@@ -69,7 +69,7 @@
     },
     "6018": {
       "name": "Pata ponedora",
-      "desc": "Al comienzo de cada combate, coloca una Estructura «Huevo de Pato» con 0 de Poder y 1 de Vida en el centro de tu primera fila. Al final del turno, si el Huevo de Pato sigue con vida, se convierte en un Pato mascota con 3 de Poder y 15 de Vida que recibe el daño a la Vida en tu lugar."
+      "desc": "Al comienzo de cada combate, coloca una Estructura «Huevo de Pato» con 0 de Poder y 1 de Vida en el centro de tu primera fila. Al comienzo de tu turno, si el Huevo de Pato sigue con vida, se convierte en un Pato mascota con 3 de Poder y 15 de Vida que recibe el daño a la Vida en tu lugar."
     },
     "6019": {
       "name": "Pera de pato",

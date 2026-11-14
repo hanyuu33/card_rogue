@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 315,
+ "count": 319,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -86,7 +86,7 @@
   },
   "8010": {
    "name": "Glowgrass",
-   "effect_text": "While on the field, your Skill damage +1. Keyword \"Dimensional\": Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "While on the field, your Skill damage +1."
   },
   "8018": {
    "name": "Living Fence",
@@ -231,7 +231,7 @@
   },
   "8053": {
    "name": "Beyond the Limit",
-   "effect_text": "Choose a friendly Ally or Structure and give it an Upgrade: Overload. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Choose a friendly Ally or Structure and give it an Upgrade: Overload."
   },
   "8054": {
    "name": "Reboot",
@@ -299,7 +299,7 @@
   },
   "8071": {
    "name": "Scrap",
-   "effect_text": "Transform **all other cards** in your Hand into \"Charged Bombardment\". Those cards cost 0 this turn; their original Cost returns once they leave your Hand. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Transform **all other cards** in your Hand into \"Charged Bombardment\". Those cards cost 0 this turn; their original Cost returns once they leave your Hand."
   },
   "8072": {
    "name": "Mnemosyne",
@@ -347,15 +347,15 @@
   },
   "8084": {
    "name": "Teach",
-   "effect_text": "Assemble a card from the all-class card pool. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Assemble a card from the all-class card pool."
   },
   "8085": {
    "name": "Shadow Bind",
-   "effect_text": "Assemble a card from the all-class card pool. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Assemble a card from the all-class card pool."
   },
   "8086": {
    "name": "Reconstruct",
-   "effect_text": "Assemble a card from the all-class card pool. Keyword \"Dimensional\": Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Assemble a card from the all-class card pool."
   },
   "9001": {
    "name": "Duck Knight",
@@ -363,7 +363,7 @@
   },
   "9002": {
    "name": "Deep Echo",
-   "effect_text": "When used, add a copy of it to your Draw Pile. At the start of your turn, deal 6 damage to a random enemy X times. X is the number of copies of this card in the Effect Zone."
+   "effect_text": "When used, add a copy of it to your Draw Pile. At the start of your turn, deal 8 damage to a random enemy X times. X is the number of copies of this card in the Effect Zone."
   },
   "9003": {
    "name": "Fire Arrow",
@@ -391,7 +391,7 @@
   },
   "9009": {
    "name": "Familiar Duck",
-   "effect_text": "Summoned by Duck Wizard."
+   "effect_text": ""
   },
   "9010": {
    "name": "Weaken",
@@ -444,7 +444,7 @@
   },
   "9022": {
    "name": "Duck Egg",
-   "effect_text": "Placed in the center of your front row by \"Egg-Laying Duck\" at the start of each battle. If it is still alive at the end of the turn, it becomes a Pet Duck with 3 Attack and 15 Health, taking Health damage in your place. Keyword \"Dimensional\": Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "At the start of your turn, if it is still alive, it becomes a Pet Duck with 3 Attack and 15 Health, taking Health damage in your place."
   },
   "9023": {
    "name": "Hero",
@@ -460,7 +460,7 @@
   },
   "9026": {
    "name": "Ceramic Duck",
-   "effect_text": "Fired by Duck Kiln. Its Health increases by 1 every 2 turns."
+   "effect_text": "Its Health increases by 1 every 2 turns."
   },
   "9027": {
    "name": "Night Duck",
@@ -468,7 +468,7 @@
   },
   "9028": {
    "name": "Dragonkin",
-   "effect_text": "Summoned by the death of Young Dragon."
+   "effect_text": ""
   },
   "9029": {
    "name": "Skeleton",
@@ -544,7 +544,7 @@
   },
   "9048": {
    "name": "Clockwork Duck",
-   "effect_text": "Summoned by Mechanical Mega Duck."
+   "effect_text": ""
   },
   "9049": {
    "name": "Gear Ascension",
@@ -552,7 +552,7 @@
   },
   "9050": {
    "name": "Whale's Wrath",
-   "effect_text": "Deal 11 damage. Choose 2 cards from your Discard Pile and add them to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Deal 11 damage. Choose 2 cards from your Discard Pile and add them to your Hand."
   },
   "9051": {
    "name": "Nature's Force",
@@ -604,7 +604,7 @@
   },
   "9063": {
    "name": "Hurricane Roar",
-   "effect_text": "For each of the first X Effect cards used each turn, deal 4 damage to all enemies. Using this card itself does not trigger it. X is the number of copies of this card in the Effect Zone."
+   "effect_text": "Whenever you use an Effect card, deal 4 damage to all enemies, repeated X times. Using this card itself does not trigger it. X is the number of copies of this card in the Effect Zone."
   },
   "9064": {
    "name": "Breeze Guard",
@@ -672,7 +672,7 @@
   },
   "9080": {
    "name": "Golem",
-   "effect_text": "Summoned by \"Golemancy\". Taunt: enemy units must attack it first. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "Taunt: enemy units must attack it first."
   },
   "9082": {
    "name": "Wind Elemental",
@@ -736,11 +736,11 @@
   },
   "9097": {
    "name": "Foresight",
-   "effect_text": "Choose one: add a 0-cost Skill card from your Discard Pile to your Hand; or add a random Skill card with non-zero Cost from your Draw Pile to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Choose one: add a 0-cost Skill card from your Discard Pile to your Hand; or add a random Skill card with non-zero Cost from your Draw Pile to your Hand."
   },
   "9098": {
    "name": "Defy Fate",
-   "effect_text": "Discard your entire Hand, then add **all 0-cost and 1-cost cards** from your Discard Pile to your Hand in Discard Pile order, up to your Hand limit. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Discard your entire Hand, then add **all 0-cost and 1-cost cards** from your Discard Pile to your Hand in Discard Pile order, up to your Hand limit."
   },
   "9099": {
    "name": "Glimmer",
@@ -900,7 +900,7 @@
   },
   "9146": {
    "name": "Fill",
-   "effect_text": "Transform a card in your Hand into a \"Charged Bombardment\". Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Transform a card in your Hand into a \"Charged Bombardment\"."
   },
   "9147": {
    "name": "Assembly Line",
@@ -928,7 +928,7 @@
   },
   "9154": {
    "name": "Opening",
-   "effect_text": "No effect when played. Dimensional: Banished after being played; does not go to the Discard Pile and does not appear again this battle."
+   "effect_text": "No effect when played. It does not appear again this battle."
   },
   "9155": {
    "name": "Night Walk",
@@ -960,7 +960,7 @@
   },
   "9164": {
    "name": "Auxiliary Blade",
-   "effect_text": "Give a friendly Ally an Upgrade: **+2 Power**, and it gains \"Death\": when it is Destroyed, add an \"Auxiliary Blade\" to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Give a friendly Ally an Upgrade: **+2 Power**, and it gains \"Death\": when it is Destroyed, add an \"Auxiliary Blade\" to your Hand."
   },
   "9165": {
    "name": "Duplication",
@@ -968,7 +968,7 @@
   },
   "9166": {
    "name": "Cluster Battery",
-   "effect_text": "On Play: add two \"Charged Bombardment\" to your Draw Pile. Each time it gains an Upgrade, add a \"Charged Bombardment\" from your Draw Pile to your Hand. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "On Play: add two \"Charged Bombardment\" to your Draw Pile. Each time it gains an Upgrade, add a \"Charged Bombardment\" from your Draw Pile to your Hand."
   },
   "9167": {
    "name": "Merge",
@@ -976,7 +976,7 @@
   },
   "9168": {
    "name": "Wish",
-   "effect_text": "Choose a card from your Draw Pile and add it to your Hand. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Choose a card from your Draw Pile and add it to your Hand."
   },
   "9169": {
    "name": "Sword of Flames",
@@ -984,7 +984,7 @@
   },
   "9170": {
    "name": "Emergency Power",
-   "effect_text": "Gain 1 Cost and draw 1 card. All friendly units on the field restore 2 Health. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Gain 1 Cost and draw 1 card. All friendly units on the field restore 2 Health."
   },
   "9171": {
    "name": "Rapid",
@@ -1012,7 +1012,7 @@
   },
   "9177": {
    "name": "Pet Duck",
-   "effect_text": "Hatched from a \"Duck Egg\". Takes HP damage in your place. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "Takes HP damage in your place."
   },
   "9178": {
    "name": "Eternal Night",
@@ -1032,11 +1032,11 @@
   },
   "9182": {
    "name": "Lullaby",
-   "effect_text": "All units cannot act for 1 turn, friend and foe alike. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "All units cannot act for 1 turn, friend and foe alike."
   },
   "9183": {
    "name": "Friends of the Forest",
-   "effect_text": "Add a random Forest Spirit Ally to your Hand; it costs -2 this turn. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Add a random Forest Spirit Ally to your Hand; it costs -2 this turn."
   },
   "9184": {
    "name": "Inventory Sorting",
@@ -1068,7 +1068,7 @@
   },
   "9191": {
    "name": "Dark Fusion",
-   "effect_text": "Assemble a card and give it \"Preserve\", then deal damage equal to its Power to all enemies. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Assemble a card and give it \"Preserve\", then deal damage equal to its Power to all enemies."
   },
   "9192": {
    "name": "Supporting Fire",
@@ -1076,7 +1076,7 @@
   },
   "9193": {
    "name": "Technical Fusion",
-   "effect_text": "Assemble a card using a Construct as the base. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Assemble a card using a Construct as the base."
   },
   "9200": {
    "name": "The Revelator",
@@ -1096,15 +1096,15 @@
   },
   "9204": {
    "name": "Bounty Hunter",
-   "effect_text": "First kill of each battle: permanently +1 Power for this run. Gain 20 Gold after the battle ends. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "First kill of each battle: permanently +1 Power for this run. Gain 20 Gold after the battle ends."
   },
   "9205": {
    "name": "Hunt",
-   "effect_text": "Deal 22 damage to a target. If this card kills an enemy, this card's damage is permanently increased by 4 for this run. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Deal 22 damage to a target. If this card kills an enemy, this card's damage is permanently increased by 4 for this run."
   },
   "9206": {
    "name": "Vulture",
-   "effect_text": "First kill of each battle: permanently +3 Power and +6 Health for this run. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "First kill of each battle: permanently +3 Power and +6 Health for this run."
   },
   "9207": {
    "name": "Mass-Produced Asclepius",
@@ -1164,7 +1164,7 @@
   },
   "9222": {
    "name": "Theseus Engine",
-   "effect_text": "**Overload**. Each time this card's Health drops to 0 or lower, add a \"Charged Bombardment\" to your Hand. Keyword \"Dimensional\": Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "**Overload**. Each time this card's Health drops to 0 or lower, add a \"Charged Bombardment\" to your Hand."
   },
   "9223": {
    "name": "Enforcer",
@@ -1192,7 +1192,7 @@
   },
   "9229": {
    "name": "Dread Projection",
-   "effect_text": "Mark the tile the target is on, and give the target -11 Power this turn. If the target is already Marked, deal 8 damage to it instead. Dimensional: Banished after being played; does not go to the Discard Pile."
+   "effect_text": "Mark the tile the target is on, and give the target -11 Power this turn. If the target is already Marked, deal 8 damage to it instead."
   },
   "9230": {
    "name": "Dread Incarnate",
@@ -1260,11 +1260,11 @@
   },
   "9246": {
    "name": "Gem Beast",
-   "effect_text": "On death, assemble a card. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "On death, assemble a card."
   },
   "9247": {
    "name": "Assembly Factory",
-   "effect_text": "At the start of your turn, assemble a card. Dimensional: Banished on leaving the field; does not go to the Discard Pile."
+   "effect_text": "At the start of your turn, assemble a card."
   },
   "9248": {
    "name": "Seed",
@@ -1273,6 +1273,14 @@
   "9249": {
    "name": "The Favored",
    "effect_text": "Randomly use a copy of an Effect card from your Draw Pile. Restore Cost equal to the number of Effect cards in your Draw Pile."
+  },
+  "9250": {
+   "name": "Mother Duck",
+   "effect_text": "When used, summon one \"Duckling\" on each side of this card (if possible)."
+  },
+  "9251": {
+   "name": "Duckling",
+   "effect_text": "When it enters, reduce the Cost of a random Effect card in your Hand by 1."
   }
  }
 }

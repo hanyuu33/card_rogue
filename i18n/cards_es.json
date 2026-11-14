@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 315,
+ "count": 319,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -86,7 +86,7 @@
   },
   "8010": {
    "name": "Hierba Luminosa",
-   "effect_text": "Mientras esté en el campo, tu daño de Habilidad aumenta +1. Palabra clave «dimensional»: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Mientras esté en el campo, tu daño de Habilidad aumenta +1."
   },
   "8018": {
    "name": "Valla Viviente",
@@ -231,7 +231,7 @@
   },
   "8053": {
    "name": "Más Allá del Límite",
-   "effect_text": "Elige un Aliado o una Estructura aliada y otórgale una mejora: Sobrecarga. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Elige un Aliado o una Estructura aliada y otórgale una mejora: Sobrecarga."
   },
   "8054": {
    "name": "Reinicio",
@@ -299,7 +299,7 @@
   },
   "8071": {
    "name": "Chatarra",
-   "effect_text": "Transforma **todas las demás cartas** de la mano en «Bombardeo Cargado». Esas cartas cuestan 0 este turno; recuperan su Coste original al salir de la mano. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Transforma **todas las demás cartas** de la mano en «Bombardeo Cargado». Esas cartas cuestan 0 este turno; recuperan su Coste original al salir de la mano."
   },
   "8072": {
    "name": "Mnemosine",
@@ -347,15 +347,15 @@
   },
   "8084": {
    "name": "Enseñanza",
-   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases."
   },
   "8085": {
    "name": "Atadura de Sombras",
-   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases."
   },
   "8086": {
    "name": "Reconstrucción",
-   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases. Palabra clave «dimensional»: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Ensambla una carta de la reserva de cartas de todas las clases."
   },
   "9001": {
    "name": "Caballero Pato",
@@ -363,7 +363,7 @@
   },
   "9002": {
    "name": "Eco Profundo",
-   "effect_text": "Al usarse, añade una copia de «Eco Profundo» a la pila de robo. Al comienzo de tu turno, inflige 6 de daño a un enemigo aleatorio X veces. X es el número de copias de esta carta en la zona de Efectos."
+   "effect_text": "Al usarse, añade una copia de «Eco Profundo» a la pila de robo. Al comienzo de tu turno, inflige 8 de daño a un enemigo aleatorio X veces. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9003": {
    "name": "Flecha de Fuego",
@@ -391,7 +391,7 @@
   },
   "9009": {
    "name": "Pato Familiar",
-   "effect_text": "Invocado por Pato Hechicero."
+   "effect_text": ""
   },
   "9010": {
    "name": "Debilitar",
@@ -444,7 +444,7 @@
   },
   "9022": {
    "name": "Huevo de Pato",
-   "effect_text": "Lo coloca el «Pata ponedora» en el centro de tu primera fila al comienzo de cada batalla. Si sigue vivo al final del turno, se convierte en un Pato Mascota con 3 de Ataque y 15 de Vida, que recibe el daño de Vida en tu lugar. Palabra clave «dimensional»: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Al comienzo de tu turno, si sigue vivo, se convierte en un Pato Mascota con 3 de Ataque y 15 de Vida, que recibe el daño de Vida en tu lugar."
   },
   "9023": {
    "name": "Héroe",
@@ -460,7 +460,7 @@
   },
   "9026": {
    "name": "Pato de Cerámica",
-   "effect_text": "Horneado por el Horno de Patos. Su Vida aumenta en 1 cada 2 turnos."
+   "effect_text": "Su Vida aumenta en 1 cada 2 turnos."
   },
   "9027": {
    "name": "Pato Nocturno",
@@ -468,7 +468,7 @@
   },
   "9028": {
    "name": "Vástago de Dragón",
-   "effect_text": "Invocado por la muerte del Dragón Joven."
+   "effect_text": ""
   },
   "9029": {
    "name": "Esqueleto",
@@ -544,7 +544,7 @@
   },
   "9048": {
    "name": "Pato de Cuerda",
-   "effect_text": "Invocado por el Megapato Mecánico."
+   "effect_text": ""
   },
   "9049": {
    "name": "Ascenso de Engranajes",
@@ -552,7 +552,7 @@
   },
   "9050": {
    "name": "Ira de la Ballena",
-   "effect_text": "Inflige 11 de daño. Elige 2 cartas de la pila de descarte y añádelas a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Inflige 11 de daño. Elige 2 cartas de la pila de descarte y añádelas a la mano."
   },
   "9051": {
    "name": "Fuerza de la Naturaleza",
@@ -604,7 +604,7 @@
   },
   "9063": {
    "name": "Rugido del Huracán",
-   "effect_text": "Por cada una de las primeras X cartas de Efecto usadas cada turno, inflige 4 de daño a todos los enemigos. Usar esta carta no lo activa. X es el número de copias de esta carta en la zona de Efectos."
+   "effect_text": "Cada vez que uses una carta de Efecto, inflige 4 de daño a todos los enemigos, repetido X veces. Usar esta carta no lo activa. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9064": {
    "name": "Guardia de la Brisa",
@@ -672,7 +672,7 @@
   },
   "9080": {
    "name": "Gólem",
-   "effect_text": "Invocado por «Golemancia». Provocar: las unidades enemigas deben atacarlo primero. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Provocar: las unidades enemigas deben atacarlo primero."
   },
   "9082": {
    "name": "Elemental de Viento",
@@ -736,11 +736,11 @@
   },
   "9097": {
    "name": "Previsión",
-   "effect_text": "Elige una opción: añade una carta de Habilidad de Coste 0 de la pila de descarte a la mano; o añade una carta de Habilidad aleatoria de Coste distinto de 0 de la pila de robo a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Elige una opción: añade una carta de Habilidad de Coste 0 de la pila de descarte a la mano; o añade una carta de Habilidad aleatoria de Coste distinto de 0 de la pila de robo a la mano."
   },
   "9098": {
    "name": "Desafiar al Destino",
-   "effect_text": "Descarta toda la mano y luego añade **todas las cartas de Coste 0 y Coste 1** de la pila de descarte a la mano, en el orden de la pila de descarte y hasta alcanzar el límite de la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Descarta toda la mano y luego añade **todas las cartas de Coste 0 y Coste 1** de la pila de descarte a la mano, en el orden de la pila de descarte y hasta alcanzar el límite de la mano."
   },
   "9099": {
    "name": "Resplandor Tenue",
@@ -900,7 +900,7 @@
   },
   "9146": {
    "name": "Rellenar",
-   "effect_text": "Transforma una carta de la mano en un «Bombardeo Cargado». Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Transforma una carta de la mano en un «Bombardeo Cargado»."
   },
   "9147": {
    "name": "Línea de Ensamblaje",
@@ -928,7 +928,7 @@
   },
   "9154": {
    "name": "Apertura",
-   "effect_text": "No tiene efecto al jugarla. Dimensional: se destierra después de jugarla; no va a la pila de descarte y no vuelve a aparecer en esta batalla."
+   "effect_text": "No tiene efecto al jugarla. No vuelve a aparecer en esta batalla."
   },
   "9155": {
    "name": "Caminata Nocturna",
@@ -960,7 +960,7 @@
   },
   "9164": {
    "name": "Hoja Auxiliar",
-   "effect_text": "Otorga una mejora a un Aliado aliado: **+2 de Poder**, y obtiene «Muerte»: cuando sea destruido, añade una «Hoja Auxiliar» a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Otorga una mejora a un Aliado aliado: **+2 de Poder**, y obtiene «Muerte»: cuando sea destruido, añade una «Hoja Auxiliar» a la mano."
   },
   "9165": {
    "name": "Duplicación",
@@ -968,7 +968,7 @@
   },
   "9166": {
    "name": "Batería de Racimo",
-   "effect_text": "Al entrar al campo: añade dos «Bombardeo Cargado» a la pila de robo. Cada vez que recibe una mejora, añade un «Bombardeo Cargado» de la pila de robo a la mano. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Al entrar al campo: añade dos «Bombardeo Cargado» a la pila de robo. Cada vez que recibe una mejora, añade un «Bombardeo Cargado» de la pila de robo a la mano."
   },
   "9167": {
    "name": "Fusión",
@@ -976,7 +976,7 @@
   },
   "9168": {
    "name": "Deseo",
-   "effect_text": "Elige una carta de la pila de robo y añádela a la mano. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Elige una carta de la pila de robo y añádela a la mano."
   },
   "9169": {
    "name": "Espada de Llamas",
@@ -984,7 +984,7 @@
   },
   "9170": {
    "name": "Energía de Emergencia",
-   "effect_text": "Obtén 1 de Coste y roba 1 carta. Todas las unidades aliadas del campo recuperan 2 de Vida. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Obtén 1 de Coste y roba 1 carta. Todas las unidades aliadas del campo recuperan 2 de Vida."
   },
   "9171": {
    "name": "Velocidad",
@@ -1012,7 +1012,7 @@
   },
   "9177": {
    "name": "Pato Mascota",
-   "effect_text": "Eclosiona de un «Huevo de Pato». Recibe el daño de HP en tu lugar. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Recibe el daño de HP en tu lugar."
   },
   "9178": {
    "name": "Noche Eterna",
@@ -1032,11 +1032,11 @@
   },
   "9182": {
    "name": "Canción de Cuna",
-   "effect_text": "Todas las unidades no pueden actuar durante 1 turno, tanto aliadas como enemigas. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Todas las unidades no pueden actuar durante 1 turno, tanto aliadas como enemigas."
   },
   "9183": {
    "name": "Amigos del Bosque",
-   "effect_text": "Añade un Aliado Espíritu del bosque aleatorio a la mano; cuesta -2 este turno. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Añade un Aliado Espíritu del bosque aleatorio a la mano; cuesta -2 este turno."
   },
   "9184": {
    "name": "Organización de Inventario",
@@ -1068,7 +1068,7 @@
   },
   "9191": {
    "name": "Fusión Oscura",
-   "effect_text": "Ensambla una carta y otórgale «conservar»; luego inflige daño igual a su Poder a todos los enemigos. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Ensambla una carta y otórgale «conservar»; luego inflige daño igual a su Poder a todos los enemigos."
   },
   "9192": {
    "name": "Fuego de Apoyo",
@@ -1076,7 +1076,7 @@
   },
   "9193": {
    "name": "Fusión Técnica",
-   "effect_text": "Ensambla una carta usando un Constructo como base. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Ensambla una carta usando un Constructo como base."
   },
   "9200": {
    "name": "El Revelador",
@@ -1096,15 +1096,15 @@
   },
   "9204": {
    "name": "Cazarrecompensas",
-   "effect_text": "Primera vez que mata a un enemigo en cada batalla: +1 de Poder permanente durante esta partida. Obtén 20 de Oro al terminar la batalla. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Primera vez que mata a un enemigo en cada batalla: +1 de Poder permanente durante esta partida. Obtén 20 de Oro al terminar la batalla."
   },
   "9205": {
    "name": "Cacería",
-   "effect_text": "Inflige 22 de daño a un objetivo. Si esta carta mata a un enemigo, su daño aumenta permanentemente en 4 durante esta partida. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Inflige 22 de daño a un objetivo. Si esta carta mata a un enemigo, su daño aumenta permanentemente en 4 durante esta partida."
   },
   "9206": {
    "name": "Buitre",
-   "effect_text": "Primera vez que mata a un enemigo en cada batalla: +3 de Poder y +6 de Vida permanentes durante esta partida. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Primera vez que mata a un enemigo en cada batalla: +3 de Poder y +6 de Vida permanentes durante esta partida."
   },
   "9207": {
    "name": "Asclepio de Producción en Serie",
@@ -1164,7 +1164,7 @@
   },
   "9222": {
    "name": "Máquina de Teseo",
-   "effect_text": "**Sobrecarga**. Cada vez que la Vida de esta carta baja a 0 o menos, añade un «Bombardeo Cargado» a la mano. Palabra clave «dimensional»: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "**Sobrecarga**. Cada vez que la Vida de esta carta baja a 0 o menos, añade un «Bombardeo Cargado» a la mano."
   },
   "9223": {
    "name": "Ejecutor",
@@ -1192,7 +1192,7 @@
   },
   "9229": {
    "name": "Proyección de Terror",
-   "effect_text": "Marca la casilla en la que se encuentra el objetivo y le otorga -11 de Poder este turno. Si el objetivo ya está marcado, le inflige 8 de daño en su lugar. Dimensional: se destierra después de jugarla; no va a la pila de descarte."
+   "effect_text": "Marca la casilla en la que se encuentra el objetivo y le otorga -11 de Poder este turno. Si el objetivo ya está marcado, le inflige 8 de daño en su lugar."
   },
   "9230": {
    "name": "Terror Encarnado",
@@ -1260,11 +1260,11 @@
   },
   "9246": {
    "name": "Bestia de Gemas",
-   "effect_text": "Al morir, ensambla una carta. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Al morir, ensambla una carta."
   },
   "9247": {
    "name": "Fábrica de Ensamblaje",
-   "effect_text": "Al comienzo de tu turno, ensambla una carta. Dimensional: se destierra al salir del campo; no va a la pila de descarte."
+   "effect_text": "Al comienzo de tu turno, ensambla una carta."
   },
   "9248": {
    "name": "Semilla",
@@ -1273,6 +1273,14 @@
   "9249": {
    "name": "El Favorecido",
    "effect_text": "Usa aleatoriamente una copia de una carta de Efectos de tu pila de robo. Recupera Coste igual al número de cartas de Efectos en tu pila de robo."
+  },
+  "9250": {
+   "name": "Pata Madre",
+   "effect_text": "Al usarse, invoca un «Patito» a cada lado de esta carta (si es posible)."
+  },
+  "9251": {
+   "name": "Patito",
+   "effect_text": "Al entrar, reduce en 1 el Coste de una carta de Efecto aleatoria de tu mano."
   }
  }
 }

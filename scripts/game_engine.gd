@@ -236,8 +236,8 @@ var paint_src:= Vector2i(-1, -1)   # 机器人自己那格（候选要排除它 
 var _aether_left:= 0
 var _aether_used:= false
 var _stoneskin_left:= 0
-# 「每回合第 X 次」的 X = 效果区张数 → 用计数记录本回合已触发几次（回合开始归零）
-var _roar_fires:= 0
+# 「每回合第 X 次」的 X = 效果区张数 → 用计数记录本回合已触发几次（回合开始归零）。
+# R692：「飓风咆哮」改成**每次**使用效果卡都触发（不再数次数），只剩和风守护还用这个计数。
 var _space_fires:= 0
 # 风元素（9082）：技能结算窗口 —— 窗口内只要有伤害落在敌方身上就记一次（见 _mark_spell_enemy_hit）
 var _spell_active:= false
@@ -294,6 +294,10 @@ const EGG_CARD_ID:= 9022
 # 与森林守护 / 铁栅栏 / 大树守卫走同一条通道（战场绿环与伤害结算同源，不会两处漂移）。
 const PET_DUCK_ID:= 9177
 const PET_DUCK_TRAIT:= "宠物鸭"
+# R692：鸭妈妈 9250（森林精魄 · 4 费稀有盟友）→ 使用时在**两侧**各召唤一只小鸭 9251。
+# 小鸭是 token（rarity 5，不进奖励池），入场时使手卡里随机一张效果卡费用 -1。
+const DUCK_MOTHER_ID:= 9250
+const DUCKLING_ID:= 9251
 # ---- 「钢铁要塞」关卡（R149，第二层精英困难）----
 # 量产型赫卡同克瑞斯（9133）上场就带铸造倒计时：**我方回合结束** -1，
 # 减到 0 → 破坏自身并在**原地**立起一座钢铁要塞（9134，工事 5/100 程2 嘲讽）。
@@ -2379,7 +2383,6 @@ func _begin_turn(side: String) -> void :
 		_aether_used = false
 		_aether_left = 0
 		_taunt_all_active = false   # 闪躲（9103）：含敌方回合在内的一整个来回结束 → 到期
-		_roar_fires = 0
 		_space_fires = 0
 		_sync_harp()   # R352 竖琴：战斗中拿到的道具 / 读档续战，此处补齐在场上盟友的 +2
 		_sync_knight_sword()   # R383 骑士剑：同一处补齐（含中途拿到道具的情况）
@@ -2389,6 +2392,9 @@ func _begin_turn(side: String) -> void :
 			_finish("失败", "%d 回合内未击破敌方 HP" % state.turn_limit)
 			return
 
+		# R692（店长口径「鸭蛋改为（我方）回合开始时若存活」）：孵化从**回合结束**搬到
+		# **我方回合开始**。排在 `state.reset_units()` 之前 → 刚孵出的宠物鸭这一回合就能行动。
+		_egg_hatch_tick()
 		_spring_tick()          # R307 泉水：后排单位每回合回 4
 		_tick_enemy_growth()
 		# R341 鹿首标本（6049）：**每个我方回合开始** +1 层（本场永久累计）。
@@ -4330,8 +4336,6 @@ func end_turn() -> void :
 			popcorn_draw += POPCORN_DRAW
 			_log("爆米花：本回合没用技能指向敌人 → 下回合多抽 %d 张（累计 %d）"
 					% [POPCORN_DRAW, popcorn_draw])
-		# R340 生蛋鸭：存活到回合结束的鸭蛋 → 原地孵成宠物鸭（与罐子同一段收尾，先于弃手牌）
-		_egg_hatch_tick()
 		_jar_tick()
 		_paralysis_tick()   # R373 麻痹：回合结束仍在手卡 → 消失（排在弃手牌之前）
 		# R314 储物箱（6044）：持有 → 回合结束**不弃手牌**（keep_all）。
@@ -5629,6 +5633,9 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 
 	if card.id == AETHER_DEMON_ID:
 		_water_element_fetch(p)
+
+	if card.id == DUCK_MOTHER_ID:
+		_duck_mother_summon(p)
 
 	if card.id == OWL_ID:
 		_owl_fetch()
@@ -8126,6 +8133,61 @@ func _water_element_fetch(_p: Placement, source: String = "水元素") -> void :
 	action.emit("water_element", {"card": vortex})
 
 
+func _duck_mother_summon(p: Placement) -> void :
+	## R692：鸭妈妈 9250「使用时，在这张卡两边各召唤一只「小鸭」（如果可能）」。
+	## * 「两边」= **同一行**左右相邻格（列 -1 / +1）；越界 / 已被占 / 行归属不合法
+	##   的那一侧**直接跳过**，不往别处替补（卡面写的是「如果可能」）。
+	## * 落点仍过 `_can_hold()`（空格 + `unit_slot_allowed` 的 HP 行硬禁区）。
+	## * 副本走 `from_dict` + `traits.duplicate()`：卡库实例共享，场上被改造会跨局泄漏。
+	## * `_on_ally_entered()` 照常调用 —— 小鸭的减费就挂在那条钩子上。
+	if p == null:
+		return
+	var cell:= _cell_of(p)
+	if cell == Vector2i(-1, -1):
+		return
+	var base: CardData = CardRepo.load_json().get_card(DUCKLING_ID)
+	if base == null:
+		_log("鸭妈妈：卡牌库里没有「小鸭」（%d）" % DUCKLING_ID)
+		return
+	var made:= 0
+	for dc: int in [-1, 1]:
+		var spot:= Vector2i(cell.x, cell.y + dc)
+		if not _can_hold(spot, p.owner):
+			continue
+		var duck: CardData = CardData.from_dict(base.to_dict())
+		duck.traits = (duck.traits as Array).duplicate()
+		var born:= state.place(duck, spot, p.owner)
+		made += 1
+		_log("鸭妈妈：在 %s 召唤「%s」（%d 攻 / %d 血）" % [
+				str(spot), duck.card_name, duck.power, duck.health])
+		action.emit("place", {"cell": spot, "card": duck, "side": p.owner,
+				"summon": true, "from": cell})
+		_on_ally_entered(born, p.owner)
+	_log("鸭妈妈：两侧共召唤 %d 只小鸭" % made)
+	action.emit("duck_mother", {"cell": cell, "count": made})
+
+
+func _duckling_discount(p: Placement) -> void :
+	## R692：小鸭 9251「入场时，手卡随机一张效果卡 -1 费」。
+	## * 候选 = `state.hand` 里的效果卡；`state.hand` 顺序稳定 → 同种子回放可复现。
+	## * 减费走 `state.hand_cost_delta`（唯一口径）：**只在手卡内有效**，
+	##   打出 / 弃掉即恢复原价（与小精灵 9074 / 雪豹同一套）。
+	if p == null or p.owner != SIDE_SELF:
+		return
+	var cand: Array[CardData] = []
+	for c: CardData in state.hand:
+		if c.is_effect():
+			cand.append(c)
+	if cand.is_empty():
+		_log("小鸭：手卡没有效果卡 → 落空")
+		action.emit("duckling", {"card": null, "amount": 0})
+		return
+	var pick: CardData = cand[rng.randi() % cand.size()]
+	state.hand_cost_delta[pick] = int(state.hand_cost_delta.get(pick, 0)) + 1
+	_log("小鸭：手卡「%s」费用 -1（手卡内有效，打出 / 弃掉恢复原价）" % pick.card_name)
+	action.emit("duckling", {"card": pick, "amount": 1})
+
+
 func _owl_fetch() -> void :
 	var cand: Array[int] = []
 	for i in state.deck.size():
@@ -10452,14 +10514,17 @@ func _on_turn_first_play(side: String, played: CardData) -> void :
 	# 每张只写了自己那条不触发；玩家看到的就是「有些效果卡不一定触发」（用户实测反馈）。
 	var skip_roar := played.id == AETHER_ROAR_ID
 	var skip_guard := played.id == SPACE_GUARD_ID
-	# 「每回合第 X 次」：X = 效果区里该类卡的张数（单张时 X=1 → 就是原来的「每回合首次」）。
+	# R692（店长口径「改为每次使用效果卡，叠加改为造成 X 次」）：
+	#   ① 不再有「每回合前 X 次」的门槛 —— 本回合**每一次**使用效果卡都触发；
+	#   ② 叠加改成**打 X 下**（X = 效果区里本卡的张数），每一下各自重挑目标。
 	if not skip_roar:
 		var roar_n:= _trait_copies(state.effects, AETHER_ROAR_TRAIT)
-		if roar_n > 0 and _roar_fires < roar_n:
-			_roar_fires += 1
+		if roar_n > 0:
 			var roar_c:= _first_with_trait(state.effects, AETHER_ROAR_TRAIT)
 			if roar_c != null:
-				_aether_roar(roar_c)
+				for _i in roar_n:
+					_aether_roar(roar_c)
+	# 和风守护仍是「每回合前 X 次」（本轮没动它）。
 	if not skip_guard:
 		var sg_n:= _trait_copies(state.effects, SPACE_GUARD_TRAIT)
 		if sg_n > 0 and _space_fires < sg_n:
@@ -12270,6 +12335,8 @@ func _on_ally_entered(p: Placement, side: String) -> void :
 	_hidden_energy_tick(p, side)   # R331：友方**单位**（含工事）入场 → 改造 +「死亡」
 	if p.card.kind != "盟友":
 		return
+	if p.card.id == DUCKLING_ID:
+		_duckling_discount(p)   # R692：小鸭入场 → 手卡随机一张效果卡 -1
 	_wind_force_tick(side, "%s 登场" % p.card.card_name)
 
 
@@ -13972,7 +14039,7 @@ func _jar_tick() -> void :
 
 
 func _egg_hatch_tick() -> void :
-	## 生蛋鸭（6018）/ 鸭蛋（9022，R340）：**我方回合结束时**仍存活的鸭蛋
+	## 生蛋鸭（6018）/ 鸭蛋（9022，R340；R692 改为**我方回合开始时**）：仍存活的鸭蛋
 	## → **原地**变成「宠物鸭」（9177，盟友 3/15/程 1 /速 1），替我方 HP 承受伤害。
 	## ⚠️ 用 `state.place()` **覆盖同一格**，不走进 `_destroy`：这是「孵化」不是「死亡」，
 	##    不该触发死亡 / 击杀记功 / 后排溢出伤害；鸭蛋本身也没有死亡，语义上更接近「变幻」。

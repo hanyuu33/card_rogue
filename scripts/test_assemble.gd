@@ -1540,18 +1540,18 @@ func _test_r592_combo_dimension() -> void:
 	var bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check(bs.find("CardFace.draw_affix_index(self, _hover_card, _hover_zone_rect") >= 0,
 			"R614：完整卡组等区域面板悬停时补画解释浮窗")
-	# 三张传授卡：**显示层**正文只剩一句（用户口径「只需要：从全职业卡池组合一张卡。」）。
-	# 数据层仍保留「字段「次元」：…」这句 —— R411 的源头保真锁认它，
-	# `CardText.clean_meta_notes()` 在显示层整句剥掉（R600 同一套口径：数据权威、显示清洗）。
-	# 两条一起锁，才既不会为了「看着短」把后果从数据里删掉，也不会让玩家在卡面上读到它。
+	# 三张传授卡：正文只剩一句（用户口径「只需要：从全职业卡池组合一张卡。」）。
+	# R692（店长口径「多余的字段描述文本删除」）：数据层**也**不再写「字段「次元」：…」——
+	# 「次元」由字段本身承载（卡面 glyph + 悬停解释），正文复述一遍属于冗余。
+	# 下面两条锁住「显示层一句 + 数据层不再有那句」。
 	for tid: int in [8084, 8085, 8086]:
 		var tc: CardData = repo.get_card(tid)
 		var shown := CardText.clean_meta_notes(tc.effect_text)
 		check(shown == "从全职业卡池组合一张卡。",
 				"R614：%d %s 显示层正文应为一句（实际「%s」）"
 				% [tid, tc.card_name, shown])
-		check(tc.effect_text.contains("字段「次元」"),
-				"R614：%d %s 数据层仍要写明次元后果（R411 源头保真）" % [tid, tc.card_name])
+		check(not tc.effect_text.contains("字段「次元」") and tc.has_affix("次元"),
+				"R692：%d %s 数据层不再复述次元说明，但字段本身必须在" % [tid, tc.card_name])
 	# 判据锁（文本级）：认的是「卡面在说自己会组合」，不是 id 清单 ——
 	# 以后新增「组合一张卡」的卡忘了加次元，这条直接红。
 	for c2: CardData in repo.all_cards():

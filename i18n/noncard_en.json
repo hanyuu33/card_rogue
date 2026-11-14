@@ -69,7 +69,7 @@
     },
     "6018": {
       "name": "Egg-Laying Duck",
-      "desc": "At the start of each battle, place a Duck Egg Structure with 0 Power and 1 Health in the center of your front row. At the end of the turn, if Duck Egg is still alive, it becomes a Pet Duck with 3 Power and 15 Health that takes Health damage in your place."
+      "desc": "At the start of each battle, place a Duck Egg Structure with 0 Power and 1 Health in the center of your front row. At the start of your turn, if Duck Egg is still alive, it becomes a Pet Duck with 3 Power and 15 Health that takes Health damage in your place."
     },
     "6019": {
       "name": "Duck Pear",

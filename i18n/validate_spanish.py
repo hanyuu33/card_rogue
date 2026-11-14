@@ -144,9 +144,9 @@ def flatten_interface(data, translated=False):
     return rows, entries
 
 
-# 卡牌：317 个稳定 ID（R689 +种子 9248 / 被眷顾者 9249）；名称与效果字段完整，空效果只允许仍为空。
+# 卡牌：319 个稳定 ID（R692 +鸭妈妈 9250 / 小鸭 9251；R689 +种子 9248 / 被眷顾者 9249）；名称与效果字段完整，空效果只允许仍为空。
 check(set(CARDS_ES["cards"]) == set(CARDS_ZH["cards"]), "cards ID 覆盖与 canonical 一致")
-check(len(CARDS_ES["cards"]) == 317, "cards 共 317 张")
+check(len(CARDS_ES["cards"]) == 319, "cards 共 319 张")
 raw_cards = {str(row["id"]): row for row in RAW_CARDS}
 for cid, zh_row in CARDS_ZH["cards"].items():
     es_row = CARDS_ES["cards"].get(cid, {})
@@ -369,5 +369,5 @@ if errors:
         print("  -", error)
     sys.exit(1)
 print("SPANISH I18N OK: %d checks" % checks)
-print("  cards=317 | relics=62 | classes=3 | traps=%d" % len(raw_traps))
+print("  cards=319 | relics=62 | classes=3 | traps=%d" % len(raw_traps))
 print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=155 | interface=790 | l10n=56")

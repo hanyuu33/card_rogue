@@ -12965,6 +12965,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("大树守卫：效果区 %d 张效果卡 → +%d 力量、+%d 生命" % [
 					int(data.get("n", 0)), int(data.get("n", 0)), 2 * int(data.get("n", 0))])
 		"water_element":
+		"duck_mother":
+			_say("鸭妈妈：两侧共召唤 %d 只「小鸭」" % int(data.get("count", 0)))
+		"duckling":
+			var dk_name := ""
+			if data.get("card") is CardData:
+				dk_name = (data["card"] as CardData).card_name
+			if dk_name == "":
+				_say("小鸭：手卡没有效果卡 → 落空")
+			else:
+				_say("小鸭：手卡「%s」费用 -1" % dk_name)
 			var wv_name := "漩涡"
 			if data.get("card") is CardData:
 				wv_name = (data["card"] as CardData).card_name
