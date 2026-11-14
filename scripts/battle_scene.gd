@@ -17625,6 +17625,20 @@ func _draw_spell_preview(card: CardData, center: Vector2i) -> void:
 				cc + Vector2(0, kw * 1.06), COL_BONUS, Color(0.14, 0.11, 0.03, 0.86))
 
 
+static func _stat_col(cur: int, base: Variant, idle: Color) -> Color:
+	## R711（店长口径）：左栏详细面板的**数值染色唯一判据** —— 高了绿、低了红、一样就 `idle`。
+	## 哨兵：`base` 不是数字（卡库查不到原型 / 动态衍生物）→ 一律 `idle`，
+	## 绝不给一个来路不明的红绿字（与 `CardFace._delta_col()` 的 null 口径一致）。
+	## ⚠️ 用的是**浅底**那两级（`STAT_UP` / `STAT_DOWN`），不是卡面徽章的 `BADGE_*`。
+	if not (base is int or base is float):
+		return idle
+	var b := int(base)
+	if cur > b:
+		return UiTheme.STAT_UP
+	if cur < b:
+		return UiTheme.STAT_DOWN
+	return idle
+
 static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	## 左栏框体流的**唯一组装口**（R297）。顺序就是用户口径：
 	##   数值两框 → 「效果」小标题 + 效果文本框 → 字段解释框（每个字段一个）
@@ -17636,42 +17650,48 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	var out: Array = []
 	# ① 数值框（只有场上单位 / 工事才有值意义）
 	if card.kind == "盟友" or card.kind == "工事":
-		# R706（店长口径）：数值只要**和卡库原型不同就写红色的当前值**，不再「11（原 8）」——
-		# 详细面板只回答「现在是多少」；来源（成长 / 附魔 / 场上修正）由卡面染色与 buff 框交代。
+		# R711（店长口径）：**和卡库原型不同就上色** —— 高了绿、低了红，一样保持原色。
+		# 面板不再写「11（原 8）」：它只回答「现在是多少」，来源由卡面染色与 buff 框交代。
+		# 与卡面 `CardFace._delta_col()` 同一条规则，但两级色是**配浅底**的（`UiTheme.STAT_UP`）——
+		# 卡面徽章那套 `BADGE_UP`(#2fd968) 压在羊皮纸 #f1e9d5 上只有 1.54:1，这号字读不出来。
 		# 基准走 `CardFace.base_stats()`：与卡面染色同一口，含难度档位 diff（R325 不算「变强」）。
 		var proto := CardFace.base_stats(card)
 		var hp_now: int = pl.health if pl != null else card.health
 		var hp_txt: String = "%d/%d" % [hp_now, card.health] if pl != null else str(card.health)
 		var pw_now: int = pl.effective_power() if pl != null else card.power
-		var pw_txt: String = str(pw_now)
-		var pw_hot: bool = proto.has("power") and pw_now != int(proto["power"])
-		# 生命**本来就是红的**（`STAT_HEALTH` = c1121f = `DMG_NOW`），上限被成长抬高时不用再换色。
+		# 生命是唯一例外（店长原话「对于生命，这个绿色只在左侧详情显示最大生命时生效」）：
+		# 绿只落在 `/` 后面那截**最大生命**上；当前血量照旧按生命色（红）走 ——
+		# 受伤红和「上限被加强」是两件事，合成一个色就互相掩盖了（R301 同一个教训）。
+		var hp_max_col: Color = UiTheme.STAT_HEALTH
+		if proto.has("health") and card.health > int(proto["health"]):
+			hp_max_col = UiTheme.STAT_UP
+		var hp_segs: Array = []
+		if pl != null:
+			hp_segs.append({"text": str(hp_now), "col": UiTheme.STAT_HEALTH})
+			hp_segs.append({"text": "/%d" % card.health, "col": hp_max_col})
+		else:
+			hp_segs.append({"text": str(card.health), "col": hp_max_col})
 		out.append({
 			"type": "stats", "kind": "stats", "col": Color("6b6155"),
 			"items": [
-				{"icon": UiAssets.badge_icon("power"), "text": pw_txt,
-						"col": UiTheme.DMG_NOW if pw_hot else UiTheme.STAT_POWER},
+				{"icon": UiAssets.badge_icon("power"), "text": str(pw_now),
+						"col": _stat_col(pw_now, proto.get("power", null), UiTheme.STAT_POWER)},
 				{"icon": UiAssets.badge_icon("health"), "text": hp_txt,
-						"col": UiTheme.STAT_HEALTH},
+						"col": UiTheme.STAT_HEALTH, "segs": hp_segs},
 			],
 		})
 		# ⚠️ 移速 / 射程一律走 `effective_*()`：夜鸭的奇数回合 -1、暗影领主、动员的
 		# 场上修正都要看得见（旧注释里那条「栏里写速 2、实际只走得动 1 格」的教训）。
+		# 被削弱（低于原型）同样写红字 —— 一条规则到底，不分「成长」还是「场上减益」。
 		var rng_shown: int = pl.effective_range() if pl != null else card.attack_range
 		var spd_shown: int = pl.effective_speed() if pl != null else card.move_speed
-		# 场上修正（夜鸭 / 暗影领主 / 动员）改了数值 → 同样写红字当前值。R706 一条规则到底：
-		# 「与卡库原型不同」就红，不再写「（原 X）」—— 否则同一块面板里两套写法。
-		var rng_txt: String = str(rng_shown)
-		var rng_hot: bool = proto.has("range") and rng_shown != int(proto["range"])
-		var spd_txt: String = str(spd_shown)
-		var spd_hot: bool = proto.has("speed") and spd_shown != int(proto["speed"])
 		var mv_items: Array = [
-			{"icon": UiAssets.badge_icon("range"), "text": rng_txt,
-					"col": UiTheme.DMG_NOW if rng_hot else UiTheme.INK_600},
+			{"icon": UiAssets.badge_icon("range"), "text": str(rng_shown),
+					"col": _stat_col(rng_shown, proto.get("range", null), UiTheme.INK_600)},
 		]
 		if card.kind == "盟友":
-			mv_items.append({"icon": UiAssets.badge_icon("speed"), "text": spd_txt,
-					"col": UiTheme.DMG_NOW if spd_hot else UiTheme.INK_600})
+			mv_items.append({"icon": UiAssets.badge_icon("speed"), "text": str(spd_shown),
+					"col": _stat_col(spd_shown, proto.get("speed", null), UiTheme.INK_600)})
 		out.append({"type": "stats", "kind": "stats", "col": Color("6b6155"), "items": mv_items})
 	# ② 效果正文：单独一个框，**高度随文字量**（`CardInfoBoxes.box_h` 折行数出来）
 	out.append({"type": "caption", "kind": "caption", "title": "效果", "col": Color("2a5a8a")})

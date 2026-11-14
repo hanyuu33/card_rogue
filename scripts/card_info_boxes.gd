@@ -222,6 +222,8 @@ static func _draw_box(cv: CanvasItem, font: Font, font_bold: Font, b: Dictionary
 static func _draw_stats(cv: CanvasItem, font_bold: Font, b: Dictionary, rect: Rect2,
 		size: int) -> void:
 	## 数值框：图标 + 数字横排（力量 / 生命 一组，攻击距离 / 移动速度 一组）。
+	## R711：一个数值可以带**多段不同颜色** —— 生命 `16/16` 的当前血量走生命色、
+	##      最大生命在成长后走绿（店长口径「这个绿色只在左侧详情显示最大生命时生效」）。
 	var items: Array = b.get("items", [])
 	var k := k_of(size)
 	var cy := rect.position.y + rect.size.y * 0.5
@@ -234,16 +236,29 @@ static func _draw_stats(cv: CanvasItem, font_bold: Font, b: Dictionary, rect: Re
 		var tex: Variant = it.get("icon")
 		if tex is Texture2D:
 			cv.draw_texture_rect(tex as Texture2D,
-					Rect2(Vector2(cx - ir, cy - ir), Vector2(ir, ir) * 2.0), false)
+				Rect2(Vector2(cx - ir, cy - ir), Vector2(ir, ir) * 2.0), false)
 		else:
 			cv.draw_circle(Vector2(cx, cy), ir * 0.82, col)
-		var txt := str(it.get("text", ""))
 		var tx := cx + ir + 3.0 * k
-		cv.draw_string(font_bold, Vector2(tx, cy + asc * 0.42), txt,
+		var segs: Array = it.get("segs", [])
+		if not segs.is_empty():
+			# 逐段画、宽度累加：不同颜色仍然是**同一串数字**，中间不留缝。
+			var adv := 0.0
+			for sg: Dictionary in segs:
+				var st := str(sg.get("text", ""))
+				if st == "":
+					continue
+				cv.draw_string(font_bold, Vector2(tx + adv, cy + asc * 0.42), st,
+						HORIZONTAL_ALIGNMENT_LEFT, -1, size, sg.get("col", col))
+				adv += font_bold.get_string_size(st, HORIZONTAL_ALIGNMENT_LEFT, -1,
+						size).x
+			x = tx + adv + 12.0 * k
+		else:
+			var txt := str(it.get("text", ""))
+			cv.draw_string(font_bold, Vector2(tx, cy + asc * 0.42), txt,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
-		x = tx + font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x \
-				+ 12.0 * k
-
+			var tw := font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+			x = tx + tw + 12.0 * k
 
 # ------------------------------------------------------------ 自绘图标
 # 字段 / buff 没有美术素材（`assets/ui/icon_*` 只有费用 / 力量 / 生命 / 箭 / 鞋），

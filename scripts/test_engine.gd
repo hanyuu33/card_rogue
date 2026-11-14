@@ -62394,10 +62394,22 @@ func _init() -> void:
 	var r706_pw_col: Color = r706_pw.get("col", Color(0, 0, 0, 0))
 	check(str(r706_pw.get("text", "")) == "11" and not str(r706_pw.get("text", "")).contains("原"),
 			"R706 秃鹰：力量只写当前值 11、不再「11（原 8）」（%s）" % str(r706_pw.get("text", "")))
-	check(r706_pw_col == UiTheme.DMG_NOW and r706_pw_col != UiTheme.STAT_POWER,
-			"R706 秃鹰：力量与卡库原型不同 → 红字（%s）" % r706_pw_col.to_html(false))
-	check(str(r706_hp.get("text", "")) == "16/16",
+	check(r706_pw_col == UiTheme.STAT_UP and r706_pw_col != UiTheme.DMG_NOW
+			and r706_pw_col != UiTheme.STAT_POWER,
+			"R711 秃鹰：力量**高于**原型 → 绿字（%s）" % r706_pw_col.to_html(false))
+	var r707_hseg: Array = r706_hp.get("segs", [])
+	var r707_hcur: Dictionary = r707_hseg[0] if r707_hseg.size() > 0 else {}
+	var r707_hmax: Dictionary = r707_hseg[1] if r707_hseg.size() > 1 else {}
+	check(str(r706_hp.get("text", "")) == "16/16" and r707_hseg.size() == 2,
 			"R706 秃鹰：生命写成长后的 16/16（%s）" % str(r706_hp.get("text", "")))
+	check(str(r707_hmax.get("text", "")) == "/16"
+			and r707_hmax.get("col") == UiTheme.STAT_UP
+			and r707_hcur.get("col") == UiTheme.STAT_HEALTH,
+			"R711 生命：绿只落在「最大生命」那截（当前 %s %s / 上限 %s %s）"
+			% [str(r707_hcur.get("text", "")),
+			str(r707_hcur.get("col", Color(0, 0, 0, 0)).to_html(false)),
+			str(r707_hmax.get("text", "")),
+			str(r707_hmax.get("col", Color(0, 0, 0, 0)).to_html(false))])
 	check(r706_repo.get_card(9206).power == 8 and r706_repo.get_card(9206).health == 10,
 			"R706 秃鹰：卡库原型没被成长 / 面板写脏（%d/%d）"
 			% [r706_repo.get_card(9206).power, r706_repo.get_card(9206).health])
@@ -62410,6 +62422,36 @@ func _init() -> void:
 	check(str(r706_ppw.get("text", "")) == str(r706_plain.power)
 			and r706_ppw_col == UiTheme.STAT_POWER,
 			"R706 没变过的卡：力量仍是原本的色与值（%s）" % str(r706_ppw.get("text", "")))
+	var r706_php: Dictionary = (((r706_bsc._info_blocks(r706_plain, r706_ppl)[0]
+			as Dictionary)["items"] as Array)[1])
+	var r707_phsegs: Array = r706_php.get("segs", [])
+	var r707_phmax: Dictionary = r707_phsegs[1] if r707_phsegs.size() > 1 else {}
+	check(r707_phmax.get("col") == UiTheme.STAT_HEALTH,
+			"R711 没变过的卡：生命上限保持生命色、不染绿（%s）"
+			% str(r707_phmax.get("col", Color(0, 0, 0, 0)).to_html(false)))
+	# ②b 比原型**低** → 红（店长口径「生命以外比原本低用红色的」）
+	var r707_low: CardData = CardData.from_dict(r706_repo.get_card(8056).to_dict())
+	var r707_lpl := r706_fs.place(r707_low, Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r707_lpl.atk_buff = -2
+	r707_lpl.night_owl_weak = 1      # 惧光：射程 / 移速各 -1
+	var r707_low_blocks: Array = r706_bsc._info_blocks(r707_low, r707_lpl)
+	var r707_lpw: Dictionary = ((r707_low_blocks[0] as Dictionary)["items"] as Array)[0]
+	var r707_lspd: Dictionary = ((r707_low_blocks[1] as Dictionary)["items"] as Array)[1]
+	# 惧光会把力量再减半 → 具体值随实现变，只锁「低于原型 + 红」
+	check(int(str(r707_lpw.get("text", "999"))) < r707_low.power
+			and r707_lpw.get("col") == UiTheme.STAT_DOWN,
+			"R711 力量低于原型 → 红字（%s，原型 %d）"
+			% [str(r707_lpw.get("text", "")), r707_low.power])
+	check(r707_lspd.get("col") == UiTheme.STAT_DOWN,
+			"R711 移速被场上削弱、低于原型 → 红字（%s）"
+			% str(r707_lspd.get("col", Color(0, 0, 0, 0)).to_html(false)))
+	# 哨兵：查不到原型（动态衍生物）→ 一律原色，绝不给来路不明的红绿
+	check(r706_bsc._stat_col(9, null, UiTheme.INK_600) == UiTheme.INK_600
+			and r706_bsc._stat_col(1, null, UiTheme.INK_600) == UiTheme.INK_600,
+			"R711 哨兵：没有原型基准 → 高了低了一律保持原色")
+	# 浅底可读：不能把卡面徽章那两级（深底专用）搬进左栏
+	check(UiTheme.STAT_UP != UiTheme.BADGE_UP and UiTheme.STAT_DOWN != UiTheme.BADGE_DOWN,
+			"R711 配色：左栏用 STAT_UP/STAT_DOWN，不复用深底徽章的 BADGE_UP/BADGE_DOWN")
 	# ③ 土元素：`3X` 要落到具体数（店长口径「显示为 30（3x10）这种形式」）
 	var r706_e := _new_engine([], 30, 30, -1, false)
 	r706_e.start_game(0)
