@@ -322,6 +322,15 @@ func _init() -> void:
 			and RunState.pending_reward_count() == 1,
 			"R695：持暗动力时卡牌奖励不被作废（必须当场拿的代价不变）")
 	RunState.relics.erase(RunState.DARK_POWER_RELIC_ID)
+	# 二选一 / 核心这类「结构性」条目也必须能被作废 —— 漏一种，「✦ 待领奖励 N」就永远不归零。
+	RunState.pending_rewards = []
+	RunState.queue_key_choice(6001)
+	RunState.pending_rewards.append({"kind": "core", "state": RunState.REWARD_PENDING})
+	check(RunState.forfeit_pending_rewards() == 2 and RunState.pending_reward_count() == 0,
+			"R695：大宝箱二选一 / 核心兑换同样会被作废（入口计数能归零）")
+	check(RunState.skipped_relics.has(6001),
+			"R695：二选一里的候选道具仍然登记「本局不再出」（走的是它自己的放弃口）")
+	RunState.skipped_relics.erase(6001)
 	RunState.pending_rewards = []
 	# 自动离开判据：R389 的「必须领完」已撤，只剩「暗动力扣着卡牌」这一条拦。
 	check(RewardPanel.can_auto_leave_after_reward(true, false),

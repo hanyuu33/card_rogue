@@ -39,8 +39,13 @@
   `map` 加 1 键（`MAP_REWARD_FORFEIT`）。四语同步（zh / en / ja / es），
   分域计数 reward 124→123、map 244→245、总数仍是 **794**（es 校验器的总数锁不动）。
   canonical 里 4 条失衡的 `glossary_reuse` 锚点（放弃这次删卡 / 放弃这次兑换 / 不可放弃 / 放弃这组）一并删除。
-- **测试改口径**：`test_traps` 44→**90**（满栏照掉 200 场 8~32 次、满栏入队→拒绝→丢弃→领进来全链、
-  作废幂等、暗动力不作废卡牌、`can_auto_leave` 三种组合、源码级锁「再无放弃按钮」+ × 命中顺序）；
+- **作废要覆盖每一类条目**：`skip_pending_reward` 末尾那句「统一置 skipped」以前只对「非 relic」生效，
+  二选一（`relic_or_key`）与核心兑换会顺带被置灰、但二选一的候选道具**没登记** `skipped_relics`。
+  现在二选一走它自己的放弃口 `skip_key_choice(idx)`，其余结构性条目走统一置灰 —— 否则漏一种，
+  地图入口那个「✦ 待领奖励 N」就永远不归零。
+- **测试改口径**：`test_traps` 44→**92**（满栏照掉 200 场 8~32 次、满栏入队→拒绝→丢弃→领进来全链、
+  作废幂等、暗动力不作废卡牌、二选一/核心也能作废、`can_auto_leave` 三种组合、
+  源码级锁「再无放弃按钮」+ × 命中顺序）；
   `test_engine` R389 三条判据改写成 R695 三条、R440 的「放弃这组→不可放弃」锁改成「已撤」；
   `test_smoke` 的 R389 用例改成「没领也走 + 暗动力不动」、R442 第 ② 步改成「按钮宽 0 且退出不改状态」。
   临时探针（已删）验过两段式：`20×20` 命中区、第一下不丢、第二下丢、上膛过期不误丢 7/7。
@@ -48,7 +53,7 @@
   `-- --screenshot --tooldemo --toolfull --shotframe 260`（满栏道具详情页的「换一个」栏位 +
   右下「工具栏已满」灰按钮 + 底部说明）。
 - **验证**：`python _verify.py` → assemble / mana 通过，engine **5963✓ 0✗**、reward **26✓ 0✗**、
-  bgm **39✓ 0✗**、traps **90✓ 0✗**、trapinput **36✓ 0✗**、smoke **72✓ 0✗**，`== _verify：全部通过 ==`；
+  bgm **39✓ 0✗**、traps **92✓ 0✗**、trapinput **36✓ 0✗**、smoke **72✓ 0✗**，`== _verify：全部通过 ==`；
   `validate_interface.py` → **794 条全过**（reward 123 / map 245）、`validate_spanish.py` **22113 checks**、
   `validate_glossary.py` 全过；跑前备份 `app_userdata/卡牌肉鸽`（22 文件，含 `profile.json` +
   `run_save.sav`），跑完逐文件还原 `RESTORE_VERIFY OK`。

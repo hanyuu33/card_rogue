@@ -2319,6 +2319,13 @@ static func skip_pending_reward(idx: int) -> bool:
 			skip_relic_drop()
 		elif not skipped_relics.has(rid):
 			skipped_relics.append(rid)
+	# R695：大宝箱二选一走它**自己的**放弃口 —— 那里会把候选奖励道具登记进
+	# `skipped_relics`（本局不再随机出来），下面那句「直接置 skipped」会漏掉这笔账。
+	if str(e.get("kind", "")) == "relic_or_key":
+		return skip_key_choice(idx)
+	# 其余（核心兑换 / 任何以后新增的结构性条目）—— 统一置为已处理：
+	# 作废窗口（`forfeit_pending_rewards`）必须能把每一条都清掉，
+	# 否则一条永远 pending 的条目会跟着整局走、地图入口那个「N」永远不归零。
 	e["state"] = REWARD_SKIPPED
 	return true
 
