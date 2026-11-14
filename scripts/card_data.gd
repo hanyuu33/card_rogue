@@ -164,6 +164,9 @@ var power: int = 0
 var health: int = 0
 var attack_range: int = 0
 var move_speed: int = 0
+## 元素族（R738 起「卡色」= 属性，不是色相）：火 / 冰 / 雷 / 毒 / 暗影 / 圣光 /
+## 自然 / 物理 / 水风。空串 = 没有明显属性 → 战斗特效按职业兜底
+##（`FxArt.family_of()`）。旧值「红/蓝/紫…」是色相词，R738 已全表迁移，别再写回来。
 var color: String = ""
 var traits: Array = []
 var effect_text: String = ""

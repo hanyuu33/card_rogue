@@ -39,8 +39,10 @@ FX675 = ["battle_mech_bolt", "battle_mech_omen", "battle_mech_gale",
 # R679：特效收尾五项 —— 中毒 tick / 灵魂收割 / 折射炮 / 隐藏能源 / 暗影之刃。
 FX679 = ["battle_r679_poison", "battle_r679_soul", "battle_r679_refract",
          "battle_r679_hidden", "battle_r679_blade"]
+# R738：卡色重设计后的目视验收 —— 新族（自然 / 雷）+「森林精魄打攻击」不再喷冰。
+FX738 = ["battle_skill_nature", "battle_skill_bolt", "battle_attack_forest"]
 REST = ["map", "shop", "shop_full", "shop_hover"]
-ALL = BATTLE + REST + FX + FX670 + FX675 + FX679
+ALL = BATTLE + REST + FX + FX670 + FX675 + FX679 + FX738
 
 
 def snap(root):
@@ -125,6 +127,8 @@ def main(argv):
         targets = FX679
     elif only == "r675":
         targets = FX675
+    elif only == "r738":
+        targets = FX738
     elif only == "rest":
         targets = REST
     else:

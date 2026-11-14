@@ -24,7 +24,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "白",
+      "color": "物理",
       "image": ""
     },
     {
@@ -49,7 +49,7 @@
       "effect_text": "登场后首个回合开始时：对所有敌方单位造成 4 点伤害。",
       "target_mode": "none",
       "actions": 2,
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -73,7 +73,7 @@
       ],
       "effect_text": "死亡：召唤一只龙裔。",
       "target_mode": "none",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -93,7 +93,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "冰",
       "image": ""
     },
     {
@@ -117,7 +117,7 @@
       ],
       "effect_text": "死亡：对敌方 HP 造成 5 点伤害。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "毒",
       "image": ""
     },
     {
@@ -144,7 +144,7 @@
       "effect_text": "死亡：召唤两只骷髅。",
       "target_mode": "none",
       "actions": 2,
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -164,7 +164,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -188,7 +188,7 @@
       ],
       "effect_text": "死亡：召唤一只骷髅。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -213,7 +213,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -237,7 +237,7 @@
       ],
       "effect_text": "死亡：对场上其它所有单位造成 8 点伤害，不分敌我。",
       "target_mode": "none",
-      "color": "黄",
+      "color": "火",
       "image": ""
     },
     {
@@ -262,7 +262,7 @@
       "effect_text": "受到的技能伤害最多为 3 点。",
       "target_mode": "none",
       "actions": 2,
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -284,7 +284,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -300,7 +300,7 @@
       ],
       "effect_text": "对一个目标造成 4 点伤害。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "",
       "image": ""
     },
     {
@@ -320,7 +320,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "白",
+      "color": "自然",
       "image": ""
     },
     {
@@ -341,7 +341,7 @@
       ],
       "effect_text": "主动发动：代替行动回复 6 点生命，之后横置。在场只能发动一次。",
       "target_mode": "none",
-      "color": "白",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "active", "effects": []},
       "lower_effect": {"effects": [{"type": "heal", "value": 6}], "note": "代替行动"}
@@ -363,7 +363,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "白",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -384,7 +384,7 @@
       ],
       "effect_text": "每击杀一个敌人，力量 +2。",
       "target_mode": "none",
-      "color": "白",
+      "color": "物理",
       "image": ""
     },
     {
@@ -405,7 +405,7 @@
       "effect_text": "使用时，将一张「幽深回响」加入抽牌库。回合开始时，对随机敌人造成 8 点伤害，重复 X 次。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 8,
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -425,7 +425,7 @@
       ],
       "effect_text": "对一个目标造成 17 点伤害。",
       "target_mode": "unit",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -445,7 +445,7 @@
       ],
       "effect_text": "将一个敌方单位击退 2 格。若因阻挡未能移动满 2 格，则对其造成 8 点伤害。",
       "target_mode": "unit",
-      "color": "黄",
+      "color": "物理",
       "image": ""
     },
     {
@@ -465,7 +465,7 @@
       ],
       "effect_text": "抽 2 张牌。自己效果卡区有至少 2 张卡时，回复 1 点费用。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "",
       "image": ""
     },
     {
@@ -485,7 +485,7 @@
       ],
       "effect_text": "对目标造成 11 点伤害，闪电沿相邻的单位一路传导，所有被连到的单位受同样的伤害（不分敌我）。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "雷",
       "image": ""
     },
     {
@@ -506,7 +506,7 @@
       ],
       "effect_text": "选一个格子，对该格及周身一圈的单位造成 20 点伤害（不分敌我）。",
       "target_mode": "cell",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -527,7 +527,7 @@
       ],
       "effect_text": "自己的回合开始时，若场上没有使魔鸭子，则召唤一只，并横置自己（本回合无法再行动）。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -548,7 +548,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "白",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -568,7 +568,7 @@
       ],
       "effect_text": "使一个单位下回合力量 -9。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -588,7 +588,7 @@
       ],
       "effect_text": "对一个单位造成 3 点伤害，并冰封它，使其下回合无法行动。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "冰",
       "image": ""
     },
     {
@@ -613,7 +613,7 @@
       "effect_text": "",
       "target_mode": "none",
       "actions": 2,
-      "color": "金",
+      "color": "物理",
       "image": ""
     },
     {
@@ -634,7 +634,7 @@
       "effect_text": "每回合开始时，所有友方单位力量 +1（每个单位最多累计 +4）。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "金",
+      "color": "物理",
       "image": ""
     },
     {
@@ -655,7 +655,7 @@
       ],
       "effect_text": "回合开始时：对一个随机敌方单位造成 5 点伤害；若场上没有敌方单位，则改为伤害敌方 HP。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -676,7 +676,7 @@
       "effect_text": "每 3 个回合召唤一只鸭子骑士。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 3,
-      "color": "白",
+      "color": "物理",
       "image": ""
     },
     {
@@ -697,7 +697,7 @@
       "effect_text": "受到伤害减少 1 点，但至少仍要受到 1 点。每回合结束时回复 2 点生命。",
       "target_mode": "none",
       "regen_per_turn": 2,
-      "color": "白",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "passive": {"text": "受到伤害减少 1 点，但至少仍要受到 1 点。", "reduce": 1, "source_trait": "犀牛"}, "effects": []},
       "lower_effect": {"effects": [{"type": "heal", "value": 2}]}
@@ -720,7 +720,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "白",
+      "color": "物理",
       "image": ""
     },
     {
@@ -741,7 +741,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "白",
+      "color": "物理",
       "image": ""
     },
     {
@@ -762,7 +762,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -783,7 +783,7 @@
       ],
       "effect_text": "死亡：对周身一圈各造成 10 点伤害（不分敌我）。",
       "target_mode": "none",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -806,7 +806,7 @@
       "effect_text": "自己的回合开始时，为伤势最重的己方单位恢复 5 点生命。每回合开始时，力量 +1。",
       "target_mode": "none",
       "value": 5,
-      "color": "白",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -831,7 +831,7 @@
       ],
       "effect_text": "我方回合开始时若存活，会变成 3 攻 15 血的宠物鸭，代替你承受生命伤害。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "自然",
       "image": ""
     },
     {
@@ -852,7 +852,7 @@
       ],
       "effect_text": "上场需额外丢弃 4 张手牌。",
       "target_mode": "none",
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -873,7 +873,7 @@
       "effect_text": "己方第 3、5、7 个回合开始时，使一个现存生命最高且没有双动的己方单位获得双动（本局；原本就能行动两次的单位不会被选中）。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 2,
-      "color": "金",
+      "color": "冰",
       "image": ""
     },
     {
@@ -895,7 +895,7 @@
       "effect_text": "自己回合开始时召唤陶瓷鸭：场上陶瓷鸭少于3只时，在相邻的空格上各召唤一只；达到3只时，改为在相邻的空格中随机选1个只召唤1只，并给所有陶瓷鸭+1血量。新烧出的生命值每过2回合+1。",
       "target_mode": "none",
       "value": 9026,
-      "color": "金",
+      "color": "火",
       "image": ""
     },
     {
@@ -916,7 +916,7 @@
       ],
       "effect_text": "它的生命值每过2回合+1。",
       "target_mode": "none",
-      "color": "白",
+      "color": "物理",
       "image": ""
     },
     {
@@ -938,7 +938,7 @@
       "effect_text": "每回合开始时，力量 +1。**奇数回合**时，移动速度 -1、攻击距离 -1。",
       "target_mode": "none",
       "value": 1,
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -958,7 +958,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -978,7 +978,7 @@
       ],
       "effect_text": "由亡灵领主或骷髅兵的死亡召唤。",
       "target_mode": "none",
-      "color": "白",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -1002,7 +1002,7 @@
       "effect_text": "",
       "target_mode": "none",
       "actions": 2,
-      "color": "灰",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1023,7 +1023,7 @@
       ],
       "effect_text": "使用后：手牌增加一张此卡的「短暂复制」。",
       "target_mode": "none",
-      "color": "白",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"effects": [{"type": "add_copy", "value": 1}]}
@@ -1045,7 +1045,7 @@
       ],
       "effect_text": "被破坏后返回手牌，并变为 1 费。",
       "target_mode": "none",
-      "color": "黄",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1065,7 +1065,7 @@
       ],
       "effect_text": "使用后从卡组随机抽取一张技能牌，该卡本回合费用 -1。",
       "target_mode": "none",
-      "color": "红",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"effects": [{"type": "draw_random_skill", "value": 1}]}
@@ -1087,7 +1087,7 @@
       ],
       "effect_text": "对一个目标造成 14 点伤害；我方场上每有一个盟友，这张卡的费用 -1。",
       "target_mode": "unit",
-      "color": "橙",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1108,7 +1108,7 @@
       ],
       "effect_text": "我方所有盟友造成的伤害 +X；从手牌使用盟友时，该盟友获得 +2X 生命。X 为本卡在效果区的张数。",
       "target_mode": "none",
-      "color": "棕",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1128,7 +1128,7 @@
       ],
       "effect_text": "指定一个盟友：我方生命受到伤害时，改由它承受。同一单位不能重复获得该效果。死亡：抽一张卡。",
       "target_mode": "unit",
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1148,7 +1148,7 @@
       ],
       "effect_text": "自己弃牌区每有一个盟友，这张卡费用 -1。使用时自己场上其他盟友力量 +2。",
       "target_mode": "none",
-      "color": "棕",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"effects": [{"type": "buff_allies_atk", "value": 2}]}
@@ -1170,7 +1170,7 @@
       ],
       "effect_text": "使用后选择弃牌堆中一张盟友回到手卡，乌鸦除外。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "use_after", "effects": []},
       "lower_effect": {"effects": [{"type": "recall_ally_from_discard"}]}
@@ -1192,7 +1192,7 @@
       ],
       "effect_text": "使用时，自己场上每有一个其他盟友，获得 +2 力量。",
       "target_mode": "none",
-      "color": "棕",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"effects": [{"type": "buff_per_ally", "value": 2}]}
@@ -1214,7 +1214,7 @@
       ],
       "effect_text": "这个回合，手卡中盟友的费用 -1。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -1232,7 +1232,7 @@
       "traits": [],
       "effect_text": "指定一个己方盟友：本回合其力量 +8。",
       "target_mode": "unit",
-      "color": "红",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1250,7 +1250,7 @@
       "traits": [],
       "effect_text": "在一条横行上生成三面冰墙；冰墙会在我方回合开始时融化。",
       "target_mode": "cell",
-      "color": "蓝",
+      "color": "冰",
       "image": ""
     },
     {
@@ -1268,7 +1268,7 @@
       "traits": [],
       "effect_text": "冰墙术生成的墙。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "冰",
       "image": ""
     },
     {
@@ -1289,7 +1289,7 @@
       "effect_text": "每个己方盟友进入战场时，或使用效果卡时，随机对一个敌人造成 4 点伤害。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 4,
-      "color": "绿",
+      "color": "水风",
       "image": ""
     },
     {
@@ -1309,7 +1309,7 @@
       ],
       "effect_text": "使用后从抽牌库将一张费用最低的盟友加入手卡。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use_after", "effects": []},
       "lower_effect": {"effects": [{"type": "fetch_cheapest_ally"}]}
@@ -1334,7 +1334,7 @@
       "effect_text": "每回合开始时，把场上的发条鸭补齐到 2 只。",
       "target_mode": "none",
       "value": 2,
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1355,7 +1355,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1376,7 +1376,7 @@
       "effect_text": "每回合开始时，所有友方单位力量 +2（本局）。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 2,
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1399,7 +1399,7 @@
       ],
       "effect_text": "造成 11 点伤害。从弃牌堆选择 2 张卡加入手卡。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "水风",
       "image": ""
     },
     {
@@ -1417,7 +1417,7 @@
       "traits": [],
       "effect_text": "回复 1 点费用。自己场上每有一个盟友，额外回复 1 点费用。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1435,7 +1435,7 @@
       "traits": [],
       "effect_text": "使用后，本回合使用下一个盟友时，费用 -1。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use_after", "effects": []},
       "lower_effect": {"effects": [{"type": "next_ally_discount", "value": 1}]}
@@ -1455,7 +1455,7 @@
       "traits": [],
       "effect_text": "场上所有自己盟友获得+3生命。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1473,7 +1473,7 @@
       "traits": [],
       "effect_text": "对一个敌方单位造成 4 点伤害，重复 5 次。",
       "target_mode": "unit",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -1491,7 +1491,7 @@
       "traits": [],
       "effect_text": "选择一个己方盟友，使其可以攻击两次（持续到它离场），已拥有同类效果时无效。自己场上有 3 个或以上盟友时，费用 -2。",
       "target_mode": "unit",
-      "color": "红",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1512,7 +1512,7 @@
       "effect_text": "每回合前 X 次使用效果牌时，将其一张复制加入抽牌库，并抽一张卡。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 1,
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -1533,7 +1533,7 @@
       "effect_text": "每回合前 X 次使用效果牌后，随机一个敌人力量 -10，持续到你下个回合开始。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 10,
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -1554,7 +1554,7 @@
       "effect_text": "使用效果卡后，回复 X 点费用。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 1,
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -1575,7 +1575,7 @@
       "effect_text": "回合开始时，抽 X 张卡；这样抽到的效果卡费用 -1。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 1,
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -1596,7 +1596,7 @@
       "effect_text": "本回合受到的前 X 次伤害变为 1，X 为这张卡发动前你本回合使用过的效果卡数量。每回合只有第一张生效。",
       "target_mode": "none",
       "value": 0,
-      "color": "蓝",
+      "color": "水风",
       "image": ""
     },
     {
@@ -1617,7 +1617,7 @@
       "effect_text": "回合开始时，随机将 X 张效果卡加入你的手卡。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -1638,7 +1638,7 @@
       "effect_text": "每当你使用一张效果卡，将 X 张乌鸦加入你的手卡，它们本回合费用为 0。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -1659,7 +1659,7 @@
       "effect_text": "每次使用效果卡时，对所有敌人造成 4 点伤害，重复 X 次。使用此卡本身不会触发。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 4,
-      "color": "绿",
+      "color": "水风",
       "image": ""
     },
     {
@@ -1680,7 +1680,7 @@
       "effect_text": "每回合前 X 次使用效果卡时，随机让一个离己方 HP 最近的敌人退后 2 格。使用此卡本身不会触发。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 2,
-      "color": "绿",
+      "color": "水风",
       "image": ""
     },
     {
@@ -1701,7 +1701,7 @@
       "effect_text": "战斗结束后，回复自己 8 点生命。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 8,
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1722,7 +1722,7 @@
       "effect_text": "己方 HP 接下来受到的 X 次伤害，若达到 2 点或以上则变为 1。X 为本卡在效果区的张数 ×2。",
       "target_mode": "none",
       "value": 2,
-      "color": "绿",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1743,7 +1743,7 @@
       "effect_text": "自己受到的 HP 伤害由这张卡代替承受。使用时，自己场上每有一张效果卡，获得 +1 力量 +2 生命，最多 5 次。",
       "target_mode": "none",
       "value": 5,
-      "color": "白",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1764,7 +1764,7 @@
       "effect_text": "自己场上每有一张效果卡，这张卡费用 -1。使用时，将一张「漩涡」加入手卡。",
       "target_mode": "none",
       "value": 0,
-      "color": "白",
+      "color": "水风",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"effects": [{"type": "add_card", "card_id": 9186, "value": 1}]}
@@ -1787,7 +1787,7 @@
       "effect_text": "将一张「鸭蛋」加入你的手卡。每回合前 X 次使用效果卡时，将一张「鸭蛋」加入你的手卡。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -1809,7 +1809,7 @@
       "effect_text": "**接通**的己方单位攻击时，可以用与它接通的其他己方单位的位置发起攻击。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1830,7 +1830,7 @@
       "effect_text": "在选定位置召唤一道 0 点力量、12 点生命的铁栅栏。它替你的 HP 承受伤害，只要它还留在场上，你的 HP 就不会受到伤害。你本回合使用的每张效果卡使这张卡费用 -1。",
       "target_mode": "cell",
       "value": 0,
-      "color": "蓝",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1852,7 +1852,7 @@
       ],
       "effect_text": "替你的 HP 承受伤害。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -1872,7 +1872,7 @@
       ],
       "effect_text": "使用时，将一张随机效果卡从卡组加入手卡。",
       "target_mode": "none",
-      "color": "白",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"effects": [{"type": "add_random_effect", "value": 1, "from": "deck"}]}
@@ -1895,7 +1895,7 @@
       "effect_text": "使用后，你使用的下一张效果卡费用减少 2。",
       "target_mode": "none",
       "value": 2,
-      "color": "白",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "use_after", "effects": []},
       "lower_effect": {"effects": [{"type": "next_effect_discount", "value": 2}]}
@@ -1918,7 +1918,7 @@
       ],
       "effect_text": "在场时，伤害类技能原本费用每有 1 点，增加 1 点伤害。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -1938,7 +1938,7 @@
       ],
       "effect_text": "每回合使用的第一张技能卡费用 -1、伤害 +1。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -1958,7 +1958,7 @@
       ],
       "effect_text": "回合结束时手卡的这张卡不会丢弃。对十字范围造成 40 点伤害，不分敌我。技能每次造成伤害，这张卡费用本局 -1。",
       "target_mode": "cell",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -1976,7 +1976,7 @@
       "traits": ["传承"],
       "effect_text": "每回合前 X 个死亡并送去弃牌区的己方盟友回到手卡，费用 -1。场上每有 1 个己方盟友，手卡中的这张卡费用 -1。X 为本卡在效果区的张数。",
       "target_mode": "none",
-      "color": "白",
+      "color": "",
       "image": ""
     },
     {
@@ -1996,7 +1996,7 @@
       ],
       "effect_text": "在己方半场召唤一个魔像。每回合第一次使用技能卡时，手卡的这张卡本回合费用 -1。",
       "target_mode": "cell",
-      "color": "蓝",
+      "color": "物理",
       "image": ""
     },
     {
@@ -2021,7 +2021,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -2041,7 +2041,7 @@
       ],
       "effect_text": "这张卡在场时，技能牌费用 -1；本次对战中每用技能对敌造成伤害，此卡费用 -1。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "水风",
       "image": ""
     },
     {
@@ -2060,7 +2060,7 @@
       "effect_text": "对随机敌人造成 8 点伤害，重复 X 次，X 为你消耗的全部费用；每次的目标随机。没有费用时也能使用（此时 X 为 0）。",
       "target_mode": "none",
       "x_cost": true,
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -2080,7 +2080,7 @@
       ],
       "effect_text": "对一横行的所有单位造成 14 点伤害，不分敌我。直到下次自己回合开始，经过该横行的单位都会受到 7 点伤害，同一个单位最多受到 14 点伤害。",
       "target_mode": "cell",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -2098,7 +2098,7 @@
       "traits": [],
       "effect_text": "你使用的下一张技能会生效 2 次。",
       "target_mode": "none",
-      "color": "金",
+      "color": "",
       "image": ""
     },
     {
@@ -2115,7 +2115,7 @@
       "class": "暗影刺客",
       "traits": [],
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": "",
       "effect_text": "对一个目标造成 2+X 点伤害，X 为本回合你已使用的卡牌数。"
     },
@@ -2134,7 +2134,7 @@
       "traits": [],
       "effect_text": "对目标造成 4 点伤害，随机将一张费用为 0 的技能卡从卡组加入手卡。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -2152,7 +2152,7 @@
       "traits": [],
       "effect_text": "对目标造成 3 点伤害，目标本回合失去 3 点力量。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -2170,7 +2170,7 @@
       "traits": [],
       "effect_text": "抽 X 张牌，X 为本回合你已使用的卡牌数，这些牌本回合结束不会丢弃。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -2188,7 +2188,7 @@
       "traits": [],
       "effect_text": "打出时，若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡。",
       "target_mode": "none",
-      "color": "白",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2206,7 +2206,7 @@
       "traits": [],
       "effect_text": "使用时，手卡中所有技能牌本回合费用 -1；手卡每有一张费用为 0 的技能卡，这张卡获得 +3 生命。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"effects": [{"type": "hand_skill_discount", "value": 1}, {"type": "hp_per_zero_skill", "value": 3}]}
@@ -2226,7 +2226,7 @@
       "traits": [],
       "effect_text": "造成 5 点伤害，若目标处于满血状态则改为造成 12 点伤害。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -2244,7 +2244,7 @@
       "traits": [],
       "effect_text": "每使用一张卡，随机对一个敌人造成 2 点伤害。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "水风",
       "image": ""
     },
     {
@@ -2262,7 +2262,7 @@
       "traits": [],
       "effect_text": "回合开始时多抽 1 张卡，如果这张卡费用为 0，则再抽 1 张。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -2280,7 +2280,7 @@
       "traits": [],
       "effect_text": "自己回合开始时，这张卡破坏。这张卡破坏时，从卡组将一张随机技能卡加入手卡。",
       "target_mode": "none",
-      "color": "白",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2298,7 +2298,7 @@
       "traits": [],
       "effect_text": "对目标造成 4 点伤害。若这回合已经使用过 2 张其他卡，抽 1 张卡；若这回合已经使用过 4 张其他卡，则改为造成 10 点伤害。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -2316,7 +2316,7 @@
       "traits": [],
       "effect_text": "抽 2 张卡，如果其中有费用为 0 的卡，则再抽 1 张卡。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -2334,7 +2334,7 @@
       "traits": [],
       "effect_text": "对目标造成 10 点伤害，从弃牌区将所有费用为 0 的卡返回手卡。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "水风",
       "image": ""
     },
     {
@@ -2352,7 +2352,7 @@
       "traits": [],
       "effect_text": "在场时每使用一张卡，这张卡力量 +1，攻击或离场后重置。",
       "target_mode": "none",
-      "color": "白",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2370,7 +2370,7 @@
       "traits": [],
       "effect_text": "对十字形区域的敌方单位造成 17 点伤害。本回合使用 4 张以上其他卡后才能使用。",
       "target_mode": "cell",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -2391,7 +2391,7 @@
       "traits": [],
       "effect_text": "选一个效果：从弃牌区选一张费用为 0 的技能卡加入手卡；或从卡组随机将一张费用不为 0 的技能卡加入手卡。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -2412,7 +2412,7 @@
       "traits": [],
       "effect_text": "丢弃所有手卡，之后从弃牌区把**所有 0 费卡和 1 费卡**按弃牌区顺序加入手卡，最多填到手牌上限。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -2430,7 +2430,7 @@
       "traits": [],
       "effect_text": "回合开始时，将一张荧光草加入你的手卡。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -2453,7 +2453,7 @@
       ],
       "effect_text": "在场时自己的技能伤害 +1。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -2471,7 +2471,7 @@
       "traits": [],
       "effect_text": "选一个盟友移动到任意一个空的格子，且它本回合力量 +4。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2489,7 +2489,7 @@
       "traits": [],
       "effect_text": "自己的回合中每次自己没有手卡时，抽 1 张卡，这样抽到的 0 费卡本回合费用 +1。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -2507,7 +2507,7 @@
       "traits": [],
       "effect_text": "对所有敌人造成 2 点伤害，所有敌人本回合失去 1 点力量。使用后返回手卡，费用最低为 1。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2525,7 +2525,7 @@
       "traits": [],
       "effect_text": "这个回合，所有友方单位获得嘲讽。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -2543,7 +2543,7 @@
       "traits": [],
       "effect_text": "造成 6 点伤害，若这张卡是你手卡中仅剩的一张则改为造成 22 点伤害。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -2564,7 +2564,7 @@
       ],
       "effect_text": "入场时抽一张卡。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "自然",
       "image": "",
       "upper_effect": {"trigger": "enter", "effects": []},
       "lower_effect": {"effects": [{"type": "draw", "value": 1}]}
@@ -2586,7 +2586,7 @@
       ],
       "effect_text": "自己回合结束时，剩余费用每有 1 点，这张卡获得 1 点力量和 2 点生命。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "effects": []},
       "lower_effect": {"effects": [{"type": "buff_per_energy", "atk": 1, "hp": 2}]}
@@ -2609,7 +2609,7 @@
       ],
       "effect_text": "自己回合结束时，剩余费用每有 1 点，这张卡获得 1 点力量和 3 点生命。",
       "target_mode": "none",
-      "color": "红",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "effects": []},
       "lower_effect": {"effects": [{"type": "buff_per_energy", "atk": 1, "hp": 3}]}
@@ -2631,7 +2631,7 @@
       ],
       "effect_text": "自己回合结束时，剩余费用每 2 点，下个回合开始时获得 1 点额外费用。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -2651,7 +2651,7 @@
       ],
       "effect_text": "自己回合结束时，对随机一个敌人造成 X 点伤害，X 为你本回合已使用的费用数。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2671,7 +2671,7 @@
       ],
       "effect_text": "使用后，你在本回合结束时获得 5 点费用（优先结算）。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
       "lower_effect": {"note": "在本回合结束时", "effects": [{"type": "energy", "value": 5}]}
@@ -2693,7 +2693,7 @@
       ],
       "effect_text": "自己回合结束时，剩余费用每 3 点，将随机一个敌人击退 2 格。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2713,7 +2713,7 @@
       ],
       "effect_text": "自己回合结束时，剩余费用每有 1 点，对所有敌人造成 2 点伤害。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2733,7 +2733,7 @@
       ],
       "effect_text": "攻击时，回复 1 点费用。",
       "target_mode": "none",
-      "color": "白",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "attack", "effects": []},
       "lower_effect": {"effects": [{"type": "energy", "value": 1}]}
@@ -2756,7 +2756,7 @@
       ],
       "effect_text": "攻击时，回复 1 点费用。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "attack", "effects": []},
       "lower_effect": {"effects": [{"type": "energy", "value": 1}]}
@@ -2778,7 +2778,7 @@
       ],
       "effect_text": "每回合抽牌之后，你强制从手牌中选择 1 张弃掉（不能不选），然后获得 2 点费用。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2799,7 +2799,7 @@
       "effect_text": "每回合开始时，所有使魔鸭子力量 +1（本局）。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2819,7 +2819,7 @@
       ],
       "effect_text": "入场时：回复 4 点费用。本回合手卡中所有卡费用 +4。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "enter", "effects": []},
       "lower_effect": {"effects": [{"type": "energy", "value": 4}, {"type": "hand_cost_raise", "value": 4}]}
@@ -2843,7 +2843,7 @@
       ],
       "effect_text": "初始沉睡 2：不会行动。每过一个自己的回合沉睡 -1，每次受到伤害也 -1；沉睡归零后立刻恢复行动。醒着时每次受伤力量 +1（本局）。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2865,7 +2865,7 @@
       "effect_text": "每回合开始时，所有使魔鸭子力量 +1（本局）；每 2 回合在随机的空格上召唤一只使魔鸭子（玩家后排除外）。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2887,7 +2887,7 @@
       ],
       "effect_text": "不会沉睡，开局即可行动。每受到 1 点伤害，本回合力量 +1（可叠加，回合结束清零），并且力量本局 +1。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -2909,7 +2909,7 @@
       ],
       "effect_text": "回合结束时不会被丢弃。被任何「改造」时，额外获得 +1 生命。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "圣光",
       "image": "",
       "upgrade_hp_bonus": 1
     },
@@ -2931,7 +2931,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "灰",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -2948,7 +2948,7 @@
       ],
       "effect_text": "改造一个己方盟友或工事，使其力量 +2、生命 +10。若改造的是「素体」，它还会额外获得 +1 生命。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -2965,7 +2965,7 @@
       ],
       "effect_text": "场地效果。站在此格的单位，在**自己回合结束时**回复 3 点生命（敌我双方都算）。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "水风",
       "field_heal": 3,
       "image": ""
     },
@@ -2987,7 +2987,7 @@
       ],
       "effect_text": "被改造时，获得 +2 力量、+2 生命。",
       "target_mode": "none",
-      "color": "白",
+      "color": "物理",
       "image": "",
       "upgrade_atk_bonus": 2,
       "upgrade_hp_bonus": 2,
@@ -3008,7 +3008,7 @@
       ],
       "effect_text": "从抽牌堆里随机选一张**没有「一回合行动两次」**的盟友，给它添加「一回合行动两次」。抽牌堆里没有这样的盟友时，效果落空。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "雷",
       "image": ""
     },
     {
@@ -3025,7 +3025,7 @@
       ],
       "effect_text": "**手牌和卡组**里所有**盟友和工事**获得改造：生命 +3。两处都没有盟友 / 工事时效果落空。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3047,7 +3047,7 @@
       ],
       "effect_text": "每拥有一层改造，它攻击范围内的敌人受到的伤害 +1。任何来源的伤害都算。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3064,7 +3064,7 @@
       ],
       "effect_text": "从抽牌堆里随机改造一张**还没有能量屏障**的盟友或工事，使它**初次受到的伤害变为 0**。然后抽 3 张卡。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3085,7 +3085,7 @@
       ],
       "effect_text": "每拥有一层改造，这张卡获得 **+3 生命**。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3103,7 +3103,7 @@
       ],
       "effect_text": "改造**场上的一个己方盟友**，使它获得 +2 最大生命，并且**每回合结束时回复 4 点生命**。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3122,7 +3122,7 @@
       "effect_text": "场地效果。站在此格的**己方盟友或工事**，在**自己回合结束时**回复 4 点生命。",
       "field_heal": 4,
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3141,7 +3141,7 @@
       ],
       "effect_text": "场地效果。站在此格的**己方盟友或工事**，在**自己回合结束时**获得一次「改造」：力量 +1、生命 +1。**每回合都结算、可无限叠加**。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -3162,7 +3162,7 @@
       ],
       "effect_text": "**每回合一次**：这张卡被「改造」时，将一张「升级」加入你的手牌，那张牌在手牌里**费用为 0**。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": "",
       "upper_effect": {"trigger": "upgraded", "effects": []},
       "lower_effect": {"effects": [{"type": "add_card", "card_id": 8027, "value": 1}]}
@@ -3181,7 +3181,7 @@
       ],
       "effect_text": "选择**手牌里**的一张盟友或工事，给它施加「改造」：**费用 +1、力量 +3、生命 +6**。",
       "target_mode": "hand_unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3198,7 +3198,7 @@
       ],
       "effect_text": "**手牌里所有**盟友和工事获得「改造」：**力量 +1、生命 +4，费用不变**，**然后抽 1 张卡**。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3220,7 +3220,7 @@
       "affixes": [],
       "effect_text": "**接通**的我方盟友和工事，在**自己回合结束时**回复 2 点生命。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "雷",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "effects": []},
       "lower_effect": {"effects": [{"type": "heal", "value": 2}]}
@@ -3245,7 +3245,7 @@
       "affixes": [],
       "effect_text": "**接通**的我方单位**受到伤害时**，改为由这张卡来承受。**溢出的伤害不再结算**。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3268,7 +3268,7 @@
       "affixes": [],
       "effect_text": "与这张卡**接通**的我方盟友**获得「改造」时**，这张卡也获得**相同的改造**。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3285,7 +3285,7 @@
       ],
       "effect_text": "使**场上的一个己方盟友**获得改造：生命 +4、受到的伤害 -1，但每次至少仍受 1 点。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3307,7 +3307,7 @@
       "effect_text": "**回合开始时**，随机使**手牌**里的一张盟友或工事获得改造：力量 +1、生命 +3。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 0,
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3327,7 +3327,7 @@
       ],
       "effect_text": "与这张卡**接通**的己方**素体以外**的盟友或工事被**破坏**时：这张卡的力量增加等量数值，并将一张「素体」加入你的手牌。",
       "target_mode": "none",
-      "color": "橙",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3351,7 +3351,7 @@
       ],
       "effect_text": "**嘲讽**。**使用时**：破坏所有与这张卡**接通**的**己方**卡，并将那些卡的力量与生命加到这张卡上。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "火",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": [], "extra_affixes": ["嘲讽"]},
       "lower_effect": {"effects": [{"type": "absorb_linked"}]}
@@ -3370,7 +3370,7 @@
       ],
       "effect_text": "将两张「素体」加入你的抽牌库，那两张卡获得改造：力量 +1、生命 +4。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3387,7 +3387,7 @@
       ],
       "effect_text": "指定自己一个己方盟友或工事，将其**破坏**，回复 3 点费用，并将一张「素体」加入手卡。若目标**被改造**，则额外获得一张「升级」。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3411,7 +3411,7 @@
       ],
       "effect_text": "**超负荷**。",
       "target_mode": "none",
-      "color": "橙",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3427,7 +3427,7 @@
       ],
       "effect_text": "指定一个我方单位，使其回复至满生命。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3452,7 +3452,7 @@
       ],
       "effect_text": "**嘲讽**。**超负荷**。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3472,7 +3472,7 @@
       ],
       "effect_text": "指定一个我方盟友或工事，使其获得改造：超负荷。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "火",
       "image": ""
     },
     {
@@ -3488,7 +3488,7 @@
       ],
       "effect_text": "将场上一张友方单位返回手卡，费用变为0。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3512,7 +3512,7 @@
       ],
       "effect_text": "超负荷；嘲讽。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3535,7 +3535,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3557,7 +3557,7 @@
       "affixes": [],
       "effect_text": "每次获得改造时，攻击距离+1。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": "",
       "upper_effect": {"trigger": "upgraded", "effects": []},
       "lower_effect": {"effects": [{"type": "range", "value": 1}]}
@@ -3582,7 +3582,7 @@
       ],
       "effect_text": "**嘲讽**。每拥有一层改造，这张卡受到的伤害 -1，但每次至少仍受 1 点。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3604,7 +3604,7 @@
       "affixes": [],
       "effect_text": "每次获得改造时，抽一张卡。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": "",
       "upper_effect": {"trigger": "upgraded", "effects": []},
       "lower_effect": {"effects": [{"type": "draw", "value": 1}]}
@@ -3629,7 +3629,7 @@
       ],
       "effect_text": "嘲讽。入场时，本次对战中你每使用过一张「聚能炮击」，本卡生命 +3。本回合，你手卡里的「聚能炮击」费用为 0。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3645,7 +3645,7 @@
       ],
       "effect_text": "指定战场上的**两个单位**，**交换它们的位置**（敌我皆可，两个单位的状态也跟着换）。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3664,7 +3664,7 @@
       "affixes": ["次元"],
       "effect_text": "从全职业卡池组合一张卡。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -3683,7 +3683,7 @@
       "affixes": ["次元"],
       "effect_text": "从全职业卡池组合一张卡。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -3702,7 +3702,7 @@
       "affixes": ["次元"],
       "effect_text": "从全职业卡池组合一张卡。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3719,7 +3719,7 @@
       ],
       "effect_text": "将**手牌里**的一张卡**变成**「素体」，并使「素体」获得改造：**生命 +8**",
       "target_mode": "hand_any",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3740,7 +3740,7 @@
       ],
       "effect_text": "运送委托的货物：替你的 HP 承受伤害。被破坏时、以及**交付完成后**，都会从卡组中删除。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -3759,7 +3759,7 @@
       "affixes": [],
       "effect_text": "选卡组一张卡，使其**消失**。**下个回合开始时多抽一张卡**。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -3781,7 +3781,7 @@
       "affixes": [],
       "effect_text": "回合开始时，抽一张卡。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "turn_start", "effects": []},
       "lower_effect": {"effects": [{"type": "draw", "value": 1}]}
@@ -3800,7 +3800,7 @@
       ],
       "effect_text": "选择**手牌里**的一张盟友，给它施加「改造」：**费用 -1、移动速度 +1**。",
       "target_mode": "hand_unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3817,7 +3817,7 @@
       ],
       "effect_text": "使**场上的一个己方盟友**获得改造：共享护盾 —— 之后**我方 HP 要受到伤害时，改由它承受**",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3832,7 +3832,7 @@
       "affixes": [],
       "effect_text": "回合开始时，选 X 张手卡变成随机**被改造时有额外效果**的卡牌，并使其获得改造：生命 +2。X 为本卡在效果区的张数。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3851,7 +3851,7 @@
       ],
       "effect_text": "将手牌里**其他所有卡**变成「聚能炮击」。这些卡本回合费用为 0。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "火",
       "image": ""
     },
     {
@@ -3872,7 +3872,7 @@
       "affixes": [],
       "effect_text": "在场时，**每拥有一层改造，所有敌人力量 -1**。若本卡在**战斗内**被**随机变化**出来，费用 -2。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -3893,7 +3893,7 @@
       "affixes": [],
       "effect_text": "入场时，本次对战中你每使用过一张「聚能炮击」，本卡力量 +1。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "火",
       "image": ""
     },
     {
@@ -3915,7 +3915,7 @@
       "affixes": [],
       "effect_text": "入场时，选一张手卡变成「聚能炮击」。若本卡在**战斗内**被**随机变化**出来，力量 +2、生命 +2。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "火",
       "image": ""
     },
     {
@@ -3937,7 +3937,7 @@
       "affixes": [],
       "effect_text": "**每回合一次**：你使用「聚能炮击」时，该炮击伤害 +7，且因此抽到的那张卡费用 -1。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "火",
       "image": ""
     },
     {
@@ -3958,7 +3958,7 @@
       "affixes": [],
       "effect_text": "入场时，手卡中的盟友获得改造：生命 +4。",
       "target_mode": "none",
-      "color": "白",
+      "color": "圣光",
       "image": "",
       "upper_effect": {"trigger": "enter", "effects": []},
       "lower_effect": {"effects": [{"type": "hand_upgrade", "value": 4}]}
@@ -3981,7 +3981,7 @@
       "affixes": [],
       "effect_text": "你每**变化**一张卡，回复**2**点费用。变化：战斗内将一张卡变成另一张卡。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4000,7 +4000,7 @@
       "affixes": [],
       "effect_text": "将手卡所有卡变成随机卡。其中变化出的**盟友卡**本回合费用 -1。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4019,7 +4019,7 @@
       "affixes": [],
       "effect_text": "造成**9**点伤害，抽一张卡。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -4041,7 +4041,7 @@
       "effect_text": "每过 3 回合，随机从量产型俄倪厄 / 量产型赫利俄斯中召唤一个到己方半场。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 3,
-      "color": "金",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4063,7 +4063,7 @@
       "effect_text": "回合开始时，选 X 张手卡消失，随机将 X 张卡牌加入你的手卡。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -4085,7 +4085,7 @@
       "effect_text": "打出无效果。在手卡时，所有技能卡费用 +1。",
       "target_mode": "none",
       "value": 0,
-      "color": "灰",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4107,7 +4107,7 @@
       "effect_text": "使用时，己方所有盟友获得「次元」与「死亡」—— 它们被破坏时，将一张种子加入你的手卡。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -4130,7 +4130,7 @@
       "effect_text": "回合开始时，使一个「拾荒者」以外的友方单位获得改造：力量 +3、生命 +5。",
       "target_mode": "none",
       "value": 0,
-      "color": "金",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4153,7 +4153,7 @@
       "effect_text": "每次被改造时，对所有敌方单位造成 1 点伤害。",
       "target_mode": "none",
       "value": 0,
-      "color": "金",
+      "color": "雷",
       "image": ""
     },
     {
@@ -4177,7 +4177,7 @@
       "effect_text": "打出无效果。",
       "target_mode": "none",
       "value": 0,
-      "color": "灰",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4198,7 +4198,7 @@
       ],
       "effect_text": "将手卡一张卡变成「聚能炮击」。",
       "target_mode": "hand_any",
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -4219,7 +4219,7 @@
       "affixes": [],
       "effect_text": "自己回合结束时，回复 X 点生命值，X 为自己剩余费用（每 1 点剩余费用回复 1 点生命，不超过生命上限）。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "effects": []},
       "lower_effect": {"effects": [{"type": "heal_per_energy", "value": 1}]}
@@ -4240,7 +4240,7 @@
       "affixes": [],
       "effect_text": "对目标造成 4 点伤害，然后抽 1 张卡。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4259,7 +4259,7 @@
       "affixes": [],
       "effect_text": "对目标造成 8 点伤害。若**含这张卡**本回合已经使用了 3 张卡，回复 1 点费用。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4278,7 +4278,7 @@
       "affixes": [],
       "effect_text": "对目标造成 8 点伤害，然后从**弃牌区任选一张卡**返回你的手卡。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4297,7 +4297,7 @@
       "affixes": [],
       "effect_text": "从抽牌库中**选择 2 张卡**，这 2 张卡在本次对战中**消失**。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -4319,7 +4319,7 @@
       "affixes": [],
       "effect_text": "己方场上还有「鸭子暗杀者」以外的单位时：不能攻击对方 HP；可以改用一次行动**闪现**到战场上任意空格。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4342,7 +4342,7 @@
       "affixes": [],
       "effect_text": "移动时可以**无视单位阻挡**（可以穿过任何单位，不能停在上面）；每个存活的鸭子暗杀者使这张卡**力量 +3、移动速度 +1**。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4364,7 +4364,7 @@
       "effect_text": "战斗**开始时**以及**每 3 个回合**，召唤一只鸭子暗杀者。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 3,
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4381,7 +4381,7 @@
       ],
       "effect_text": "从弃牌区选一张盟友或工事，那张卡返回手卡，并获得本局改造：生命+3。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4402,7 +4402,7 @@
       ],
       "effect_text": "在场时，场上的「量产型俄倪厄」一回合行动两次，且每回合回复 2 点生命。",
       "target_mode": "none",
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4423,7 +4423,7 @@
       ],
       "effect_text": "回合开始时，往对方卡组中加入一张「破绽」。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4444,7 +4444,7 @@
       ],
       "effect_text": "回合开始时，往对方卡组中加入一张「破绽」。",
       "target_mode": "none",
-      "color": "金",
+      "color": "物理",
       "image": "",
       "actions": 2,
       "affixes": [
@@ -4469,7 +4469,7 @@
       ],
       "effect_text": "铸造：我方回合结束时倒计时 -1；减到 0 时破坏自身，并在原地立起一座「钢铁要塞」。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4491,7 +4491,7 @@
       ],
       "effect_text": "",
       "target_mode": "none",
-      "color": "金",
+      "color": "物理",
       "image": "",
       "affixes": [
         "嘲讽"
@@ -4517,7 +4517,7 @@
       ],
       "effect_text": "锻造：亲自击杀敌人时，在己方半场的随机空格召唤一只「量产型俄倪厄」。每回合它没能击杀任何敌人，就攻击距离 +1、力量 +1，本局累计。",
       "target_mode": "none",
-      "color": "金",
+      "color": "火",
       "image": ""
     },
     {
@@ -4538,7 +4538,7 @@
       "affixes": [],
       "effect_text": "回合开始时，若场上没有其他己方单位，获得：力量 +2，受到的攻击伤害减半。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4560,7 +4560,7 @@
       "affixes": [],
       "effect_text": "在场时，量产型赫利俄斯以外的己方单位获得：受到的技能伤害减半（向上取整）。",
       "target_mode": "none",
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4583,7 +4583,7 @@
       "affixes": [],
       "effect_text": "量产锻造：亲自击杀敌方单位时，在己方半场的随机空格锻造一只「量产型俄倪厄」。",
       "target_mode": "none",
-      "color": "金",
+      "color": "火",
       "image": ""
     },
     {
@@ -4605,7 +4605,7 @@
       "effect_text": "己方每个回合开始时，随机破坏一个敌方单位。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "金",
+      "color": "火",
       "image": ""
     },
     {
@@ -4629,7 +4629,7 @@
       ],
       "effect_text": "每过3回合，行动次数+1。",
       "target_mode": "none",
-      "color": "金",
+      "color": "水风",
       "image": ""
     },
     {
@@ -4650,7 +4650,7 @@
       "affixes": [],
       "effect_text": "每回合获得20护甲。若获得前已有护甲，则清零护甲并对随机敌方单位造成等量伤害，之后力量+1。",
       "target_mode": "none",
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4672,7 +4672,7 @@
       "affixes": [],
       "effect_text": "在场时只能发动一次：攻击单位时，在己方后排召唤一只量产型俄倪厄，并使其移动速度 +1。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4691,7 +4691,7 @@
       "affixes": [],
       "effect_text": "这个回合，你使用所有卡都无需费用。包含这张卡在内，本回合只能使用 5 张卡（无论这张卡之前还是之后使用的）。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -4713,7 +4713,7 @@
       "effect_text": "造成 0 点伤害。回合结束时，每有 1 点未使用的费用，手卡的此卡伤害 +3，本局累计。",
       "target_mode": "unit",
       "value": 0,
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -4735,7 +4735,7 @@
       "effect_text": "打出无效果。回合结束时若这张卡仍在手牌：这张卡消失，并在敌方半场随机位置召唤一个敌人。此卡不可以从卡组删除。",
       "target_mode": "none",
       "value": 0,
-      "color": "灰",
+      "color": "暗影",
       "image": "",
       "no_remove": true
     },
@@ -4754,7 +4754,7 @@
       "traits": [],
       "effect_text": "对一个敌人造成 5 点伤害，在不同敌人间随机弹跳两次，每次伤害减 1。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4773,7 +4773,7 @@
       "affixes": [],
       "effect_text": "入场时，本次对战中你每变化过一张牌，便随机释放一张机械之心技能卡；目标与落点随机，不消耗费用。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -4792,7 +4792,7 @@
       "affixes": [],
       "effect_text": "对一个敌人造成**10**点伤害。场上的己方单位每有 1 层改造，伤害 +4。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -4811,7 +4811,7 @@
       "affixes": [],
       "effect_text": "对一个敌人造成**10**点伤害，并将其击退 1 格。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -4832,7 +4832,7 @@
       ],
       "effect_text": "使一个己方盟友获得改造：**力量 +2**，并获得「死亡」：它被破坏时，将一张「辅助刃」加入手卡。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -4851,7 +4851,7 @@
       "affixes": [],
       "effect_text": "选择自己战场上的一个盟友或工事，将两张它的复制加入手卡。这些复制在你手牌中时费用为 0。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4875,7 +4875,7 @@
       ],
       "effect_text": "入场时，将两张「聚能炮击」加入抽牌库。每次获得改造时，从卡组把一张「聚能炮击」加入手卡。",
       "target_mode": "none",
-      "color": "白",
+      "color": "火",
       "image": "",
       "upper_effect": {"trigger": "upgraded", "effects": [], "enter_effects": [{"type": "add_card_to_deck", "card_id": 9145, "value": 2}]},
       "lower_effect": {"effects": [{"type": "add_card", "card_id": 9145, "value": 1, "from": "deck"}]}
@@ -4899,7 +4899,7 @@
       "affixes": [],
       "effect_text": "选择卡组一张「素体」，使其**消失**；使场上一张己方盟友或工事获得改造：力量与生命各增加那张素体的数值。",
       "target_mode": "unit",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4921,7 +4921,7 @@
       "effect_text": "每次你的一张卡被改造时，对随机 **2** 个敌人造成 **3** 点伤害，重复 X 次。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 3,
-      "color": "紫",
+      "color": "雷",
       "image": ""
     },
     {
@@ -4943,7 +4943,7 @@
       "effect_text": "友方单位入场时，获得改造，并获得「死亡」——它被破坏时，对距离 1 的随机一个敌人造成 **8** 点伤害。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 8,
-      "color": "紫",
+      "color": "雷",
       "image": ""
     },
     {
@@ -4965,7 +4965,7 @@
       "effect_text": "回合开始时，选抽牌库 X 张卡，把它们变成随机卡并加入手卡。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "value": 1,
-      "color": "紫",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -4988,7 +4988,7 @@
       ],
       "effect_text": "从卡组选择一张卡加入手卡。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5009,7 +5009,7 @@
       "affixes": [],
       "effect_text": "对每一列最靠前的敌人造成 10 点伤害。",
       "target_mode": "none",
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -5032,7 +5032,7 @@
       ],
       "effect_text": "获得 1 点费用，抽 1 张卡。场上所有友方单位回复 2 点生命。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "雷",
       "image": ""
     },
     {
@@ -5051,7 +5051,7 @@
       "affixes": [],
       "effect_text": "抽 2 张牌。抽到的牌里每有一张 0 费，本回合所有敌人受到伤害 +1。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "",
       "image": ""
     },
     {
@@ -5070,7 +5070,7 @@
       "affixes": [],
       "effect_text": "对所有敌人造成 9 点伤害。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -5089,7 +5089,7 @@
       "affixes": [],
       "effect_text": "抽 5 张牌。这回合结束为止，你不能使用盟友和工事卡。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "",
       "image": ""
     },
     {
@@ -5108,7 +5108,7 @@
       "affixes": [],
       "effect_text": "从卡组选择一张盟友或工事卡，将其变成「素体」。抽 4 张卡。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5129,7 +5129,7 @@
       "affixes": [],
       "effect_text": "场上每有一个单位被破坏，抽 1 张卡。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -5150,7 +5150,7 @@
       "affixes": [],
       "effect_text": "随机打出抽牌库中 3 张费用 1 或以下的技能卡。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": ""
     },
     {
@@ -5174,7 +5174,7 @@
       ],
       "effect_text": "代替你承受 HP 伤害。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "自然",
       "image": ""
     },
     {
@@ -5196,7 +5196,7 @@
       "effect_text": "夜鸭不再虚弱：不再受「惧光」影响（奇数回合也不降攻击距离、移动速度与力量）。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "金",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -5218,7 +5218,7 @@
       "affixes": [],
       "effect_text": "被攻击时，使攻击者下回合眩晕（不能行动）。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": "",
       "upper_effect": {"trigger": "attacked", "effects": []},
       "lower_effect": {"effects": [{"type": "stun"}]}
@@ -5242,7 +5242,7 @@
       "effect_text": "本场战斗结束后：奖励界面增加一条奖励，可以从卡组删除一张卡。此卡不可以从卡组删除。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "白",
+      "color": "圣光",
       "image": "",
       "no_remove": true
     },
@@ -5265,7 +5265,7 @@
       "effect_text": "本场战斗结束后：获得额外的 40 金币。此卡不可以从卡组删除。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 40,
-      "color": "金",
+      "color": "圣光",
       "image": "",
       "no_remove": true
     },
@@ -5288,7 +5288,7 @@
       "effect_text": "所有单位 1 回合不能行动，不分敌我。",
       "target_mode": "none",
       "value": 1,
-      "color": "紫",
+      "color": "暗影",
       "image": "",
       "locked": true
     },
@@ -5311,7 +5311,7 @@
       "effect_text": "将一张随机森林精魄盟友加入手卡，其本回合费用 -2。",
       "target_mode": "none",
       "value": 2,
-      "color": "绿",
+      "color": "自然",
       "image": "",
       "locked": true
     },
@@ -5331,7 +5331,7 @@
       "affixes": [],
       "effect_text": "随机将卡组里的两张卡分别变成另一张随机卡。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5352,7 +5352,7 @@
       "affixes": [],
       "effect_text": "不能打出。回合结束时若这张卡仍在手牌：这张卡消失。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "暗影",
       "image": "",
       "unplayable": true
     },
@@ -5371,7 +5371,7 @@
       "effect_text": "场地效果。使用时，若此格没有单位，随机将一个与此格距离 1 的单位移动到本格。此格上的单位在**我方回合结束时**受到 15 点伤害，且后续受到的漩涡伤害 +1。",
       "field_vortex_dmg": 15,
       "target_mode": "none",
-      "color": "蓝",
+      "color": "水风",
       "image": "",
       "locked": true
     },
@@ -5393,7 +5393,7 @@
       ],
       "effect_text": "攻击敌人后，将其沿攻击方向击退 1 格，自己前进 1 格（被挡住则不动）。",
       "target_mode": "none",
-      "color": "白",
+      "color": "自然",
       "image": "",
       "locked": true,
       "upper_effect": {"trigger": "attack", "effects": []},
@@ -5417,7 +5417,7 @@
       "affixes": [],
       "effect_text": "",
       "target_mode": "none",
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5439,7 +5439,7 @@
       "effect_text": "第一阶段。每回合随机轰击一列：该列所有敌方单位受到 5 伤害；该列没有单位时改为直击玩家 HP。启示者自身：每回合力量 +1，免疫位置移动。剩余生命降到 2/3 时转入第二阶段，退回后排中间并更换本卡。",
       "target_mode": "none",
       "value": 5,
-      "color": "灰",
+      "color": "火",
       "image": ""
     },
     {
@@ -5461,7 +5461,7 @@
       "effect_text": "第二阶段。攻击启示者的单位受到 5 伤害；启示者每次受到技能伤害，向你的弃牌区加入一张「麻痹」（0 费诅咒 · 不能打出 · 回合结束仍在手牌就消失）。启示者自身：践踏，受到的技能伤害减半，移动速度 -1，每回合可行动两次，免疫位置移动。剩余生命降到 1/3 时转入第三阶段，退回后排中间并更换本卡。",
       "target_mode": "none",
       "value": 5,
-      "color": "蓝",
+      "color": "雷",
       "image": ""
     },
     {
@@ -5483,7 +5483,7 @@
       "effect_text": "第三阶段（最终）。玩家每个回合开始时，召唤一只力量 +10 的量产型。启示者自身：进入本阶段时破坏场上所有其他单位，每回合可行动两次，攻击距离 +2，移动速度 0，场上有其他友方单位时免疫攻击以外的伤害，与它接通的友方单位代它承受一半伤害，免疫位置移动。",
       "target_mode": "none",
       "value": 10,
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5504,7 +5504,7 @@
       "affixes": [],
       "effect_text": "入场时，选场上其他一个友方单位：将其变成随机机械之心单位。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5525,7 +5525,7 @@
       "affixes": [],
       "effect_text": "",
       "target_mode": "none",
-      "color": "灰",
+      "color": "水风",
       "image": ""
     },
     {
@@ -5543,7 +5543,7 @@
       "traits": [],
       "effect_text": "对一个敌人造成 7 点伤害，使其本回合失去 1 点力量。随机使手卡一张盟友或工事消失，将其生命值本局加到此卡的伤害上，将其力量本局加到此卡的降力上。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -5568,7 +5568,7 @@
       "target_mode": "none",
       "first_kill_power": 1,
       "battle_end_gold": 20,
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -5593,7 +5593,7 @@
       "target_mode": "unit",
       "value": 22,
       "per_kill_damage": 4,
-      "color": "紫",
+      "color": "物理",
       "image": ""
     },
     {
@@ -5618,7 +5618,7 @@
       "target_mode": "none",
       "first_kill_power": 3,
       "first_kill_health": 6,
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -5639,7 +5639,7 @@
       ],
       "effect_text": "攻击时，随机一张手牌本回合费用 -1。",
       "target_mode": "none",
-      "color": "白",
+      "color": "冰",
       "image": "",
       "upper_effect": {"trigger": "attack", "effects": []},
       "lower_effect": {"effects": [{"type": "hand_discount", "value": 1}]}
@@ -5660,7 +5660,7 @@
       "field_poison_dmg": 10,
       "field_poison_turns": 2,
       "target_mode": "none",
-      "color": "绿",
+      "color": "毒",
       "image": ""
     },
     {
@@ -5683,7 +5683,7 @@
       "effect_text": "每回合获得 10 护甲。获得前若已有护甲，则力量 +1。",
       "target_mode": "none",
       "value": 10,
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5706,7 +5706,7 @@
       "effect_text": "免疫所有伤害。场上每个友方单位被破坏时，在此卡旁边召唤一个相同单位，并使此卡生命 -10。此卡被破坏时，对手胜利。",
       "target_mode": "none",
       "value": 10,
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -5728,7 +5728,7 @@
       "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 5 点伤害，每回合此伤害 +1。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 5,
-      "color": "红",
+      "color": "火",
       "image": ""
     },
     {
@@ -5750,7 +5750,7 @@
       "effect_text": "每 2 个回合开始时，所有友方单位力量 +1，每个单位最多累计 +4。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "蓝",
+      "color": "冰",
       "image": ""
     },
     {
@@ -5773,7 +5773,7 @@
       "effect_text": "打出时：将一张「聚能炮击」加入手卡。此后你使用「聚能炮击」时，除主目标外，额外对一个随机其他敌方单位造成等量伤害。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 0,
-      "color": "紫",
+      "color": "火",
       "image": ""
     },
     {
@@ -5795,7 +5795,7 @@
       "effect_text": "枭熊的生命在一半以上时，它受到的伤害 -1；生命降到一半或以下时获得「践踏」——它造成的伤害击杀单位时，溢出的伤害沿同列继续传下去，没有攻击到单位时不触发。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 1,
-      "color": "金",
+      "color": "自然",
       "image": ""
     },
     {
@@ -5818,7 +5818,7 @@
       "effect_text": "X 费，打出时消耗全部费用。落地时力量记为 X、生命记为 9X，本场战斗不再变化；X 为 0 时它一落地就倒下。行动时跳跃到一个空格子，对周围距离 1 的敌方单位各造成等同于力量的伤害。不能进行常规攻击。",
       "target_mode": "none",
       "x_cost": true,
-      "color": "紫",
+      "color": "自然",
       "image": ""
     },
     {
@@ -5839,7 +5839,7 @@
       ],
       "effect_text": "不能进行常规攻击。行动时跳跃到一个空格子，对周围距离 1 的敌方单位各造成等同于力量的伤害。",
       "target_mode": "none",
-      "color": "白",
+      "color": "自然",
       "image": ""
     },
     {
@@ -5859,7 +5859,7 @@
       ],
       "effect_text": "对随机 2 个敌人各造成 10 点伤害（敌人不足 2 个时有多少打多少）。",
       "target_mode": "none",
-      "color": "红",
+      "color": "物理",
       "image": ""
     },
     {
@@ -5879,7 +5879,7 @@
       ],
       "effect_text": "对一个敌人造成 22 点伤害；若将其击杀，溢出的伤害沿同一列继续传递（践踏）。",
       "target_mode": "unit",
-      "color": "红",
+      "color": "物理",
       "image": ""
     },
     {
@@ -5899,7 +5899,7 @@
       ],
       "effect_text": "对一个敌人造成 16 点伤害并将其击退 1 格；同时对其他所有敌人各造成 8 点伤害。",
       "target_mode": "unit",
-      "color": "红",
+      "color": "物理",
       "image": ""
     },
     {
@@ -5925,7 +5925,7 @@
       ],
       "effect_text": "**超负荷**。死亡：若此卡生命为负数，对敌方所有单位造成等同于负血量的伤害。",
       "target_mode": "none",
-      "color": "橙",
+      "color": "火",
       "image": ""
     },
     {
@@ -5947,7 +5947,7 @@
       "affixes": [],
       "effect_text": "己方带「超负荷」的盟友因超负荷死亡时，将抽牌堆、手牌或弃牌区里的一张此卡放到它原本的位置。",
       "target_mode": "none",
-      "color": "橙",
+      "color": "物理",
       "image": ""
     },
     {
@@ -5971,7 +5971,7 @@
       ],
       "effect_text": "**超负荷**。可以放在己方单位上：破坏该单位，此卡获得它卡面上的力量与生命。",
       "target_mode": "none",
-      "color": "橙",
+      "color": "物理",
       "image": ""
     },
     {
@@ -5996,7 +5996,7 @@
       ],
       "effect_text": "**超负荷**。每次此卡的生命降到 0 或更低，将一张「聚能炮击」加入手卡。",
       "target_mode": "none",
-      "color": "橙",
+      "color": "圣光",
       "image": "",
       "upper_effect": {"trigger": "lethal", "effects": [], "extra_affixes": ["超负荷", "次元"]},
       "lower_effect": {"effects": [{"type": "add_card", "card_id": 9145, "value": 1}]}
@@ -6020,7 +6020,7 @@
       "affixes": [],
       "effect_text": "自己场上有「量产型俄倪厄」时，受到的伤害减半。自己场上的「量产型俄倪厄」受到伤害时，本回合力量 +1。",
       "target_mode": "none",
-      "color": "金",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -6042,7 +6042,7 @@
       "affixes": [],
       "effect_text": "场地效果（全场同时只存在一个标记）。处于这一格的敌人受到的伤害 +1（固定，不随回合成长）。换一个格子放标记会把旧的顶掉。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6061,7 +6061,7 @@
       "affixes": [],
       "effect_text": "对目标造成 6 点伤害，然后标记目标所在的格子。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6082,7 +6082,7 @@
       "affixes": [],
       "effect_text": "被标记的敌人受到的所有伤害提升 50%（替代标记本身的加伤）。打出时若场上没有标记，随机标记一个格子。效果区多张本卡不可叠加。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6101,7 +6101,7 @@
       "affixes": [],
       "effect_text": "对目标造成 14 点伤害；若目标被标记，改为造成 20 点伤害并抽 2 张卡。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6120,7 +6120,7 @@
       "affixes": [],
       "effect_text": "被标记的敌人对这张卡造成的伤害减半。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6141,7 +6141,7 @@
       ],
       "effect_text": "标记目标所在的格子，并使目标本回合力量 -11。若目标已被标记，则改为对其造成 8 点伤害。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6162,7 +6162,7 @@
       "affixes": [],
       "effect_text": "对被标记的敌人造成伤害时，使其本回合力量 -X。若场上没有标记，随机标记一个敌人所在的位置。X 为本卡在效果区的张数。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6183,7 +6183,7 @@
       "affixes": [],
       "effect_text": "自己回合结束时，处于标记格的敌人受到 4X 点伤害。X 为本卡在效果区的张数。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6202,7 +6202,7 @@
       "affixes": [],
       "effect_text": "攻击被标记的敌人时回复 3 点生命值。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "attack", "effects": []},
       "lower_effect": {"effects": [{"type": "heal", "value": 3}]}
@@ -6223,7 +6223,7 @@
       "affixes": [],
       "effect_text": "每次对被标记的敌人造成伤害，此卡费用本局 -1。这张卡击杀单位时，这张卡回满生命。",
       "target_mode": "none",
-      "color": "黑",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6242,7 +6242,7 @@
       "affixes": [],
       "effect_text": "对目标造成 15 点伤害。同一回合内，你对被标记的目标造成第 3 次伤害后（本卡自己造成的不算），从抽牌库或弃牌区将一张「恐惧收割」加入手卡，费用 -1。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6264,7 +6264,7 @@
       "affixes": [],
       "effect_text": "回合结束时不会被丢弃。入场时，对敌方单位分配 3X 点伤害（X = 本次战斗中已使用的盟友数量，含本卡）：由近及远，打倒一个就把剩下的分给下一个。场上每有 1 个己方盟友，手卡中的这张卡费用 -2。",
       "target_mode": "none",
-      "color": "棕",
+      "color": "物理",
       "image": ""
     },
     {
@@ -6283,7 +6283,7 @@
       "affixes": [],
       "effect_text": "入场时，清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害。",
       "target_mode": "none",
-      "color": "红",
+      "color": "火",
       "image": "",
       "upper_effect": {"trigger": "enter", "effects": []},
       "lower_effect": {"effects": [{"type": "purge_curse", "value": 2}]}
@@ -6303,7 +6303,7 @@
       "traits": ["机械", "阵亡双动"],
       "effect_text": "己方单位死亡时，此卡获得「一回合行动两次」。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -6321,7 +6321,7 @@
       "traits": ["机械", "阵亡机动"],
       "effect_text": "己方单位死亡时，此卡攻击距离与移动速度 +1（只触发一次，不可叠加）。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -6339,7 +6339,7 @@
       "traits": ["机械", "阵亡猎杀"],
       "effect_text": "己方单位死亡时获得：己方每个回合开始时，随机破坏一个敌方单位；若敌方场上没有单位，则对敌方 HP 造成 10 点伤害。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "物理",
       "image": ""
     },
     {
@@ -6358,7 +6358,7 @@
       "effect_text": "敌方场上所有单位获得「次元」。己方第 12 个回合结束时，破坏己方场上所有单位。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "value": 12,
-      "color": "灰",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6376,7 +6376,7 @@
       "traits": ["工事", "机械", "沉睡", "激光炮"],
       "effect_text": "不能进行常规攻击。沉睡 2 回合。每回合随机选取两列并预告；行动时对这两列中每列的第一个敌方单位造成等同于力量的伤害，该列没有目标则直击对方 HP。每回合力量 +1。",
       "target_mode": "none",
-      "color": "金",
+      "color": "火",
       "image": ""
     },
     {
@@ -6394,7 +6394,7 @@
       "traits": ["普罗诺亚", "变形"],
       "effect_text": "每回合开始时，根据对方本回合使用最多的卡牌类型改变形态：盟友或工事 → 炮击构状体；技能或场地 → 护盾构状体；其他类型 → 迅捷构状体。场上只有自己时，损失 10 点生命召唤一个构状体；否则把当前构状体变成对应形态。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": ""
     },
     {
@@ -6412,7 +6412,7 @@
       "traits": ["构状体", "炮击"],
       "effect_text": "每个回合开始时，使一个其他友方单位力量 +1。",
       "target_mode": "none",
-      "color": "金",
+      "color": "火",
       "image": ""
     },
     {
@@ -6430,7 +6430,7 @@
       "traits": ["构状体", "护盾"],
       "effect_text": "这张卡在场时，其他己方单位受到的伤害减半。",
       "target_mode": "none",
-      "color": "蓝",
+      "color": "圣光",
       "image": ""
     },
     {
@@ -6450,7 +6450,7 @@
       "affixes": ["疾行"],
       "effect_text": "",
       "target_mode": "none",
-      "color": "绿",
+      "color": "水风",
       "image": ""
     },
     {
@@ -6471,7 +6471,7 @@
       "affixes": ["次元"],
       "effect_text": "死亡时，组合一张卡。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "自然",
       "image": "",
       "combo_trigger": "death"
     },
@@ -6494,7 +6494,7 @@
       "affixes": ["次元"],
       "effect_text": "回合开始时，组合一张卡。",
       "target_mode": "none",
-      "color": "灰",
+      "color": "圣光",
       "image": "",
       "combo_trigger": "turn_start"
     },
@@ -6517,7 +6517,7 @@
       "effect_text": "回合开始时，破坏此卡：随机获得 1 点费用，或一张随机卡加入手卡。X 为本卡在效果区的张数，每张各结算一次。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -6539,7 +6539,7 @@
       "effect_text": "随机将抽牌库的一张效果卡复制并打出。回复等于抽牌库中效果卡张数的费用。",
       "target_mode": "none",
       "value": 0,
-      "color": "绿",
+      "color": "",
       "image": ""
     },
     {
@@ -6554,7 +6554,7 @@
       "affixes": [],
       "effect_text": "丢弃所有手牌。下回合，自己的技能伤害加倍（与其他增加乘算）。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "",
       "image": "",
       "locked": true
     },
@@ -6570,7 +6570,7 @@
       "affixes": ["次元"],
       "effect_text": "组合一张卡，使那张卡获得「保存」，对所有敌人造成那个力量值的伤害。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "暗影",
       "image": "",
       "locked": true
     },
@@ -6586,7 +6586,7 @@
       "affixes": [],
       "effect_text": "造成 8 点伤害，使目标本回合降低 8 力量。",
       "target_mode": "unit",
-      "color": "紫",
+      "color": "火",
       "image": "",
       "locked": true
     },
@@ -6602,7 +6602,7 @@
       "affixes": ["次元"],
       "effect_text": "以构装体为基础组合一张卡。",
       "target_mode": "none",
-      "color": "紫",
+      "color": "圣光",
       "image": "",
       "locked": true
     },
@@ -6624,7 +6624,7 @@
       "affixes": [],
       "effect_text": "使用时，在这张卡两边各召唤一只「小鸭」（如果可能）。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "自然",
       "image": ""
     },
     {
@@ -6646,7 +6646,7 @@
       "affixes": ["次元"],
       "effect_text": "入场时，随机使手卡里的一张效果卡费用 -1。",
       "target_mode": "none",
-      "color": "绿",
+      "color": "自然",
       "image": ""
     }
   ]

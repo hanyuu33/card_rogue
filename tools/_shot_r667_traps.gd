@@ -143,12 +143,14 @@ func _m() -> void:
 				print("[r667] TRAPFX MISS legal_cells empty or bad id")
 		elif t.begins_with("battle_skill"):
 			# R670 P1：技能卡通用施法图。走**真的** `fx_impact` 事件口 —— 界面自己按
-			# 卡面 color 选图，不是手塞队列；截出来就是玩家打出这张牌看到的那一帧。
+			# 卡的元素族选图，不是手塞队列；截出来就是玩家打出这张牌看到的那一帧。
+			# R738：`color` 改成元素族（火/冰/雷/毒/暗影/圣光/自然/物理/水风）。
 			var sk_key := t.substr(13)   # battle_skill_<key>
-			var sk_colors := {"shadow": "紫", "fire": "红", "ice": "蓝",
-					"holy": "金", "nature": "绿"}
+			var sk_colors := {"fire": "火", "ice": "冰", "bolt": "雷", "poison": "毒",
+					"shadow": "暗影", "holy": "圣光", "nature": "自然",
+					"phys": "物理", "storm": "水风"}
 			var sk_card := CardData.new()
-			sk_card.color = str(sk_colors.get(sk_key, "紫"))
+			sk_card.color = str(sk_colors.get(sk_key, "暗影"))
 			sk_card.kind = "技能"
 			sk_card.card_name = "技能"
 			var sk_cell := _enemy_cell(sc)
@@ -160,6 +162,23 @@ func _m() -> void:
 			sc.status_text = ""
 			print("[r670] SKILLFX %s cell=%s fx=%d" % [
 					sk_key, str(sk_cell), sc._battle_fx.size()])
+			sc.queue_redraw()
+			await _wait(3)
+		elif t == "battle_attack_forest":
+			# R738：「森林精魄打攻击喷冰」的现场对照。用**真卡** 8002（color 空、class 空）
+			# 走真的 fx_impact 口 —— family_of() 读到 player_class=森林精魄 → 自然绿。
+			# 旧口径下 8002 的 color=蓝 会被一路映射成冰霜图，这张截图就是回归钉子。
+			RunState.player_class = PlayerClass.DRUID
+			var atk_card := CardRepo.load_json().get_card(8002)
+			var atk_cell := _enemy_cell(sc)
+			sc.engine.action.emit("fx_impact", {"cell": atk_cell, "amount": 4,
+					"source": "技能", "card": atk_card})
+			for af in sc._battle_fx:
+				af["start"] = sc._now() - 150
+			sc._shake_until = 0
+			sc.status_text = ""
+			print("[r738] ATTACKFX color=[%s] family=%s fx=%d" % [atk_card.color,
+					FxArt.family_of(atk_card), sc._battle_fx.size()])
 			sc.queue_redraw()
 			await _wait(3)
 		elif t == "battle_vortex":

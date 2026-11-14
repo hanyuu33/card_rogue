@@ -10495,53 +10495,53 @@ func _init() -> void:
 
 	# ---- R737②：卡组取技能卡（连刺 / 影子猫 / 预判② 共用口）也必须独立化 ----
 
-	var r737f_e := _new_engine([], 20, 20, -1, false)
+	var r738f_e := _new_engine([], 20, 20, -1, false)
 
-	r737f_e.start_game(0)
+	r738f_e.start_game(0)
 
-	r737f_e.state.hand.clear()
+	r738f_e.state.hand.clear()
 
-	r737f_e.state.deck.clear()
+	r738f_e.state.deck.clear()
 
-	r737f_e.state.discard.clear()
+	r738f_e.state.discard.clear()
 
-	r737f_e.state.deck.append(repo.get_card(9077))
+	r738f_e.state.deck.append(repo.get_card(9077))
 
-	var r737f_c: CardData = r737f_e._fetch_skill_from_deck(0)
+	var r738f_c: CardData = r738f_e._fetch_skill_from_deck(0)
 
-	check(r737f_c != null and r737f_c.own_copy,
+	check(r738f_c != null and r738f_c.own_copy,
 			"R737：卡组取技能卡取出的是独立实例（原先把牌库共享实例直接塞进手牌）")
 
 	# ---- R737③：改造＝「同一张卡换实例」，实例级减费必须跟着走 ----
 
-	var r737u_e := _new_engine([], 20, 20, -1, false)
+	var r738u_e := _new_engine([], 20, 20, -1, false)
 
-	r737u_e.start_game(0)
+	r738u_e.start_game(0)
 
-	r737u_e.state.hand.clear()
+	r738u_e.state.hand.clear()
 
-	r737u_e.state.deck.clear()
+	r738u_e.state.deck.clear()
 
-	r737u_e.state.discard.clear()
+	r738u_e.state.discard.clear()
 
-	r737u_e.state.hand.append(_card(8001, "木栅栏", "工事", 2, 0, 6))
+	r738u_e.state.hand.append(_card(8001, "木栅栏", "工事", 2, 0, 6))
 
-	r737u_e.state.hand.append(CardData.from_dict(repo.get_card(8039).to_dict()))
+	r738u_e.state.hand.append(CardData.from_dict(repo.get_card(8039).to_dict()))
 
-	var r737u_t: CardData = r737u_e.state.hand[0]
+	var r738u_t: CardData = r738u_e.state.hand[0]
 
-	r737u_e.state.card_discount[r737u_t] = 2
+	r738u_e.state.card_discount[r738u_t] = 2
 
-	r737u_e.state.energy = 20
+	r738u_e.state.energy = 20
 
-	r737u_e.cast_sys_upgrade(1, 0, false)
+	r738u_e.cast_sys_upgrade(1, 0, false)
 
-	var r737u_after: CardData = r737u_e.state.hand[0]
+	var r738u_after: CardData = r738u_e.state.hand[0]
 
-	check(r737u_after != null and r737u_after != r737u_t,
+	check(r738u_after != null and r738u_after != r738u_t,
 			"R737：系统升级换了一个实例（from_dict 副本 + 原位替换）")
 
-	check(int(r737u_e.state.card_discount.get(r737u_after, 0)) == 2,
+	check(int(r738u_e.state.card_discount.get(r738u_after, 0)) == 2,
 			"R737：改造后永久减费跟着新实例走（旧代码会静默清零）")
 
 
@@ -75122,21 +75122,55 @@ func _test_r670() -> void:
 		if FxArt.tex(str(r670_nm2)) == null:
 			r670_tex_bad.append(str(r670_nm2))
 	check(r670_tex_bad.is_empty(), "R670：FxArt 取图口全部可解码（刚落盘未导入也要能读）")
-	check(FxArt.skill_name_for_color("紫") == FxArt.SKILL_SHADOW
-			and FxArt.skill_name_for_color("黑") == FxArt.SKILL_SHADOW,
-			"R670：紫 / 黑 → 暗影通用施法图")
-	check(FxArt.skill_name_for_color("红") == FxArt.SKILL_FIRE
-			and FxArt.skill_name_for_color("橙") == FxArt.SKILL_FIRE,
-			"R670：红 / 橙 → 火焰通用施法图")
-	check(FxArt.skill_name_for_color("蓝") == FxArt.SKILL_ICE, "R670：蓝 → 冰霜通用施法图")
-	check(FxArt.skill_name_for_color("金") == FxArt.SKILL_HOLY
-			and FxArt.skill_name_for_color("白") == FxArt.SKILL_HOLY,
-			"R670：金 / 白 → 圣光通用施法图")
-	check(FxArt.skill_name_for_color("绿") == FxArt.SKILL_NATURE
-			and FxArt.skill_name_for_color("灰") == FxArt.SKILL_NATURE
-			and FxArt.skill_name_for_color("棕") == FxArt.SKILL_NATURE
-			and FxArt.skill_name_for_color("黄") == FxArt.SKILL_NATURE,
-			"R670：绿 / 灰 / 棕 / 黄 → 自然物理通用施法图")
+	check(FxArt.FAMILIES.size() == 9 and FxArt.FAMILIES.has(FxArt.FAM_FIRE)
+			and FxArt.FAMILIES.has(FxArt.FAM_STORM)
+			and FxArt.FAMILIES.has(FxArt.FAM_PHYS),
+			"R738：元素族共 9 个（火/冰/雷/毒/暗影/圣光/自然/物理/水风）")
+	var r738_fam_art := {FxArt.FAM_FIRE: FxArt.SKILL_FIRE, FxArt.FAM_ICE: FxArt.SKILL_ICE,
+			FxArt.FAM_BOLT: FxArt.BOLT, FxArt.FAM_POISON: FxArt.POISON,
+			FxArt.FAM_SHADOW: FxArt.SKILL_SHADOW, FxArt.FAM_HOLY: FxArt.SKILL_HOLY,
+			FxArt.FAM_NATURE: FxArt.SKILL_NATURE, FxArt.FAM_PHYS: FxArt.BLAST,
+			FxArt.FAM_STORM: FxArt.GALE}
+	var r738_art_bad: Array[String] = []
+	for r738_f: String in FxArt.FAMILIES:
+		if FxArt.art_of_family(r738_f) != str(r738_fam_art[r738_f]):
+			r738_art_bad.append(r738_f)
+	check(r738_art_bad.is_empty(), "R738：九族各对应一张通用施法图（错：%s）"
+			% (", ".join(r738_art_bad) if not r738_art_bad.is_empty() else "无"))
+	# 卡表数据体检：`color` 只能是九族之一或空串 —— 写着「蓝/紫/灰」这类旧色相词
+	# 会静默落进「按职业兜底」，牌打出来特效对不上，回归也看不出红。
+	var r738_repo := CardRepo.load_json()
+	var r738_illegal: Array[String] = []
+	for r738_c: CardData in r738_repo.all_cards():
+		var r738_col := str(r738_c.color)
+		if r738_col != "" and not FxArt.FAMILIES.has(r738_col):
+			r738_illegal.append("%d=%s" % [r738_c.id, r738_col])
+	check(r738_illegal.is_empty(), "R738：319 张卡的 color 全部是元素族或空串（非法：%s）"
+			% (", ".join(r738_illegal) if not r738_illegal.is_empty() else "无"))
+	# 显式族说了算：火球术 火 / 冰冻术士 冰 / 清泉 水风 / 毒沼 毒
+	var r738_cases := {9007: FxArt.FAM_FIRE, 1031: FxArt.FAM_ICE,
+			8028: FxArt.FAM_STORM, 8082: FxArt.FAM_POISON, 9236: FxArt.FAM_FIRE}
+	var r738_case_bad: Array[String] = []
+	for r738_id: int in r738_cases:
+		var r738_got := FxArt.family_of(r738_repo.get_card(r738_id))
+		if r738_got != str(r738_cases[r738_id]):
+			r738_case_bad.append("%d:%s≠%s" % [r738_id, r738_got,
+					str(r738_cases[r738_id])])
+	check(r738_case_bad.is_empty(), "R738：显式元素的卡按自己的族走（错：%s）"
+			% (", ".join(r738_case_bad) if not r738_case_bad.is_empty() else "无"))
+	# 无属性 → 按职业：公用卡 8002「攻击」同一张牌，三个职业三种特效。
+	# 这条正是「森林精魄打攻击喷冰」的回归钉子。
+	var r738_atk := r738_repo.get_card(8002)
+	check(FxArt.family_of(r738_atk, "森林精魄") == FxArt.FAM_NATURE
+			and FxArt.family_of(r738_atk, "暗影刺客") == FxArt.FAM_SHADOW
+			and FxArt.family_of(r738_atk, "机械之心") == FxArt.FAM_HOLY,
+			"R738：攻击 8002 无属性 → 森林自然 / 暗影暗影 / 机械圣光")
+	check(FxArt.skill_name_for(r738_atk, "森林精魄") != FxArt.SKILL_ICE,
+			"R738：森林精魄打「攻击」不再喷冰霜图（旧口径 8002 的 color=蓝 一路映射到冰）")
+	# 没有职业可依的卡（敌人 / 查不到 class）→ 物理
+	check(FxArt.family_of(null) == FxArt.ENEMY_FAMILY
+			and FxArt.family_of(r738_repo.get_card(1053), "森林精魄") == FxArt.FAM_SHADOW,
+			"R738：骷髅兵是暗影（显式族优先于职业）；空卡兜底物理")
 	var r670_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check_src(r670_bs.contains("\t\t\"vortex\":") and r670_bs.contains("\t\t\"poison\":")
 			and r670_bs.contains("\t\t\"air_raid_hit\":"),

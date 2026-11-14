@@ -8576,8 +8576,9 @@ func _show_over(win: bool) -> void:
 	var story_repo := StoryRepo.load_json()
 	var story_new := ProfileData.check_achievements(story_repo)
 	ProfileData.flush()
-	# R389：真的解锁了**有正文**的剧情 → 结算面板副标题 + 底部轻提示各报一句。
+	# R389：真的解锁了**有正文**的剧情 → 结算面板副标题报一句。
 	# 任意没写正文的段落都不提示 —— `unlock_notice()` 里已经挡掉。
+	# R738：右下角那张跨界面的卡片由 `ProfileData.check_achievements()` 统一弹，本处不重复。
 	var story_note := story_repo.unlock_notice(story_new)
 	if story_note == "" and _demo_story_notice != "":
 		story_note = _demo_story_notice   # 出图用（真实路径永远是上面那一行）
@@ -8585,7 +8586,9 @@ func _show_over(win: bool) -> void:
 		_over_hint.text = story_note
 		# 结算面板是米色羊皮卷底：亮金（ACCENT_LIT）在上面发灰，用深一档的金
 		_over_hint.add_theme_color_override("font_color", UiTheme.ACCENT_GOLD)
-		UiToast.toast(story_note, 3200)
+		# R738：这里不再补一句 `UiToast` —— 解锁那一刻 `ProfileData.check_achievements()`
+		# 已经统一弹了右下角的 StoryUnlockToast（跨界面、4.8s）。这里只留静止的副标题：
+		# 同一件事报两遍（底中胶囊 + 右下卡）纯噪声，且底中那条 1.6s 就散了。
 	# R530（用户口径「打通第三层后不要弹出通关提示，而是进入结算界面」）：
 	# 整局通关 → 这张「胜  利」小面板一次都不显示，直接切结算页。
 	# 放在这里（而不是函数开头）是为了让上面那串记账 / 成就 / 剧情解锁 / 胜负音效
@@ -12418,15 +12421,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							"label": "独行 -%d" % fi_dmg if fi_lone else "",
 							"size": 26 if fi_lone else 0}})
 					_push_cue([fc], "", fi_col)
-					# R670：技能卡（source 写「技能」的那条口）按**卡面 color** 选一张
+					# R670：技能卡（source 写「技能」的那条口）按**卡的元素族**选一张
 					# 通用施法图。29 张伤害技能在此之前只有一坨紫色爆点，玩家看不出
 					# 用的是哪张牌、什么属性。⚠️ 只演首段：多段技能逐段各贴一张会糊成
 					# 一团；带专属演出的（龙息 / 独行 / 陷阱 / 流星 / 舰炮…）各有自己的
 					# 图，这里不掺和（`_fx_claimed` 与 source 判定已经隔开）。
+					# R738：取族走 `FxArt.family_of()` —— 卡自己写了元素就用它，写空则按
+					# 职业兜底（森林打「攻击」不该喷冰，见 fx_art.gd 头注）。
 					var fi_is_skill := fi_seg <= 0 and not FX_OWN_SOURCES.has(fi_src)
 					if fi_is_skill and data.get("card") is CardData:
 						var fi_scard: CardData = data["card"]
-						_fx_push_cell(FxArt.skill_name_for_color(fi_scard.color), fc, fi_at,
+						_fx_push_cell(FxArt.skill_name_for(fi_scard), fc, fi_at,
 								BATTLE_FX_MS, 150.0)
 
 					# R675：机制类伤害连技能卡都不是（source 写的是机制名），卡色分族对它们
