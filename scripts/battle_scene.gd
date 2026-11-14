@@ -9442,7 +9442,7 @@ func _art(card: CardData, rect: Rect2) -> void:
 func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_tapped: bool,
 		cost_override := -1, power_override := -1, on_board := false, sleeping := false,
 		phase := 0, speed_override := -1, range_override := -1,
-		state_slots: Array = []) -> void:
+		state_slots: Array = [], armor := 0) -> void:
 	## 卡面一律按 rect 完整排版（含手牌）—— 卡底沉出窗口下沿的那截由视口裁掉，
 	## 卡面内容**不做**任何偏移补偿：卡片是一个整体，被挡住就挡住。
 	## cost_override >= 0 且不等于卡面费用 → 在费用圆上重画**绿色**数字，
@@ -9456,10 +9456,12 @@ func _draw_card_face(card: CardData, rect: Rect2, hp: int, selected: bool, is_ta
 	## name_only = true（战斗内一律）→ 卡面**只画卡名**，不画种类·字段与效果文 ——
 	##   效果详情由悬停/点选的描述面板提供（左侧信息栏「悬停优先，其次选中的卡」）。
 	# ⚠️ 位置参数：第 16 = `adventure_frame`（战斗卡面**要**冒险框，原样传 true）、
-	#    第 17 = `record_seen`（画出来 = 玩家见过，必须 true）、第 18 才是 `state_slots`。
+	#    第 17 = `record_seen`（画出来 = 玩家见过，必须 true）、第 18 才是 `state_slots`、
+	#    第 19 = `armor`（R692b：战场单位传 `Placement.armor`，画在生命徽章正上方）。
 	#    漏一个就会让数组落到 bool 位上（R656 第一次改就是这么炸的）。
 	CardFace.draw(self, card, rect, hp, selected, is_tapped, _font, _font_bold, power_override,
-			on_board, sleeping, true, phase, speed_override, range_override, true, true, state_slots)
+			on_board, sleeping, true, phase, speed_override, range_override, true, true,
+			state_slots, armor)
 	if not card.x_cost and cost_override >= 0 and cost_override != card.cost:
 		# ⚠️ R122：**必须走 CardFace.draw_badge()**（同一个槽位的唯一绘制口）。
 		# 这里原来自己 `draw_circle` 盖一个纯色圆盘 —— R115 把费用徽章换成
@@ -9938,7 +9940,7 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
 			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true,
 			p.sleep_left > 0, _rev_art_phase(p), p.effective_speed(), p.effective_range(),
-			_slots)
+			_slots, p.armor)
 	# R165：移除「横置」视觉——不再把卡转横。改用青色**就绪光环**标明「可行动」：
 	# 凡本回合还有行动权（未横置）的单位都亮脉动环（敌我同标），以此区分不能动的卡。
 	if not p.tapped:

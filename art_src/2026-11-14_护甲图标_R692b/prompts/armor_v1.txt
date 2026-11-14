@@ -1,0 +1,19 @@
+A single game UI status icon for "ARMOR" (armor plating), square, centered, icon only.
+
+VISUAL LANGUAGE — copy the reference icon's style EXACTLY:
+- one solid dark circular disc as the plate (near-black with a hint of teal),
+- a thin bright rim ring hugging the disc edge,
+- ONE bold flat vector symbol in the middle, drawn with a hard dark outline and a soft top-left highlight / glossy gradient,
+- flat 2D game-icon look, crisp clean edges, no perspective, no photorealism.
+
+CONTENT — the symbol must be ARMOR PLATING, not a plain shield:
+- TWO overlapping armor plates / shields: a larger plate set slightly behind and behind-right, a smaller plate overlapping in front-left, so it reads as "stacked layers of armor",
+- the plates are shield-shaped with a squared-off bottom point, plus 2 short rivets or a small boss in the center of the front plate,
+- do NOT draw a face, a crest, an animal, a sword, or a heart inside the shield.
+
+COLOR — teal-green, so it cannot be confused with the existing blue shield icon:
+- disc: very dark teal (#0A2320),
+- rim ring and symbol: bright mint-teal (#57D6C0) with darker teal (#1F8E7C) shading on the lower-right,
+- must feel like a sibling of the reference icon, only a different hue and a different symbol.
+
+STRICT: transparent background outside the circular disc, no text, no numbers, no letters, no watermark, no drop shadow outside the disc, no border/frame around the square, nothing else in the image.

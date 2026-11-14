@@ -289,6 +289,18 @@ static func draw_glyph(cv: CanvasItem, c: Vector2, r: float, glyph: String, col:
 			if glyph == "share":
 				cv.draw_line(c + Vector2(-r * 0.24, 0.0), c + Vector2(r * 0.24, 0.0), col, 1.4)
 				cv.draw_line(c + Vector2(0.0, -r * 0.24), c + Vector2(0.0, r * 0.24), col, 1.4)
+		"armor":                   # 护甲（R692b）：盾形 + 两道横纹（区别于纯盾的「护盾」）
+			var apts := PackedVector2Array([
+				c + Vector2(-r * 0.58, -r * 0.66), c + Vector2(r * 0.58, -r * 0.66),
+				c + Vector2(r * 0.58, r * 0.06), c + Vector2(0.0, r * 0.78),
+				c + Vector2(-r * 0.58, r * 0.06)])
+			cv.draw_colored_polygon(apts, Color(col.r, col.g, col.b, 0.34))
+			var aedge := apts.duplicate()
+			aedge.append(apts[0])
+			cv.draw_polyline(aedge, col, 1.4)
+			for i in 2:
+				var ay: float = -r * 0.20 + float(i) * r * 0.30
+				cv.draw_line(c + Vector2(-r * 0.26, ay), c + Vector2(r * 0.26, ay), col, 1.2)
 		"portal":                  # 次元：两个同心菱形
 			for k in 2:
 				var s := r * (0.80 - 0.38 * float(k))

@@ -373,7 +373,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		power_override := -1, on_board := false, sleeping := false,
 		name_only := false, phase := 0,
 		speed_override := -1, range_override := -1, adventure_frame := false,
-		record_seen := true, state_slots: Array = []) -> void:
+		record_seen := true, state_slots: Array = [], armor := 0) -> void:
 	## 卡面一律按 rect **完整排版**，与图鉴/战场小卡同一套比例，没有「按可见高度重锚」
 	## 之类的特例 —— 手牌卡底沉出窗口下沿时，被挡住的那截就让它挡住
 	## （作者口径：卡片是一个整体，排版要与正常状态完全一致，别为了躲裁剪挪数值）。
@@ -431,7 +431,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped, name_only)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override,
-			speed_override, range_override)
+			speed_override, range_override, armor)
 	# ⑧ 附魔标记（R214）—— 同样压在最上层（它骑在卡图左上角上）
 	_draw_enchant_mark(canvas, card, rect, font_bold)
 	_draw_combine_mark(canvas, card, rect)                       # R565：组合专属印记
@@ -962,6 +962,58 @@ static func _draw_one_badge(canvas: CanvasItem, e: Dictionary, box: Rect2,
 		_draw_count_pip(canvas, box, k, cnt, alpha)
 
 
+static func _draw_armor_badge(canvas: CanvasItem,
+		health_center: Vector2, health_r: float, kc: float, armor: int) -> void:
+	## 护甲徽章（R692b，`Placement.armor` = R162 阿斯克勒庇厄斯 / R451 量产型那层额外血量）。
+	## 店长口径：**图标在卡的生命值正上方，然后加数字** —— 圆心与生命徽章同一条竖线，
+	## 竖着读就是「甲 / 血」，和底部那一排「力 程 速 生」的固定坐标互不干扰。
+	## 视觉：`assets/ui/affix_armor.png` 圆徽（与字段徽章同一套素材口径）＋ 右上角真值数字；
+	## 缺素材回退「语义色圆底 + 矢量盾」，与状态槽位的回退同源，没图也照常可读。
+	## ⚠️ 半径比数值徽章大 15%：这颗要同时装图标和两位数字（力 / 速 那种纯数字球不用）。
+	var ra: float = health_r * 1.12
+	var center := Vector2(health_center.x, health_center.y - health_r - ra - 0.5 * kc)
+	var box := Rect2(center - Vector2(ra, ra), Vector2(ra, ra) * 2.0)
+	var tex: Texture2D = UiAssets.affix_badge("armor")
+	if tex != null:
+		canvas.draw_texture_rect(tex, box, false)
+	else:
+		var fg := Color(0.56, 0.93, 0.84)
+		canvas.draw_circle(center, ra, Color(0.04, 0.17, 0.15))
+		canvas.draw_arc(center, ra * 0.92, 0.0, TAU, 28, fg, maxf(1.0, 1.2 * kc))
+		preload("res://scripts/card_info_boxes.gd").draw_glyph(canvas, center, ra * 0.54,
+				"armor", fg)
+	# 数字走**不截断**的口（`_draw_value_pip`）：护甲 10 / 16 / 20 都是常见值，
+	# 「9+」会把「再打一下就破」读成「还厚得很」。角标挂**右上角** —— 右下角会压到
+	# 下面那颗生命徽章上，把血量读成一个缺角的数。
+	_draw_value_pip(canvas, box, kc, armor, 1.0, true)
+
+
+static func _draw_value_pip(canvas: CanvasItem, box: Rect2, k: float,
+		n: int, alpha: float, top_right := false) -> void:
+	## **不截断**的数值角标（R692b，护甲专用）：与 `_draw_count_pip()` 同一套描边与配色，
+	## 唯一的区别是写**真值**，且能挂在**右上角**（`top_right = true`）。
+	## 为什么另开一个而不是给 count 加参数：`count` 的 9+ 是**刻意**口径 —— 沉睡、倒数的
+	## 「还剩几下」只要知道快到了；护甲不一样，10 与 20 差一次攻击能不能打死，
+	## 被截成「9+」就是在说错话。
+	## ⚠️ 字号随位数缩：3 位数（极端叠到 100+）也得压进这个圆里，宁可小一点，不许溢出压住图标。
+	var digits := str(n).length()
+	var pr := maxf(5.0, box.size.y * 0.30)
+	var pc: Vector2
+	if top_right:
+		pc = Vector2(box.end.x - pr * 0.45, box.position.y + pr * 0.45)
+	else:
+		pc = Vector2(box.end.x - pr * 0.18, box.end.y - pr * 0.18)
+	canvas.draw_circle(pc, pr, Color(0.07, 0.05, 0.03, 0.94 * alpha))
+	canvas.draw_arc(pc, pr, 0.0, TAU, 18,
+			Color(1.0, 0.97, 0.86, 0.90 * alpha), maxf(1.0, 0.9 * k))
+	var f: FontFile = UiTheme.font_bold()
+	var fs := maxi(8, roundi(pr * 1.55 / (1.0 + 0.30 * float(maxi(0, digits - 1)))))
+	var txt := str(n)
+	var tw: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	canvas.draw_string(f, pc + Vector2(-tw * 0.5, float(fs) * 0.36), txt,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1.0, 0.98, 0.92, alpha))
+
+
 static func _draw_count_pip(canvas: CanvasItem, box: Rect2, k: float,
 		n: int, alpha: float) -> void:
 	## 数字角标：圆徽**右下角**贴一枚小圆（半压在徽章边缘上），里面是剩余次数。
@@ -1223,7 +1275,7 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 
 static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, rect: Rect2,
 		k: float, kc: float, hp: int, power_override: int,
-		speed_override := -1, range_override := -1) -> void:
+		speed_override := -1, range_override := -1, armor := 0) -> void:
 	## 数值「额外挂载」。位置是**固定槽位**，与卡的种类无关 ——
 	## 玩家的眼睛只需要记一次坐标：
 	##   ① 费用 = 卡框左上角 · ② 力量 = 卡框左下角（与 ① 同一条竖线）
@@ -1298,6 +1350,14 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	draw_badge(canvas, font_bold, Vector2(health_x, bar_y), r, fs, "health",
 			"9X" if x_unit else str(hp), UiTheme.BADGE_HEALTH,
 			UiTheme.BADGE_VALUE if x_unit else _health_col(card, hp, base_health))
+	# ── ⑥ 护甲（R692b）──
+	# 店长口径：「护甲图标位置放在卡的生命值正上面，然后加数字」。
+	# 于是它不吃底部那一排的槽位（那一排的坐标是固定语义：力 / 程 / 速 / 生），
+	# 而是**挂在生命徽章正上方**、x 与生命完全同一个 —— 竖着读就是「甲 / 血」。
+	# ⚠️ 为什么不进右上角状态圆槽：槽位是**轮播**的（多状态时 1.8 秒才轮到一次），
+	#    护甲每回合都在变、且决定「这一下打不打得穿」，必须常驻可见。
+	if armor > 0:
+		_draw_armor_badge(canvas, Vector2(health_x, bar_y), r, kc, armor)
 
 
 static func badge_shown(cur: int, override: int) -> int:
