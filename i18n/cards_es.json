@@ -1172,7 +1172,7 @@
   },
   "9224": {
    "name": "Marca",
-   "effect_text": "Efecto de campo (solo existe una Marca en todo el campo a la vez). Los enemigos de esta casilla reciben +1 de daño (fijo; no aumenta con los turnos). Colocar la Marca en otra casilla sustituye a la anterior; marcar de nuevo la misma casilla no cuenta como moverla y el valor sigue siendo +1."
+   "effect_text": "Efecto de campo (solo existe una Marca en todo el campo a la vez). Los enemigos de esta casilla reciben +1 de daño (fijo; no aumenta con los turnos). Colocar la Marca en otra casilla sustituye a la anterior."
   },
   "9225": {
    "name": "Presagio de Muerte",

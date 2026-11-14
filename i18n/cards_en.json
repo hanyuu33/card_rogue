@@ -1172,7 +1172,7 @@
   },
   "9224": {
    "name": "Mark",
-   "effect_text": "Field effect (only one Mark exists on the whole field at a time). Enemies on this tile take +1 damage (fixed; it does not grow with turns). Placing the Mark on a different tile replaces the old one; marking the same tile again does not count as moving it, and the value stays at +1."
+   "effect_text": "Field effect (only one Mark exists on the whole field at a time). Enemies on this tile take +1 damage (fixed; it does not grow with turns). Placing the Mark on a different tile replaces the old one."
   },
   "9225": {
    "name": "Death Omen",
