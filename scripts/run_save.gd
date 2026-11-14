@@ -95,6 +95,21 @@ static func set_test_mode() -> void:
 	SAVE_PATH = TEST_SAVE_PATH
 	TRACE_FILE = TEST_TRACE_PATH
 	CLEARED_PATH = TEST_CLEARED_PATH     # R640：通关墓碑同样不许写玩家那份
+	_wipe_test_files()                   # R686：换路径 ≠ 干净，旧测试档要一并清掉
+
+
+static func _wipe_test_files() -> void:
+	## R686：**测试档也要每次从零开始**。`set_test_mode()` 原来只换路径、不清文件 ——
+	## 上一次回归留下的 `run_save_test.sav` / `run_cleared_test.sav` 会让 R640 / R486
+	## 变成「同一份代码第一遍红、第二遍绿」的薛定谔回归（R682 实测真的踩到：
+	## 先 5928✓ 2✗、把这两份删了再跑 5929✓ 0✗）。
+	## 当时只在 test_engine 入口临时兜了一下，因为这份文件在那个窗口里归并行线；
+	## 现在归位到源头，任何入口调 `set_test_mode()` 都自动干净，也包括以后的 test_reward。
+	## ⚠️ 只删测试路径，**永远不碰** `REAL_SAVE_PATH` / `REAL_CLEARED_PATH`。
+	for p: String in [TEST_SAVE_PATH, TEST_CLEARED_PATH, TEST_TRACE_PATH,
+			TEST_SAVE_PATH + ".tmp", TEST_SAVE_PATH + ".prev"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 
 
 # ------------------------------------------------------------ 查询

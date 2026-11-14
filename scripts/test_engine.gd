@@ -306,15 +306,8 @@ func _init() -> void:
 
 	RunSave.set_test_mode()
 
-	# R682：**测试档也要每次从零开始**。`set_test_mode()` 只换路径、不清文件 ——
-	# 上一次留下的 `run_save_test.sav` / `run_cleared_test.sav` 会让 R640 / R486 变成
-	# 「同一份代码第一遍红、第二遍绿」的薛定谔回归（本轮实测真的踩到了）。
-	# ⚠️ 长期正解是让 `RunSave.set_test_mode()` 自己删这两份（与 `ProfileData` 对齐），
-	#    但那份文件现在在并行线的改动里，本轮先在这个入口兜住。
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://run_save_test.sav"))
-
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://run_cleared_test.sav"))
-
+	# R686：测试档清理已归位到 `RunSave.set_test_mode()` 里（R682 时那份文件在并行线手里，
+	# 才临时在这个入口兜的）。入口不必再删，留这行是为了别有人又加回来。
 	print("== 肉鸽引擎规则测试 ==")
 
 	var repo := CardRepo.load_json()
