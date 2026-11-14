@@ -5592,7 +5592,8 @@ func _init() -> void:
 
 			"镜像：打出自身那一下不触发（牌组不变、也不抽卡）")
 
-	# 镜像已在效果区 → 之后再打效果牌：复制那张牌入卡组，**再抽一张**（draw() 取牌库尾 → 抽回副本）
+	# 镜像已在效果区 → 之后再打效果牌：**先从牌库抽一张**，再把那张牌的副本放进牌库。
+	# R736：反过来（先放再抽）时 draw() 取牌库尾 → 抽回的永远是副本，抽牌等于没发生。
 
 	var mir_e2 := _new_engine([], 20, 20, -1, false)
 
@@ -5608,15 +5609,15 @@ func _init() -> void:
 
 	mir_e2.use_effect(0)
 
-	check(mir_e2.state.effects.size() == 2 and mir_e2.state.deck.is_empty()
+	check(mir_e2.state.effects.size() == 2 and mir_e2.state.deck.size() == 1
 
-			and mir_e2.state.hand.size() == 1
+			and mir_e2.state.deck[0].card_name == "自愈"
 
-			and mir_e2.state.hand[0].card_name == "自愈",
+			and mir_e2.state.hand.is_empty(),
 
-			"镜像：本回合第一次使用效果牌 → 一份副本入卡组、再抽一张（副本被抽回手牌）")
+			"镜像：牌库为空时抽不到（手牌 0 张），副本照常进牌库（R736 先抽后放）")
 
-	check(mir_e2.state.hand[0] != mir_e2.state.effects[1],
+	check(mir_e2.state.deck[0] != mir_e2.state.effects[1],
 
 			"镜像：加入的是同名**副本**（不是同一个对象）")
 
@@ -5648,9 +5649,11 @@ func _init() -> void:
 
 	check(mir_e3.state.deck.size() == 2 and mir_e3.state.hand.size() == 1
 
-			and mir_e3.state.hand[0].card_name == "自愈",
+			and mir_e3.state.hand[0].card_name == "熊"
 
-			"镜像：第一次使用效果牌 → 复制 1 份入卡组 + 抽 1 张（抽回副本，牌库其余 2 张不动）")
+			and mir_e3.state.deck[0].card_name == "树人",
+
+			"镜像：抽到的是牌库原有的「熊」，副本另进牌库（仍是 2 张：树人 + 自愈副本）")
 
 	mir_e3.state.hand = [repo.get_card(9065)]
 
@@ -5682,9 +5685,9 @@ func _init() -> void:
 
 	check(mir_e4.state.deck.size() == 2 and mir_e4.state.hand.size() == 1
 
-			and mir_e4.state.hand[0].card_name == "自愈",
+			and mir_e4.state.hand[0].card_name == "熊",
 
-			"镜像（R688 可叠加）：2 张时每次使用仍只复制 1 份、只抽 1 张（不按张数乘）")
+			"镜像（可叠加）：2 张时每次使用仍只复制 1 份、只抽 1 张（抽到牌库原有牌）")
 
 	mir_e4.state.hand = [repo.get_card(9065)]
 
@@ -5715,9 +5718,9 @@ func _init() -> void:
 
 	check(mir_e4.state.deck.size() == mir_deck0 and mir_e4.state.hand.size() == 1
 
-			and mir_e4.state.hand[0].card_name == "自愈",
+			and mir_e4.state.hand[0].card_name == "熊",
 
-			"镜像：下一回合第一次使用效果牌 → 再复制 1 份 + 再抽 1 张（抽回副本）")
+			"镜像：下一回合第一次使用效果牌 → 再复制 1 份进牌库 + 抽到牌库原有的一张")
 
 
 

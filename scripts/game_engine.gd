@@ -10809,16 +10809,18 @@ func _mirror_reflect(side: String, played: CardData) -> void :
 	if played == null:
 		return
 	if side == SIDE_SELF:
+		# R736（店长口径「按卡面修」）：**先抽、再放副本**。
+		# 反过来（先 append 副本再抽）时 `FieldState.draw()` 取牌库**尾** → 抽回的永远是
+		# 刚放进去的那张副本，「抽一张卡」等于没发生：牌库张数与内容都不变，玩家只是拿回了
+		# 自己刚打出的那张效果牌的复制（店长实报「抽一张卡变成了加一张效果卡到手卡」）。
+		# ⚠️ R647 当时写的「先抽后放会白赚一份」是错的：两种顺序都是净 +1 张（复制本身
+		#    凭空多一张），差别只在「抽到的是副本、还是牌库里原有的牌」。
+		var got:= _draw_many(1)
+		_log("镜像：抽一张卡（进手牌 %d 张）" % got)
 		var mr_copy := CardData.from_dict(played.to_dict())
 		state.deck.append(mr_copy)
 		_log("镜像：将一张「%s」加入本局卡组" % played.card_name)
 		action.emit("deck_added", {"card": mr_copy, "side": side})
-		# R647（用户规则）：镜像**每次触发**都再抽一张卡。
-		# ⚠️ 顺序固定「先入卡组、再抽」，与卡面文案一致；`FieldState.draw()` 取牌库**尾**，
-		#    刚 append 的副本就在尾部 → 手牌未满时抽回的通常正是这张副本（= 复制直接上手）。
-		#    别把两行调成「先抽后放」：那样手牌 +1 的同时牌库也 +1，等于白赚一份。
-		var got:= _draw_many(1)
-		_log("镜像：抽一张卡（进手牌 %d 张）" % got)
 	else:
 		state.opp_deck_count += 1
 		_log("镜像（敌方）：本局卡组 +1 张「%s」" % played.card_name)
