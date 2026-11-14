@@ -471,7 +471,8 @@ func _draw() -> void:
 				draw_string(_font_bold, dr.position + Vector2(14, 68),
 						GameI18n.ui("map", "DECK_EDIT_CARD_GROWTH", "本局永久成长 %s（跨战斗保留）") % grow_line,
 						HORIZONTAL_ALIGNMENT_LEFT, 180.0, UiTheme.FS_CAPTION, UiTheme.PAGE_GREEN)
-			var lines := CardFace.wrap_text(_font, CardText.naturalize(dc.effect_text),
+			# R702：成长卡写当前伤害（与上方「本局永久成长」那行同一口径）。
+			var lines := CardFace.wrap_text(_font, CardText.naturalize_card(dc),
 					dr.size.x - 210.0, UiTheme.FS_BODY)
 			for li in mini(lines.size(), 3):
 				draw_string(_font, dr.position + Vector2(196, 24 + li * 20), lines[li],

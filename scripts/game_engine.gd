@@ -14915,6 +14915,9 @@ func _spell_kill_damage_growth(card: CardData) -> void:
 	if inc <= 0:
 		return
 	card.value += inc
+	# R702：`growth_damage` 是「卡面正文那块数字该长多少」的展示账 —— 之前只抬了 value，
+	# 于是战斗中这张卡的面板还印着基础值（22），与实打实的 26 对不上。
+	card.growth_damage += inc
 	if RunState.run_active:
 		RunState.grow_card(card.id, 0, 0, inc)
 	_log("%s 击杀敌人 → 本局永久伤害 +%d（现 %d）" % [card.card_name, inc, card.value])

@@ -156,7 +156,8 @@ func _draw() -> void:
 	# 效果文全文（不截断到 3 行 —— 这个页面就是来看全文的）
 	# R602：仍然「能全文就全文」，但先按可用高度**折行 + 缩字号**（16→10），
 	# 长了就降字号而不是把后半句直接砍掉。
-	var eff := CardText.naturalize(_card.effect_text)
+	# R702：成长卡的正文要写**当前**伤害（猎杀 22 → 30），与上面数值行同一口径。
+	var eff := CardText.naturalize_card(_card)
 	if eff != "":
 		var avail_h := t.end.y - y
 		# R631：缩字号下限 10 → 9，并按「末行墨迹底」判（与卡面同一套口径）。

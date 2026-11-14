@@ -410,7 +410,8 @@ func _draw_detail(merged: Array, L: Dictionary) -> void:
 		y += 8.0
 	# 效果文
 	# R602：可用高度 = 面板底（留 44 给「卡组中…张」那行）→ 先折行再缩字号。
-	var eff := CardText.naturalize(c.effect_text)
+	# R702：成长卡的正文要写**当前**伤害（猎杀 22 → 30），与上面那行数值行同一口径。
+	var eff := CardText.naturalize_card(c)
 	if eff != "":
 		var avail_h: float = maxf(20.0, py + ph - 44.0 - y)
 		# R631：缩字号下限 10 → 9，按「末行墨迹底」判。

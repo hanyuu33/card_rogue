@@ -16274,7 +16274,7 @@ func _draw_enemy_effect_popup() -> void:
 		_draw_string_center(_font_bold, UI_FS_BODY, nm,
 				Vector2(c.x, y), Color.WHITE, -1)
 		y += 24.0
-		var desc := CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
+		var desc := CardText.naturalize_card(card).replace("\n", " ").strip_edges()
 		for ln in _wrap_lines(_font, UI_FS_CAPTION, desc, max_w):
 			_draw_string_center(_font, UI_FS_CAPTION, ln,
 					Vector2(c.x, y), Color(0.93, 0.93, 0.97), -1)
@@ -17475,7 +17475,9 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	# R349（用户口径）：伤害**内联进正文**，不再另起一行「现在打出」。
 	#   `now` 只有「这张卡正在手牌上」时才非空 → 弃牌区 / 卡组 / 敌方卡一律原样。
 	#   例：集中突破 `造成 **10** 点伤害` → `造成 18（10＋8）点伤害`。
-	var body_segs: Array = CardText.parse(card.effect_text)
+	# R702：正文走 `parse_card()` —— 本局成长（猎杀 +4/击杀）已经把卡库的 22 抬到 30 了，
+	# 这里若还读 `effect_text` 原文，左栏会一直印基础伤害。
+	var body_segs: Array = CardText.parse_card(card)
 	if not now.is_empty():
 		body_segs = CardText.inline_damage(body_segs, int(now.get("dmg", 0)),
 				int(now.get("base", 0)), str(now.get("expr", "")),

@@ -62094,9 +62094,117 @@ func _init() -> void:
 
 			"R393b/R592b 源码：卡面两口都不再挂成长角标")
 
+	# ================= R702：成长卡的正文要写**当前**伤害 =================
+
+	# 用户口径：「有一些诸如猎杀之类的卡，成长之后，卡片左侧详细描述里没有写实际伤害，
+
+	#             只写了基础伤害」。猎杀的 effect_text 是死文字（造成 22 点伤害），
+
+	# 本局成长只抬 value / growth_damage → 正文一直是 22，与实际打出的 30 对不上。
+
+	# 修法：显示层在**翻译之后**把「基础值」换成「当前值」（`CardText.parse_card`）。
+
 	RunState.card_growth = {}
 
+	check(repo.get_card(9205).body_number_swaps().is_empty(),
 
+			"R702：卡库原型（没有任何成长）不产生数字替换")
+
+	var r702_ids: Array[int] = [9205]
+
+	RunState.deck_ids = r702_ids
+
+	RunState.ensure_deck_mods()
+
+	RunState.grow_card(9205, 0, 0, 8)
+
+	var r702_cards: Array[CardData] = RunState.build_deck(repo)
+
+	var r702_slay: CardData = r702_cards[0]
+
+	check(r702_slay.value == 30 and r702_slay.growth_damage == 8
+
+			and r702_slay.body_number_swaps() == {"22": "30"},
+
+			"R702 数据：猎杀烤进 +8 成长后 value=30 / growth_damage=8，替换表 {22:30}（%s）"
+
+			% str(r702_slay.body_number_swaps()))
+
+	var r702_txt := CardText.naturalize_card(r702_slay)
+
+	check(r702_txt.contains("30 点伤害") and not r702_txt.contains("22 点伤害"),
+
+			"R702 正文：详细描述写实际伤害 30，不再写基础值 22（%s）" % r702_txt)
+
+	# 只换**第一次**出现：正文里后面的同数字（回合数 / 次数）不是伤害，不许跟着改
+
+	check(CardText._apply_number_swaps("造成 22 点伤害，持续 22 回合。", {"22": "30"})
+
+			== "造成 30 点伤害，持续 22 回合。",
+
+			"R702 替换：只换第一个「22」，后面的 22 回合不动")
+
+	# 边界：`8` 不许命中 `80`（与 `_find_token_in` 同一口径）
+
+	check(CardText._apply_number_swaps("造成 80 点伤害。再造成 8 点伤害。", {"8": "9"})
+
+			== "造成 80 点伤害。再造成 9 点伤害。",
+
+			"R702 替换：token 有右边界，8 不会命中 80")
+
+	# 非成长卡一个字都不能变（`parse_card` 必须与老路径逐字一致）
+
+	var r702_plain := repo.get_card(9003)
+
+	check(r702_plain.body_number_swaps().is_empty()
+
+			and CardText.naturalize_card(r702_plain) == CardText.naturalize(r702_plain.effect_text),
+
+			"R702 正文：普通卡的显示与老路径逐字一致")
+
+	# 缓存不能被两种数值串味（同一段 effect_text、两种 swaps）
+
+	var r702_a := CardText.naturalize_card(r702_slay)
+
+	var r702_b := CardText.naturalize_card(repo.get_card(9205))
+
+	check(r702_a.contains("30 点伤害") and r702_b.contains("22 点伤害"),
+
+			"R702 缓存：成长副本与原型卡各自取到自己的数字（30 / 22）")
+
+	# 源码守卫：所有「左侧详细描述」的渲染口都必须走带成长数值的入口
+
+	var r702_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+
+	check_src(r702_bs.find("CardText.parse_card(card)") >= 0
+
+			and r702_bs.find("CardText.naturalize_card(card)") >= 0,
+
+			"R702 源码：战斗左栏 + 敌方效果弹窗都走 parse_card / naturalize_card")
+
+	var r702_dvs := FileAccess.get_file_as_string("res://scripts/deck_viewer.gd")
+
+	var r702_dos := FileAccess.get_file_as_string("res://scripts/card_detail_overlay.gd")
+
+	var r702_cfs := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+
+	check_src(r702_dvs.find("CardText.naturalize_card(c)") >= 0
+
+			and r702_dos.find("CardText.naturalize_card(_card)") >= 0
+
+			and r702_cfs.find("CardText.naturalize_card(card)") >= 0,
+
+			"R702 源码：卡组浏览 / 详情浮层 / 卡面正文同口径")
+
+	# 战斗中击杀 → `growth_damage` 必须同步（只抬 value 的话，面板还印 22）
+
+	var r702_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+
+	check_src(r702_ge.find("card.value += inc") >= 0
+
+			and r702_ge.find("card.growth_damage += inc") >= 0,
+
+			"R702 源码：猎杀击杀同时抬 value 与 growth_damage")
 
 	RunState.end_run()
 

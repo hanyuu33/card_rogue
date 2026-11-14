@@ -329,7 +329,7 @@ static func _card_tip_blocks(card: CardData) -> Array:
 				"col": UiTheme.PAGE_MUTED, "size": UiTheme.FS_CAPTION, "line": 17.0, "gap": 2.0})
 	out.append({"segs": [{"text": GameI18n.ui("shared", "MENTION_SECTION_EFFECT", "效果"), "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
 			"size": UiTheme.FS_CAPTION, "line": 16.0, "gap": 9.0})
-	out.append({"segs": CardText.parse(card.effect_text), "col": UiTheme.PAGE_INK,
+	out.append({"segs": CardText.parse_card(card), "col": UiTheme.PAGE_INK,
 			"size": UiTheme.FS_LABEL, "line": 19.0, "gap": 3.0})
 	if not card.affixes.is_empty():
 		out.append({"segs": [{"text": GameI18n.ui("shared", "MENTION_SECTION_AFFIX", "字段"), "bold": true}], "col": UiTheme.ADVENTURE_FOREST,
@@ -439,7 +439,7 @@ static func summary_lines(font: Font, ref: Dictionary, max_w: float, max_lines :
 		if c == null:
 			return out
 		var stats := CardFace.stats_line(c)
-		var eff := CardText.naturalize(c.effect_text).replace("\n", " ").strip_edges()
+		var eff := CardText.naturalize_card(c).replace("\n", " ").strip_edges()
 		body = GameI18n.ui("shared", "MENTION_CARD_SUMMARY_META", "%s · %d 费 · %s%s") % [c.kind, c.cost, stats,
 				("；" + eff) if eff != "" else ""]
 	else:

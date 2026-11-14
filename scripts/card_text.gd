@@ -230,14 +230,18 @@ static func strip_parens(s: String) -> String:
 	return out.strip_edges()
 
 
-static func parse(md: String, hide_parens := HIDE_PARENS) -> Array:
+static func parse(md: String, hide_parens := HIDE_PARENS, swaps: Dictionary = {}) -> Array:
 	## 解析极简 Markdown → 片段数组：[{text, bold, italic, code}, ...]
 	## 支持 `**加粗**`、`*斜体*`、`` `代码` ``。标记不成对时按字面保留（不吞字）。
 	## ⚠️ R187：返回的是缓存的**浅副本** —— 片段 Dictionary 请勿原地改写。
 	var ck := GameI18n.language() + "|" + ("1" if hide_parens else "0") + "|" + md
+	if not swaps.is_empty():
+		ck += "|" + str(swaps)     # R702：成长卡的同一段正文有两种数 → 缓存键必须分开
 	if _parse_cache.has(ck):
 		return (_parse_cache[ck] as Array).duplicate()
-	var translated := GameI18n.source(md)
+	# R702：换数字必须在 `source()` **之后** —— 译文里的数字是硬编码的（Deal 22 damage），
+	# 先换原文会让整串查不到译文。换在译文上则与语言无关（22 → 30 在哪种语言都成立）。
+	var translated := _apply_number_swaps(GameI18n.source(md), swaps)
 	var s: String = clean_meta_notes(naturalize_phrases(translated))
 	if hide_parens:
 		s = strip_parens(s)
@@ -343,9 +347,46 @@ static func segments_plain(segs: Array) -> String:
 	return out
 
 
-static func naturalize(md: String, hide_parens := HIDE_PARENS) -> String:
+static func naturalize(md: String, hide_parens := HIDE_PARENS, swaps: Dictionary = {}) -> String:
 	## 纯文本降级：隐藏括号补注 + 去掉 Markdown 标记。给 Label / 单行提示用。
-	return segments_plain(parse(md, hide_parens))
+	return segments_plain(parse(md, hide_parens, swaps))
+
+
+static func parse_card(card: CardData, hide_parens := HIDE_PARENS) -> Array:
+	## R702：**卡面正文的唯一取数口**（含「本局成长」的数值换算）。
+	## 渲染口一律走这里，别再直接 `parse(card.effect_text)` —— 那样成长卡会一直写基础值
+	## （猎杀长到 30 了、正文还印着 22）。数值只换正文里第一个「基础值」，
+	## 与 R349 的内联（`inline_damage`，本场加成）叠着用：成长后的 base 正好是内联要找的锚。
+	if card == null:
+		return parse("", hide_parens)
+	return parse(card.effect_text, hide_parens, card.body_number_swaps())
+
+
+static func naturalize_card(card: CardData, hide_parens := HIDE_PARENS) -> String:
+	## `parse_card()` 的纯文本版（Label / 单行提示 / 折行工具用）。
+	if card == null:
+		return ""
+	return naturalize(card.effect_text, hide_parens, card.body_number_swaps())
+
+
+static func _apply_number_swaps(text: String, swaps: Dictionary) -> String:
+	## R702：把译文里的「卡库基础值」换成本局成长后的**当前值**。
+	## 每对只换**第一次**出现 —— 卡面正文里那句「造成 N 点伤害」永远是第一个数字，
+	## 再往后出现的同数字（「持续 2 回合」之类）不是伤害，不能跟着改。
+	## 边界判断复用 `_find_token_in`：`8` 不许命中 `80`，`2` 不许命中 `22`。
+	if swaps.is_empty() or text == "":
+		return text
+	var out := text
+	for key in swaps.keys():
+		var from := str(key)
+		var to := str(swaps[key])
+		if from == "" or to == "" or from == to:
+			continue
+		var i := _find_token_in(out, from)
+		if i < 0:
+			continue
+		out = out.substr(0, i) + to + out.substr(i + from.length())
+	return out
 
 
 static func to_bbcode(md: String, hide_parens := HIDE_PARENS) -> String:

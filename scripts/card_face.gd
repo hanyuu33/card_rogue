@@ -1152,7 +1152,9 @@ static func text_zone_layout(card: CardData, rect: Rect2, font: Font, font_bold:
 	var base_meta: float = base_name + row_h                 # 种类行基线
 	var has_meta: bool = base_meta + desc <= bottom
 	var eff_base0: float = base_meta + row_h                 # 效果首行基线
-	var eff: String = CardText.naturalize(card.effect_text).replace("\n", " ").strip_edges()
+	# R702：正文走 `naturalize_card()` —— 本局成长（猎杀 +4/击杀）已经把 value 抬上去了，
+	# 这里读 `effect_text` 原文会一直印基础伤害，与左栏详情 / 卡组浏览写两套数。
+	var eff: String = CardText.naturalize_card(card).replace("\n", " ").strip_edges()
 	var eff_sz: int = sz
 	var eff_lines: Array = []
 	var line_h: float = sz * 1.16

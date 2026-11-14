@@ -410,7 +410,7 @@ func _draw() -> void:
 		var meta := GameI18n.ui("map", "PICK_CARD_META", "%s · %d 费 · %s") % [dc.kind, dc.cost, dc.rarity_name()]
 		draw_string(_font, dr.position + Vector2(14, 48), meta,
 				HORIZONTAL_ALIGNMENT_LEFT, 170.0, UiTheme.FS_CAPTION, Color("9a94a8"))
-		var eff := CardText.naturalize(dc.effect_text)
+		var eff := CardText.naturalize_card(dc)
 		# R564：右侧给「详情」按钮留位（卡面只留卡名，长规则一行描述装不下）
 		var eff_w: float = dr.size.x - 210.0 - 116.0
 		var lines := CardFace.wrap_text(_font, eff, eff_w, UiTheme.FS_BODY)
