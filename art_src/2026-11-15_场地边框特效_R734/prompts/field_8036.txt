@@ -1,0 +1,15 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+A single isolated 2D game UI effect sprite: a HOLLOW RECTANGULAR BORDER RING — an elemental energy band that runs along the four edges of the canvas and is completely EMPTY in the middle. It will be laid over ONE cell of a tactical card-game board, UNDERNEATH the unit card standing there, so the ring hugs the outer edge of the cell and the middle stays black. Seen perfectly straight on, floating on a PURE BLACK (#000000) FLAT background. This will be converted into a transparent additive-blend overlay, so a clean uniform pure black background is CRITICAL and the effect must GLOW brightly against it.
+
+STYLE: 2D hand-painted anime-fantasy game effect art, the kind of spell overlay used in a cozy illustrated card game. Clean cel-shaded shapes with two or three values, crisp silhouettes, fine particle details. Vivid glow, strong contrast. Absolutely NO 3D render, NO photorealism, NO photoreal texture, NO noise grain, NO volumetric fog, NO lens flare, NO depth of field.
+
+GEOMETRY (most important): a CLOSED LOOP BAND hugging all four edges of a wide landscape rectangle. The band is EVENLY thick, about 12 to 15 percent of the canvas height, and runs CONTINUOUSLY around the whole perimeter with no gap and no break at the corners. The four corners carry slightly larger ornament clusters that stay within the band's thickness. The ENTIRE interior of the ring — the middle 70 percent of the canvas, both horizontally and vertically — is untouched pure black, with only a faint inner glow bleeding a few pixels inward. Nothing stands inside the middle.
+
+ELEMENT: a mechanical REPAIR BAY. The band is assembled from interlocking brass and steel-grey machine segments: riveted plates, toothed gear arcs biting into each other at the four corners, and a soft mint-green #6FE0A0 inspection light running along a recessed groove inside the band. Fine steel-blue #9EC4E8 highlights pick out the metal edges. Mood: tidy, engineered, quietly humming. No rust, no grime, no loose tools.
+
+COMPOSITION: one single ring only, centered, symmetric, straight-on view, no perspective tilt, no 3D bevel, no rotation, no directional lean. Both the outer rim and the inner rim of the band fade smoothly into pure black. NO ground, NO floor, NO scenery, NO background objects, NO cast shadow, NO panel, NO photo frame, NO picture inside the ring, NO second object. The ENTIRE background MUST be uniform pure black #000000: NO gradient, NO texture, NO pattern, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any text, letters, words, runes, numbers, digits, labels, watermark, logo or signature anywhere; any human figure, face, hands, creature, animal, bird, dragon, skull, ghost body; any weapon, tool, bottle, flask, bomb, spike, prop; any UI element, button, icon; any picture-frame moulding or card shape.
+
+NO readable text. NO numbers. NO watermark. Pure black background only.

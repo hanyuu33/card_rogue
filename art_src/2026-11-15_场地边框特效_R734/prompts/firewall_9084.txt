@@ -1,0 +1,15 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+A single isolated 2D game UI effect sprite: a WALL-OF-FIRE BANNER — a burning strip that covers one whole row of three battle-grid cells. It will be laid over that row, UNDERNEATH the unit cards standing there. Seen perfectly straight on, floating on a PURE BLACK (#000000) FLAT background. This will be converted into a transparent additive-blend overlay, so a clean uniform pure black background is CRITICAL and the effect must GLOW brightly against it.
+
+STYLE: 2D hand-painted anime-fantasy game effect art, the kind of spell overlay used in a cozy illustrated card game. Clean cel-shaded shapes with two or three values, crisp silhouettes, fine particle details. Vivid glow, strong contrast. Absolutely NO 3D render, NO photorealism, NO photoreal texture, NO noise grain, NO volumetric fog, NO lens flare, NO depth of field.
+
+GEOMETRY (most important): a WIDE HORIZONTAL BANNER, approximately 3.4 to 1. This is NOT a ring and NOT a rectangle outline: a continuous burning band of flame that runs from the left edge of the frame to the right edge, open at both ends, with no end caps, no border, no frame line. The flames occupy the lower 60 percent of the banner and lick upward; the top 35 percent fades into pure black. The fire is densest along the bottom baseline and thins out into separate tongues as it rises.
+
+ELEMENT: a WALL OF FIRE. A roaring continuous sheet of flame: an intense white-hot baseline, a bright orange #FF7A2A and amber #FFB03A body, deep crimson #C42B0E at the outer licks, tall flame tongues curling left and right, and small embers drifting up into the black above. Irregular, organic, hand-painted flame shapes — never a straight band of colour, never a gradient rectangle. Mood: roaring, dangerous, hot.
+
+COMPOSITION: one continuous wall of fire spanning the full width, straight-on view, no perspective, no ground plane, no scenery, no objects behind it, no cast shadow, no second effect. The bottom edge and both side ends fade into pure black so the strip tiles and blends seamlessly. The ENTIRE background MUST be uniform pure black #000000: NO gradient, NO texture, NO pattern, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any text, letters, words, runes, numbers, digits, labels, watermark, logo or signature anywhere; any human figure, face, hands, creature, animal, bird, dragon, skull, ghost body; any weapon, tool, bottle, flask, bomb, spike, prop; any UI element, button, icon; any picture-frame moulding or card shape.
+
+NO readable text. NO numbers. NO watermark. Pure black background only.
