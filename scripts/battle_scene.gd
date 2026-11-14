@@ -10087,8 +10087,14 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	# R118：`on_board = true` —— 战场卡面的「种类 · 字段」行**不再标出**上场后已无作用的
 	# 字段（交换 / 幻影）。判据在 `CardData.affix_on_board()`，这里只负责声明「我在战场上」。
 	# 沉睡（恶魔鸭 9116，sleep_left>0）→ 换沉睡专用卡图；其余状态用普通卡图。
+	# R705：费用也走 `cost_of`（原来写死 `-1` = 按卡库原价画）——实例级减费
+	# （`state.card_discount`：灵魂收割者 9233 打中被标记的敌人 -1 / 陨石术 9077）
+	# 只记在表里，卡面不读它就永远显示原价，玩家在场上会以为效果没生效。
+	# 与 R387 的速度/射程同一类坑：显示层漏了「实际值」。
+	# ⚠️ 必须带 `p.owner`：敌方单位不能被套上我方的减费表。
 	_draw_card_face(p.card, Rect2(center - Vector2(w, h) / 2.0, Vector2(w, h)),
-			_show_hp(p, p.health), selected, false, -1, p.effective_power(), true,
+			_show_hp(p, p.health), selected, false, engine.cost_of(p.card, p.owner),
+			p.effective_power(), true,
 			p.sleep_left > 0, _rev_art_phase(p), p.effective_speed(), p.effective_range(),
 			_slots, p.armor)
 	# R165：移除「横置」视觉——不再把卡转横。改用青色**就绪光环**标明「可行动」：
