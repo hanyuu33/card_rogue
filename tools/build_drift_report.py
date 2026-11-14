@@ -27,9 +27,17 @@ FIXES = re.findall(r'\["([^"]*)",\s*"([^"]*)"\]', block)
 assert len(FIXES) > 30, len(FIXES)
 
 
+# PHRASE_FIXES 里有「返回手卡」→「收回手牌」这种整句换词，底本写的是「返回手牌」，
+# 两边过完规则后一个变「收回手牌」一个还是「返回手牌」，会被误判成内容差异。
+# 这里补一层「显示层同义」归类，只用于本报告判定，不改数据。
+DISPLAY_ALIAS = [("收回手牌", "返回手牌")]
+
+
 def normalize_terms(s):
     out = s
     for a, b in FIXES:
+        out = out.replace(a, b)
+    for a, b in DISPLAY_ALIAS:
         out = out.replace(a, b)
     out = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", out)
     return out
@@ -108,6 +116,20 @@ power_body = "".join(row_html(r) for r in power_rows) if power_rows else "<tr><t
 term_body = "".join(row_html(r) for r in term_rows)
 other_body = "".join(row_html(r) for r in other_rows) if other_rows else "<tr><td colspan=3>无</td></tr>"
 
+# 显示层只把「攻击力」换成「力量」，写成「攻击 +1」的漏过去了 —— 玩家会看到「攻击 +1」，
+# 而译文说 Strength / 攻撃力 / fuerza。底本与原文在这两句上是一致的，所以上面查不出漂移。
+leak_re = re.compile(r"攻击\s*[+\-]\s*\d")
+leak_rows = [c for c in cards if leak_re.search(str(c.get("effect_text", "")))]
+leak_lead = ("另外原文里还有 <b>%d</b> 处写成「攻击 +N」（不是「攻击力」三字），显示层只替换「攻击力」，"
+             "所以玩家会真的看到「攻击 +1」，而英日西译文说的是力量 ——"
+             "这一条是实打实的不一致，不是报告口径问题。其中 9038 同时属于上面的漂移，"
+             "8045 则是原文与底本都这么写、只靠比对查不出来。" % len(leak_rows))
+leak_body = "".join(
+    "<tr><td><code>%s</code><br><span class=n>%s</span></td><td class=raw>%s</td><td class=canon>%s</td></tr>"
+    % (esc(c["id"]), esc(c["name"]), esc(c.get("effect_text", "")),
+       esc(zcards.get(str(c["id"]), {}).get("effect_text", "")))
+    for c in leak_rows) or "<tr><td colspan=3>无</td></tr>"
+
 fixed_body = "".join(
     "<tr><td><code>%s</code><br><span class=n>%s</span></td><td><b>%s</b></td><td class=why>%s</td></tr>"
     % (esc(a), esc(b), esc(c), esc(d)) for a, b, c, d in FIXED)
@@ -118,7 +140,7 @@ trans_body = "".join(
 doc = """<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>底本与原文差异专版 · card_rogue R724</title>
+<title>底本与原文差异专版 · card_rogue R725</title>
 <style>
 :root{--bg:#f5f2ec;--paper:#fffdf8;--ink:#24262d;--muted:#71727b;--line:#e2dbcc;--accent:#6a4f9c;
 --soft:#efe9f6;--warn:#b8562c;--warnbg:#fdf0e8;--ok:#2f6b4f;--okbg:#eaf4ee}
@@ -183,11 +205,14 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:8px 20px 40
   <div class="lead">原文写「攻击力」，底本已统一成「力量」。日文两边都译「攻撃力」，所以日文侧永远发现不了这个分歧 ——
   只有中文玩家会看到同一个数值两个名字。要统一成哪一套，你定，我照改。</div>
   <table>__TH__<tbody>__POWERBODY__</tbody></table>
+  <div class="lead">__LEAKLEAD__</div>
+  <table>__TH__<tbody>__LEAKBODY__</tbody></table>
 </section>
 
 <section>
   <h2>④ 其他内容差异</h2>
-  <div class="lead">除去术语替换后仍不一致的条目。</div>
+  <div class="lead">除去术语替换后仍不一致的条目。<b>现在是 0</b>：原先被算进来的 9095 / 9102 / 9127
+  只是「返回手卡 → 收回手牌」这条显示规则的两头写法不同，已归入⑤。</div>
   <table>__TH__<tbody>__OTHERBODY__</tbody></table>
 </section>
 
@@ -215,6 +240,8 @@ doc = (doc.replace("__TOTAL__", str(len(rows)))
           .replace("__FIXEDBODY__", fixed_body)
           .replace("__TRANSBODY__", trans_body)
           .replace("__POWERBODY__", power_body)
+          .replace("__LEAKBODY__", leak_body)
+          .replace("__LEAKLEAD__", leak_lead)
           .replace("__OTHERBODY__", other_body)
           .replace("__TERMBODY__", term_body)
           .replace("__TH__", th))
