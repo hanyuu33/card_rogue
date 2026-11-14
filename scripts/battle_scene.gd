@@ -149,6 +149,8 @@ const TRAP_BAR_Y := 96.0
 const TRAP_BAR_SIZE := 56.0
 const TRAP_BAR_GAP := 8.0
 const TRAP_BAR_X := DECK_X + (ZONE_W - TRAP_BAR_SIZE) * 0.5
+## R695：丢工具「上膛」的有效期（ms）—— 超过这个时间再点 × 只算重新上膛。
+const TOOL_DISCARD_MS := 2600
 # ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
 # 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
 # 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
@@ -447,6 +449,10 @@ var _trap_press_pos := Vector2.ZERO
 var _trap_drag_slot := -1       # 正在拖的陷阱槽（-1 = 无）
 var _trap_drag_pos := Vector2.ZERO
 var _trap_drag_cells: Array[Vector2i] = []   # 本次拖放的合法格
+## R695：丢弃工具的「两段式确认」——`_trap_discard_arm` 是上膛的槽（-1 = 没上膛），
+## `_trap_discard_until` 是上膛失效时刻（ms）。第一次点 × 只上膛，2.6 秒内再点同一个才真丢。
+var _trap_discard_arm := -1
+var _trap_discard_until := 0
 
 
 func _say(text: String) -> void:
@@ -1035,7 +1041,13 @@ func _ready() -> void:
 		if args[i] == "--tooldemo":
 			# R690 出图：工具栏塞三种（炼金炸弹 + 两个使用型），核验新药瓶图标与栏位观感。
 			# 出图：`battle.tscn -- --screenshot --tooldemo --level 0 --shotframe 200`
-			RunState.traps = [7001, 7005, 7006]
+			# R695：`--toolfull` 时故意塞满三个（核验满栏照样掉 / 换一个 / × 丢弃徽章）。
+			# ⚠️ 必须写成分支：`RunState.traps` 是 `Array[int]`，三元表达式产出的是无类型
+			#    Array，赋值会直接报「Invalid assignment」。
+			if "--toolfull" in args:
+				RunState.traps = [7001, 7002, 7004]
+			else:
+				RunState.traps = [7001, 7005, 7006]
 			RunState.run_active = true   # 栏位绘制的前置：非 run 态整条工具栏不画
 		if args[i] == "--shotms" and i + 1 < args.size():
 			_shot_ms = maxi(int(args[i + 1]), 10)  # 截图时机（距演示动作的毫秒数）
@@ -4846,6 +4858,17 @@ func _gui_input(event: InputEvent) -> void:
 			# R663：陷阱槽优先于手牌/棋盘 —— 槽是自绘的，点它不该走进 _on_left_click
 			# （那会顺手把当前选中清掉）。记下按下槽，等松手 / 拖过阈值再分派。
 			var ts := _trap_slot_at(event.position)
+			# R695：槽角上的「×」优先 —— 它压在槽里，先判它才能点到丢弃。
+			if ts >= 0 and _trap_discard_rect(ts).has_point(event.position) \
+					and RunState.trap_at(ts) > 0:
+				_try_discard_tool(ts)
+				_trap_press_slot = -1
+				_press_idx = -1
+				_grid_drag_arm = false
+				_grid_dragging = false
+				_info_drag_arm = false
+				_info_dragging = false
+				return
 			if ts >= 0 and RunState.trap_at(ts) > 0:
 				_trap_press_slot = ts
 				_trap_press_pos = event.position
@@ -8120,9 +8143,12 @@ func _goto_scene(path: String, fx := "wipe") -> void:
 
 
 func _on_reward_panel_closed() -> void:
-	## R389：玩家**自己点关**奖励窗之后走这里（转场关闭已被 `_closing_to_route` 挡掉）。
-	## 判据在 `RewardPanel` 那边 —— 是个纯静态函数，engine 单测得到；这里只负责执行。
-	if not RewardPanel.can_auto_leave_after_reward(_over_shown, RunState.pending_reward_count()):
+	## R389 / R695：玩家**自己点关**奖励窗之后走这里（转场关闭已被 `_closing_to_route` 挡掉）。
+	## R695（用户口径「不需要专门点放弃，允许玩家不拿直接过」）：关窗就**直接走** ——
+	## 以前要「这一批全领完」才放行，于是不想要奖励的人被扣在结算页里。
+	## 没领的条目不会丢：它们跟着地图左上「✦ 待领奖励 N」走，
+	## 只有走进**下一个未探索的格子**才作废（`RunState.forfeit_pending_rewards()`）。
+	if not RewardPanel.can_auto_leave_after_reward(_over_shown, RunState.must_take_card_reward()):
 		return
 	_on_over_restart()
 
@@ -9733,6 +9759,36 @@ func _trap_slot_at(pos: Vector2) -> int:
 	return -1
 
 
+func _trap_discard_rect(i: int) -> Rect2:
+	## R695（用户口径「现有道具可以丢弃」）：「×」小徽章骑在槽的右上角之外。
+	## ⚠️ 20×20 不算大，所以它只占「角上那一块」——槽中心的正常点按 / 拖放一点都不受影响；
+	##    并且在命中判定里**排在槽本身之前**，否则永远点不到。
+	var r := _trap_slot_rect(i)
+	return Rect2(r.position.x + r.size.x - 12.0, r.position.y - 8.0, 20.0, 20.0)
+
+
+func _try_discard_tool(slot: int) -> void:
+	## R695：丢弃栏位里的工具。**两段式**：第一次点只「上膛」，`TOOL_DISCARD_MS` 内
+	## 再点同一个 × 才真的丢。理由：丢工具不可逆，而战斗界面里每一秒都在读盘面，
+	## 弹一个模态确认框要两次动作才能消掉、还挡住战场 —— 同一个小 × 点两次最省事。
+	var id := RunState.trap_at(slot)
+	if id <= 0:
+		return
+	var td: TrapData = TrapRepo.load_json().get_trap(id)
+	var nm := td.trap_name if td != null else "工具"
+	var now := Time.get_ticks_msec()
+	if _trap_discard_arm == slot and now <= _trap_discard_until:
+		RunState.discard_trap(slot)
+		_trap_discard_arm = -1
+		_trap_discard_until = 0
+		_say("已丢弃「%s」，栏位空出来了" % nm)
+	else:
+		_trap_discard_arm = slot
+		_trap_discard_until = now + TOOL_DISCARD_MS
+		_say("再点一次「×」就丢弃「%s」（不可撤销）" % nm)
+	queue_redraw()
+
+
 func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	if engine == null or engine.current_side != GameEngine.SIDE_SELF:
 		_trap_press_slot = -1
@@ -9836,6 +9892,20 @@ func _draw_trap_bar() -> void:
 		draw_rect(r, col, false, 3.0 if dragging else 2.0)
 		if id > 0 and not dragging:
 			TrapArt.draw(self, r.grow(-5.0), id, false)
+			# R695：右上角「×」= 丢弃这个工具（两段式确认，见 `_try_discard_tool`）。
+			# 只在工具栏里画（`_draw_trap_bar` 本来就只在局内走）—— 没拿到工具的槽不画。
+			var br := _trap_discard_rect(i)
+			var armed := _trap_discard_arm == i
+			draw_circle(br.get_center(), br.size.x * 0.5,
+					Color(0.55, 0.10, 0.08, 0.96) if armed else Color(0.10, 0.09, 0.12, 0.92))
+			draw_arc(br.get_center(), br.size.x * 0.5, 0.0, TAU, 18,
+					Color("ffb38a") if armed else Color(0.90, 0.80, 0.58, 0.85), 1.5, true)
+			var cc := br.get_center()
+			var dd := Vector2(4.0, 4.0)
+			var lc := Color(1.0, 0.95, 0.90) if armed else Color(0.93, 0.85, 0.68, 0.92)
+			draw_line(cc - dd, cc + dd, lc, 2.0, true)
+			draw_line(Vector2(cc.x - dd.x, cc.y + dd.y), Vector2(cc.x + dd.x, cc.y - dd.y),
+					lc, 2.0, true)
 		elif id < 0:
 			draw_line(r.position + Vector2(12, r.size.y * 0.5),
 					r.position + Vector2(r.size.x - 12, r.size.y * 0.5),
@@ -17978,6 +18048,10 @@ func _process(delta: float) -> void:
 	# R186：触屏长按到时 → 右键等价（放弃取牌 / 取消专注 / 取消选中）。
 	# 同时摘掉待结算的左键按下 —— 否则松手时模拟鼠标会补发一发左键点击。
 	_sync_pick()
+	# R695：丢弃工具的「上膛」过期就熄掉（2.6 秒内不再点同一个 × 就不丢）。
+	if _trap_discard_arm >= 0 and Time.get_ticks_msec() > _trap_discard_until:
+		_trap_discard_arm = -1
+		queue_redraw()
 	# 演示：选卡页一展开就补一次预选（一次性；出图能看到「选中金框 + 描述条」）。
 	if _demo_pick_sel >= 0 and _pick != null and _pick.visible and _pick.is_picking():
 		_pick._toggle(_demo_pick_sel)

@@ -743,6 +743,12 @@ func _commit_enter(cell: Dictionary) -> void:
 	var res := RunState.advance(id)
 	if not bool(res.get("ok", false)):
 		return
+	# R695：走**没探索过的**格子 = 上一格忘拿的奖励到期（`advance()` 里清的）。
+	# 这里只负责说一声 —— 不作声地吞掉玩家的奖励是最容易招骂的做法。
+	var lost := int(res.get("forfeited", 0))
+	if lost > 0:
+		_set_note(GameI18n.ui("map", "MAP_REWARD_FORFEIT",
+				"离开上一格：%d 件没领的奖励已作废（要拿就得在进新格子之前回去）") % lost)
 	# R356：第三层的**起点是补给点** —— 站在那里就回满生命（终局段唯一的回血口：
 	# R224 起「到新的一层以外一律不回血」，而这一层只有 5 格、没有战斗后回血）。
 	# ⚠️ 放在 `is_new` 判定**之前**：走回起点（走过的房间）同样能补给，
@@ -1223,6 +1229,12 @@ func _fly_click(pos: Vector2) -> void:
 	_fly_ids = []
 	_fly_blocked = []
 	RunState.pending_fly = false
+	# R695：飞过去同样是「踏进没探索过的格子」→ 忘拿的奖励到期（提示紧随 `_dispatch_node`，
+	# 那一支可能自己再写一条 note，所以只在真的清掉了东西时才补一句）。
+	var flew_lost := int(res.get("forfeited", 0))
+	if flew_lost > 0:
+		_set_note(GameI18n.ui("map", "MAP_REWARD_FORFEIT",
+				"离开上一格：%d 件没领的奖励已作废（要拿就得在进新格子之前回去）") % flew_lost)
 	_dispatch_node(fc)
 
 

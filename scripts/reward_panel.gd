@@ -78,6 +78,10 @@ const PANEL_H := 584.0
 ## R674：内容要退到九宫格 34px 角花之内 —— 原来 PAD=24，标题/行卡片/按钮全压在左右边条与
 ## 上下花纹带上。54 = 角花 34 + 留白 20。
 const PAD := 54.0
+## R695：道具详情页在「工具栏 3/3」时让出的一条换工具栏位（正文 / 底部说明都会让开它）。
+const TOOL_SWAP_H := 100.0
+const TOOL_SWAP_W := 120.0
+const TOOL_SWAP_GAP := 16.0
 const ROW_H := 84.0
 const ROW_GAP := 10.0
 ## R531：追加奖励区块的**分隔带**高度 —— 画在 bonus 行**上方**（金线 + 题签 + 暖光）。
@@ -192,14 +196,14 @@ func _ready() -> void:
 
 # ------------------------------------------------------------ 开关 / 每帧
 
-static func can_auto_leave_after_reward(over_shown: bool, pending: int) -> bool:
-	## R389：奖励窗关掉之后要不要**直接走**（用户口径：领完就该回地图，
-	## 别再让玩家去点一次结算面板上的「返回冒险地图」）。
-	## 两个前提缺一不可：
-	##   * 结算面板已经出来了 —— 失败 / 单关演示根本不走这条路；
-	##   * 这一批奖励**确实领完了** —— 还有没领的就停在原地，
-	##     左上角「✦ 待领奖励 N」随时能回来，不能把人直接拽走。
-	return over_shown and pending <= 0
+static func can_auto_leave_after_reward(over_shown: bool, blocked: bool) -> bool:
+	## R695（用户口径「不需要专门点放弃，允许玩家不拿直接过」）：关掉奖励窗就**直接走**。
+	## R389 那版的第二条前提是「这一批奖励确实领完了」，现在反过来了：没领的条目跟着
+	## 地图左上「✦ 待领奖励 N」走，**走进下一个未探索过的格子**才作废
+	## （`RunState.forfeit_pending_rewards()`）—— 所以关窗不再拦人。
+	## 仍然要拦的只有一种：暗动力（6054）扣着卡牌奖励（`blocked` = `must_take_card_reward()`），
+	## 那时「完成」本来就是灰的、窗根本关不掉，这里是同一判据的第二道保险。
+	return over_shown and not blocked
 
 
 func is_open() -> bool:
@@ -576,7 +580,17 @@ func _settle_then_route(target: String) -> void:
 		SceneFx.goto(target)
 
 
-func _skip_entry(i: int) -> void:
+func _leave_entry() -> void:
+	## R695：详情页原来的「放弃这件」→ **返回列表**（用户口径「不需要专门点放弃」）。
+	## ⚠️ 这里**不碰任何数据**：条目仍是 pending，关掉界面也还在，
+	##    走到下一个未探索的格子之前都能从「✦ 待领奖励 N」回来领。
+	_back_to_list()
+
+
+func _resolve_unusable(i: int) -> void:
+	## 极少数「这条奖励此刻没有任何可执行内容」的兜底（卡组一张能删的都没有 /
+	## 凑不出一对核心）—— 那是**数据层**的事，仍然真的了结掉，不是「返回」。
+	## ⚠️ 与 `_leave_entry()` 的区别就在这一层：那个是玩家想看别的，这个是没有内容可做。
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
 	RunState.skip_pending_reward(i)
@@ -592,14 +606,6 @@ func _claim_key_choice(take_key: bool) -> void:
 	_scroll = 0.0
 	_root.queue_redraw()
 	_route_if_waiting_pick()
-
-
-func _skip_key_choice() -> void:
-	## R543：二选一放弃（什么都不拿）。
-	RunState.skip_key_choice(_sel)
-	_view = VIEW_LIST
-	_scroll = 0.0
-	_root.queue_redraw()
 
 
 func _pick_card(i: int, card_id: int) -> void:
@@ -632,9 +638,9 @@ func _open_entry(i: int) -> void:
 		if _settled(e):
 			return
 		# R414：卡组里**一张能删的都没有**（极端情况：全是带锁的卡）→ 别把人关进一个
-		# 点什么都不动的卡组页。直接按「放弃」处理，这条就干净地了结了。
+		# 点什么都不动的卡组页。这条确实没有内容可执行，直接了结（不是「返回」）。
 		if not RunState.has_deletable_deck_card():
-			_skip_entry(i)
+			_resolve_unusable(i)
 			return
 		_view = VIEW_DECK
 		_scroll = 0.0
@@ -645,9 +651,9 @@ func _open_entry(i: int) -> void:
 		if _settled(e):
 			return
 		# 卡组中途变了（读档 / 别的来源删过卡）→ 凑不出一对时别把人关进空页面，
-		# 直接按「放弃」了结这一条（道具还在，下一场战斗后还能再触发）。
+		# 直接了结这一条（道具还在，下一场战斗后还能再触发）。
 		if not _core_open_stage(0):
-			_skip_entry(i)
+			_resolve_unusable(i)
 			return
 		_view = VIEW_CORE
 		_root.queue_redraw()
@@ -1050,7 +1056,7 @@ func _draw_list() -> void:
 		_foot_note(r, done.position.y, GameI18n.ui("reward", "REWARD_CLAIM_ALL_NOTE", "「领取全部道具」不碰卡牌与工具奖励 —— 卡牌要自己挑一张"))
 	else:
 		_foot_note(r, done.position.y,
-				GameI18n.ui("reward", "REWARD_MANUAL_PROCESSING_NOTE", "卡牌 / 删卡 / 核心 / 工具奖励要点进去处理（不能一键领取）") if pend > 0 else GameI18n.ui("reward", "REWARD_ALL_SETTLED_NOTE", "全部奖励都已处理，可以点「完成」"))
+				GameI18n.ui("reward", "REWARD_MANUAL_PROCESSING_NOTE", "卡牌 / 删卡 / 核心 / 工具奖励要点进去处理；关掉界面不会丢，进下一个新格子前都能回来领") if pend > 0 else GameI18n.ui("reward", "REWARD_ALL_SETTLED_NOTE", "全部奖励都已处理，可以点「完成」"))
 	_draw_btn(done, GameI18n.ui("reward", "REWARD_DONE", "完成"), false, must_pick)
 	# R463：右上角「卡组」—— 领奖励之前先看一眼这局攒了什么（选卡时最常想翻）
 	_draw_btn(_btn_view_deck_rect(r), GameI18n.ui("reward", "REWARD_DECK_BUTTON", "卡组"), false, false)
@@ -1285,6 +1291,9 @@ func _draw_relic() -> void:
 		return
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
+	# R695：工具栏 3/3 时这一条领不进去 → 正文要让出底部 TOOL_SWAP_H 给「换一个」栏位。
+	var tool_full := (not settled) and str(e.get("kind", "")) == "tool" \
+			and RunState.trap_free_slots() <= 0
 	_draw_btn(_btn_back_rect(), GameI18n.ui("reward", "REWARD_BACK_TO_LIST", "← 返回列表"), false, false)
 	# R680：标题（含 R577b 那枚道具图）**整组居中** —— 与二选一视图同一个口径。
 	# 原来标题 `x+180` 左起正好压住「← 返回列表」右沿（184），图标再挂在标题右端，
@@ -1317,6 +1326,9 @@ func _draw_relic() -> void:
 			+ float(CardFace.wrap_text(_font, prose, body_txt_w, UiTheme.FS_BODY).size()) * 24.0
 			+ Mention.block_height(_font, _font_bold, prose, body_txt_w, Mention.BLOCK_HEAD_H)
 			+ 34.0, 150.0, PANEL_H - HEAD_H - FOOT_H)
+	# R695：满栏时正文区收短 TOOL_SWAP_H（换工具栏位要落在这里），否则长描述会压到栏位上。
+	if tool_full:
+		body_h = maxf(120.0, body_h - TOOL_SWAP_H)
 	_root.draw_rect(Rect2(r.position.x + PAD, r.position.y + HEAD_H, PANEL_W - PAD * 2.0,
 			body_h), Color(0.99, 0.97, 0.90, 0.55), true)
 	# R680：状态行跟着标题一起整幅居中（同二选一副标题）—— 正文段落仍左对齐，
@@ -1328,6 +1340,9 @@ func _draw_relic() -> void:
 	var txt_w := PANEL_W - PAD * 4.0
 	var txt_x := r.position.x + PAD * 2.0
 	var bottom := r.position.y + PANEL_H - FOOT_H - 8.0
+	if tool_full:
+		bottom -= TOOL_SWAP_H
+	# R695：上面已算过 `tool_full`（正文要让位给换工具栏位）—— 这里不再重算。
 	var segs := CardText.parse(_relic_desc_text(e))
 	var res := CardText.draw_wrapped_hits(_root, _font, _font_bold, segs, txt_x,
 			r.position.y + HEAD_H + 68.0 - _scroll, txt_w, UiTheme.FS_BODY, 24.0,
@@ -1337,21 +1352,85 @@ func _draw_relic() -> void:
 	_mention_hits = res["hits"]
 	# 底部动作
 	var claim := _btn_claim_rect()
-	var skip := _btn_skip_rect()
+	# R695（用户口径「我希望满栏掉落」配套）：工具栏 3/3 时**道具领不进去** ——
+	# 旧版 `claim_pending_reward` 会返回 false，界面上却什么都不说（点了没反应）。
+	# 现在把三个旧槽摊在正文下方：点一个 = 丢掉它，新工具立刻进那个槽。
+	if tool_full:
+		_draw_tool_swap_strip(r)
 	if settled:
 		_foot_note(r, claim.position.y,
 				GameI18n.ui("reward", "REWARD_SETTLED_RELIC_NOTE", "这条已经%s了（不可再操作）") % ("领取" if _state_label(e) == "已领取" else GameI18n.ui("reward", "REWARD_SETTLED_VERB_SKIPPED", "放弃")))
+	elif tool_full:
+		_foot_note(r, claim.position.y,
+				GameI18n.ui("reward", "REWARD_TOOL_SWAP_NOTE", "点上面的旧工具 = 丢掉它，新工具立刻补进那个栏位。"))
 	else:
 		_foot_note(r, claim.position.y,
 				GameI18n.ui("reward", "REWARD_RETURN_KEEPS_REWARD", "「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。"))
-	_draw_btn(skip, GameI18n.ui("reward", "REWARD_SKIP_THIS", "放弃这件"), false, settled)
-	_draw_btn(claim, GameI18n.ui("reward", "REWARD_CLAIM", "领取") if not settled else GameI18n.ui("reward", "REWARD_SETTLED_BUTTON", "已处理"), true, settled)
+	# R695：原来这里是「放弃这件」。用户口径「不需要专门点放弃，允许不拿直接过」→
+	# 整个按钮撤掉：想走就走左上角「← 返回列表」，条目留在待领队列里。
+	_draw_btn(claim, (GameI18n.ui("reward", "REWARD_TOOL_FULL_BTN", "工具栏已满") if tool_full
+			else GameI18n.ui("reward", "REWARD_CLAIM", "领取")) if not settled
+			else GameI18n.ui("reward", "REWARD_SETTLED_BUTTON", "已处理"),
+			true, settled or tool_full)
+
+
+func _tool_swap_rect(i: int) -> Rect2:
+	## R695：换工具栏位（只在「工具栏满 + 这条是工具」时存在）。绘制与命中共用。
+	var r := _panel_rect()
+	var total := float(RunState.TRAP_SLOTS) * TOOL_SWAP_W \
+			+ float(RunState.TRAP_SLOTS - 1) * TOOL_SWAP_GAP
+	var x0 := r.position.x + (PANEL_W - total) * 0.5
+	var y := r.position.y + PANEL_H - FOOT_H - 8.0 - TOOL_SWAP_H + 24.0
+	return Rect2(x0 + float(i) * (TOOL_SWAP_W + TOOL_SWAP_GAP), y,
+			TOOL_SWAP_W, TOOL_SWAP_H - 30.0)
+
+
+func _draw_tool_swap_strip(r: Rect2) -> void:
+	## R695（用户口径「我希望满栏掉落」）：3/3 满栏时，新工具**照样掉**、
+	## 照样能领 —— 只是要先腾个位置。这里把三个旧槽摊在正文下方，点一个 = 丢掉它、
+	## 新工具立刻补进那个槽（`_swap_tool()`）。
+	## 为什么不做成「满栏就不掉」：旧版就是那样，10% 的掉率对满栏玩家悄悄变成 0%。
+	var top := r.position.y + PANEL_H - FOOT_H - 8.0 - TOOL_SWAP_H
+	_root.draw_string(_font_bold, Vector2(r.position.x, top + 16.0),
+			GameI18n.ui("reward", "REWARD_TOOL_FULL_SWAP", "工具栏已满：点一个旧工具，把它换下来"),
+			HORIZONTAL_ALIGNMENT_CENTER, PANEL_W, UiTheme.FS_CAPTION, Color("8c1a10"))
+	for i in RunState.TRAP_SLOTS:
+		var sr := _tool_swap_rect(i)
+		var old := RunState.trap_at(i)
+		if old <= 0:
+			continue
+		var hot := _mouse_over(sr)
+		_root.draw_rect(sr, Color(1.0, 0.98, 0.92, 0.72) if hot else Color(0.99, 0.97, 0.90, 0.55), true)
+		_root.draw_rect(sr, Color("b03a2e") if hot else Color(0.42, 0.36, 0.26, 0.40), false, 2.0)
+		var tex: Texture2D = UiAssets.trap_icon(old)
+		if tex != null:
+			_root.draw_texture_rect(tex, Rect2(sr.position + Vector2(6.0, 6.0),
+					Vector2(sr.size.y - 12.0, sr.size.y - 12.0)), false)
+		var td: TrapData = TrapRepo.load_json().get_trap(old)
+		var nm := td.trap_name if td != null else "工具"
+		_root.draw_string(_font, Vector2(sr.position.x + sr.size.y - 2.0, sr.position.y + 22.0),
+				nm, HORIZONTAL_ALIGNMENT_LEFT, sr.size.x - sr.size.y - 2.0,
+				UiTheme.FS_CAPTION, Color("6a5a40"))
+		_root.draw_string(_font, Vector2(sr.position.x + sr.size.y - 2.0, sr.position.y + 38.0),
+				GameI18n.ui("reward", "REWARD_TOOL_SWAP_TAG", "丢掉它"), HORIZONTAL_ALIGNMENT_LEFT,
+				sr.size.x - sr.size.y - 2.0, UiTheme.FS_CAPTION,
+				Color("b03a2e") if hot else Color(0.55, 0.42, 0.30, 0.75))
+
+
+func _swap_tool(slot: int) -> void:
+	## R695：丢掉旧槽 → 立刻把这条工具领进来（`claim_pending_reward` 会填第一个空槽）。
+	## ⚠️ 顺序不能反：先领后丢的话，满栏时 `gain_trap()` 直接失败，玩家白丢一个工具。
+	var old := RunState.discard_trap(slot)
+	if old <= 0:
+		return
+	if RunState.claim_pending_reward(_sel):
+		_back_to_list()
 
 
 func _draw_key_choice() -> void:
 	## R543：大宝箱「奖励道具 / 生命之种」二选一视图。
-	## 两个并列选项卡片（左=奖励道具，右=生命之种信物），点一个即领取；
-	## 底部「返回列表」「放弃这件」照旧。
+	## 两个并列选项卡片（左=奖励道具，右=生命之种信物），点一个即领取。
+	## R695：底部的「放弃这件」已撤 —— 两个都不想要就走「← 返回列表」，条目留在待领队列。
 	var r := _panel_rect()
 	_draw_panel_box(r)
 	if _sel >= RunState.pending_rewards.size():
@@ -1375,12 +1454,13 @@ func _draw_key_choice() -> void:
 	_draw_key_option(opt_a, 0, rid, settled)
 	_draw_key_option(opt_b, 1, rid, settled)
 	# 底部动作
-	var skip := _btn_skip_rect()
+	# R695：这里不再画「放弃这件」—— 两个选项都不想要就「← 返回列表」，
+	# 这条二选一会留在待领队列里（走到下一个未探索的格子前都能回来选）。
+	var note_y := _btn_claim_rect().position.y
 	if settled:
-		_foot_note(r, skip.position.y, GameI18n.ui("reward", "REWARD_SETTLED_CHOICE_NOTE", "这条已经处理过了（不可再操作）。"))
+		_foot_note(r, note_y, GameI18n.ui("reward", "REWARD_SETTLED_CHOICE_NOTE", "这条已经处理过了（不可再操作）。"))
 	else:
-		_foot_note(r, skip.position.y, GameI18n.ui("reward", "REWARD_KEY_CHOICE_HINT", "点左侧拿奖励道具，点右侧拿「生命之种」信物。"))
-	_draw_btn(skip, "放弃这件", false, settled)
+		_foot_note(r, note_y, GameI18n.ui("reward", "REWARD_KEY_CHOICE_HINT", "点左侧拿奖励道具，点右侧拿「生命之种」信物。"))
 
 
 func _key_choice_rect(opt: int) -> Rect2:
@@ -1565,7 +1645,8 @@ func _draw_deck() -> void:
 				GameI18n.ui("reward", "REWARD_SCROLL_MORE", "滚轮查看更多（%d 张）") % n, HORIZONTAL_ALIGNMENT_RIGHT, c.size.x,
 				UiTheme.FS_CAPTION, UiTheme.INK_600)
 	_draw_btn(_btn_deck_back_rect(), "← 返回列表", false, false)
-	_draw_btn(_btn_deck_skip_rect(), GameI18n.ui("reward", "REWARD_SKIP_DELETE", "放弃这次删卡"), false, settled)
+	# R695：删卡页不再有「放弃这次删卡」—— 不删就「← 返回列表」，这条留在待领队列
+	#（走到下一个未探索的格子前都能回来删）。
 
 
 # ------------------------------------------------------------ R463 只看卡组
@@ -1835,7 +1916,7 @@ func _draw_core() -> void:
 				UiTheme.FS_CAPTION, UiTheme.INK_600)
 	_draw_btn(_btn_deck_back_rect(), "← 返回列表" if _core_stage == 0 else GameI18n.ui("reward", "REWARD_CORE_RESELECT", "← 重选祭品"),
 			false, false)
-	_draw_btn(_btn_deck_skip_rect(), GameI18n.ui("reward", "REWARD_CORE_SKIP", "放弃这次兑换"), false, settled)
+	# R695：核心兑换不再有「放弃这次兑换」—— 不换就「← 返回列表」，这条留在待领队列。
 
 
 func _layer_image(key: String, rect: Rect2) -> void:
@@ -1925,9 +2006,10 @@ func _draw_cards() -> void:
 		var left := maxi(0, RunState.match_charge)
 		var rtxt := GameI18n.ui("reward", "REWARD_REROLL_LEFT", "刷新 · 剩 %d") % left if rb.size.x >= 132.0 else GameI18n.ui("reward", "REWARD_REROLL_LEFT_COMPACT", "刷新 %d") % left
 		_draw_btn(rb, rtxt, false, settled or left <= 0)
-	# R440 暗动力（6054）：持有它 → 卡牌奖励不可放弃，按钮换文案并置灰。
-	_draw_btn(_btn_cards_skip_rect(), GameI18n.ui("reward", "REWARD_CANNOT_SKIP", "不可放弃") if must_pick else GameI18n.ui("reward", "REWARD_SKIP_GROUP", "放弃这组"), false,
-			settled or must_pick)
+	# R695：卡牌三选一不再有「放弃这组」/「不可放弃」—— 拿不定就先「← 返回列表」，
+	# 这条留在待领队列（走到下一个未探索的格子前都能回来拿）。
+	# ⚠️ 暗动力（6054）的「必须当场拿」现在只由一件事保证：列表页的「完成」置灰
+	#    （`RunState.must_take_card_reward()`）—— 少一个按钮不少一分强制。
 	# R167：确认按钮（触屏必需 —— 没有悬停就得靠它「先看后拿」）
 	var can_pick := (not settled) and _pick_sel >= 0 and _pick_sel < cands.size()
 	_draw_btn(_btn_confirm_rect(), GameI18n.ui("reward", "REWARD_CONFIRM_CARD", "确认选择这张"), true, not can_pick)
@@ -1935,6 +2017,12 @@ func _draw_cards() -> void:
 		_root.draw_string(_font, Vector2(pr.position.x, pr.end.y - 20.0),
 				GameI18n.ui("reward", "REWARD_GROUP_SETTLED", "这组已经处理过了"),
 				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, REWARD_TEXT)
+	elif must_pick:
+		# R695：撤掉「不可放弃」按钮之后，「暗动力必须当场拿」要在卡面上说清楚 ——
+		# 否则玩家只会看到列表页的「完成」是灰的，却不知道为什么。
+		_root.draw_string(_font_bold, Vector2(pr.position.x, pr.end.y - 20.0),
+				GameI18n.ui("reward", "REWARD_DARK_POWER_MUST_PICK", "暗动力：必须当场拿取一张卡，不能留到以后领"),
+				HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_CAPTION, Color("8c1a10"))
 	# 右下角的淡金花叶与主框顶饰呼应，透明度低，不碰按钮文字。
 
 
@@ -2062,40 +2150,38 @@ func _btn_claim_rect() -> Rect2:
 	return Rect2(r.end.x - PAD - 120.0, r.end.y - 78.0, 120.0, 38.0)
 
 
-func _btn_skip_rect() -> Rect2:
-	var c := _btn_claim_rect()
-	return Rect2(c.position.x - 150.0, c.position.y, 136.0, 38.0)
-
-
 func _cards_y() -> float:
 	## 独立标题下直接摆卡，为效果说明和底部操作留出空间。
 	return cards_layout_for_viewport(_vs())["cards_y"]
 
 
 func _cards_button_rects() -> Dictionary:
-	## R502：返回 / 放弃 / 确认 / 卡组按参考稿铺满底部；持有火柴时插入「刷新」，
-	## 五枚按钮重新均分，绝不为了像参考图而丢掉已有功能。绘制与命中都读这里。
+	## R502：返回 / 确认 / 卡组按参考稿铺满底部；持有火柴时插入「刷新」，按钮重新均分。
+	## R695：**「放弃这组」整枚撤掉**（用户口径「不需要专门点放弃」）—— 排版从 5 枚变 4 枚，
+	## 确认按钮吃下原来放弃那格。`"skip"` 仍然留在字典里（宽 0）：
+	## 外部探针 / 旧烟测还按名字取几何，给个空矩形比直接删键更安全（`has_point` 恒 false）。
 	var pr := _cards_panel_rect()
 	var x := pr.position.x + 34.0
 	var w := pr.size.x - 68.0
 	var y: float = cards_layout_for_viewport(_vs())["buttons_y"]
 	if RunState.has_relic(RunState.MATCH_RELIC_ID):
-		var widths := [170.0, 140.0, 160.0, 240.0, 170.0]
-		var total := 944.0
+		var widths := [170.0, 140.0, 300.0, 170.0]
+		var total := 812.0
 		var xx := x + maxf(0.0, (w - total) * 0.5)
 		var out := {}
-		for k: String in ["back", "reroll", "skip", "confirm", "deck"]:
-			var bw: float = widths[["back", "reroll", "skip", "confirm", "deck"].find(k)]
+		for k: String in ["back", "reroll", "confirm", "deck"]:
+			var bw: float = widths[["back", "reroll", "confirm", "deck"].find(k)]
 			out[k] = Rect2(xx, y, bw, 44.0)
 			xx += bw + 16.0
+		out["skip"] = Rect2(xx, y, 0.0, 0.0)
 		return out
 	return {
-		"back": Rect2(x, y, w * 0.206, 44.0),
+		"back": Rect2(x, y, w * 0.22, 44.0),
 		# 没持火柴时不画；仍给测试与外部探针一个确定的几何值。
-		"reroll": Rect2(x + w * 0.215, y, w * 0.04, 44.0),
-		"skip": Rect2(x + w * 0.264, y, w * 0.206, 44.0),
-		"confirm": Rect2(x + w * 0.484, y, w * 0.276, 44.0),
-		"deck": Rect2(x + w * 0.781, y, w * 0.219, 44.0),
+		"reroll": Rect2(x + w * 0.23, y, w * 0.04, 44.0),
+		"skip": Rect2(x + w * 0.23, y, 0.0, 0.0),
+		"confirm": Rect2(x + w * 0.28, y, w * 0.40, 44.0),
+		"deck": Rect2(x + w * 0.72, y, w * 0.28, 44.0),
 	}
 
 
@@ -2271,15 +2357,19 @@ func _on_click(pos: Vector2) -> void:
 			if _btn_claim_rect().has_point(pos):
 				_claim_entry(_sel)
 				return
-			if _btn_skip_rect().has_point(pos):
-				_skip_entry(_sel)
-				return
+			# R695：工具栏满 → 点旧槽 = 丢掉它并把这条工具领进来（其余情况没有这排栏位）。
+			if _sel < RunState.pending_rewards.size():
+				var et: Dictionary = RunState.pending_rewards[_sel]
+				if str(et.get("kind", "")) == "tool" and not _settled(et) \
+						and RunState.trap_free_slots() <= 0:
+					for ti in RunState.TRAP_SLOTS:
+						if _tool_swap_rect(ti).has_point(pos):
+							_swap_tool(ti)
+							return
+			return
 		VIEW_KEY_CHOICE:
 			if _btn_back_rect().has_point(pos):
 				_back_to_list()
-				return
-			if _btn_skip_rect().has_point(pos):
-				_skip_key_choice()
 				return
 			if _settled(RunState.pending_rewards[_sel]):
 				return
@@ -2292,9 +2382,6 @@ func _on_click(pos: Vector2) -> void:
 		VIEW_DECK:
 			if _btn_deck_back_rect().has_point(pos):
 				_back_to_list()
-				return
-			if _btn_deck_skip_rect().has_point(pos):
-				_skip_entry(_sel)
 				return
 			if _sel < RunState.pending_rewards.size() \
 					and _settled(RunState.pending_rewards[_sel]):
@@ -2317,11 +2404,6 @@ func _on_click(pos: Vector2) -> void:
 					_root.queue_redraw()
 					return
 				_back_to_list()
-				return
-			if _btn_deck_skip_rect().has_point(pos):
-				_core_grid = []
-				_core_src_idx = -1
-				_skip_entry(_sel)
 				return
 			if _sel < RunState.pending_rewards.size() \
 					and _settled(RunState.pending_rewards[_sel]):
@@ -2352,12 +2434,6 @@ func _on_click(pos: Vector2) -> void:
 				return
 			if _btn_cards_back_rect().has_point(pos):
 				_back_to_list()
-				return
-			if _btn_cards_skip_rect().has_point(pos):
-				# R440 暗动力：按钮已置灰 —— 点它不生效（不消耗、不改任何状态）。
-				if RunState.must_take_card_reward():
-					return
-				_skip_entry(_sel)
 				return
 			var e: Dictionary = RunState.pending_rewards[_sel]
 			if _settled(e):
@@ -2547,6 +2623,10 @@ func _demo_start() -> void:
 		RunState.run_active = true
 		RunState.traps = [-1, -1, -1]
 		RunState.pending_rewards = []
+		# R695 出图：`--toolfull` → 工具栏 3/3 + 点开掉落的那条工具，
+		# 核验正文下方那排「换一个」栏位（点旧槽 = 丢掉它、新的立刻补进去）。
+		if "--toolfull" in args:
+			RunState.traps = [7001, 7002, 7004]
 		RunState.queue_tool_reward(7003)   # 毒瓶（放置型）
 		RunState.queue_tool_reward(7005)   # 小血瓶（使用型）
 		var tmt := Timer.new()
@@ -2555,6 +2635,8 @@ func _demo_start() -> void:
 		tmt.timeout.connect(func():
 			open()
 			if "--tooldetail" in args:
+				_open_entry(0)
+			elif "--toolfull" in args:
 				_open_entry(0))
 		add_child(tmt)
 		tmt.start()

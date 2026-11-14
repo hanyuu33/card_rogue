@@ -823,6 +823,10 @@ static func flyer_teleport(node_id: int) -> Dictionary:
 		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
 	if cleared_ids.has(node_id) or not flyer_candidates().has(node_id):
 		return {"ok": false, "cost": 0, "revealed": false, "chocolate": chocolate}
+	# R695：飞过去也是「踏进一个没探索过的格子」→ 忘拿的奖励同样到期。
+	# 位置与 `advance()` 里那条一致：先清账、再改位置（顺序本身不影响正确性，
+	# 但两处保持同一顺序，读起来才不会怀疑有坑）。
+	var forfeited := forfeit_pending_rewards()
 	var c: Dictionary = map_cells[node_id]
 	cleared_ids.append(node_id)
 	var revealed := false
@@ -831,7 +835,8 @@ static func flyer_teleport(node_id: int) -> Dictionary:
 		revealed = true
 	current_node_id = node_id
 	reveal_known()
-	return {"ok": true, "cost": 0, "revealed": revealed, "chocolate": chocolate}
+	return {"ok": true, "cost": 0, "revealed": revealed, "chocolate": chocolate,
+			"forfeited": forfeited}
 
 
 static func lucky7_left() -> int:
@@ -1255,6 +1260,9 @@ static func advance_layer(layer: int) -> int:
 	##   * 掷本层起始道具三选一（第一层 = 初始池，第二层 = 二层起始池）；
 	##   * 重置层内进度（战斗计数 / 选关记录 / 已清节点），**卡组与道具跨层保留**。
 	## 返回本层起点节点 id（-1 = 地图为空）。
+	# R695：换层 = 旧地图整张作废 → 旧地图上忘拿的奖励同样作废（"到下一个未探索的格子"
+	# 的那张图已经不在了，留着也回不去）。放在最前面：下面一长串清理都以新层为准。
+	forfeit_pending_rewards()
 	max_hp = maxi(1, max_hp)
 	hp = max_hp                      # 二层起始：恢复所有生命
 	bandage_pending = 0             # R234：换层 → 止血绷带待结算清零（本层口径）
@@ -1413,6 +1421,19 @@ static func consume_trap(slot: int) -> int:
 	return id
 
 
+static func discard_trap(slot: int) -> int:
+	## R695（用户口径「现有道具可以丢弃」）：把栏位里的工具**主动丢掉**，腾出格子。
+	## 返回被丢掉的 id（空槽 / 越界 → -1，调用方据此静默）。
+	## ⚠️ 与 `consume_trap()` 的区别：那个是「用掉了」（放置 / 使用，效果已经发生），
+	##    这个是「不要了」—— 没有回血、没有退款、不计入本场使用记录。
+	## ⚠️ 没有「丢掉还能捡回来」：工具是一次性的栏位资源，丢了就是丢了。
+	var id := trap_at(slot)
+	if id < 0:
+		return -1
+	traps[slot] = -1
+	return id
+
+
 static func roll_battle_tool_drop() -> int:
 	## R694（用户口径「任何战斗都有 10% 概率掉落工具」）：**每一场**战斗胜利都摇一次 ——
 	## 普通 / 精英 / Boss / 事件里的遭遇战一视同仁（不收 node_type，所以不存在漏掉哪一类）。
@@ -1423,13 +1444,14 @@ static func roll_battle_tool_drop() -> int:
 	## 序号 `tool_roll_seq` 每场结算 +1（与「摇没摇中」「有没有空位」无关），
 	## 所以同一条种子不会被摇第二遍，续档之后也不会。
 	##
-	## 满栏（3/3）直接不掉：掉了也装不进去，塞进奖励队列只会变成一条领不了的待办。
+	## R695（用户口径「我希望满栏掉落」）：**满栏照掉**。旧版在满栏时直接 `return -1`，
+	## 于是 3/3 的玩家永远刷不出工具、10% 变成 0% —— 而「装不进去」这件事已经有出路了
+	## （工具栏的 × 可以丢弃旧工具；奖励页里满栏时会摊开 3 个旧工具让你换下一个）。
+	## ⚠️ 别在这里判空位：判空位的唯一消费口是 `gain_trap()` 自己。
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_of("tool_drop", tool_roll_seq)
 	tool_roll_seq += 1
 	if rng.randf() >= TOOL_DROP_CHANCE:
-		return -1
-	if trap_free_slots() <= 0:
 		return -1
 	var pool: Array[TrapData] = TrapRepo.load_json().all_traps()
 	if pool.is_empty():
@@ -2301,6 +2323,31 @@ static func skip_pending_reward(idx: int) -> bool:
 	return true
 
 
+static func forfeit_pending_rewards() -> int:
+	## R695（用户口径「允许玩家不拿直接过，但到下一个未探索的格子前都可以回来拿」）：
+	## **真正离开这个房间**的那一刻，把还没领的奖励作废 —— 返回作废条数。
+	##
+	## 为什么需要它：奖励界面上已经没有「放弃这件」了，条目会一直保持 pending
+	## （关掉界面不丢，地图左上「✦ 待领奖励 N」随时能回来领）。既然不再是玩家
+	## 主动点掉的，就得有个「窗口到期」的落点，否则一条忘了领的奖励会跟着整局走到最后。
+	## 窗口的口径只有一句：**走进下一个没探索过的格子之前**（`advance()` 的 is_new 分支、
+	## `flyer_teleport()` 的落点、`advance_layer()` 的换层）。
+	##
+	## ⚠️ 内部走 `skip_pending_reward()` —— 不是另写一套。那里的账（道具要登记
+	## `skipped_relics` / `skip_relic_drop()` 清待领掉落、暗动力拒绝放弃卡牌）全都算数，
+	## 抄一遍就一定会有一天两边不一致。
+	## ⚠️ 暗动力（6054）的卡牌条目这里**不会被作废**（`skip_pending_reward` 拒绝）——
+	## 它本来就不许拖到以后，界面上「完成」也一直是灰的，正常玩到不了这一步；
+	## 真到了（改档 / 自动化），留着比悄悄吞掉安全。
+	var n := 0
+	for i in range(pending_rewards.size() - 1, -1, -1):
+		if str((pending_rewards[i] as Dictionary).get("state", REWARD_PENDING)) != REWARD_PENDING:
+			continue
+		if skip_pending_reward(i):
+			n += 1
+	return n
+
+
 static func must_take_card_reward() -> bool:
 	## R440 暗动力（6054）：手里还有**待领的卡牌奖励**时返回 true ——
 	## 奖励窗据此把「放弃这组」置灰、并拦住「完成」（必须拿一张卡才能关掉界面）。
@@ -3083,7 +3130,12 @@ static func advance(node_id: int) -> Dictionary:
 	var is_new: bool = not cleared_ids.has(node_id)
 	var cost := 0
 	var revealed := false
+	var forfeited := 0
 	if is_new:
+		# R695：**踏进一个没探索过的格子 = 忘拿的奖励到期**（用户口径「到下一个未探索的
+		# 格子前都可以回来拿」）。只认 is_new —— 原路走回走过的房间不扣任何东西，
+		# 待领奖励照旧留在原地，随时能回来领。
+		forfeited = forfeit_pending_rewards()
 		var c: Dictionary = map_cells[node_id]
 		# R357（用户口径「第三层不再使用巧克力机制」）：第三层的格子**不收步数**。
 		# 这一层的终局是「走到 Boss 格就开打」（map_scene._commit_enter 的 "boss" 分支），
@@ -3108,7 +3160,7 @@ static func advance(node_id: int) -> Dictionary:
 	reveal_known()   # R207：走进来之后立刻把新视野记进 seen —— 旧邻居不会因为
 	                 #      「已经不是邻居」而重新被雾盖回去（用户口径）
 	return {"ok": true, "is_new": is_new, "cost": cost, "revealed": revealed,
-			"chocolate": chocolate}
+			"chocolate": chocolate, "forfeited": forfeited}
 
 
 static func complete_current() -> void:

@@ -1,3 +1,62 @@
+## 2026-11-14 R695 满栏照掉 + 工具可丢弃 + 奖励「不拿也能过」
+
+**口径（用户，两条）**：①「我希望满栏掉落，并且现有道具可以丢弃。」②「现在所有奖励界面的
+『放弃这件』都可以改为返回。不需要专门点放弃，而是允许玩家不拿直接过（并且在到下一个未探索
+的格子前都可以回来拿回忘拿的奖励。注意暗动力之类的强制机制要正确）。」
+
+- **满栏掉落**：`roll_battle_tool_drop()` 删掉 `if trap_free_slots() <= 0: return -1`。旧版
+  3/3 的玩家 10% 掉率悄悄变成 0%（而且掉了也进不了队列），这才是「满栏永远刷不出工具」的根因。
+  现在满栏照掉、照进队列；装不进去由下面两条出路解决。
+- **工具可丢弃**：`RunState.discard_trap(slot)`（与 `consume_trap` 同形不同义：一个是「用了」，
+  一个是「不要了」——无退款、无记录）。战斗工具栏每个已填槽的右上角多一枚「×」小徽章
+  （`_trap_discard_rect` / `_try_discard_tool`，20×20 骑在槽角外，命中排在「按下槽」**之前**，
+  否则永远点不到）；**两段式**：第一下只上膛（`TOOL_DISCARD_MS` 2600ms 内有效），第二下才真丢，
+  过期自动熄火。不做模态确认框：战斗里每一秒都在读盘面，而丢弃不可逆，同一个小 × 点两次最省事。
+- **满栏领工具**：`claim_pending_reward()` 对满栏仍然返回 false（数据层防线不动），界面把
+  「点了没反应」换成**摊开换一个**：工具详情页在 `trap_free_slots() <= 0` 时于正文下方画 3 个
+  旧槽（图标 + 名字 + 「丢掉它」），点一个 = `discard_trap` 后立刻 `claim_pending_reward`
+  （顺序不能反，先领后丢会白丢一个）。正文 `body_h` / `bottom` 同步让开 `TOOL_SWAP_H = 100`。
+- **奖励不拿也能过**：五枚「放弃」按钮**全部撤掉** —— `放弃这件`（道具 / 二选一）、`放弃这组` /
+  `不可放弃`（卡牌三选一）、`放弃这次删卡`、`放弃这次兑换`。留按钮不叫「返回」，直接删：每个视图
+  左上角本来就有「← 返回列表」，再并排一枚同义按钮只是重复。条目留在队列里（state 仍是 pending）。
+  卡牌三选一的底部排版从 5 枚变 4 枚（`"skip"` 键保留但宽 0，外部探针按名字取几何不会炸）。
+- **自动离开判据改口径**：`RewardPanel.can_auto_leave_after_reward(over_shown, blocked)` —— 第二参
+  从「待领条数」变成「暗动力是否扣着卡牌」。R389 的「必须领完才走」撤销：关窗即走，没领的跟着
+  地图左上「✦ 待领奖励 N」走。
+- **作废窗口（唯一到期点）**：`RunState.forfeit_pending_rewards()` 内部走
+  `skip_pending_reward()`（不另写一套账：道具登记 `skipped_relics` / 清 `pending_relic_drop` 全都算数，
+  暗动力拒绝放弃卡牌的闸门也照旧生效）。三处触发：`advance()` 的 `is_new` 分支、`flyer_teleport()`
+  的落点、`advance_layer()` 的换层。**原路走回走过的房间不作废**（用户口径只到「下一个未探索的格子」）。
+  三处都把条数放进返回值 `"forfeited"`，`map_scene` 据此弹 `MAP_REWARD_FORFEIT`。
+- **暗动力（6054）**：代价一点没减 —— 卡牌页不再有「不可放弃」，改为把强制落在**两处可见处**：
+  列表「完成」置灰（原本就是这条判据）+ 卡牌页底部新增红字「暗动力：必须当场拿取一张卡，不能留到
+  以后领」。作废那条后门也被 `skip_pending_reward` 拦住（`forfeit_pending_rewards` 返回 0 条）。
+  跨场景闸门（`map_scene._ready` 重开面板）原样保留。
+- **i18n**：删 5 键（`REWARD_SKIP_THIS` / `REWARD_SKIP_GROUP` / `REWARD_CANNOT_SKIP` /
+  `REWARD_SKIP_DELETE` / `REWARD_CORE_SKIP`），加 4 键（`REWARD_TOOL_FULL_SWAP` /
+  `REWARD_TOOL_SWAP_TAG` / `REWARD_TOOL_SWAP_NOTE` / `REWARD_TOOL_FULL_BTN`），
+  `REWARD_MANUAL_PROCESSING_NOTE` 改写成「关掉界面不会丢，进下一个新格子前都能回来领」；
+  `map` 加 1 键（`MAP_REWARD_FORFEIT`）。四语同步（zh / en / ja / es），
+  分域计数 reward 124→123、map 244→245、总数仍是 **794**（es 校验器的总数锁不动）。
+  canonical 里 4 条失衡的 `glossary_reuse` 锚点（放弃这次删卡 / 放弃这次兑换 / 不可放弃 / 放弃这组）一并删除。
+- **测试改口径**：`test_traps` 44→**90**（满栏照掉 200 场 8~32 次、满栏入队→拒绝→丢弃→领进来全链、
+  作废幂等、暗动力不作废卡牌、`can_auto_leave` 三种组合、源码级锁「再无放弃按钮」+ × 命中顺序）；
+  `test_engine` R389 三条判据改写成 R695 三条、R440 的「放弃这组→不可放弃」锁改成「已撤」；
+  `test_smoke` 的 R389 用例改成「没领也走 + 暗动力不动」、R442 第 ② 步改成「按钮宽 0 且退出不改状态」。
+  临时探针（已删）验过两段式：`20×20` 命中区、第一下不丢、第二下丢、上膛过期不误丢 7/7。
+- **出图**：`battle.tscn -- --screenshot --tooldemo --level 0 --shotframe 200`（工具栏三枚 × 徽章）；
+  `-- --screenshot --tooldemo --toolfull --shotframe 260`（满栏道具详情页的「换一个」栏位 +
+  右下「工具栏已满」灰按钮 + 底部说明）。
+- **验证**：`python _verify.py` → assemble / mana 通过，engine **5963✓ 0✗**、reward **26✓ 0✗**、
+  bgm **39✓ 0✗**、traps **90✓ 0✗**、trapinput **36✓ 0✗**、smoke **72✓ 0✗**，`== _verify：全部通过 ==`；
+  `validate_interface.py` → **794 条全过**（reward 123 / map 245）、`validate_spanish.py` **22113 checks**、
+  `validate_glossary.py` 全过；跑前备份 `app_userdata/卡牌肉鸽`（22 文件，含 `profile.json` +
+  `run_save.sav`），跑完逐文件还原 `RESTORE_VERIFY OK`。
+- **已知取舍**：满栏掉出来的工具**不会**自动顶替任何一个旧工具 —— 必须玩家自己点 × 或点「换一个」；
+  「顺手自动丢最旧的」这种省事做法会替玩家做不可逆的决定，不做。
+- **提交边界**：`run_state.gd` / `reward_panel.gd` / `battle_scene.gd` / `map_scene.gd` +
+  四份 interface JSON + 三套测试 + 本文件。`battle_scene.gd` / `test_engine.gd` / `test_smoke.gd` 保持 CRLF。
+
 ## 2026-11-13 R669 图鉴左栏说明溢出：按语言撑高羊皮纸边框
 
 **口径（用户）**：「gallery 左侧，文字明显溢出边框。修复，可以加大边框，或者把文字整段移到下面」。采用**加大边框**，中文版式保持原样。

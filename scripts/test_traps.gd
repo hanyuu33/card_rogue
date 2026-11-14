@@ -246,13 +246,34 @@ func _init() -> void:
 		if RunState.roll_battle_tool_drop() > 0:
 			hits += 1
 	check(hits >= 70 and hits <= 130, "1000 场战斗的掉率落在 70~130 次（实测 %d）" % hits)
-	# 满栏（3/3）：一场也不掉 —— 掉了也装不进去
+	# R695（用户口径「我希望满栏掉落」）：满栏（3/3）**照样按 10% 掉** ——
+	# 旧版在这里 `return -1`，于是满栏玩家永远刷不出工具（10% 悄悄变成 0%）。
+	# 装不进去已有两条出路：工具栏的 ×（丢弃）+ 奖励页的「换一个」。
 	RunState.traps = [7001, 7002, 7003]
 	var full_hits := 0
 	for i in 200:
 		if RunState.roll_battle_tool_drop() > 0:
 			full_hits += 1
-	check(full_hits == 0, "工具栏满（3/3）时一场都不掉（实测 %d）" % full_hits)
+	check(full_hits >= 8 and full_hits <= 32,
+			"工具栏满（3/3）时照样按 10%% 掉（200 场实测 %d）" % full_hits)
+	# 满栏掉出来的工具也能一路走到「领进来」：丢弃一个旧槽就行（数据层口）。
+	var full_id := 7004
+	RunState.traps = [7001, 7002, 7003]
+	check(RunState.queue_tool_reward(full_id), "满栏时工具照样能入奖励队列")
+	var full_idx := RunState.pending_rewards.size() - 1
+	check(not RunState.claim_pending_reward(full_idx),
+			"满栏直接领 → 拒绝（不是静默吞掉，界面据此摊开「换一个」栏位）")
+	check(RunState.discard_trap(1) == 7002, "丢弃第 2 个栏位：返回被丢的 id")
+	check(RunState.trap_at(1) == -1, "丢弃后该栏位空出来")
+	check(RunState.claim_pending_reward(full_idx)
+			and RunState.trap_at(1) == full_id,
+			"腾出位置后同一条奖励立刻能领进来（补的就是刚空出来的槽）")
+	RunState.pending_rewards.remove_at(full_idx)
+	# 丢弃不产生任何退款 / 记录：`discard_trap` 只搬栏位（与 `consume_trap` 同形不同义）。
+	RunState.traps = [7001, -1, -1]
+	check(RunState.discard_trap(0) == 7001 and RunState.trap_at(0) == -1,
+			"丢弃 = 从栏位移除，不改成别的什么")
+	check(RunState.discard_trap(0) == -1, "空槽丢弃返回 -1（界面静默）")
 	# 入队 → 领取：工具进空槽、条目置为已领取
 	RunState.traps = [-1, -1, -1]
 	RunState.pending_rewards = []
@@ -277,6 +298,59 @@ func _init() -> void:
 	RunState.traps = [-1, -1, -1]
 	RunState.tool_roll_seq = 0
 	RunState.run_seed = saved_seed
+
+	# ---- R695 奖励窗口：不领也能过，进新格子才作废 ----
+	# 用户口径：「不需要专门点放弃，允许玩家不拿直接过（到下一个未探索的格子前都能回来拿）」。
+	RunState.pending_rewards = []
+	RunState.queue_tool_reward(7001)
+	RunState.queue_tool_reward(7002)
+	check(RunState.pending_reward_count() == 2, "R695：两条待领奖励就位")
+	check(RunState.forfeit_pending_rewards() == 2,
+			"R695：离开房间 → 待领奖励全部作废（返回条数）")
+	check(RunState.pending_reward_count() == 0, "R695：作废之后待领归零")
+	var all_skipped := true
+	for fr_e: Dictionary in RunState.pending_rewards:
+		if str(fr_e.get("state", "")) != RunState.REWARD_SKIPPED:
+			all_skipped = false
+	check(all_skipped, "R695：作废 = 数据层走 skip（账本一致，不另开一套）")
+	check(RunState.forfeit_pending_rewards() == 0, "R695：没有待领时作废返回 0（幂等）")
+	# 暗动力（6054）：卡牌奖励不许被「作废」这条后门绕过 —— 它本来就该当场拿。
+	RunState.relics.append(RunState.DARK_POWER_RELIC_ID)
+	RunState.pending_rewards = []
+	RunState.queue_card_reward("normal")
+	check(RunState.forfeit_pending_rewards() == 0
+			and RunState.pending_reward_count() == 1,
+			"R695：持暗动力时卡牌奖励不被作废（必须当场拿的代价不变）")
+	RunState.relics.erase(RunState.DARK_POWER_RELIC_ID)
+	RunState.pending_rewards = []
+	# 自动离开判据：R389 的「必须领完」已撤，只剩「暗动力扣着卡牌」这一条拦。
+	check(RewardPanel.can_auto_leave_after_reward(true, false),
+			"R695：关掉奖励窗就走（不再要求先领完）")
+	check(not RewardPanel.can_auto_leave_after_reward(false, false),
+			"R695：结算面板没出来时仍然不自动走")
+	check(not RewardPanel.can_auto_leave_after_reward(true, true),
+			"R695：暗动力扣着卡牌 → 不自动走")
+	# 界面上不再有「放弃」按钮 —— 这是本轮的核心改动，源码级锁死。
+	var rp695 := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	# 只看**代码形态**：注释里会写「这里原来是『放弃这件』」，字面量搜索会误判。
+	check(rp695.find('GameI18n.ui("reward", "REWARD_SKIP') < 0
+			and rp695.find('GameI18n.ui("reward", "REWARD_CANNOT_SKIP') < 0
+			and rp695.find("_btn_skip_rect()") < 0,
+			"R695：奖励面板里再无「放弃这件 / 放弃这组」这类按钮（键与命中口都不存在了）")
+	check(rp695.find("REWARD_TOOL_FULL_SWAP") >= 0 and rp695.find("_swap_tool") >= 0,
+			"R695：满栏时道具详情页摊开「换一个」栏位")
+	var bs_src695 := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(bs_src695.find("_trap_discard_rect") >= 0 and bs_src695.find("_try_discard_tool") >= 0,
+			"R695：战斗工具栏带丢弃口（× + 两段式确认）")
+	check(bs_src695.find("_trap_discard_rect(ts).has_point(event.position)") >= 0
+			and bs_src695.find("_try_discard_tool(ts)") >= 0,
+			"R695：× 的命中排在「按下槽」之前（否则永远点不到 —— 槽会先把按下吃掉）")
+	check(bs_src695.find("同一个小 × 点两次") >= 0 or bs_src695.find("两段式") >= 0,
+			"R695：丢弃是两段式（不可逆操作，不做成单击即丢）")
+	var rs_src695 := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check(rs_src695.find("forfeit_pending_rewards") >= 0
+			and rs_src695.find('"forfeited"') >= 0,
+			"R695：advance / 传送把「作废了几条」交回调用方（地图据此提示）")
 
 	# ---- ⑦ 源码守卫：三处 UI 与引擎接线不许被后续改动抹掉 ----
 	var shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")

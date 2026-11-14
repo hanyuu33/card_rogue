@@ -119,11 +119,7 @@
     "reward.REWARD_LIST_TITLE": "rewards.获得奖励",
     "reward.REWARD_CLAIM_ALL_RELICS": "rewards.领取全部道具",
     "reward.REWARD_BONUS_HEADING": "rewards.追加奖励",
-    "reward.REWARD_SKIP_DELETE": "rewards.放弃这次删卡",
-    "reward.REWARD_CORE_SKIP": "rewards.放弃这次兑换",
     "reward.REWARD_CARD_HEADING": "rewards.卡牌奖励",
-    "reward.REWARD_CANNOT_SKIP": "rewards.不可放弃",
-    "reward.REWARD_SKIP_GROUP": "rewards.放弃这组",
     "map.ROGUE_MAP_TYPE_START": "rooms.起点",
     "map.ROGUE_MAP_TYPE_BATTLE": "rooms.战斗",
     "map.ROGUE_MAP_TYPE_ELITE": "rooms.精英",
@@ -707,7 +703,7 @@
       },
       "REWARD_MANUAL_PROCESSING_NOTE": {
         "source": "scripts/reward_panel.gd:1053",
-        "zh": "卡牌 / 删卡 / 核心 / 工具奖励要点进去处理（不能一键领取）"
+        "zh": "卡牌 / 删卡 / 核心 / 工具奖励要点进去处理；关掉界面不会丢，进下一个新格子前都能回来领"
       },
       "REWARD_ALL_SETTLED_NOTE": {
         "source": "scripts/reward_panel.gd:1019",
@@ -757,10 +753,6 @@
         "source": "scripts/reward_panel.gd:1301",
         "zh": "「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。"
       },
-      "REWARD_SKIP_THIS": {
-        "source": "scripts/reward_panel.gd:1302",
-        "zh": "放弃这件"
-      },
       "REWARD_CLAIM": {
         "source": "scripts/reward_panel.gd:1303",
         "zh": "领取"
@@ -804,10 +796,6 @@
       "REWARD_SCROLL_MORE": {
         "source": "scripts/reward_panel.gd:1518",
         "zh": "滚轮查看更多（%d 张）"
-      },
-      "REWARD_SKIP_DELETE": {
-        "source": "scripts/reward_panel.gd:1521",
-        "zh": "放弃这次删卡"
       },
       "REWARD_DECK_COUNT": {
         "source": "scripts/reward_panel.gd:1572",
@@ -873,10 +861,6 @@
         "source": "scripts/reward_panel.gd:1789",
         "zh": "← 重选祭品"
       },
-      "REWARD_CORE_SKIP": {
-        "source": "scripts/reward_panel.gd:1791",
-        "zh": "放弃这次兑换"
-      },
       "REWARD_CARD_HEADING": {
         "source": "scripts/reward_panel.gd:1803",
         "zh": "卡牌奖励"
@@ -888,14 +872,6 @@
       "REWARD_REROLL_LEFT_COMPACT": {
         "source": "scripts/reward_panel.gd:1879",
         "zh": "刷新 %d"
-      },
-      "REWARD_CANNOT_SKIP": {
-        "source": "scripts/reward_panel.gd:1882",
-        "zh": "不可放弃"
-      },
-      "REWARD_SKIP_GROUP": {
-        "source": "scripts/reward_panel.gd:1882",
-        "zh": "放弃这组"
       },
       "REWARD_CONFIRM_CARD": {
         "source": "scripts/reward_panel.gd:1886",
@@ -1036,6 +1012,22 @@
       "REWARD_TOOL_DESC_MISSING": {
         "source": "scripts/reward_panel.gd:443",
         "zh": "（这件工具的说明缺失）"
+      },
+      "REWARD_TOOL_FULL_SWAP": {
+        "source": "scripts/reward_panel.gd",
+        "zh": "工具栏已满：点一个旧工具，把它换下来"
+      },
+      "REWARD_TOOL_SWAP_TAG": {
+        "source": "scripts/reward_panel.gd",
+        "zh": "丢掉它"
+      },
+      "REWARD_TOOL_SWAP_NOTE": {
+        "source": "scripts/reward_panel.gd",
+        "zh": "点上面的旧工具 = 丢掉它，新工具立刻补进那个栏位。"
+      },
+      "REWARD_TOOL_FULL_BTN": {
+        "source": "scripts/reward_panel.gd",
+        "zh": "工具栏已满"
       }
     },
     "map": {
@@ -2014,6 +2006,10 @@
       "RELIC_VIEWER_SPENT_PREFIX": {
         "source": "scripts/relic_viewer.gd:231",
         "zh": "已耗尽 · "
+      },
+      "MAP_REWARD_FORFEIT": {
+        "source": "scripts/map_scene.gd",
+        "zh": "离开上一格：%d 件没领的奖励已作废（要拿就得在进新格子之前回去）"
       }
     },
     "battle": {
@@ -3450,8 +3446,8 @@
   },
   "expected_counts": {
     "shop": 72,
-    "reward": 124,
-    "map": 244,
+    "reward": 123,
+    "map": 245,
     "battle": 72,
     "shell": 193,
     "shared": 89

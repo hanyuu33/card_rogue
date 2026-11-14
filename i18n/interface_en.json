@@ -117,7 +117,7 @@
       "REWARD_CLAIM_ALL_RELICS": "Claim All Relics",
       "REWARD_DARK_POWER_MUST_PICK": "Dark Drive: you must take a card now; you cannot leave it to claim later",
       "REWARD_CLAIM_ALL_NOTE": "\"Claim All Relics\" leaves Card and Tool Rewards untouched — you must choose a card yourself",
-      "REWARD_MANUAL_PROCESSING_NOTE": "Card / Card Removal / Core / Tool rewards must be opened and handled (cannot be claimed with one click)",
+      "REWARD_MANUAL_PROCESSING_NOTE": "Card / Card Removal / Core / Tool rewards must be opened and handled; closing this panel keeps them — claim them before you enter a new room",
       "REWARD_ALL_SETTLED_NOTE": "All rewards have been resolved. You can click \"Done\"",
       "REWARD_DONE": "Done",
       "REWARD_DECK_BUTTON": "Deck",
@@ -130,7 +130,6 @@
       "REWARD_SETTLED_RELIC_NOTE": "This reward has been %s (no further actions possible)",
       "REWARD_SETTLED_VERB_SKIPPED": "skipped",
       "REWARD_RETURN_KEEPS_REWARD": "\"Back to List\" will not discard it — you can reopen it at any time and claim it then.",
-      "REWARD_SKIP_THIS": "Skip This",
       "REWARD_CLAIM": "Claim",
       "REWARD_SETTLED_BUTTON": "Resolved",
       "REWARD_BIG_CHEST_CHOICE_TITLE": "Large Chest · Choose 1 of 2",
@@ -142,7 +141,6 @@
       "REWARD_DELETE_SUBTITLE": "Click a card to Remove it immediately — it will not return this run; locked cards cannot be Removed",
       "REWARD_NO_DELETABLE_CARDS": "No cards in your Deck can be Removed",
       "REWARD_SCROLL_MORE": "Scroll for more (%d cards)",
-      "REWARD_SKIP_DELETE": "Skip Card Removal",
       "REWARD_DECK_COUNT": "Deck (%d cards)",
       "REWARD_DECK_VIEWER_SUBTITLE": "Your full Deck this run — scroll / hold and drag to view; view only, no cards will be changed",
       "REWARD_DECK_EMPTY": "There are no cards in your Deck yet",
@@ -159,12 +157,9 @@
       "REWARD_CORE_EMPTY": "No cards available",
       "REWARD_CORE_SCROLL_MORE": "Scroll / hold and drag for more (%d cards)",
       "REWARD_CORE_RESELECT": "← Choose Another Sacrifice",
-      "REWARD_CORE_SKIP": "Skip This Exchange",
       "REWARD_CARD_HEADING": "Card Reward",
       "REWARD_REROLL_LEFT": "Reroll · %d left",
       "REWARD_REROLL_LEFT_COMPACT": "Reroll %d",
-      "REWARD_CANNOT_SKIP": "Cannot Skip",
-      "REWARD_SKIP_GROUP": "Skip This Group",
       "REWARD_CONFIRM_CARD": "Confirm This Card",
       "REWARD_GROUP_SETTLED": "This group has already been resolved",
       "REWARD_CARD_META": "%s · %d Cost · %s",
@@ -199,7 +194,11 @@
       "REWARD_TOOL_NAME": "Tool: %s",
       "REWARD_TOOL_TAG_PLACE": "Battle drop · Placement tool (drag onto a battlefield cell)",
       "REWARD_TOOL_TAG_USE": "Battle drop · Usable tool (tap to use)",
-      "REWARD_TOOL_DESC_MISSING": "(This tool's description is missing)"
+      "REWARD_TOOL_DESC_MISSING": "(This tool's description is missing)",
+      "REWARD_TOOL_FULL_SWAP": "Tool bar is full: tap an old tool to swap it out",
+      "REWARD_TOOL_SWAP_TAG": "Discard",
+      "REWARD_TOOL_SWAP_NOTE": "Tapping an old tool above discards it, and the new tool fills that slot right away.",
+      "REWARD_TOOL_FULL_BTN": "Tool bar full"
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "Starting Point",
@@ -445,7 +444,8 @@
       "EVENT_TOP_TITLE": "Event",
       "RELIC_VIEWER_BUTTON_OVERFLOW": "Relics %d ▾",
       "RELIC_VIEWER_BUTTON": "Relics %d",
-      "RELIC_VIEWER_SPENT_PREFIX": "Depleted · "
+      "RELIC_VIEWER_SPENT_PREFIX": "Depleted · ",
+      "MAP_REWARD_FORFEIT": "Left the previous room: %d unclaimed reward(s) expired (go back before entering a new room to claim them)"
     },
     "battle": {
       "BATTLE_LOG": "Records",

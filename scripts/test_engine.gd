@@ -61192,19 +61192,19 @@ func _init() -> void:
 
 	check(r389_story.unlock_notice([]) == "", "R389 剧情提示：没有新解锁 → 空串")
 
-	# ---- ⑤ 自动离开判据：还有没领的就不许走 ----
+	# ---- ⑤ 自动离开判据（R695 改口径：关窗就走，未领的跟着地图入口走）----
 
-	check(not RewardPanel.can_auto_leave_after_reward(false, 0),
+	check(not RewardPanel.can_auto_leave_after_reward(false, false),
 
-			"R389 回地图判据：结算面板还没出 → 不走")
+			"R695 回地图判据：结算面板还没出 → 不走")
 
-	check(not RewardPanel.can_auto_leave_after_reward(true, 3),
+	check(RewardPanel.can_auto_leave_after_reward(true, false),
 
-			"R389 回地图判据：还有 3 条没领 → 不走（左上角「待领奖励」还在）")
+			"R695 回地图判据：结算面板已出 → 关窗就走（R389 的「必须领完」已撤）")
 
-	check(RewardPanel.can_auto_leave_after_reward(true, 0),
+	check(not RewardPanel.can_auto_leave_after_reward(true, true),
 
-			"R389 回地图判据：结算面板已出 + 全部领完 → 直接回地图")
+			"R695 回地图判据：暗动力扣着卡牌 → 不走（唯一还拦人的情况）")
 
 	# ---- ⑥ 源码锁：接线（关窗回调 / 统一出口 / 剧情提示）----
 
@@ -64228,16 +64228,17 @@ func _init() -> void:
 
 	var r440_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
 
-	check_src(r440_rp.count("RunState.must_take_card_reward()") >= 4,
+	check_src(r440_rp.count("RunState.must_take_card_reward()") >= 3,
 
-			"R440 界面：列表 / 卡牌视图的绘制与点击四处都问同一判据（实际 %d）"
+			"R440 界面：列表「完成」/ 卡牌页说明 / 关窗判据都问同一判据（实际 %d）"
 
 				% r440_rp.count("RunState.must_take_card_reward()"))
 
-	check_src(r440_rp.contains('GameI18n.ui("reward", "REWARD_CANNOT_SKIP", "不可放弃") if must_pick else')
-			and r440_rp.contains('GameI18n.ui("reward", "REWARD_SKIP_GROUP", "放弃这组")'),
+	# R695：那枚「放弃这组 / 不可放弃」按钮整枚撤掉了 —— 暗动力的强制改由
+	# 「完成」置灰 + 卡面下方那行红字承担（同一判据，少一个按钮不少一分强制）。
+	check_src(not r440_rp.contains('GameI18n.ui("reward", "REWARD_SKIP_GROUP"'),
 
-			"R440 界面：「放弃这组」在持有暗动力时换成「不可放弃」并置灰")
+			"R695 界面：卡牌三选一不再有「放弃这组」（改写：完成置灰 + 红字说明）")
 
 	var r440_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 

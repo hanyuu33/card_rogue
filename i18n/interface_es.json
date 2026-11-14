@@ -117,7 +117,7 @@
       "REWARD_CLAIM_ALL_RELICS": "Reclamar todas las Reliquias",
       "REWARD_DARK_POWER_MUST_PICK": "Poder oscuro: debes tomar una carta ahora; no puedes dejarla para después",
       "REWARD_CLAIM_ALL_NOTE": "«Reclamar todas las Reliquias» no afecta a las recompensas de cartas ni de herramientas; debes elegir una carta",
-      "REWARD_MANUAL_PROCESSING_NOTE": "Las recompensas de cartas, eliminación, Núcleo y herramientas deben abrirse y gestionarse (no se reclaman con un clic)",
+      "REWARD_MANUAL_PROCESSING_NOTE": "Las recompensas de cartas, eliminación, Núcleo y herramientas deben abrirse y gestionarse; al cerrar el panel no se pierden: reclámalas antes de entrar en una casilla nueva",
       "REWARD_ALL_SETTLED_NOTE": "Todas las recompensas están resueltas. Pulsa «Listo»",
       "REWARD_DONE": "Listo",
       "REWARD_DECK_BUTTON": "Mazo",
@@ -130,7 +130,6 @@
       "REWARD_SETTLED_RELIC_NOTE": "Esta recompensa ya fue %s (no admite más acciones)",
       "REWARD_SETTLED_VERB_SKIPPED": "omitida",
       "REWARD_RETURN_KEEPS_REWARD": "«Volver a la lista» no la descarta; puedes abrirla y reclamarla más tarde.",
-      "REWARD_SKIP_THIS": "Omitir",
       "REWARD_CLAIM": "Reclamar",
       "REWARD_SETTLED_BUTTON": "Resuelta",
       "REWARD_BIG_CHEST_CHOICE_TITLE": "Cofre grande · elige 1 de 2",
@@ -142,7 +141,6 @@
       "REWARD_DELETE_SUBTITLE": "Haz clic en una carta para eliminarla de inmediato; no volverá en esta partida. Las cartas bloqueadas no se pueden eliminar",
       "REWARD_NO_DELETABLE_CARDS": "No hay cartas del mazo que se puedan eliminar",
       "REWARD_SCROLL_MORE": "Desplázate para ver más (%d cartas)",
-      "REWARD_SKIP_DELETE": "Omitir eliminación de carta",
       "REWARD_DECK_COUNT": "Mazo (%d cartas)",
       "REWARD_DECK_VIEWER_SUBTITLE": "Tu mazo completo de esta partida: desplázate o mantén pulsado y arrastra; solo lectura, no se modificará ninguna carta",
       "REWARD_DECK_EMPTY": "Aún no hay cartas en el mazo",
@@ -159,12 +157,9 @@
       "REWARD_CORE_EMPTY": "No hay cartas disponibles",
       "REWARD_CORE_SCROLL_MORE": "Desplázate o mantén pulsado y arrastra para ver más (%d cartas)",
       "REWARD_CORE_RESELECT": "← Elegir otro sacrificio",
-      "REWARD_CORE_SKIP": "Omitir este intercambio",
       "REWARD_CARD_HEADING": "Recompensa de cartas",
       "REWARD_REROLL_LEFT": "Renovar · quedan %d",
       "REWARD_REROLL_LEFT_COMPACT": "Renovar %d",
-      "REWARD_CANNOT_SKIP": "No se puede omitir",
-      "REWARD_SKIP_GROUP": "Omitir este grupo",
       "REWARD_CONFIRM_CARD": "Confirmar esta carta",
       "REWARD_GROUP_SETTLED": "Este grupo ya se resolvió",
       "REWARD_CARD_META": "%s · Coste %d · %s",
@@ -199,7 +194,11 @@
       "REWARD_TOOL_NAME": "Herramienta: %s",
       "REWARD_TOOL_TAG_PLACE": "Botín de combate · De colocación (arrástrala a una casilla del campo)",
       "REWARD_TOOL_TAG_USE": "Botín de combate · De uso (tócala para usar)",
-      "REWARD_TOOL_DESC_MISSING": "(Falta la descripción de esta herramienta)"
+      "REWARD_TOOL_DESC_MISSING": "(Falta la descripción de esta herramienta)",
+      "REWARD_TOOL_FULL_SWAP": "Barra de herramientas llena: toca una herramienta vieja para sustituirla",
+      "REWARD_TOOL_SWAP_TAG": "Descartar",
+      "REWARD_TOOL_SWAP_NOTE": "Toca una herramienta vieja arriba para descartarla: la nueva ocupa ese espacio al instante.",
+      "REWARD_TOOL_FULL_BTN": "Barra llena"
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "Punto de partida",
@@ -445,7 +444,8 @@
       "EVENT_TOP_TITLE": "Evento",
       "RELIC_VIEWER_BUTTON_OVERFLOW": "Reliquias %d ▾",
       "RELIC_VIEWER_BUTTON": "Reliquias %d",
-      "RELIC_VIEWER_SPENT_PREFIX": "Agotada · "
+      "RELIC_VIEWER_SPENT_PREFIX": "Agotada · ",
+      "MAP_REWARD_FORFEIT": "Saliste de la sala anterior: %d recompensa(s) sin reclamar caducaron (vuelve antes de entrar en una casilla nueva)"
     },
     "battle": {
       "BATTLE_LOG": "Registro",

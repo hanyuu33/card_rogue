@@ -117,7 +117,7 @@
       "REWARD_CLAIM_ALL_RELICS": "全レリックを受け取る",
       "REWARD_DARK_POWER_MUST_PICK": "暗黒動力：その場でカードを1枚受け取る必要があり、後で受け取るために残しておくことはできない",
       "REWARD_CLAIM_ALL_NOTE": "「全レリックを受け取る」ではカード／ツール報酬は対象外——カードは自分で1枚選ぶ",
-      "REWARD_MANUAL_PROCESSING_NOTE": "カード／カード削除／コア／ツール報酬は開いて個別に処理する必要がある（一括受取不可）",
+      "REWARD_MANUAL_PROCESSING_NOTE": "カード／カード削除／コア／ツール報酬は開いて個別に処理する。閉じても消えず、新しいマスに入る前なら取り戻せる",
       "REWARD_ALL_SETTLED_NOTE": "全ての報酬を処理済み。「完了」を押せる",
       "REWARD_DONE": "完了",
       "REWARD_DECK_BUTTON": "デッキ",
@@ -130,7 +130,6 @@
       "REWARD_SETTLED_RELIC_NOTE": "この報酬は既に%s済み（これ以上操作できない）",
       "REWARD_SETTLED_VERB_SKIPPED": "見送り",
       "REWARD_RETURN_KEEPS_REWARD": "「リストへ戻る」を押しても失われない——いつでも再度開いて確認し、受け取れる。",
-      "REWARD_SKIP_THIS": "これを見送る",
       "REWARD_CLAIM": "受け取る",
       "REWARD_SETTLED_BUTTON": "処理済み",
       "REWARD_BIG_CHEST_CHOICE_TITLE": "大宝箱 · 2択",
@@ -142,7 +141,6 @@
       "REWARD_DELETE_SUBTITLE": "カードをクリックすると即座に削除——このランでは戻らない。ロックされたカードは削除できない",
       "REWARD_NO_DELETABLE_CARDS": "デッキに削除できるカードがない",
       "REWARD_SCROLL_MORE": "スクロールでさらに表示（%d枚）",
-      "REWARD_SKIP_DELETE": "今回のカード削除を見送る",
       "REWARD_DECK_COUNT": "デッキ（%d枚）",
       "REWARD_DECK_VIEWER_SUBTITLE": "このランのデッキ全体——スクロール／長押しドラッグで表示。ここでは閲覧のみで、カードは一切変更されない",
       "REWARD_DECK_EMPTY": "デッキにはまだカードがない",
@@ -159,12 +157,9 @@
       "REWARD_CORE_EMPTY": "選択できるカードがない",
       "REWARD_CORE_SCROLL_MORE": "スクロール／長押しドラッグでさらに表示（%d枚）",
       "REWARD_CORE_RESELECT": "← 生贄を選び直す",
-      "REWARD_CORE_SKIP": "今回の交換を見送る",
       "REWARD_CARD_HEADING": "カード報酬",
       "REWARD_REROLL_LEFT": "リロール · 残り%d回",
       "REWARD_REROLL_LEFT_COMPACT": "リロール %d",
-      "REWARD_CANNOT_SKIP": "見送り不可",
-      "REWARD_SKIP_GROUP": "このグループを見送る",
       "REWARD_CONFIRM_CARD": "このカードの選択を確定",
       "REWARD_GROUP_SETTLED": "このグループは既に処理済み",
       "REWARD_CARD_META": "%s · %dコスト · %s",
@@ -199,7 +194,11 @@
       "REWARD_TOOL_NAME": "ツール：%s",
       "REWARD_TOOL_TAG_PLACE": "戦闘ドロップ・設置型（戦場のマスへドラッグ）",
       "REWARD_TOOL_TAG_USE": "戦闘ドロップ・使用型（タップで使用）",
-      "REWARD_TOOL_DESC_MISSING": "（このツールの説明が見つかりません）"
+      "REWARD_TOOL_DESC_MISSING": "（このツールの説明が見つかりません）",
+      "REWARD_TOOL_FULL_SWAP": "ツールバーが満杯：古いツールをタップして入れ替え",
+      "REWARD_TOOL_SWAP_TAG": "捨てる",
+      "REWARD_TOOL_SWAP_NOTE": "上の古いツールをタップすると捨てられ、新しいツールがその枠にすぐ入る。",
+      "REWARD_TOOL_FULL_BTN": "ツールバー満杯"
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "起点",
@@ -445,7 +444,8 @@
       "EVENT_TOP_TITLE": "イベント",
       "RELIC_VIEWER_BUTTON_OVERFLOW": "レリック %d ▾",
       "RELIC_VIEWER_BUTTON": "レリック %d",
-      "RELIC_VIEWER_SPENT_PREFIX": "消耗済み · "
+      "RELIC_VIEWER_SPENT_PREFIX": "消耗済み · ",
+      "MAP_REWARD_FORFEIT": "前のマスを離れた：未受取の報酬 %d 件が失効した（受け取るなら新しいマスに入る前に戻ること）"
     },
     "battle": {
       "BATTLE_LOG": "記録",

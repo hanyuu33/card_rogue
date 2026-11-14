@@ -958,7 +958,7 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 	RunState.pending_relic_drop = -1
 	# R442（用户口径「暗动力应该强制领取卡牌，不应该有可以待领的情况 —— 这是代价」）：
 	# 持 6054 时卡牌奖励必须**当场**领掉。四步全过才算：
-	#   ① 列表「完成」点不动；② 卡牌视图「放弃这组」点不动；
+	#   ① 列表「完成」点不动；② 卡牌视图不再有「放弃这组」、退出也不动这条（R695）；
 	#   ③ 选掉第一组后「完成」仍被拦（第二组还在）；④ 两组都选完才放行。
 	var r442_fin := RunState.run_finished
 	var r442_deck: Array = RunState.deck_ids.duplicate()
@@ -981,12 +981,17 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 		if not p.is_open():
 			r442_bad = "持暗动力时「完成」把关掉了（卡牌奖励变成了待领）"
 		else:
-			# ② 卡牌视图的「放弃这组」也必须点不动
+			# ② R695：卡牌视图**已经没有**「放弃这组」了（按钮宽 0）；退出去也不会动这条
 			p._open_entry(r442_c1)
+			if (p._btn_cards_skip_rect() as Rect2).size.x > 0.0:
+				r442_bad = "「放弃这组」的按钮还在（宽 %.0f）" % (p._btn_cards_skip_rect() as Rect2).size.x
 			p._on_click(p._btn_cards_skip_rect().get_center())
+			p._on_click(p._btn_cards_back_rect().get_center())
 			var r442_st := str((RunState.pending_rewards[r442_c1] as Dictionary).get("state", ""))
-			if r442_st != RunState.REWARD_PENDING:
-				r442_bad = "持暗动力时卡牌奖励被放弃了（state=%s）" % r442_st
+			if r442_bad != "":
+				pass
+			elif r442_st != RunState.REWARD_PENDING:
+				r442_bad = "退出去把卡牌奖励弄成了 %s" % r442_st
 			else:
 				# ③ 选掉第一组 → 第二组还在，仍然不许关
 				var r442_p1 := int(((RunState.pending_rewards[r442_c1] as Dictionary)["candidates"] as Array)[0])
@@ -1232,7 +1237,8 @@ func _check_r390_shop_revisit(scene: Variant) -> void:
 func _check_r389_auto_leave(scene: Variant) -> void:
 	## R389：奖励窗关掉之后走不走，只有**玩家自己点关**才会问（转场关闭不惊动）。
 	## 三个状态都要走一遍：
-	##   ① 还有没领的 → 停在结算面板（左上角「待领奖励 N」还在，不能把人拽走）
+	##   ① 还有没领的 → R695 起**也直接回地图**（未领的跟着「待领奖励 N」入口走）；
+	##      只有暗动力扣着卡牌时不动
 	##   ② 全部领完   → 直接回地图（不用再点一次结算按钮）
 	##   ③ 转场关闭   → 只去一个目标（不能半路又跳一次地图）
 	var p: Variant = scene.get("_reward_panel")
@@ -1245,12 +1251,24 @@ func _check_r389_auto_leave(scene: Variant) -> void:
 	if RunState.pending_reward_count() != 3:
 		_smoke_fail("R389：用例需要 3 条待领奖励，实际 %d" % RunState.pending_reward_count())
 		return
-	# ① 还有奖励没领
+	# ① R695（用户口径「允许玩家不拿直接过」）：还有奖励没领**也**直接走 ——
+	# 未领的条目跟着地图左上「✦ 待领奖励 N」走，进下一个未探索格子才作废。
+	p.open()
+	p.close()
+	if routed != ["res://scenes/map.tscn"]:
+		_smoke_fail("R695 还有奖励没领：应照样回地图，实际 %s" % str(routed))
+		return
+	routed.clear()
+	# ①-b 唯一还拦人的情况：暗动力（6054）扣着卡牌奖励。
+	# 这一条在 `_on_reward_panel_closed` 就被判据挡掉了 —— 不会走到宿主的重开逻辑。
+	RunState.relics.append(RunState.DARK_POWER_RELIC_ID)
 	p.open()
 	p.close()
 	if not routed.is_empty():
-		_smoke_fail("R389 还有奖励没领：不该自动离开（实际去了 %s）" % str(routed))
+		_smoke_fail("R695 暗动力：扣着卡牌奖励时不该自动离开（实际去了 %s）" % str(routed))
+		RunState.relics.erase(RunState.DARK_POWER_RELIC_ID)
 		return
+	RunState.relics.erase(RunState.DARK_POWER_RELIC_ID)
 	# ② 全部领完 → 直接回地图
 	routed.clear()
 	p.open()
@@ -1273,7 +1291,7 @@ func _check_r389_auto_leave(scene: Variant) -> void:
 		_smoke_fail("R389 转场关闭：只该去一个目标，实际 %s" % str(routed))
 		return
 	scene.set("over_route_fn", Callable())
-	print("SMOKE OK R389 领完奖励：关窗即回地图 / 没领完不动 / 转场不重复跳")
+	print("SMOKE OK R695 关窗即回地图（没领也走）/ 暗动力扣卡牌时不动 / 转场不重复跳")
 
 
 func _check_r550_locked_class(scene: Variant) -> void:
