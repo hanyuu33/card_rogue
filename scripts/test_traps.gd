@@ -411,6 +411,37 @@ func _init() -> void:
 			fx_all = false
 	check(fx_all, "R669：4 张 codex 触发特效贴图已落 assets/fx")
 
+	# ---- ⑧ R696：入牌库飞行起点 / 落库脉冲 / 「+1」飘字 ----
+	# 这三条都是 `battle_scene` 的绘制接线，和上面 R695 的 `bs_src695` 是同一类守卫；
+	# 放在这个套件里是因为它已经是 battle_scene 视觉断言的收纳处。
+	var bs696 := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check(bs696.find("DECK_FLY_FROM") >= 0 and bs696.find("DECK_Y - 130.0") < 0,
+			"R696：入牌库起点改用 DECK_FLY_FROM（旧值落在弃牌槽里，已删）")
+	# 几何直接读脚本常量：不实例化场景也能验「起点在哪个槽里」。
+	var dcf_script: Script = load("res://scripts/battle_scene.gd")
+	var dcf: Dictionary = dcf_script.get_script_constant_map()
+	var fly_from: Vector2 = dcf.get("DECK_FLY_FROM", Vector2.ZERO)
+	var disc_y := float(dcf.get("DISCARD_Y", 0.0))
+	var zone_h := float(dcf.get("ZONE_H", 0.0))
+	var deck_x := float(dcf.get("DECK_X", 0.0))
+	check(fly_from != Vector2.ZERO,
+			"R696：DECK_FLY_FROM 可取到（%.0f, %.0f）" % [fly_from.x, fly_from.y])
+	check(fly_from.y < disc_y or fly_from.y > disc_y + zone_h,
+			"R696：起点不落在弃牌槽 %.0f..%.0f（实际 y=%.0f）—— 这是旧版「看不见」的根因"
+			% [disc_y, disc_y + zone_h, fly_from.y])
+	check(fly_from.x < deck_x,
+			"R696：起点在牌堆左侧空地（x=%.0f < 牌堆 %0.f）" % [fly_from.x, deck_x])
+	check(bs696.find("var _deck_pulse") >= 0 and bs696.find("func _draw_deck_pulse") >= 0
+			and bs696.find("_draw_deck_pulse(drect)") >= 0,
+			"R696：落库脉冲有队列 / 有绘制口 / 牌堆绘制处已接")
+	check(bs696.find("_deck_pulse = _deck_pulse.filter") >= 0
+			and bs696.find("or not _deck_pulse.is_empty()") >= 0,
+			"R696：脉冲自己收掉且计入 busy（不收会钉死 busy，不计会卡在中间一格）")
+	check(bs696.find('"text": "+1"') >= 0 and bs696.find('Color("ffd76a")') >= 0,
+			"R696：落库那一刻有金色「+1」飘字")
+	check(bs696.find("--deckfly") >= 0,
+			"R696：带 --deckfly 出图入口（验同类动画不必再打临时补丁）")
+
 	RunState.traps = [-1, -1, -1]
 	print("TRAPS === 结束：%d 通过 / %d 失败 ===" % [_ok, _bad])
 	quit(1 if _bad > 0 else 0)

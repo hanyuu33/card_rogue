@@ -136,6 +136,13 @@ const DISCARD_Y := DECK_Y - ZONE_H - 46.0
 ## 「卡组」在下。弃牌区不再显示顶牌卡面，改成 图标 + 张数徽章；卡组张数改成骑在卡背顶边上。
 const VOID_X := DECK_X
 const VOID_Y := DISCARD_Y - ZONE_H - 22.0
+## R696：入牌库飞行的**默认起点** —— 必须落在任何堆之外。旧值
+## `(DECK_X + ZONE_W/2, DECK_Y - 130)` 整段压在弃牌槽里（弃牌区 = DISCARD_Y..+ZONE_H
+## = DECK_Y-142..DECK_Y-46），卡背叠卡背，玩家等于看不见这张卡在飞。
+## 改成从牌堆左侧的空草地水平飞入：x 在满 10 张手牌最右沿（≈875）之外、
+## y 与牌堆同高且低于「我方生命」面板 —— 全程不穿任何 UI。
+const DECK_FLY_FROM := Vector2(DECK_X - 230.0, DECK_Y + CARD_H / 2.0)
+const DECK_PULSE_MS := 640      # 落库脉冲时长（飞行 320ms 结束后仍留一段余光）
 const ZONE_ICON := 62.0     # 区域内图标的绘制边长（正方形素材等比缩进这个方框）
 const ZONE_NAME_H := 18.0   # 区域名压条的厚度（压在方块下沿；R393 14 → 18 配 13px 字）
 # ---- R667 陷阱栏：右侧资源列**正上方**，与卡组/弃牌/消耗同列（同一中轴 x=1200）----
@@ -700,6 +707,7 @@ const CURSE_FLY_MS := 400.0     # 收进牌库（缩小 + 飞向卡组堆 + 换�
 var _curse_queue: Array = []    # 待播 [{card, from}]
 var _curse_cur: Dictionary = {} # 正在播 {card, from, t0, dur}
 var _transform_fx: Array = []   # R284：变幻特效 {zone, slot, start, dur}（zone: hand/deck/discard）
+var _deck_pulse: Array = []     # R696：卡真的进了抽牌库 → 牌堆金色脉冲 {start, dur}
 var _earring_missed := 0        # 耳环连出期间压下的飞出数（>3 → 收尾合并一次整体淡出）
 var _void_known := 0            # void_count 快照：增量 = 这段时间被「消耗」的张数（飞出改上飞）
 # R151 批 1 · P0-4：出牌落位 —— 「place」事件用它把 _slides 的 from 换成真实松手/手牌位置
@@ -3607,6 +3615,23 @@ func _demo_tick() -> void:
 		# R332 出图：截图前 40 帧才打本能 —— 躲过开局横幅，又让状态栏播报 +
 		# 「本能 · 卡名列表」飘字还在屏上（1700ms 生命周期）。
 		engine.use_spell(0, null)
+		_clear_hover_state()
+		selection = null
+	if _shot_pending and "--deckfly" in _demo_args \
+			and _demo_frame == 120 and engine != null:
+		# R696 出图：打出幽深回响（9002）→ 副本从牌堆**左侧空地**飞入 + 「+1」+ 金环。
+		# ⚠️ `deck_added` 分支带 `if not _shot_pending`（截图模式跳过动态演出），
+		#    这里临时放行一次，演完立刻还原。
+		# ⚠️ 出牌帧**固定 120**（不在 `_shot_frame` 之前若干帧）—— 否则截图永远落在
+		#    出牌后的同一毫秒，拍不到「飞行中 / 落库后」两个阶段。
+		# 出图：`battle.tscn -- --screenshot --deckfly --level 0 --shotframe 145|215|700`
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(repo.get_card(9002).to_dict()))
+		engine.state.energy = 9
+		var df_keep := _shot_pending
+		_shot_pending = false
+		engine.use_effect(0)
+		_shot_pending = df_keep
 		_clear_hover_state()
 		selection = null
 	if _shot_pending and "--r331hidden" in _demo_args \
@@ -11538,6 +11563,8 @@ func _tick_anims() -> bool:
 	_heal_fx = _heal_fx.filter(func(f): return n - int(f.start) < int(f.dur))
 	_deck_fly = _deck_fly.filter(func(f): return n - int(f.start) < int(f.dur))
 	_transform_fx = _transform_fx.filter(func(x): return n - int(x.start) < int(x.dur))
+	# R696：脉冲同理 —— 不自己收掉会把 busy 永久钉死，回合推不动。
+	_deck_pulse = _deck_pulse.filter(func(dp): return n - int(dp["start"]) < int(dp["dur"]))
 	# R362：诅咒展示队列（逐张：展示 → 收进卡组 → 下一张）
 	var curse_busy := _tick_curse_show(n)
 	if not _screen_flash.is_empty() and n - int(_screen_flash.start) >= int(_screen_flash.dur):
@@ -11569,6 +11596,7 @@ func _tick_anims() -> bool:
 			or not _impacts.is_empty() or not _pow_fx.is_empty() \
 			or not _heal_fx.is_empty() or not _screen_flash.is_empty() \
 			or not _deck_fly.is_empty() or not _transform_fx.is_empty() \
+			or not _deck_pulse.is_empty() \
 			or curse_busy
 
 
@@ -12035,13 +12063,20 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"deck_added":
 			# R283：卡入牌库（镜面反射 / 生产订单）-> 卡背飞入卡组区（普通调，无紫）。
 			var da_card: CardData = data.get("card")
-			var da_from := Vector2(DECK_X + ZONE_W / 2.0, DECK_Y - 130.0)
+			# R696：默认起点改走 `DECK_FLY_FROM`（牌堆左侧空地），来源仍可由 payload 指定。
+			var da_from: Vector2 = DECK_FLY_FROM
 			if data.get("from") is Vector2:
 				da_from = data["from"]
 			if not _shot_pending:
 				_deck_fly.append({"card": da_card, "from": da_from,
 					"start": n, "dur": 320, "curse": false})
 				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
+				# R696：卡背太小、320ms 一闪而过，玩家余光未必扫到右下角 →
+				# 补「+1」飘字 + 牌堆金环。飘字落点在牌堆**左侧**空地，不压张数徽章。
+				_deck_pulse.append({"start": n, "dur": DECK_PULSE_MS})
+				_floaters.append({"pos": Vector2(DECK_X - 30.0, DECK_Y + 26.0),
+						"text": "+1", "col": Color("ffd76a"),
+						"start": n + 300, "dur": 620, "size": 19})
 		"trample_hit":
 			# R225 践踏：击杀的溢出伤害沿**同一列**击穿下一个单位 —— 在**那个格子**
 			# 补一次命中演出（不重播攻击者的攻击动作），排在这次攻击「命中」之后再播，
@@ -12538,6 +12573,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						% int(data.get("drawn", 0)))
 			if bool(data.get("ok", false)) and data.get("card") is CardData and not _shot_pending:
 				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
+				_deck_pulse.append({"start": n, "dur": DECK_PULSE_MS})   # R696：真往库里塞了一张
 		"barrier":
 			# 护盾**挡下**伤害的瞬间（R87）：这是玩家最需要看到的反馈 —— 护盾消失且不扣血。
 			sfx.play("heal")
@@ -12755,6 +12791,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("过载：牌库里没有「没有一回合行动两次」的盟友，效果落空")
 			if bool(data.get("ok", false)) and data.get("card") is CardData and not _shot_pending:
 				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
+				_deck_pulse.append({"start": n, "dur": DECK_PULSE_MS})   # R696：真往库里塞了一张
 		"auto_upgrade":
 			# 自主升级 8045（R95，机械之心；R275 改口径）：回合开始随机改造**手牌**里一张
 			# 盟友 / 工事。飘字落在手牌区上方 —— 与「过载」（牌库）分开。
@@ -16692,6 +16729,7 @@ func _draw_deck_and_discard() -> void:
 		_draw_card_back(drect)
 	_draw_zone_name(drect, GameI18n.ui("battle", "BATTLE_DRAW_PILE", "抽牌库"))
 	_draw_zone_count(drect, state.deck.size())
+	_draw_deck_pulse(drect)   # R696：落库金环画在卡背之上（纯外扩，不遮卡面）
 	# ---- 弃牌区：图标 + 张数（不再显示卡面）----
 	var crect := _zone_rect("discard")
 	_draw_zone_icon(_discard_tex, crect, Color("a08a52"))
@@ -17095,6 +17133,24 @@ func _draw_deck_fly() -> void:
 		if curse:
 			draw_rect(r, Color(0.55, 0.18, 0.78, 0.40 * (1.0 - t * 0.5)), true)
 			draw_rect(r, Color(0.78, 0.40, 0.95, 0.85 * (1.0 - t)), false, 2.5)
+
+func _draw_deck_pulse(drect: Rect2) -> void:
+	## R696：卡真的进了抽牌库时的「落库脉冲」—— 金色外扩环，配「+1」飘字。
+	## 与 `_transform_fx` 的紫环分工：紫环 = 卡组区内容变了（含「库存整理」那种
+	## 变形，那里写的字是「变幻」）；金环只认「有卡加入」，语义不会被借走。
+	## 只画在堆的外圈（`grow` 一路向外），不碰卡面与张数徽章。
+	var n := _now()
+	for f: Dictionary in _deck_pulse:
+		var t := float(n - int(f["start"])) / int(f["dur"])
+		if t < 0.0:
+			continue
+		t = clampf(t, 0.0, 1.0)
+		var a := 1.0 - t
+		var grow := lerpf(1.0, 15.0, t)
+		var glow := pow(a, 0.55)   # 线性衰减到一半就看不见了，压平一点留余光
+		draw_rect(drect.grow(grow), Color(1.0, 0.66, 0.12, 0.95 * glow), false, 3.8)
+		draw_rect(drect.grow(grow * 0.45), Color(1.0, 0.95, 0.72, glow), false, 2.0)
+
 
 func _draw_transform_fx() -> void:
 	## R283/R284：变幻特效 —— 扩散光环 + 火花 + 「变幻」字样，标记「这张卡被变化了」。
