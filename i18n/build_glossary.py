@@ -124,7 +124,9 @@ g["difficulty_notes"] = named([
     ("行动力降低", "Less Chocolate", "チョコレート減少"),
     ("虚弱", "Weakened", "虚弱"),
     ("精英出现增多", "More Elites", "エリートの出現増加"),
-    ("第三层上锁", "Layer 3 Locked", "第3層が施錠"),
+    ("第三层上锁，获取三个信物以解锁第三层",
+     "Layer 3 Locked: collect three Key Relics to unlock it",
+     "第3層が施錠：3つのキーレリックを集めると解除"),
 ])
 g["rooms"] = named([
     ("战斗", "Battle", "戦闘"), ("精英战斗", "Elite Battle", "エリート戦"),

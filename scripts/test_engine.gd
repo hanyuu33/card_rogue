@@ -20139,9 +20139,10 @@ func _init() -> void:
 
 	RunState.set_difficulty(11)
 
-	check(RunState.difficulty_name() == "上锁" and RunState.third_layer_locked(),
+	check(RunState.difficulty_name() == "上锁" and RunState.third_layer_locked()
+			and RunState.difficulty_note().contains("获取三个信物以解锁第三层"),
 
-			"难度 11 = 上锁；第三层进入需信物（third_layer_locked）")
+			"难度 11 = 上锁；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
 
 	RunState.set_difficulty(99)
 

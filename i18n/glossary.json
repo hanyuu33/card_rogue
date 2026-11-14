@@ -941,9 +941,9 @@
       "en": "More Elites",
       "ja": "エリートの出現増加"
     },
-    "第三层上锁": {
-      "en": "Layer 3 Locked",
-      "ja": "第3層が施錠"
+    "第三层上锁，获取三个信物以解锁第三层": {
+      "en": "Layer 3 Locked: collect three Key Relics to unlock it",
+      "ja": "第3層が施錠：3つのキーレリックを集めると解除"
     }
   },
   "rooms": {
