@@ -38769,6 +38769,43 @@ func _init() -> void:
 
 		"R215 敌方效果弹窗：到期由 _process 收起 + 底部「继续」按钮带倒计时（R353）")
 
+	# ⑧b R710：转阶段「效果区换卡」—— 段落切分是纯函数，接线靠源码断言
+
+	var r706_sw := {"start": 1000, "t_out": 280, "gap": 80, "t_in": 420, "land": 620}
+
+	check(r215_bs.ee_swap_stage(r706_sw, 900) == "wait"
+
+			and r215_bs.ee_swap_stage(r706_sw, 1000) == "out"
+
+			and r215_bs.ee_swap_stage(r706_sw, 1279) == "out"
+
+			and r215_bs.ee_swap_stage(r706_sw, 1280) == "gap"
+
+			and r215_bs.ee_swap_stage(r706_sw, 1359) == "gap"
+
+			and r215_bs.ee_swap_stage(r706_sw, 1360) == "in"
+
+			and r215_bs.ee_swap_stage(r706_sw, 1779) == "in"
+
+			and r215_bs.ee_swap_stage(r706_sw, 1780) == "land"
+
+			and r215_bs.ee_swap_stage(r706_sw, 2399) == "land"
+
+			and r215_bs.ee_swap_stage(r706_sw, 2400) == "done",
+
+			"R710 效果区换卡：wait → out(280) → gap(80) → in(420) → land(620) → done 分段准确")
+
+	check_src(r215_besrc.find("_draw_ee_swap()") >= 0
+
+			and r215_besrc.find("_ee_swap_hide_id()") >= 0
+
+			and r215_besrc.find("敌方效果更新") >= 0
+
+			and r215_besrc.find("from_effect_id") >= 0,
+
+			"R710 效果区换卡：动画层压在效果区之上 + 演出期间藏掉新卡 + 落位在状态条点名新效果")
+
+
 	# ⑨ 设置落盘：音效开关写进 user://settings.cfg 并能读回
 
 	var r215_sfx := GameSettings.sfx_on
@@ -57438,6 +57475,15 @@ func _init() -> void:
 
 	r356_e.win_on_boss = GameEngine.REVELATOR_ID
 
+	# R710：效果区换卡演出要靠事件里的「换掉的那张」—— 界面凭 `from_effect_id` 演旧卡飞走。
+	# 没有这个字段，效果区只能表现成「旧卡忽然不见、新卡凭空出现」，读不出「被替换」。
+
+	var r706_events: Array = []
+
+	r356_e.action.connect(func(k: String, d: Dictionary) -> void:
+		if k == "boss_phase":
+			r706_events.append(d))
+
 	var r356_boss := r356_e.state.place(CardData.from_dict(r356_boss_card.to_dict()),
 
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
@@ -57476,6 +57522,14 @@ func _init() -> void:
 
 			"R356 阶段 2：效果区换成电磁屏障 9202（舰炮被移出，实际 %s）" % str(r356_eff))
 
+	check(not r706_events.is_empty()
+
+			and int((r706_events.back() as Dictionary).get("from_effect_id", 0)) == GameEngine.REVELATOR_NAVAL_GUN_ID
+
+			and int((r706_events.back() as Dictionary).get("effect_id", 0)) == GameEngine.REVELATOR_SHIELD_ID,
+
+			"R710 阶段 2：boss_phase 事件带「换掉的是舰炮 9201 / 换成电磁屏障 9202」（界面靠它演旧卡离场）")
+
 	var r356_skill := r356_e._hit_unit(r356_boss, 10, "技能")
 
 	check(r356_skill == 5,
@@ -57509,6 +57563,14 @@ func _init() -> void:
 	check(r356_eff == [GameEngine.REVELATOR_CALL_ID],
 
 			"R356 阶段 3：效果区换成紧急呼叫 9203（实际 %s）" % str(r356_eff))
+
+	check(not r706_events.is_empty()
+
+			and int((r706_events.back() as Dictionary).get("from_effect_id", 0)) == GameEngine.REVELATOR_SHIELD_ID
+
+			and int((r706_events.back() as Dictionary).get("effect_id", 0)) == GameEngine.REVELATOR_CALL_ID,
+
+			"R710 阶段 3：from_effect_id 递进成电磁屏障 9202 → 紧急呼叫 9203（每一阶都指名被换掉的）")
 
 
 
@@ -57750,17 +57812,23 @@ func _init() -> void:
 
 	var r356_bp_at := r356_bsrc.find('"boss_phase":')
 
-	var r356_bp_body := r356_bsrc.substr(r356_bp_at, 2600) if r356_bp_at >= 0 else ""
+	# R710：换卡演出整段塞进了这个分支 → 窗口从 2600 拉到 4200。不拉的话 `_ee_popup_at`
+	# 会落在窗口外，断言红成「重弹丢了」，而实际代码是对的（假警报最费时间）。
+
+	var r356_bp_body := r356_bsrc.substr(r356_bp_at, 4200) if r356_bp_at >= 0 else ""
 
 	check_src(r356_bp_at >= 0
 
 			and r356_bp_body.find("_ee_popup = false") >= 0
 
+			and r356_bp_body.find("var ee_pop_at := n + EE_SWAP_DELAY_MS") >= 0
+
 			and r356_bp_body.find(
+				"EE_SWAP_OUT_MS + EE_SWAP_GAP_MS + EE_SWAP_IN_MS + EE_SWAP_LAND_MS") >= 0
 
-				"_ee_popup_at = n + REV_RETURN_MS - 60 + REV_FX_MS + REV_FACE_GAP_MS") >= 0,
+			and r356_bp_body.find("_ee_popup_at = ee_pop_at") >= 0,
 
-			"R357 界面：转阶段先收掉旧弹窗，重弹排在「退回后排 + 特效」之后（不盖住动画）")
+			"R357/R710 界面：转阶段先收掉旧弹窗，重弹排在「退回后排 + 特效 + 换卡演出 + 落位环」全部之后（不盖住动画）")
 
 	check_src(r356_bsrc.find("if _ee_popup_at > 0 and _now() >= _ee_popup_at:") >= 0
 

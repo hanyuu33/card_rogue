@@ -389,6 +389,9 @@ var _grid_zoom := 1.0
 var _ee_popup := false
 var _ee_popup_t0 := 0            # 弹窗开启时刻（msec）—— 自动关闭的计时起点
 var _ee_popup_at := 0            # R356：转阶段排队重弹的时刻（0 = 没有排队）
+## R710：效果区换卡的演出状态（空 = 没在演）。字段见 `_process` 的 `boss_phase` 分支：
+## old_id / new_id / start / from / sc / col / t_out / gap / t_in / land / said。
+var _ee_swap := {}
 ## R357：转阶段的演出三段（用户口径「先移回后排 → 播特效动画 → 播完再改换卡面」）。
 ## 三个状态必须分开存 —— 只有分开，卡面才能比引擎晚一拍：
 ##   `_rev_fx`        正在播的那段特效（{} = 没在播）
@@ -400,6 +403,17 @@ var _rev_face_phase := 0
 const REV_RETURN_MS := 460      # 本体滑回后排的时长（先演这个）
 const REV_FX_MS := 900          # 屏障 / 燃烧覆盖卡面的时长（后演这个）
 const REV_FACE_GAP_MS := 160    # 特效收尾 → 重弹敌方效果的间隔
+## R710：转阶段的**效果区换卡**演出（店长口径「效果更新不明显」）。
+## 引擎早在这之前就把效果卡换好了（`boss_phase` 事件里的 `from_effect_id` 是换掉的那张），
+## 界面要补的是「换」这个动作本身 —— 四段固定节奏，读起来才是「旧的被抽走、新的补进来」：
+##   ① 旧卡上飘 + 缩小 + 灰化淡出 → ② 空槽一瞬 → ③ 新卡从启示者卡面飞进槽位 → ④ 落位外扩环。
+## 起点排在「卡面换完」那一刻，和阶段横幅 / 屏障特效错开，不抢戏。
+const EE_SWAP_DELAY_MS := REV_RETURN_MS - 60 + REV_FX_MS + REV_FACE_GAP_MS
+const EE_SWAP_OUT_MS := 280     # ① 旧卡离场
+const EE_SWAP_GAP_MS := 80      # ② 空槽（让「被抽走」读得出来，别无缝衔接）
+const EE_SWAP_IN_MS := 420      # ③ 新卡飞入
+const EE_SWAP_LAND_MS := 620    # ④ 落位环（不占「藏新卡」窗口，落位即交还正常绘制）
+const EE_SWAP_TAIL_MS := 200    # 落位环播完 → 重弹敌方效果弹窗的间隔（弹窗会盖住右栏）
 var _status_hold_until := 0     # 操作反馈的保护期：期间悬停文本不覆盖
 ## R391：最近一次悬停/点击的**画布坐标** —— 自绘的大号「回合结束」按钮用它判 hover。
 var _mouse_ui := Vector2(-9999.0, -9999.0)
@@ -4743,6 +4757,7 @@ func load_level(lvl: Dictionary) -> void:
 	# R136/R146：开场巡场 —— 停自己半场 → 推进到对方半场（放大）→ **拖回我方 + 还原大小**。
 	_ee_popup = false   # R197：新一场战斗，开场弹窗重新计一次
 	_ee_popup_at = 0    # R356：上一场排队中的「转阶段重弹」不许漏到这一场
+	_ee_swap = {}       # R710：换卡演出同样不许漏场（新一场从旧槽位凭空飞出一张卡会读成 bug）
 	# R357：转阶段特效 / 待换卡面同样不许漏场（新一场的启示者必须从第 1 张图开始）。
 	_rev_fx = {}
 	_rev_fx_phase = 0
@@ -11595,6 +11610,9 @@ func _tick_anims() -> bool:
 	_transform_fx = _transform_fx.filter(func(x): return n - int(x.start) < int(x.dur))
 	# R696：脉冲同理 —— 不自己收掉会把 busy 永久钉死，回合推不动。
 	_deck_pulse = _deck_pulse.filter(func(dp): return n - int(dp["start"]) < int(dp["dur"]))
+	# R710：效果区换卡同理，整段走完（land 也收掉）才清空。
+	if not _ee_swap.is_empty() and ee_swap_stage(_ee_swap, n) == "done":
+		_ee_swap = {}
 	# R362：诅咒展示队列（逐张：展示 → 收进卡组 → 下一张）
 	var curse_busy := _tick_curse_show(n)
 	if not _screen_flash.is_empty() and n - int(_screen_flash.start) >= int(_screen_flash.dur):
@@ -11627,6 +11645,7 @@ func _tick_anims() -> bool:
 			or not _heal_fx.is_empty() or not _screen_flash.is_empty() \
 			or not _deck_fly.is_empty() or not _transform_fx.is_empty() \
 			or not _deck_pulse.is_empty() \
+			or not _ee_swap.is_empty() \
 			or curse_busy
 
 
@@ -14114,7 +14133,23 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			#    于是这段时间里读到的仍是上一阶段的图。
 			_ee_popup = false                          # 收掉旧的（开场那份 / 上一阶段那份）
 			# ④ 重弹敌方效果排到「特效播完 + 换好卡面」之后，不盖住演出。
-			_ee_popup_at = n + REV_RETURN_MS - 60 + REV_FX_MS + REV_FACE_GAP_MS
+			var ee_pop_at := n + EE_SWAP_DELAY_MS
+			# R710：右栏效果区的「旧卡飞出 → 新卡飞入」—— 引擎那边已经换好了数据
+			# （`from_effect_id` = 被换掉的那张），这里只负责把「换」演出来。
+			# 新卡 id 为 0（库里查不到）时整段跳过，退回原来的「只重弹弹窗」。
+			_ee_swap = {}
+			var ee_new := int(data.get("effect_id", 0))
+			if ee_new > 0:
+				_ee_swap = {"old_id": int(data.get("from_effect_id", 0)), "new_id": ee_new,
+						"start": ee_pop_at, "from": _cell_center(bp_cell),
+						"sc": _grid_scroll, "col": bp_col, "said": false,
+						"t_out": EE_SWAP_OUT_MS, "gap": EE_SWAP_GAP_MS,
+						"t_in": EE_SWAP_IN_MS, "land": EE_SWAP_LAND_MS}
+				# 弹窗等换卡演完再弹 —— 它正好盖在右栏上，抢在前面会白演。
+				# ⚠️ 必须等**落位环也播完**才弹：弹窗（768x540 居中）会盖住右栏效果区，
+				# 抢在落位之前弹，等于把刚飞进去的那张卡挡掉 —— 演出白做。
+				ee_pop_at += EE_SWAP_OUT_MS + EE_SWAP_GAP_MS + EE_SWAP_IN_MS + EE_SWAP_LAND_MS + EE_SWAP_TAIL_MS
+			_ee_popup_at = ee_pop_at
 			_say("⚠ 启示者进入第 %d 阶段（生命 %d）" % [bp_ph, int(data.get("health", 0))])
 		"defector_awaken":
 			# R525 叛逃机械：同伴阵亡 → 剩下两只当场变强。这里只出一行状态条 + 顶部提示；
@@ -16225,6 +16260,10 @@ func _maybe_open_enemy_effect_popup() -> void:
 	## 仍可随时点右侧「敌方效果」区查看；回放不弹；每场至多一次。
 	if _ee_popup:
 		return
+	# R710 出图：开场那份弹窗（768x540 居中）会盖住右栏效果区，拍「换卡」时按需掐掉。
+	# 只影响 `--screenshot` 演示，实战里这段弹窗早在玩家打出第一阶段伤害前就收掉了。
+	if "--nomepopup" in _demo_args:
+		return
 	if engine == null or engine.state.enemy_effects.is_empty():
 		return
 	_ee_popup = true
@@ -16305,20 +16344,174 @@ func _draw_enemy_effects() -> void:
 	# 同名合并显示（左下角 ×N 角标）
 	var merged_e := _merged_effects(state.enemy_effects)
 	var n_ee := merged_e.size()
-	if n_ee == 1:
+	# R710：换卡演出期间**把新卡从槽位藏掉**（藏到落位那一刻，位置交给动画里的飞行卡）。
+	# 不藏的话旧卡还在熄灭、新卡已经好端端插在槽里，「替换」就读不出来。
+	var hide_ee := _ee_swap_hide_id()
+	if n_ee == 1 and (merged_e[0]["card"] as CardData).id != hide_ee:
 		_draw_string_nw(_font_bold, 17, (merged_e[0]["card"] as CardData).card_name, z.position + Vector2(108, 63), UiTheme.PAGE_INK, -1)
 	var cap_e := _enemy_effect_zone_max_slots()
 	if n_ee <= cap_e:
 		for i in n_ee:
 			var m: Dictionary = merged_e[i]
+			if (m["card"] as CardData).id == hide_ee:
+				continue
 			_draw_effect_thumbnail(m["card"], _enemy_effect_rect(i), m["count"])
 	else:
 		for i in cap_e - 1:
 			var m2: Dictionary = merged_e[i]
+			if (m2["card"] as CardData).id == hide_ee:
+				continue
 			_draw_effect_thumbnail(m2["card"], _enemy_effect_rect(i), m2["count"])
 		_draw_more_tile(_enemy_effect_rect(cap_e - 1), "+%d" % (n_ee - (cap_e - 1)),
 				"")
 	_draw_relic_bar()
+	_draw_ee_swap()   # R710：换卡演出压在效果区之上（旧卡上飘 / 新卡飞入 / 落位环）
+
+
+static func ee_swap_stage(sw: Dictionary, now_ms: int) -> String:
+	## R710：效果区换卡演出当前走到哪一段 —— `wait` / `out` / `gap` / `in` / `land` / `done`。
+	## **纯函数**（不读 `_now()`）：headless 测试直接喂时间点验段落切分。
+	## 段长全从字典里取（`t_out` / `gap` / `t_in` / `land`），所以测试能自己造一份快进表。
+	var t_out := int(sw.get("t_out", EE_SWAP_OUT_MS))
+	var gap := int(sw.get("gap", EE_SWAP_GAP_MS))
+	var t_in := int(sw.get("t_in", EE_SWAP_IN_MS))
+	var land := int(sw.get("land", EE_SWAP_LAND_MS))
+	var d := now_ms - int(sw.get("start", 0))
+	if d < 0:
+		return "wait"
+	if d < t_out:
+		return "out"
+	if d < t_out + gap:
+		return "gap"
+	if d < t_out + gap + t_in:
+		return "in"
+	if d < t_out + gap + t_in + land:
+		return "land"
+	return "done"
+
+
+func _ee_swap_hide_id() -> int:
+	## R710：此刻该从槽位藏掉的那张卡 id（-1 = 不藏）。
+	## 藏到**落位那一帧**为止：落位环开始的同时交还正常绘制，飞行卡正好落在同一格，
+	## 两张叠不出双层边框（`_draw_ee_swap` 的 land 段因此只画环、不画卡）。
+	if _ee_swap.is_empty():
+		return -1
+	var st := ee_swap_stage(_ee_swap, _now())
+	if st == "out" or st == "gap" or st == "in":
+		return int(_ee_swap.get("new_id", -1))
+	return -1
+
+
+func _ee_swap_slot() -> int:
+	## R710：新卡在「同名合并后」列表里的槽位（动画落点）。
+	## 启示者只挂 1 张阶段效果 → 正常就是 0 号；关卡若另挂了别的敌方效果，新卡 append
+	## 在末尾，这里也能落到它真正的格子上。找不到（被别的效果挤掉）→ 0。
+	var want := int(_ee_swap.get("new_id", 0))
+	if engine == null:
+		return 0
+	var merged := _merged_effects(engine.state.enemy_effects)
+	for i in merged.size():
+		if int((merged[i]["card"] as CardData).id) == want:
+			return i
+	return 0
+
+
+func _ee_swap_from() -> Vector2:
+	## R710：飞行起点 = 启示者卡面中心，但**必须夹进棋盘可视窗**。
+	## 开局 `_grid_scroll` 落在最底（我方视角），启示者站在第 0 行时它的卡面在窗上沿之外，
+	## 不夹的话新卡等于「从屏幕外飞进来」—— 读成凭空出现，「从它身上分离」的意思就丢了。
+	## 夹的目标是**可视窗**（GRID_X/Y/W/H），不是棋盘内容坐标：向上滚过才知道上面还有多高。
+	var p: Vector2 = _ee_swap.get("from", Vector2.ZERO)
+	p += _scroll_dy(float(_ee_swap.get("sc", _grid_scroll)))
+	p.x = clampf(p.x, GRID_X + 44.0, GRID_X + GRID_W - 44.0)
+	p.y = clampf(p.y, GRID_Y + 52.0, GRID_Y + GRID_H - 40.0)
+	return p
+
+
+func _draw_ee_swap() -> void:
+	## R710：转阶段的**效果区换卡**演出（店长口径「效果更新不明显」）。
+	## 四段：① 旧卡上飘 / 缩小 / 灰化淡出 → ② 空槽一瞬 → ③ 新卡从启示者卡面飞进槽位
+	## → ④ 落位外扩环（状态条那句「敌方效果更新：X」由 `_process` 在同段点名）。
+	## ⚠️ 旧卡/新卡都走 `repo` 现取 CardData：旧卡此时已经**不在** `enemy_effects` 里了，
+	##    想从场上数据找它是找不到的 —— 引擎把它 id 传过来了（`from_effect_id`）。
+	var n := _now()
+	if _ee_swap.is_empty() or repo == null:
+		return
+	var stage := ee_swap_stage(_ee_swap, n)
+	if stage == "wait" or stage == "done":
+		return
+	var st := int(_ee_swap.get("start", 0))
+	var t_out := int(_ee_swap.get("t_out", EE_SWAP_OUT_MS))
+	var gap := int(_ee_swap.get("gap", EE_SWAP_GAP_MS))
+	var t_in := int(_ee_swap.get("t_in", EE_SWAP_IN_MS))
+	var land := int(_ee_swap.get("land", EE_SWAP_LAND_MS))
+	var rect := _enemy_effect_rect(_ee_swap_slot())
+	var base := rect.position + Vector2(22, 26)   # 缩略图框（pos + (0,4)，44x44）的中心
+	var col: Color = _ee_swap.get("col", Color("b06be0"))
+	if stage == "out":
+		# ① 旧卡离场：向上飘 20px + 缩到 0.62 + 灰化，末尾淡出。灰调是「失效」的读法，
+		#    和落位那道彩色环正好一冷一热。
+		var oc: CardData = repo.get_card(int(_ee_swap.get("old_id", 0)))
+		var t1 := clampf(float(n - st) / float(maxi(1, t_out)), 0.0, 1.0)
+		if oc != null:
+			_draw_ee_tile(oc, base + Vector2(0.0, -20.0 * t1), lerpf(1.0, 0.62, t1),
+					Color(0.62, 0.60, 0.64), 1.0 - t1)
+	elif stage == "in":
+		# ③ 新卡飞入：启示者卡面中心 → 槽位（三次缓出），带 3 枚渐隐残影 + 一条尾光。
+		var from := _ee_swap_from()
+		var t2 := clampf(float(n - st - t_out - gap) / float(maxi(1, t_in)), 0.0, 1.0)
+		var e := 1.0 - pow(1.0 - t2, 3.0)
+		var nc: CardData = repo.get_card(int(_ee_swap.get("new_id", 0)))
+		if nc != null:
+			# 尾光两层（阶段色 + 暖白）：单层细线在亮背景（木桥 / 水面）上几乎看不见，
+			# 而「新卡是从它身上分离出来的」这条读感全靠这一笔。
+			var tail := from.lerp(base, e)
+			draw_line(from, tail, Color(col.r, col.g, col.b, 0.62 * e), 5.5)
+			draw_line(from, tail, Color(1.0, 0.97, 0.86, 0.40 * e), 2.2)
+			for k in range(3, 0, -1):
+				var te := clampf(e - 0.12 * float(k), 0.0, 1.0)
+				_draw_ee_tile(nc, from.lerp(base, te), lerpf(1.32, 1.0, te),
+						Color.WHITE, 0.30 * e * (1.0 - 0.22 * float(k - 1)))
+			_draw_ee_tile(nc, from.lerp(base, e), lerpf(1.32, 1.0, e),
+					Color.WHITE, clampf(0.35 + 0.65 * e, 0.0, 1.0))
+	elif stage == "land":
+		# ④ 落位：两圈外扩环（阶段色 + 暖白）。此时新卡已交还正常绘制，这里只加光。
+		var t3 := clampf(float(n - st - t_out - gap - t_in) / float(maxi(1, land)), 0.0, 1.0)
+		var a := 1.0 - t3
+		var f := Rect2(base - Vector2(22, 22), Vector2(44, 44))
+		var grow := lerpf(1.0, 13.0, t3)
+		draw_rect(f.grow(grow), Color(col.r, col.g, col.b, 0.95 * pow(a, 0.55)), false, 3.4)
+		draw_rect(f.grow(grow * 0.45), Color(1.0, 0.96, 0.78, pow(a, 0.7)), false, 2.0)
+
+
+func _draw_ee_tile(card: CardData, ctr: Vector2, s: float, tint: Color, a: float) -> void:
+	## R710：效果区缩略图的**可缩放 / 可染色 / 可半透明**版本 —— 只服务换卡演出。
+	## `_draw_effect_thumbnail` 走固定 44x44 正常绘制（悬停命中、张数角标都绑在它上面），
+	## 那里一个像素都不动，动画另开一份。
+	## `tint` 乘进底框与卡图：旧卡离场喂灰调、新卡飞入喂白（保持原色）。
+	if card == null or a <= 0.01:
+		return
+	var w := 44.0 * s
+	var frame := Rect2(ctr - Vector2(w, w) * 0.5, Vector2(w, w))
+	var bg := Color("e8dfc9")
+	var bd := Color("68755c")
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(bg.r * tint.r, bg.g * tint.g, bg.b * tint.b, a)
+	sb.border_color = Color(bd.r * tint.r, bd.g * tint.g, bd.b * tint.b, a)
+	sb.set_border_width_all(maxi(1, int(round(4.0 * s))))
+	sb.set_corner_radius_all(maxi(2, int(round(5.0 * s))))
+	draw_style_box(sb, frame)
+	var picture := frame.grow(-5.0 * s)
+	var art := CardFace.art_for(card.pic_id())
+	if art != null:
+		var ts := art.get_size()
+		var side := minf(ts.x, ts.y)
+		draw_texture_rect_region(art, picture,
+				Rect2((ts - Vector2.ONE * side) / 2.0, Vector2.ONE * side),
+				Color(tint.r, tint.g, tint.b, a))
+	else:
+		_draw_string_center(_font_bold, maxi(8, int(12.0 * s)), card.card_name.substr(0, 2),
+				picture.get_center(), Color(0.32, 0.39, 0.30, a), -1)
 
 
 func _enemy_effect_zone_max_slots() -> int:
@@ -18208,6 +18401,18 @@ func _process(delta: float) -> void:
 		_rev_fx = {}
 		_rev_fx_phase = 0
 		queue_redraw()
+	# R710：换卡落位那一刻在状态条点名新效果 —— 槽位只有 76x52，字塞不进右栏，
+	# 而「更新了什么」必须有一处文字落点（店长口径：效果更新不明显）。
+	if not _ee_swap.is_empty() and not bool(_ee_swap.get("said", false)):
+		if ee_swap_stage(_ee_swap, _now()) == "land":
+			_ee_swap["said"] = true
+			var es_nm := ""
+			if repo != null:
+				var es_c: CardData = repo.get_card(int(_ee_swap.get("new_id", 0)))
+				if es_c != null:
+					es_nm = es_c.card_name
+			if es_nm != "":
+				_say("✦ 敌方效果更新：%s" % es_nm)
 	# R356：转阶段的「重新弹出敌方效果」到点了 —— 横幅 / 爆点这时候已经演完。
 	if _ee_popup_at > 0 and _now() >= _ee_popup_at:
 		_ee_popup_at = 0

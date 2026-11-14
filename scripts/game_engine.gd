@@ -3319,32 +3319,40 @@ func _revelator_enter_phase(p: Placement, phase: int) -> void:
 			eff_id = REVELATOR_SHIELD_ID
 		3:
 			eff_id = REVELATOR_CALL_ID
-	_set_revelator_effect(eff_id)
+	# R710：旧效果卡 id 一起交给界面 —— 效果区的「旧卡飞出 → 新卡飞入」要靠它分两段演。
+	var prev_eff_id:= _set_revelator_effect(eff_id)
 	if p.health < 1:
 		p.health = 1
 	_log("启示者进入第 %d 阶段（剩余生命 %d）" % [phase, p.health])
 	# R357：带上 `from`（退回前的格子）—— 界面要先把它**滑回**后排（`_slides`），
 	# 再播阶段特效，最后才换卡图。没有这个字段，界面就只知道「它已经在后排了」。
 	action.emit("boss_phase", {"cell": home, "card": p.card, "phase": phase,
-			"health": p.health, "effect_id": eff_id, "from": from_cell})
+			"health": p.health, "effect_id": eff_id, "from_effect_id": prev_eff_id,
+			"from": from_cell})
 
 
-func _set_revelator_effect(card_id: int) -> void:
+func _set_revelator_effect(card_id: int) -> int:
 	## 把启示者那一套场上效果换成 `card_id`（R356）。
 	## 只动 9201 / 9202 / 9203 这三张：别的敌方效果（将来关卡表里再挂的）不碰。
 	## 挂的是**独立副本** —— 效果区里那份要是卡库实例，任何临时改动都会跨局泄漏。
+	## R710：返回**被换掉的那张的 id**（没有则 0）—— 界面靠它把「旧卡离场」演出来。
+	## 没有这个字段，效果区只能表现成「旧卡忽然不见、新卡凭空出现」，读不出「被替换」。
 	var pool:= [REVELATOR_NAVAL_GUN_ID, REVELATOR_SHIELD_ID, REVELATOR_CALL_ID]
+	var prev_id:= 0
 	for c: CardData in state.enemy_effects.duplicate():
 		if c.id in pool:
+			if prev_id == 0:
+				prev_id = c.id   # 只记第一张：启示者阶段效果恒为 1 张，多出的不算「被换掉的」
 			state.enemy_effects.erase(c)
 	var repo:= CardRepo.load_json()
 	var proto: CardData = repo.get_card(card_id)
 	if proto == null:
 		_log("启示者阶段效果失败：卡牌库里没有 id=%d" % card_id)
-		return
+		return prev_id
 	var copy:= CardData.from_dict(proto.to_dict())
 	state.enemy_effects.append(copy)
 	_log("启示者阶段效果：%s 启用" % copy.card_name)
+	return prev_id
 
 
 func _revelator_has_escort(p: Placement) -> bool:
