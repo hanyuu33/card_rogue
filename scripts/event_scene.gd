@@ -1973,27 +1973,68 @@ func _fit_center() -> void:
 	# R602（用户口径「文字和外框重叠 / 溢出」）：正文长短悬殊（27 处 `desc.text = …`），
 	# 而 Label 的 minimum size 会跟着文本长高 → VBox 被撑高，末位选项挤出屏幕。
 	# 统一在拿到宽度之后先缩字号（16→10），缩到底仍超才按 354 高裁切。
-	_fit_event_text()
 	var top_floor := 360.0 if UiAssets.event_pic(_kind()) != null else 150.0
 	var bottom := vh - 30.0
-	var h := 0.0
+	# R729：正文拿回真实高度之后（不再是 1px），原先「量一次 h，再 clamp 到 top_floor」
+	# 会让长文案事件的下沿冲出屏幕（卡片商人 397、赏月 325 在 720 高下都越界）。
+	# 顺序改成：先按 354 的理想上限量一次 → 装不下就按**实际可用高度**重缩字号 → 再量。
+	_fit_event_text(354.0)
+	var h: float = c.get_combined_minimum_size().y
+	if top_floor + h > bottom:
+		var over: float = top_floor + h - bottom
+		_fit_event_text(maxf(72.0, 354.0 - over))
+		h = c.get_combined_minimum_size().y
 	for sep in [12, 8, 5]:
 		c.add_theme_constant_override("separation", sep)
 		h = c.get_combined_minimum_size().y
 		if top_floor + h <= bottom:
 			break
-	var top: float = clampf(bottom - h, top_floor, vh * 0.5 + 60.0)
+	# R729：`top_floor` 由「硬下限」改成「优先守的下限」—— 缩到最小字号仍装不下时
+	# 允许整块上移：宁可压掉一点插图下沿，也不能把末位选项切在屏幕外。
+	var top: float = minf(bottom - h, vh * 0.5 + 60.0)
 	c.offset_top = top - vh * 0.5
 	c.offset_bottom = c.offset_top + h
 
 
-func _fit_event_text() -> void:
-	## 事件正文 / 结果行的「框内自适应」：框宽 = Center 当前宽，正文高度上限 354
-	## （=`Desc` 在 720 高度下的实际可用高度），结果行一行 36。
+func _fit_event_text(desc_cap := 354.0) -> void:
+	## 事件正文 / 结果行的「框内自适应」：框宽 = Center 当前宽，正文高度上限由调用方给
+	## （默认 354 = 720 高度下的可用值；R729 起装不下时会传更小的值进来重缩字号），
+	## 结果行一行 36。
 	var c: VBoxContainer = $Center
-	var w: float = maxf(200.0, c.size.x)
-	UiTheme.autoshrink_label(desc, desc.text, 16, 10, Vector2(w, 354.0))
-	UiTheme.autoshrink_label(result_label, result_label.text, 16, 10, Vector2(w, 36.0))
+	# R729：`c.size.x` 是**上一帧**的宽度（`_apply_center_width()` 刚改的是 offset，
+	# 容器还没重排）。量文字要用目标宽度 `_center_w`，否则会按旧宽折行、多算一行。
+	var w: float = maxf(200.0, _center_w if _center_w > 1.0 else c.size.x)
+	var fs_d: int = UiTheme.autoshrink_label(desc, desc.text, 16, 10, Vector2(w, desc_cap))
+	var fs_r: int = UiTheme.autoshrink_label(result_label, result_label.text, 16, 10,
+			Vector2(w, 36.0))
+	# R729（用户口径「黄字和白字互相重叠」）：`autoshrink_label()` 为了「绝不画到框外」
+	# 会打开 `clip_text`，而**开了裁剪的 Label 最小高度是 0** —— 放进 VBox 后被压成 1px，
+	# 正文整段消失；但 R122 的悬浮高亮层是按文字几何另画的（不看 Label 的 size），
+	# 于是名字那四个黄字仍画在原来那一行的位置上，正好压在下面的选项按钮里，
+	# 和按钮的白字重叠。奥秘之泉只是最显眼的一处 —— 23 个居中布局事件全都是这样。
+	# 解法：把「按最终字号算出的真实排版高度」写回 custom_minimum_size，让容器照它分配。
+	# 上限仍取 354 / 36（与 `autoshrink_label` 的测量框同一个数），不会把卡片顶出屏幕。
+	_apply_text_min_height(desc, fs_d, w, desc_cap)
+	_apply_text_min_height(result_label, fs_r, w, 36.0)
+
+
+func _apply_text_min_height(lb: Label, fs: int, w: float, cap: float) -> void:
+	## R729：把「这段文字在最终字号下真正需要的高度」写进 `custom_minimum_size`。
+	## 容器（VBox）是按**最小尺寸**分配空间的，而 `clip_text = true` 的 Label 最小高度是 0：
+	## 只设 `size` 没用，下一帧容器就会把它压回 0（实测 1px）。
+	## `cap` 必须与 `autoshrink_label()` 的测量框同一个数，别让它自己长。
+	if lb == null or not is_instance_valid(lb):
+		return
+	if lb.text.strip_edges() == "" or fs <= 0:
+		lb.custom_minimum_size = Vector2.ZERO
+		return
+	var face := lb.get_theme_font("font")
+	if face == null:
+		return
+	var spacing := float(lb.get_theme_constant("line_spacing"))
+	var need: float = UiTheme.text_need(face, lb.text, w, fs, true, spacing).y
+	# +2：多行度量和 Label 实际绘制之间的行尾余量（中英混排折行会差一像素级）。
+	lb.custom_minimum_size = Vector2(0.0, minf(need + 2.0, cap))
 
 
 func _on_main() -> void:

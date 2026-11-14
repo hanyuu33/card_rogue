@@ -735,22 +735,22 @@ static func text_need(face: Font, text: String, max_w: float, fs: int, wrap := f
 
 
 static func autoshrink_label(lb: Label, text: String, fs_max := -1, fs_min := 10,
-		box := Vector2.ZERO) -> void:
-	## Label 版「框里放不下就缩字号」。
+		box := Vector2.ZERO) -> int:
+	## Label 版「框里放不下就缩字号」。返回**最终选中的字号**（0 = 没量成，调用方别拿它算高度）。
 	## `box` 传**场景里写死的框**（Label 自己的 size 会被长文本的 minimum size 撑大，
 	## 拿 lb.size 当判据等于用「已经被撑开的框」去量，永远不超）。
 	## 缩到 `fs_min` 仍放不下 → `clip_text = true` 兜底，绝不画到框外。
 	## R717：固定框必须同时做到「每次换内容都收回来」+「测量计入 Label 行间距」。
 	if lb == null or not is_instance_valid(lb):
-		return
+		return 0
 	var face := lb.get_theme_font("font")
 	if face == null:
 		lb.text = text
-		return
+		return 0
 	var b := box if box.x > 1.0 and box.y > 1.0 else lb.size
 	if b.x <= 1.0 or b.y <= 1.0:
 		lb.text = text
-		return
+		return lb.get_theme_font_size("font_size")
 	var hi := fs_max if fs_max > 0 else lb.get_theme_font_size("font_size")
 	var wrap := lb.autowrap_mode != TextServer.AUTOWRAP_OFF
 	var spacing := float(lb.get_theme_constant("line_spacing")) if wrap else 0.0
@@ -762,6 +762,7 @@ static func autoshrink_label(lb: Label, text: String, fs_max := -1, fs_min := 10
 	lb.add_theme_font_size_override("font_size", fs)
 	lb.text = text
 	lb.size = b
+	return fs
 
 
 static func _fit_action_button(btn: Button, primary: bool, night := false) -> void:
