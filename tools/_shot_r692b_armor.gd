@@ -40,8 +40,8 @@ func _wait(n: int) -> void:
 func _snap(name: String) -> void:
 	DirAccess.make_dir_recursive_absolute("res://_shots")
 	var img := get_root().get_texture().get_image()
-	img.save_png("res://_shots/r692_%s.png" % name)
-	print("[r692] SAVED %s %s" % [name, str(img.get_size())])
+	img.save_png("res://_shots/r692b_%s.png" % name)
+	print("[r692b] SAVED %s %s" % [name, str(img.get_size())])
 
 
 func _m() -> void:
@@ -71,7 +71,7 @@ func _m() -> void:
 			_foe_cell, GameEngine.SIDE_OPPONENT)
 	p_foe.armor = 10
 	# 槽位队列只有护甲一项 → 无轮播，截图时刻不敏感；仍钉一下确认数值真的进了槽位。
-	print("[r692] SLOTS self=%s foe=%s" % [
+	print("[r692b] SLOTS self=%s foe=%s" % [
 			str(sc._state_slots(p_self, _self_cell)),
 			str(sc._state_slots(p_foe, _foe_cell))])
 	sc.queue_redraw()
