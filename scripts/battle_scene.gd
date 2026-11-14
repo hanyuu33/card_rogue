@@ -12962,11 +12962,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"aether_guard":
 			_say("大树守卫：效果区 %d 张效果卡 → +%d 力量、+%d 生命" % [
 					int(data.get("n", 0)), int(data.get("n", 0)), 2 * int(data.get("n", 0))])
-		"demon_fetch":
-			var df_name := "?"
+		"water_element":
+			var wv_name := "漩涡"
 			if data.get("card") is CardData:
-				df_name = (data["card"] as CardData).card_name
-			_say("水元素：从卡组取到「%s」，它的费用 -%d" % [df_name, 2])
+				wv_name = (data["card"] as CardData).card_name
+			_say("水元素：将一张「%s」加入手卡" % wv_name)
 		"owl_fetch":
 			var ow_name := "?"
 			if data.get("card") is CardData:

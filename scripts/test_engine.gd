@@ -4533,7 +4533,7 @@ func _init() -> void:
 
 
 
-	# ---- R227 → R689：生命循环（9150，森林精魄 · **1 费史诗效果卡**）----
+	# ---- R227 → R689 → R690：生命循环（9150，森林精魄 · **2 费史诗效果卡**）----
 
 	# R689 店长口径：由「0 费技能、选一个盟友」改成效果卡 —— 使用时**己方所有盟友**获得
 
@@ -4549,7 +4549,7 @@ func _init() -> void:
 
 
 
-			and lc_c.cost == 1 and lc_c.rarity == 2 and lc_c.card_class == "森林精魄"
+			and lc_c.cost == 2 and lc_c.rarity == 2 and lc_c.card_class == "森林精魄"
 
 
 
@@ -6979,7 +6979,7 @@ func _init() -> void:
 
 	check(dm_e.cost_of(repo.get_card(9068)) == 4, "水元素：效果区 2 张 → 费用 6-2=4")
 
-	dm_e.state.deck = [repo.get_card(9062)]      # 使魔之夜：3 费效果卡
+	dm_e.state.deck = [repo.get_card(9062)]      # 使魔之夜：3 费效果卡（R690 起一张不动）
 
 	dm_e.state.hand = [repo.get_card(9068)]
 
@@ -6987,15 +6987,19 @@ func _init() -> void:
 
 	dm_e.play_from_hand(0, Vector2i(4, 1))
 
-	check(dm_e.state.deck.is_empty() and dm_e.state.hand.size() == 1
+	check(dm_e.state.deck.size() == 1 and dm_e.state.deck[0].id == 9062
 
-			and dm_e.state.hand[0].id == 9062,
+			and dm_e.state.hand.size() == 1 and dm_e.state.hand[0].id == 9186,
 
-			"水元素：上场时从卡组将一张效果卡加入手卡")
+			"R690 水元素：上场时把一张「漩涡」加入手卡（卡组一张不动）")
 
-	check(dm_e.cost_of(dm_e.state.hand[0]) == 1,
+	check(dm_e.cost_of(dm_e.state.hand[0]) == 0,
 
-			"水元素：取到的那张效果卡费用 -2（3 → 1）")
+			"R690 漩涡：0 费（拿到手就能直接摆）")
+
+	check(dm_e.state.hand[0].own_copy,
+
+			"R690 漩涡：发的是独立副本，改它串不到卡库")
 
 
 
@@ -59237,7 +59241,7 @@ func _init() -> void:
 
 	var r381_g: CardData = r381_repo.get_card(9187)
 
-	check(r381_v != null and r381_v.kind == "场地" and r381_v.cost == 3
+	check(r381_v != null and r381_v.kind == "场地" and r381_v.cost == 0
 
 			and r381_v.card_class == "森林精魄" and r381_v.is_field()
 
@@ -59249,7 +59253,7 @@ func _init() -> void:
 
 			and not r381_v.traits.has("涡旋"),
 
-			"R381 漩涡 9186：3 费持续场地（森林精魄），漩涡伤害 15，已无「涡旋」trait")
+			"R381 / R690 漩涡 9186：0 费持续场地（森林精魄，R690 由 3 费下调、水元素是获得渠道），漩涡伤害 15，已无「涡旋」trait")
 
 	check(r381_g != null and r381_g.kind == "盟友" and r381_g.cost == 2
 

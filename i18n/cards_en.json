@@ -624,7 +624,7 @@
   },
   "9068": {
    "name": "Water Elemental",
-   "effect_text": "This card's Cost is -1 for each Effect card on your side of the field. On Use: add an Effect card from your Draw Pile to your Hand; its Cost is reduced by 2."
+   "effect_text": "This card's Cost is -1 for each Effect card on your side of the field. On Use: add a \"Vortex\" to your Hand."
   },
   "9069": {
    "name": "Duck Nest",

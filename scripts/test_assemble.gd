@@ -1432,7 +1432,7 @@ func _test_r589_materials() -> void:
 		9222: ["lethal", "add_card", 9145],
 		9074: ["use_after", "next_effect_discount", 2],
 		9052: ["use_after", "next_ally_discount", 1],
-		9068: ["use", "add_effect_from_deck", 1],
+		9068: ["use", "add_card", 9186],
 		8007: ["use", "hand_skill_discount", 1],
 		9046: ["use_after", "fetch_cheapest_ally", 0],
 		9039: ["use_after", "recall_ally_from_discard", 0],

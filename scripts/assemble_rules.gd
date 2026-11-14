@@ -61,7 +61,8 @@ static func valid_effect(fx: Variant) -> bool:
 		if not ad_id is int and not ad_id is float:
 			return false
 		return int(ad_id) > 0 and int(fx.value) >= 1
-	# R589：水元素 9068「从卡组将一张效果卡加入手卡，费用减少 N」。
+	# R589：「从卡组将一张效果卡加入手卡，费用减少 N」。R690 起水元素改用 add_card
+	# （抓漩涡），这条动作暂无卡使用，但仍是合法素材。
 	# 两个分量都要查：0 张 = 空动作；discount 缺省 0 是合法的（只取牌不减费）。
 	if fx.type == "add_effect_from_deck":
 		if not fx.get("value") is int and not fx.get("value") is float:
@@ -193,7 +194,7 @@ static func effect_text(fx: Dictionary) -> String:
 		"next_effect_discount": return "你使用的下一张效果卡费用减少 %d" % n
 		# 斑鸠 9052：「使用后，本回合使用下一个盟友时，费用 -1」
 		"next_ally_discount": return "本回合使用下一个盟友时，费用 -%d" % n
-		# 水元素 9068：「使用时，从卡组将一张效果卡加入手卡，费用减少 2」
+		# 「从卡组将 N 张效果卡加入手卡，费用减少 X」（R690 起暂无卡使用）
 		"add_effect_from_deck": return "从卡组将%d张效果卡加入手卡，费用减少 %d" % [
 				maxi(1, n), int(fx.get("discount", 0))]
 		# 影魔 8007 前半：「手卡中所有技能牌本回合费用 -1」

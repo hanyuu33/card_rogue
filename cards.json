@@ -1762,13 +1762,13 @@
       "traits": [
         "水元素"
       ],
-      "effect_text": "自己场上每有一张效果卡，这张卡费用 -1。使用时，从卡组将一张效果卡加入手卡，费用减少 2。",
+      "effect_text": "自己场上每有一张效果卡，这张卡费用 -1。使用时，将一张「漩涡」加入手卡。",
       "target_mode": "none",
-      "value": 2,
+      "value": 0,
       "color": "白",
       "image": "",
       "upper_effect": {"trigger": "use", "effects": []},
-      "lower_effect": {"effects": [{"type": "add_effect_from_deck", "value": 1, "discount": 2}]}
+      "lower_effect": {"effects": [{"type": "add_card", "card_id": 9186, "value": 1}]}
     },
     {
       "id": 9069,
@@ -4093,7 +4093,7 @@
       "id": 9150,
       "name": "生命循环",
       "kind": "效果",
-      "cost": 1,
+      "cost": 2,
       "power": 0,
       "health": 0,
       "attack_range": 0,
@@ -5361,7 +5361,7 @@
       "id": 9186,
       "name": "漩涡",
       "kind": "场地",
-      "cost": 3,
+      "cost": 0,
       "rarity": 0,
       "group": "player",
       "class": "森林精魄",
