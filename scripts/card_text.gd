@@ -303,9 +303,12 @@ static func _mention_seg(seg: Dictionary, token: String, name: String,
 
 static func mark_mentions(segs: Array) -> Array:
 	## 把「提到的卡牌 / 道具名」从普通文本里切出来（R168 · 机制见 `Mention`）。
-	## 两种写法都认：
+	## 三种写法都认：
 	##   * `「名字」` —— 事件 / 卡面文案的惯用写法；
-	##   * **整段加粗**的 `**名字**` —— 历史写法（parse 已把星号吃掉，这里按整段文本判定）。
+	##   * **整段加粗**的 `**名字**` —— 历史写法（parse 已把星号吃掉，这里按整段文本判定）；
+	##   * **裸名字**（R708）—— 文案里忘了加「」也认（幽光「将一张荧光草加入你的手卡」）。
+	## ⚠️ 切分只在 `Mention.split_text()` 一处做：这里再扫一遍，就会出现
+	##    「颜色标出来了、命中矩形却是空的」那种只能看不能点的假链接。
 	## 对不上名字表的一律原样保留（规范 §4.10 纪律 4：宁可少标，也不标「假链接」）。
 	var out: Array = []
 	for seg in segs:
@@ -316,27 +319,12 @@ static func mark_mentions(segs: Array) -> Array:
 		if bool(seg.get("bold", false)) and not whole.is_empty():
 			out.append(_mention_seg(seg, t, t.strip_edges(), whole))
 			continue
-		var buf := ""
-		var i := 0
-		var n := t.length()
-		while i < n:
-			if t[i] == "「" or t[i] == "«":
-				var closer := "」" if t[i] == "「" else "»"
-				var j := t.find(closer, i + 1)
-				if j > 0:
-					var nm := t.substr(i + 1, j - i - 1)
-					var ref := Mention.resolve(nm)
-					if not ref.is_empty():
-						if buf != "":
-							out.append(_carry(seg, buf))
-							buf = ""
-						out.append(_mention_seg(seg, t.substr(i, j - i + 1), nm, ref))
-						i = j + 1
-						continue
-			buf += t[i]
-			i += 1
-		if buf != "":
-			out.append(_carry(seg, buf))
+		for part: Dictionary in Mention.split_text(t):
+			var nm := str(part["name"])
+			if nm == "":
+				out.append(_carry(seg, str(part["text"])))
+			else:
+				out.append(_mention_seg(seg, str(part["text"]), nm, part["ref"]))
 	if out.is_empty():
 		out.append(_seg("", false, false, false))
 	return out

@@ -45,11 +45,26 @@ const BLOCK_HEAD_H := 24.0     # 标题行 + 与第一项的间隔
 const BLOCK_ITEM_H := 18.0     # 每项「· 种类「名字」」行占位
 const BLOCK_LINE_H := 15.0     # 摘要每行
 const BLOCK_GAP := 6.0         # 项与项之间
+## R708：**裸名兜底** —— 文案里提到另一张卡时忘了加「」（R619 补过鸭窝一处，
+## 幽光「回合开始时，将一张荧光草加入你的手卡」又漏一处），提及机制就认不到 →
+## 奖励页 / 选卡界面那几个字点不出卡面。逐条补文案是补一处漏一处，所以在解析层兜底：
+## 标记扫完之后，再把**裸出现的名字**按名字表认一遍。守两条纪律：
+##   ① **最长优先** —— 「量产型俄倪厄」不许被「俄倪厄」抢先，「骷髅兵」不许被「骷髅」吃掉；
+##   ② **歧义名跳过**（`BARE_SKIP`）—— 卡名本身就是日常动词的，正文里绝大多数是当普通词用：
+##      「攻击力 +1」（攻击 8002）、「被标记的敌人」（标记 9224）、「击退 1 格」（击退 9004）。
+##      标出来是满屏噪音，违背 §4.10 纪律 4「宁可少标」。**新增卡名若也是日常动词/通用词，
+##      把它加进这张表**，否则那张卡的正文会被自己刷成一片金色。
+const BARE_SKIP := ["攻击", "标记", "击退"]
+const BARE_MIN_LEN := 2        # 单字名不参与裸名匹配（太容易蹭到正文里的常用字）
 
 static var _index := {}      # name -> {kind, id}
 static var _cards := {}      # id -> CardData
 static var _relics := {}     # id -> RelicData
 static var _built := false
+## R708：裸名表 —— `[[名字, ref], …]` 按**名字长度降序**（最长优先），懒建一次。
+static var _bare := []
+static var _bare_built := false
+static var _bare_by_head := {}   # 首字符 → `_bare` 里的下标数组（同桶内仍按长度降序）
 ## R187 性能：`scan` 是纯函数（文案 → 提及列表），悬浮窗/附带块每次重绘都调。
 ## 缓存命中只剩字典查询；返回浅副本（条目 Dictionary 请勿原地改写）。
 const SCAN_CACHE_MAX := 256
@@ -63,6 +78,9 @@ static func reset_cache() -> void:
 	_relics = {}
 	_built = false
 	_scan_cache = {}   # R187：名字表变了，文案扫描结果也一并作废
+	_bare = []         # R708：裸名表跟着名字表一起作废
+	_bare_built = false
+	_bare_by_head = {}
 
 
 static func index() -> Dictionary:
@@ -125,46 +143,116 @@ static func relic_of(id: int) -> RelicData:
 
 static func scan(text: String) -> Array:
 	## 文案里出现过的（已登记的）提及：去重、按首次出现顺序。
-	## 返回 [{name, token, kind, id}]；`token` 是**含标记**的原文（「名字」/ **名字**）。
+	## 返回 [{name, token, kind, id}]；`token` 是原文里那一段（带标记的「名字」/ **名字**，
+	## 或 R708 的裸名字）。切分本身交给 `split_text()` —— 见那里的两条纪律。
 	## ⚠️ R187：返回缓存的**浅副本** —— 条目 Dictionary 请勿原地改写。
 	if _scan_cache.has(text):
 		return (_scan_cache[text] as Array).duplicate()
 	var out: Array = []
 	var seen := {}
-	var i := 0
-	var n := text.length()
-	while i < n:
-		var tok := ""
-		var nm := ""
-		var nxt := i + 1
-		if text[i] == "「" or text[i] == "«":
-			var closer := "」" if text[i] == "「" else "»"
-			var j := text.find(closer, i + 1)
-			if j < 0:
-				break
-			tok = text.substr(i, j - i + 1)
-			nm = text.substr(i + 1, j - i - 1)
-			nxt = j + 1
-		elif text[i] == "*" and i + 1 < n and text[i + 1] == "*":
-			var k := text.find("**", i + 2)
-			if k < 0:
-				break
-			tok = text.substr(i, k - i + 2)
-			nm = text.substr(i + 2, k - i - 2)
-			nxt = k + 2
-		else:
-			i += 1
-			continue
-		i = nxt
-		var ref := resolve(nm)
-		if nm == "" or ref.is_empty() or seen.has(nm):
+	for part: Dictionary in split_text(text):
+		var nm := str(part["name"])
+		if nm == "" or seen.has(nm):
 			continue
 		seen[nm] = true
-		out.append({"name": nm, "token": tok, "kind": str(ref["kind"]), "id": int(ref["id"])})
+		var ref: Dictionary = part["ref"]
+		out.append({"name": nm, "token": str(part["text"]),
+				"kind": str(ref["kind"]), "id": int(ref["id"])})
 	if _scan_cache.size() >= SCAN_CACHE_MAX:
 		_scan_cache.clear()
 	_scan_cache[text] = out
 	return out.duplicate()
+
+
+static func split_text(text: String) -> Array:
+	## R708：把一段文案切成「普通文字 / 提及」交替的片段：`[{text, name, ref}]`
+	## （`name` 为空 = 普通文字）。**全工程唯一的提及切分口** —— `scan()` 与
+	## `CardText.mark_mentions()` 都走这里；两边各自扫一遍，才会出现「能看见颜色却点不出卡」。
+	## 顺序：先认**带标记**的（「名字」/ «名字» / **名字**），再在剩下的文字里认**裸名**。
+	var out: Array = []
+	var buf := ""
+	var i := 0
+	var n := text.length()
+	while i < n:
+		var hit := _marked_at(text, i)
+		if hit.is_empty():
+			hit = _bare_at(text, i)
+		if hit.is_empty():
+			buf += text[i]
+			i += 1
+			continue
+		if buf != "":
+			out.append({"text": buf, "name": "", "ref": {}})
+			buf = ""
+		out.append({"text": text.substr(i, int(hit["end"]) - i),
+				"name": str(hit["name"]), "ref": hit["ref"]})
+		i = int(hit["end"])
+	if buf != "":
+		out.append({"text": buf, "name": "", "ref": {}})
+	return out
+
+
+static func _marked_at(text: String, i: int) -> Dictionary:
+	## `i` 处是不是一个**带标记**的提及：「名字」/ «名字» / **名字**。
+	## 标记里写的东西对不上名字表 → 原样留着（不当提及，也不在里面再找裸名）。
+	var n := text.length()
+	var nm := ""
+	var end := -1
+	if text[i] == "「" or text[i] == "«":
+		var closer := "」" if text[i] == "「" else "»"
+		var j := text.find(closer, i + 1)
+		if j < 0:
+			return {}
+		nm = text.substr(i + 1, j - i - 1)
+		end = j + 1
+	elif text[i] == "*" and i + 1 < n and text[i + 1] == "*":
+		var k := text.find("**", i + 2)
+		if k < 0:
+			return {}
+		nm = text.substr(i + 2, k - i - 2)
+		end = k + 2
+	else:
+		return {}
+	var ref := resolve(nm)
+	if nm == "" or ref.is_empty():
+		return {}
+	return {"start": i, "end": end, "name": nm, "ref": ref}
+
+
+static func _bare_table() -> void:
+	## R708：裸名表懒建 —— 名字长度降序（最长优先）+ 首字符分桶（省掉整表遍历）。
+	if _bare_built:
+		return
+	_bare_built = true
+	var idx := index()
+	var rows: Array = []
+	for nm: String in idx:
+		if nm.length() < BARE_MIN_LEN or BARE_SKIP.has(nm):
+			continue
+		rows.append([nm, idx[nm]])
+	rows.sort_custom(func(a, b): return String(a[0]).length() > String(b[0]).length())
+	_bare = rows
+	_bare_by_head = {}
+	for k in rows.size():
+		var head: String = String(rows[k][0]).substr(0, 1)
+		if not _bare_by_head.has(head):
+			_bare_by_head[head] = []
+		(_bare_by_head[head] as Array).append(k)
+
+
+static func _bare_at(text: String, i: int) -> Dictionary:
+	## R708：`i` 处能匹配到的**最长**裸名（同位置按长度降序排过，第一个命中即最长）。
+	_bare_table()
+	var heads: Array = _bare_by_head.get(text[i], [])
+	if heads.is_empty():
+		return {}
+	var rest := text.length() - i
+	for k: int in heads:
+		var row: Array = _bare[k]
+		var nm: String = String(row[0])
+		if rest >= nm.length() and text.substr(i, nm.length()) == nm:
+			return {"start": i, "end": i + nm.length(), "name": nm, "ref": row[1]}
+	return {}
 
 
 static func text_color(base: Color) -> Color:

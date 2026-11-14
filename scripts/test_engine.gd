@@ -7312,6 +7312,43 @@ func _init() -> void:
 
 			"R619 显示层：鸭窝正文两处「鸭蛋」都要生成指向 9022 的提及片段")
 
+	# R708：**裸名兜底** —— 文案里提到另一张卡却没加「」也要能关联（幽光 → 荧光草）。
+	# R619 当初是逐条补文案（只修好鸭窝一处），所以漏写一出现就又坏一次；
+	# 现在解析层兜底：`Mention.split_text()` 认完标记名再认裸名，两条纪律见 mention.gd。
+	var r708_yg := repo.get_card(9099)
+
+	check(r708_yg.effect_text.contains("荧光草") and not r708_yg.effect_text.contains("「荧光草」"),
+			"R708 前提：幽光 9099 的正文写的是裸名「荧光草」（本题的现场）")
+
+	var r708_scan: Array = Mention.scan(r708_yg.effect_text)
+
+	var r708_hit := false
+
+	for r708_r: Dictionary in r708_scan:
+		if int(r708_r["id"]) == 8010:
+			r708_hit = true
+
+	check(r708_hit, "R708 裸名兜底：幽光正文里的「荧光草」要解析成 8010")
+
+	check(Mention.scan("每 2 个回合攻击力 +1，最多累计 +4。").is_empty()
+			and Mention.scan("被标记的敌人受到的所有伤害提升 50%。").is_empty()
+			and Mention.scan("造成 10 点伤害，并将其击退 1 格。").is_empty(),
+			"R708 歧义名跳过：攻击 / 标记 / 击退 撞上卡名也不许标（BARE_SKIP）")
+
+	var r708_ids: Array = []
+
+	for r708_l: Dictionary in Mention.scan("由亡灵领主或骷髅兵的死亡召唤。"):
+		r708_ids.append(int(r708_l["id"]))
+
+	check(r708_ids == [1051, 1055],
+			"R708 最长优先：骷髅兵 → 1055，不许退化成骷髅 9029")
+
+	var r708_src := FileAccess.get_file_as_string("res://scripts/mention.gd")
+
+	check_src(r708_src.contains("const BARE_SKIP") and r708_src.contains("const BARE_MIN_LEN")
+			and r708_src.contains("func split_text("),
+			"R708 源码：提及切分唯一口 split_text + 两条纪律常量（BARE_SKIP / BARE_MIN_LEN）")
+
 
 	# 飓风咆哮（9063）：2 张 → 前 2 次使用效果卡各轰一次；技能卡不计入次数（R268）
 
@@ -62431,6 +62468,11 @@ func _init() -> void:
 			% str(r707_phmax.get("col", Color(0, 0, 0, 0)).to_html(false)))
 	# ②b 比原型**低** → 红（店长口径「生命以外比原本低用红色的」）
 	var r707_low: CardData = CardData.from_dict(r706_repo.get_card(8056).to_dict())
+	# ⚠️ 落点不能是 (0,1)：x=0 是**敌方后排 = 直击 HP 行**，`FieldState.place` 对 owner=self
+	# 一律拒绝（`forbidden_row_for`），返回 null 后下一行 `atk_buff` 直接崩在 Nil 上，
+	# 整个 test_engine 的 _init 中断、进程不退出（headless 挂死，回归跑不完）。
+	# 这里只测「力量低于原型 → 红字」，格子本身无意义 → 用 (3,1)（4,1 / 2,1 已被上面两张占着）。
+
 	var r707_lpl := r706_fs.place(r707_low, Vector2i(3, 1), GameEngine.SIDE_SELF)
 	r707_lpl.atk_buff = -2
 	r707_lpl.night_owl_weak = 1      # 惧光：射程 / 移速各 -1
