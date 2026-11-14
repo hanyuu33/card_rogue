@@ -541,7 +541,6 @@ const SPELL_RESIST_CAP:= 3
 const DISPLACE_IMMUNE_TRAIT:= "位移免疫"
 const ASH_DRAGON_ID:= 1013
 const ASH_DRAGON_AOE:= 4
-const FROST_MAGE_ID:= 1031      # R464：冰冻术士（战吼 = 冰封敌方本场第一个入场的单位）
 const WYVERN_ID:= 1014
 const WYVERN_TOKEN_ID:= 9028
 const GHOUL_ID:= 1050
@@ -13907,8 +13906,6 @@ func _battlecry(cell: Vector2i, p: Placement) -> void :
 	match p.card.id:
 		ASH_DRAGON_ID:
 			_battlecry_ash(cell, p)
-		FROST_MAGE_ID:
-			_battlecry_frost(cell, p)
 		_:
 			pass
 
@@ -18932,33 +18929,6 @@ func _frost_ward_check(side: String) -> void :
 			break
 	if src != "" and growth_cfg.is_empty():
 		_log("⚠️ %s 已启用，但这一关没有配 enemy_growth —— 卡面写的力量成长不会发生" % src)
-
-
-func _battlecry_frost(cell: Vector2i, p: Placement) -> void :
-	## 冰冻术士（1031）战吼（R464 用户口径）：冰封敌方**本场战斗第一个入场**的单位。
-	## 与 R461 之前的差别：不再挑「生命最低」的那个 —— 目标只由**入场顺序**决定，
-	## 于是玩家能预判（谁先下场谁挨冻），也不会因为中途掉血忽然换人。
-	## 「第一个」的判据 = 敌方**仍在场**的最小 `entry_seq`：
-	##   * 序号由 `FieldState.place()` 唯一发放（关卡摆位 / 手牌打出 / 召唤全走它）；
-	##   * 不靠 `state.board` 的字典迭代顺序 —— Dictionary 顺序不可依赖，回放 / 续档会漂。
-	## 第一个入场的那个已经阵亡时，顺位取**下一个入场的存活单位**（否则这次战吼白费）。
-	## 施加本身走 `_apply_frozen()` 唯一口 —— 爆点 / 「冰封」飘字 / 播报都由它发出的
-	## `frozen` 事件驱动，这里不另写一套演出。
-	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
-	var best:= Vector2i(-1, -1)
-	var best_seq:= 0
-	for c: Vector2i in state.board:
-		var q: Placement = state.unit_at(c)
-		if q == null or q.owner != foe or q.health <= 0:
-			continue
-		if best == Vector2i(-1, -1) or q.entry_seq < best_seq:
-			best_seq = q.entry_seq
-			best = c
-	if best == Vector2i(-1, -1):
-		_log("%s 战吼：场上没有敌方单位可冻结" % p.card.card_name)
-		return
-	_apply_frozen(state.board[best], "%s 战吼" % p.card.card_name)
-	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "frost", "target": best})
 
 
 # ============================================================ R439 战斗存档

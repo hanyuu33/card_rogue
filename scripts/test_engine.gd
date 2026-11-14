@@ -13974,79 +13974,24 @@ func _init() -> void:
 
 	check(om_bc2 == null or om_bc2.health == om_bc_hp - 4, "战吼只触发一次")
 
-	# R464（用户口径）：冰冻归**冰冻术士 1031 自己的战吼**，目标改成「敌方本场战斗
-
-	# **第一个入场**的单位」；寒霜结界 9210 只剩全场的力量成长，不再冰封任何人。
-
-	# 先入场的反而是**血更多**的那只 —— 这样「按入场顺序」与「按生命最低」会给出不同答案。
-
+	# R724（店长口径）：冰冻术士 1031 的战吼**已删除** —— 它的出场时机导致这个效果
+	# 根本触发不了（先入场的永远是玩家的单位，冰封「第一个入场」只会命中一个炮灰）。
+	# 现在 1031 只剩面板数值；寒霜结界 9210 仍然只做全场力量成长，不冰封任何人。
 	var om_fr := _new_engine([], 20, 30, -1, false)
-
 	om_fr.state.place(om_repo.get_card(1031), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
-
 	var om_fr_first := om_fr.state.place(om_repo.get_card(1054), Vector2i(3, 1),
-
-			GameEngine.SIDE_SELF)   # 14 血 · 先入场
-
-	var om_fr_second := om_fr.state.place(om_repo.get_card(1053), Vector2i(3, 2),
-
-			GameEngine.SIDE_SELF)   # 10 血 · 后入场（血更少）
-
-	check(om_fr_first.entry_seq > 0 and om_fr_second.entry_seq == om_fr_first.entry_seq + 1,
-
-			"R464 入场序号：place 逐次发放（%d → %d）"
-
-			% [om_fr_first.entry_seq, om_fr_second.entry_seq])
-
+			GameEngine.SIDE_SELF)
 	om_fr.enable_enemy_effects([om_repo.get_card(9210)])
-
-	# 效果卡不再冰封 —— 战斗开始时我方一个都不该被冻
-
-	check(not om_fr_first.frozen and not om_fr_second.frozen,
-
-			"R464 寒霜结界：战斗开始时**不再**冰封（冰冻是术士自己的战吼）")
-
 	om_fr._begin_turn(GameEngine.SIDE_OPPONENT)
-
-	check(om_fr_first.frozen,
-
-			"R464 冰冻术士战吼：冰封**第一个入场**的单位（哪怕它血最多）")
-
-	check(not om_fr_second.frozen,
-
-			"R464 冰冻术士战吼：只冰封**一个**（后入场的那个不受影响）")
-
-	# 第一个入场的已经阵亡 → 顺位落在下一个仍在场的最早入场者身上（否则这次战吼白费）
-
-	var om_fr2 := _new_engine([], 20, 30, -1, false)
-
-	om_fr2.state.place(om_repo.get_card(1031), Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
-
-	var om_fr2_gone := om_fr2.state.place(om_repo.get_card(1053), Vector2i(3, 0),
-
+	check(not om_fr_first.frozen,
+			"R724 冰冻术士战吼已删除：敌方回合开始不再冰封任何人")
+	check(om_fr_first.entry_seq > 0,
+			"R724 入场序号仍由 place 逐次发放（%d）" % om_fr_first.entry_seq)
+	var om_fr_second := om_fr.state.place(om_repo.get_card(1053), Vector2i(3, 2),
 			GameEngine.SIDE_SELF)
-
-	om_fr2.state.place(om_repo.get_card(1050), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
-
-	var om_fr2_alive := om_fr2.state.place(om_repo.get_card(1054), Vector2i(3, 2),
-
-			GameEngine.SIDE_SELF)
-
-	om_fr2.state.board.erase(Vector2i(3, 0))     # 第一个入场者离场
-
-	om_fr2._begin_turn(GameEngine.SIDE_OPPONENT)
-
-	check(om_fr2_alive.frozen,
-
-			"R464 冰冻术士战吼：第一个入场的已阵亡 → 冻结剩下的最早入场者（%d 号）"
-
-			% om_fr2_alive.entry_seq)
-
-	check(om_fr2_gone.entry_seq < om_fr2_alive.entry_seq,
-
-			"R464 入场序号：先入场的序号更小（%d < %d）"
-
-			% [om_fr2_gone.entry_seq, om_fr2_alive.entry_seq])
+	check(om_fr_second.entry_seq > om_fr_first.entry_seq,
+			"R724 入场序号逐次递增（%d → %d）"
+			% [om_fr_first.entry_seq, om_fr_second.entry_seq])
 
 
 
@@ -17579,9 +17524,9 @@ func _init() -> void:
 
 		check(not gc.effect_text.contains("登场时攻击力 -")
 
-				and gc.effect_text.contains("最多累计 +%d" % int(L2G.get("cap", 0))),
+				and not gc.effect_text.contains("关卡成长"),
 
-				"R123 卡面不再写开局削减、保留成长参数：%s（力量 %d）"
+				"R724 卡面不再写「关卡成长」（成长说明归寒霜结界 9210）：%s（力量 %d）"
 
 						% [gc.card_name, gc.power])
 
@@ -17595,9 +17540,9 @@ func _init() -> void:
 
 			and not dc_frost.effect_text.contains("关卡成长")
 
-			and dc_frost.effect_text.contains("第一个入场"),
+			and dc_frost.effect_text == "",
 
-			"R464：冰冻术士卡面不再重复写全场成长（成长参数归寒霜结界 9210）")
+			"R724：冰冻术士战吼已删除，卡面清空（成长归寒霜结界 9210）")
 
 	# 召唤 token 会被同一条成长脚本改攻击力 → 召唤文案不再写死它的数值
 
@@ -32787,9 +32732,9 @@ func _init() -> void:
 
 	check(repo.get_card(8054).effect_text.contains("返回手卡")
 
-			and repo.get_card(8054).effect_text.contains("（离开手卡重置）"),
+			and not repo.get_card(8054).effect_text.contains("离开手卡"),
 
-		"R106 卡面文本：cards.json 仍是带补注的权威版本（数据未被动过）")
+		"R724 卡面文本：规则层说明已从 cards.json 移除（不再逐卡写离手重置）")
 
 	# ---- ⑤ BBCode 转义（RichTextLabel 用）----
 
@@ -35323,11 +35268,11 @@ func _init() -> void:
 
 	check(r225_boss.traits.has(GameEngine.FORGE_TRAIT)
 
-			and r225_boss.effect_text.contains("践踏")
+			and not r225_boss.effect_text.contains("践踏")
 
 			and r225_boss.effect_text.contains("每回合"),
 
-			"R225 卡面文案同步（锻造 trait 保留；文案含「践踏」与「每回合」）")
+			"R724 卡面文案同步（锻造 trait 保留；践踏只走 trait 角标，正文不复述）")
 
 
 
@@ -42133,11 +42078,11 @@ func _init() -> void:
 
 			and not r239_curse.effect_text.contains("字段")
 
-			and r239_curse.effect_text.contains("本场对战不再出现")
+			and r239_curse.effect_text == "打出无效果。"
 
 			and r239_curse.is_curse() and r239_curse.cost == 2,
 
-			"R239/R692 破绽：次元由字段承载，只留「本场对战不再出现」这半句；仍是 2 费诅咒")
+			"R724 破绽：次元由字段承载，正文只留「打出无效果」；仍是 2 费诅咒")
 
 	check(not r239_fatigue.has_affix(GameEngine.AFFIX_DIMENSION),
 
@@ -42283,11 +42228,11 @@ func _init() -> void:
 
 			and not r240_curse.effect_text.contains("次元")
 
-			and r240_curse.effect_text.contains("本场对战不再出现")
+			and r240_curse.effect_text == "打出无效果。"
 
 			and r240_curse.has_affix(GameEngine.AFFIX_DIMENSION),
 
-			"R240/R692 破绽：正文不再复述次元说明，字段仍在（%s）" % r240_curse.effect_text)
+			"R724 破绽：正文不再复述次元说明，字段仍在（%s）" % r240_curse.effect_text)
 
 	# 文案改动不影响行为：打出仍然消失（进消耗区、不进弃牌区）
 
@@ -46793,9 +46738,9 @@ func _init() -> void:
 
 		% [GameEngine.DISPLACE_IMMUNE_TRAIT, str(r277_hep.traits if r277_hep else [])])
 
-	check(r277_hep != null and r277_hep.effect_text.contains("位移免疫："),
+	check(r277_hep != null and not r277_hep.effect_text.contains("位移免疫"),
 
-		"R277 赫菲斯托斯：效果文本写明位移免疫（%s）"
+		"R724 赫菲斯托斯：正文不再写位移免疫（只走 trait 角标）（%s）"
 
 		% (r277_hep.effect_text if r277_hep else ""))
 
@@ -49441,15 +49386,14 @@ func _init() -> void:
 
 	var r363_frost: CardData = r363_repo.get_card(1031)
 
-	check(r363_frost != null and r363_frost.traits.has("战吼")
+	check(r363_frost != null and not r363_frost.traits.has("战吼")
 
-			and r363_frost.effect_text.begins_with("登场后首个回合开始时")
+			and r363_frost.effect_text == "",
 
-			and r363_frost.effect_text.contains("第一个入场"),
+			"R724 文案：冰冻术士战吼已删除，卡面与 trait 都不再写战吼"
 
-			"R464 文案：冰冻术士带战吼，目标写清「敌方本场战斗第一个入场」的单位（实际 %s）"
+			% ("?" if r363_frost == null else str(r363_frost.traits)))
 
-			% ("?" if r363_frost == null else r363_frost.effect_text))
 
 	check(r363_frost != null and not r363_frost.effect_text.contains("关卡成长"),
 
@@ -53456,11 +53400,11 @@ func _init() -> void:
 
 	check(r319_hare.effect_text.contains("短暂复制")
 
-			and r319_hare.effect_text.contains("次元")
+			and not r319_hare.effect_text.contains("次元")
 
-			and r319_hare.effect_text.contains("回合结束"),
+			and not r319_hare.effect_text.contains("回合结束"),
 
-			"R319 野兔文案：写明「短暂复制（次元；回合结束时消失）」")
+			"R724 野兔文案：只写「短暂复制」，次元与回合结束归字段")
 
 	check(not r319_hare.has_affix(GameEngine.AFFIX_PHANTOM)
 
@@ -63425,7 +63369,7 @@ func _init() -> void:
 
 		"R397 量产型赫菲斯托斯其余不变（4/50，量产锻造仍在）")
 
-	check(r397_mh.effect_text.contains("践踏"), "R397 卡面文案补上践踏说明")
+	check(not r397_mh.effect_text.contains("践踏"), "R724 卡面不再复述践踏（trait 角标已承载）")
 
 
 
@@ -72919,11 +72863,10 @@ func _test_r600() -> void:
 
 	var r600_9234: String = CardText.naturalize(repo.get_card(9234).effect_text)
 
-	check(not r600_9234.contains("离开手") and not r600_9234.contains("恢复原")
+	check(not r600_9234.contains("离开手") and not r600_9234.contains("恢复原"),
 
-			and r600_9234.contains("手牌中费用 -1"),
 
-			"R600：9234 不写「离开手卡恢复原费用」，改说手牌中费用 -1（实际「%s」）" % r600_9234)
+			"R724：9234 不写「离开手卡恢复原费用」（实际「%s」）" % r600_9234)
 
 	var r600_8054: String = CardText.naturalize(repo.get_card(8054).effect_text)
 
