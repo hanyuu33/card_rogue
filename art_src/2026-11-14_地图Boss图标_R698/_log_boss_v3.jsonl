@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1d882-4b9b-7dd1-bc75-1e88f937dc58"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one transparent 1024×1024 boss emblem using the reference’s drawing style.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one transparent boss emblem image."}}
+{"type":"turn.completed","usage":{"input_tokens":35246,"cached_input_tokens":29056,"cache_write_input_tokens":0,"output_tokens":479,"reasoning_output_tokens":0}}

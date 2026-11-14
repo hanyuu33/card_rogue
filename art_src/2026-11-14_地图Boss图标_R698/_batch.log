@@ -1,0 +1,6 @@
+[13:19:58] RUN  boss_v1  参考=elite.png
+[13:21:05] OK   boss_v1 <- exec-06e4a717-7645-46f5-b00b-226a2b71ff6a.png (68s, 1113 KB)
+[13:21:27] RUN  boss_v2  参考=elite.png
+[13:22:37] OK   boss_v2 <- exec-824e8482-7054-4b0d-ba8b-6dd31678bb72.png (70s, 862 KB)
+[13:23:00] RUN  boss_v3  参考=elite.png
+[13:24:07] OK   boss_v3 <- exec-06709435-6d30-4001-805f-c2f697258c20.png (68s, 1130 KB)

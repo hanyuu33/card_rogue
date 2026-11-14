@@ -16,7 +16,17 @@ from PIL import Image, ImageFilter, ImageChops
 
 ROOT = r'E:/work/card_rogue'
 ICON_DIR = os.path.join(ROOT, 'assets', 'ui')
-IDS = list(range(6001, 6061)) + [6064, 6065]  # R586 正义背刺 / R593 机械臂
+def _relic_ids():
+    """道具 id 现读 relics.json —— 原来这里是硬编码清单，漏掉了之后新增的 6067
+    （记忆药水），于是它成了 62 件道具里唯一没有边缘光的一张。改成现读后，
+    以后往 relics.json 加道具只要跑一次本脚本就齐。信物 6061~6063 不参与高亮判定。"""
+    import json
+    with open(os.path.join(ROOT, 'relics.json'), encoding='utf-8') as f:
+        ids = [int(r['id']) for r in json.load(f)['relics']]
+    return [i for i in ids if i not in (6061, 6062, 6063)]
+
+
+IDS = _relic_ids()
 
 BLUE_RIM = (86, 178, 255)      # 预览 BLUE_RIM，贴图标轮廓的冷蓝
 BLUE_HALO = (56, 138, 240)     # 预览 BLUE_HALO，外扩一圈极淡晕

@@ -1,0 +1,19 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY for drawing technique: flat vector badge / die-cut sticker look, THICK uniform dark-chocolate-brown outline closing every shape, big flat saturated colour blocks, hard-edged two-step shading, small crisp bevel highlights. Do NOT copy its subject, its mask, its swords, its colours or its composition. Paint a COMPLETELY DIFFERENT emblem.
+
+SUBJECT — "OVERLORD / BOSS" room emblem for a dungeon map. ONLY TWO SHAPES, nothing else:
+1) a big front-facing horned skull, bone-cream white, two thick horns sweeping back and outward, dark hollow eye sockets with tiny ember-red pupils, a simple jaw with four blunt teeth;
+2) a heavy GOLDEN CROWN sitting on top of the skull, three spike points and one red gem at the centre.
+NO crossed axes, NO swords, NO banner, NO pennant, NO shield, NO cape, NO wings, NO extra props.
+
+SIMPLICITY LOCK (critical — this icon is displayed at 48x48 pixels on the map):
+BOLD SIMPLE SILHOUETTE, minimum detail, large flat colour areas. Every shape must be at least 1/12 of the canvas wide. Do NOT add small rivets, fine cracks, tiny ornaments, texture lines or filigree. The crown and the skull horns must be the only two readable clusters. This is a small map pin, not a poster.
+
+STYLE LOCK: match the reference's line weight and colour logic — every shape closed by a single thick dark-brown (#4a2d18) outline of uniform width, flat fills, one hard shadow step, one small specular highlight per gold surface. Symmetrical, centred, vertically stacked.
+
+BACKGROUND: fully TRANSPARENT — alpha must be 0 outside the emblem silhouette. Not white, not black, no backdrop, no plate, no circle, no glow halo, no ground shadow.
+
+COMPOSITION LOCK: scale the emblem to about 88% of the canvas width and height, centred, with at least 6% fully transparent margin on all four edges. Nothing may be cut off by the canvas border, and nothing may touch it. Do NOT shrink it to a small stamp in the middle — it must fill the frame generously like the reference.
+
+AVOID ALWAYS: NO 3D render, NO photorealistic texture, NO gradient mesh, NO airbrush, NO bokeh, NO drop shadow, NO background scenery, NO frame, NO border box, NO text, NO letters, NO numbers, NO watermark, NO logo, NO cute chibi mascot, NO anime girl, NO playing card, NO clutter of multiple objects.

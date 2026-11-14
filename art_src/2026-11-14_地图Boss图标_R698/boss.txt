@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly one 1024x1024 image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+The ATTACHED image is a STYLE REFERENCE ONLY for drawing technique and composition grammar: flat vector badge / die-cut sticker look, THICK uniform dark-chocolate-brown outline closing every shape, big flat saturated colour blocks, hard-edged two-step shading, small crisp bevel highlights on gold and steel, centred symmetric emblem. Do NOT copy its subject, its mask, its swords, its colour placement, or its exact silhouette. Paint a COMPLETELY DIFFERENT emblem.
+
+SUBJECT — "OVERLORD / BOSS" room emblem for a dungeon map. One single flat badge, no scenery:
+a front-facing horned demon skull (bone-cream white, two thick horns sweeping back and outward, dark hollow eye sockets with tiny glowing ember-red pupils), wearing a heavy GOLDEN CROWN with three spike points and a red gem at the centre; behind the skull, two crossed battle-axes forming a wide X (steel-grey axe heads with a bright bevel, dark-green wrapped hafts, gold pommels at the bottom); behind everything a deep crimson ragged pennant wedge that spreads left and right like a torn banner, giving the badge weight. Read order should be: crown and skull first, then the crossed axe heads, then the red banner.
+NO text, NO letters, NO numbers, NO heraldic shield outline.
+
+STYLE LOCK: match the reference exactly in line weight and colour logic — every shape closed by a single thick dark-brown (#4a2d18) outline of uniform width, no inner sketch lines, flat fills only, one hard shadow step, one small specular highlight per metal surface. Symmetrical, centred, vertically stacked. The badge must still read clearly when shrunk to 48x48 pixels.
+
+BACKGROUND: fully TRANSPARENT — the alpha channel must be 0 outside the emblem silhouette. Not white, not black, no backdrop, no plate, no circle, no glow halo, no ground shadow, no vignette. Keep at least 8% empty transparent margin on all four edges; the emblem must NOT touch the canvas border.
+
+AVOID ALWAYS: NO 3D render, NO photorealistic texture, NO gradient mesh, NO airbrush, NO bokeh, NO drop shadow, NO background scenery, NO frame, NO border box, NO text, NO letters, NO numbers, NO watermark, NO logo, NO cute chibi mascot, NO anime girl, NO playing card.

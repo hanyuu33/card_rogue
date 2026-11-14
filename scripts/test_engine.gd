@@ -18154,6 +18154,14 @@ func _init() -> void:
 	check(UiAssets.node_icon_path("boss") == "res://assets/ui/map_boss.png",
 
 			"地图图标命名：map_<类型>.png（map_boss.png）")
+	# R698：Boss 房图标曾整条缺失 —— `map_icons/boss.png` 与 `map_boss.png` 两张都没有，
+	# `node_icon()` 的两级回退全落空，地图上 Boss 格只画一个汉字「王」。
+	# 上面那条只验「路径拼得对」，拼对了但目录里没文件照样能过；这里改成逐个类型验「真取得到图」。
+	for _bt in RogueMap.TYPE_LABELS.keys():
+
+		check(UiAssets.node_icon(str(_bt)) != null,
+
+				"R698 地图图标全部落盘：map_icons/%s.png（此前 boss 缺失）" % str(_bt))
 
 	check(UiAssets.event_pic_path("gaze") == "res://assets/ui/event_gaze.png",
 
