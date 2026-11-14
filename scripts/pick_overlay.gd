@@ -19,7 +19,9 @@ signal collapsed_changed(collapsed: bool)
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const CardDetailOverlay = preload("res://scripts/card_detail_overlay.gd")
 
-const COLS := 5                 # 每行 5 张（用户口径）
+const COLS_MIN := 3             # R700：自适应列数的下限（再窄也不少于 3 张一行）
+const COLS_MAX := 7             # R700：自适应列数的上限（超宽屏别排成一长条）
+const VISIBLE_ROWS := 1.5       # R700：一屏露出的行数 —— 1 行完整 + 半行（提示可滚）
 const GAP := 30.0               # 卡间距（用户口径：别排太紧凑）
 const TOP_H := 64.0             # 顶栏高
 const BOT_H := 76.0             # 底栏高
@@ -185,41 +187,93 @@ func refresh() -> void:
 
 # ── 布局 ─────────────────────────────────────────────────────
 
-func _layout() -> void:
+func _ensure_size() -> void:
 	# R395（用户报「选卡页弹出来，有返回按钮和提示，但看不到任何待选卡」）：
 	# 旧代码只兜底 `size.x < 10`。**高度**没结算时（首帧 anchors 还没生效 / 从小窗切回）
 	# `h - TOP_H - GRID_TOP - BOT_H - DESC_H - 14` 会算成 0 甚至负数 → 网格被裁成 0 高：
 	# 顶栏（画在 clip 之外）照常可见，卡却一张都看不见，正是这个现象。
+	# ⚠️ R700：抽成单独一口 —— `_layout()` 与 `cols()` 都要先保证尺寸可用，
+	#    两处各写一遍兜底迟早漂移（一处改了另一处没改 → 卡按旧尺寸算、网格按新尺寸裁）。
 	if size.x < 10.0 or size.y < 10.0:
 		# 首帧 anchors 还没结算（或 headless 探针直调 open）→ 按视口尺寸兜底
 		size = get_viewport_rect().size
 	if size.x < 10.0 or size.y < 10.0:
 		size = Vector2(1280, 720)      # 视口也拿不到（极早期）→ 退回设计分辨率
-	var w := size.x
-	var h := size.y
+
+
+func _grid_size() -> Vector2:
+	## 网格可视区尺寸（卡尺寸与裁剪框的**唯一**几何口径）。
+	_ensure_size()
+	return Vector2(maxf(1.0, size.x - SIDE * 2.0),
+			maxf(1.0, size.y - TOP_H - GRID_TOP - BOT_H - DESC_H - 14.0))
+
+
+func cols() -> int:
+	## R700：每行几张 —— **由屏幕尺寸推出来**，不再写死 5 张。
+	##
+	## 旧口径（`COLS := 5` 硬编码）在两种屏上都不对：
+	##   · 电脑：`project.godot` 是 `stretch/aspect="expand"` + 逻辑 1280×720，
+	##     16:9 的窗口不论 1080p / 1440p / 4K，**逻辑宽永远是 1280** → 5 列 → 每张 193.6，
+	##     4K 显示器上整窗铺满，卡却只有屏宽的 15%，看着又小又空；
+	##   · 手机：18:9 / 20:9 更矮长，expand 只把**宽**撑开（逻辑高恒 720），
+	##     逻辑宽变成 1560 / 1600 → 同样是 5 列，卡被拉宽到 249 并撑到 301 高，
+	##     一屏只塞得下一行半，第二行被切掉大半 —— 就是「没对齐」的观感。
+	##
+	## 现在的规则：**先按「一屏想露几行」定卡高，再由卡高推卡宽，最后用可用宽取整列数。**
+	## 逻辑高恒 720 → 卡高恒定，所以两种屏的卡**物理上一样大**；而列数随宽度变
+	## （电脑 1280 → 4 列 = 每张 249 逻辑 ≈ 物理 374；手机 1560 → 5 列 = 249 逻辑），
+	## 于是电脑上的卡占屏比例明显变大，手机保持原样不溢出 —— 正是用户要的
+	## 「一定程度适应屏幕，但不是完全跟随」。
+	var gs := _grid_size()
+	var ch := gs.y / VISIBLE_ROWS          # 卡的理想高度（一屏露 VISIBLE_ROWS 行）
+	var cw := ch * 63.0 / 76.0             # 卡面宽高比恒定 63:76（与 battle_scene 同口径）
+	return clampi(roundi((gs.x + GAP) / (cw + GAP)), COLS_MIN, COLS_MAX)
+
+
+func _layout() -> void:
+	_ensure_size()
 	_clip.position = Vector2(SIDE, TOP_H + GRID_TOP)
-	_clip.size = Vector2(maxf(1.0, w - SIDE * 2.0),
-			maxf(1.0, h - TOP_H - GRID_TOP - BOT_H - DESC_H - 14.0))
-	_grid.position = Vector2(0, -_scroll)
+	_clip.size = _grid_size()
 	_grid.size = Vector2(_clip.size.x, _content_h())
+	# R700：卡尺寸随窗口变 → 内容总高也会变。窗口从矮胖切到宽扁时旧 `_scroll`
+	# 可能已经超过新的 `_max_scroll()`，不夹一次就会停在空白处（看着像「卡没了」）。
+	_clamp_scroll()
+
+
+func _row_gap() -> float:
+	## R700：行间距**单独**给，比列间距大 —— 卡底那排数值徽章（力/程/速/生）圆心
+	## 就画在 `rect.end.y` 上，**半个圆探出卡外**（`CardFace._draw_badges()` 的既定口径，
+	## 卡面统一，不在这里动它）。GAP=30 时探出的那一半几乎贴住下一行卡顶，
+	## 看着像「卡片错位、数字压住了下一张」—— 卡越大探出越多，所以按卡高折算。
+	return maxf(GAP, _card_size().y * 0.14)
 
 
 func _card_size() -> Vector2:
-	var cw := (size.x - SIDE * 2.0 - GAP * (COLS - 1)) / float(COLS)
+	## R700：列数由 `cols()` 按屏幕推（不再是常量 5）。
+	var n := float(cols())
+	var cw := (_grid_size().x - GAP * (n - 1.0)) / n
+	# 高度上限：不许高过可视区（极窄高的窗口里若一列都放不下整张卡，
+	# 就按高度反算宽度，宁可留白也不要卡整行溢出、底部糊成一片）
+	var ch := cw * 76.0 / 63.0
+	var cap := _grid_size().y
+	if ch > cap:
+		cw = cap * 63.0 / 76.0
 	# 卡面宽高比恒定 63:76（battle_scene CARD_W:CARD_H）
 	return Vector2(cw, cw * 76.0 / 63.0)
 
 
 func _content_h() -> float:
-	var rows := maxi(1, int(ceil(float(maxi(_cards.size(), 1)) / float(COLS))))
+	var n := cols()
+	var rows := maxi(1, int(ceil(float(maxi(_cards.size(), 1)) / float(n))))
 	var cs := _card_size()
-	return rows * (cs.y + GAP) - GAP
+	return rows * (cs.y + _row_gap()) - _row_gap()
 
 
 func _card_rect(k: int) -> Rect2:
 	## 第 k 张卡在 **grid 本地坐标系**里的矩形。
+	var n := cols()
 	var cs := _card_size()
-	return Rect2((k % COLS) * (cs.x + GAP), int(k / COLS) * (cs.y + GAP), cs.x, cs.y)
+	return Rect2((k % n) * (cs.x + GAP), int(k / n) * (cs.y + _row_gap()), cs.x, cs.y)
 
 
 func _max_scroll() -> float:
