@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-13",
+  "updated": "2026-11-14",
   "purpose": "R667 界面与共享组件翻译专用规范中文底本。权威 GDScript 中文不改；仅明确审计的规则漂移在 canonical 修正。",
   "rules": [
     "卡组是跨战斗完整构筑，抽牌堆是本场待抽区；删除是跨战斗 Remove，消失是本场 Banish。",
@@ -702,12 +702,12 @@
         "zh": "暗动力：必须当场拿取一张卡，不能留到以后领"
       },
       "REWARD_CLAIM_ALL_NOTE": {
-        "source": "scripts/reward_panel.gd:1016",
-        "zh": "「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张"
+        "source": "scripts/reward_panel.gd:1050",
+        "zh": "「领取全部道具」不碰卡牌与工具奖励 —— 卡牌要自己挑一张"
       },
       "REWARD_MANUAL_PROCESSING_NOTE": {
-        "source": "scripts/reward_panel.gd:1019",
-        "zh": "卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）"
+        "source": "scripts/reward_panel.gd:1053",
+        "zh": "卡牌 / 删卡 / 核心 / 工具奖励要点进去处理（不能一键领取）"
       },
       "REWARD_ALL_SETTLED_NOTE": {
         "source": "scripts/reward_panel.gd:1019",
@@ -1020,6 +1020,22 @@
       "REWARD_EVENT_CORE_TITLE": {
         "source": "scripts/event_scene.gd:2632",
         "zh": "契 约 的 核 心"
+      },
+      "REWARD_TOOL_NAME": {
+        "source": "scripts/reward_panel.gd:315",
+        "zh": "工具：%s"
+      },
+      "REWARD_TOOL_TAG_PLACE": {
+        "source": "scripts/reward_panel.gd:367",
+        "zh": "战斗掉落 · 放置型（拖到战场空格）"
+      },
+      "REWARD_TOOL_TAG_USE": {
+        "source": "scripts/reward_panel.gd:366",
+        "zh": "战斗掉落 · 使用型（轻点即用）"
+      },
+      "REWARD_TOOL_DESC_MISSING": {
+        "source": "scripts/reward_panel.gd:443",
+        "zh": "（这件工具的说明缺失）"
       }
     },
     "map": {
@@ -3434,7 +3450,7 @@
   },
   "expected_counts": {
     "shop": 72,
-    "reward": 120,
+    "reward": 124,
     "map": 244,
     "battle": 72,
     "shell": 193,

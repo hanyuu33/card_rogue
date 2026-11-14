@@ -276,7 +276,7 @@ for dynamic_key, narrative_key in dynamic_map.items():
 interface_zh_rows, interface_entries = flatten_interface(INTERFACE_ZH)
 interface_es_rows, _ = flatten_interface(INTERFACE_ES, translated=True)
 check(set(interface_es_rows) == set(interface_zh_rows), "interface 全部 scope.key 覆盖一致")
-check(len(interface_zh_rows) == 790, "interface 共 790 条")
+check(len(interface_zh_rows) == 794, "interface 共 794 条")
 reuse_locked = set(INTERFACE_ZH.get("l10n_reuse", {})) | set(INTERFACE_ZH.get("glossary_reuse", {}))
 for path, zh_text in interface_zh_rows.items():
     entry = interface_entries[path]
@@ -370,4 +370,4 @@ if errors:
     sys.exit(1)
 print("SPANISH I18N OK: %d checks" % checks)
 print("  cards=319 | relics=62 | classes=3 | traps=%d" % len(raw_traps))
-print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=155 | interface=790 | l10n=56")
+print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=155 | interface=794 | l10n=56")

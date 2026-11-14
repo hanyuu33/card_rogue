@@ -298,6 +298,7 @@ static func snapshot() -> Dictionary:
 		"revenge_pending": RunState.revenge_pending,
 		"relics": RunState.relics,
 		"traps": RunState.traps,   # R663：陷阱栏（老档缺键 → apply 兜 3 空槽）
+		"tool_roll_seq": RunState.tool_roll_seq,   # R694：战斗掉落工具的序号（续档接着数）
 		"key_relics": RunState.key_relics,   # R543：信物（解锁第三层，与道具分开记账）
 		# R367：已耗尽的道具（灰显的那些）与每层 Boss 战果 —— 续档要接着画灰 / 接着记。
 		"spent_relics": RunState.spent_relics,
@@ -592,6 +593,9 @@ static func apply(d: Dictionary) -> bool:
 	RunState.revenge_pending = bool(d.get("revenge_pending", false))
 	RunState.relics = _drop_unknown_relics(_int_array(d.get("relics", [])))
 	RunState.traps = _trap_slots(d.get("traps", []))   # R663：老档缺键 → 3 空槽
+	# R694：战斗掉落工具的派生序号（老档缺键 → 0，只是可能把头部几条种子再摇一遍，
+	# 不影响掉率本身）。
+	RunState.tool_roll_seq = int(d.get("tool_roll_seq", 0))
 	RunState.key_relics = _int_array(d.get("key_relics", []))   # R543：信物（老存档无此字段 → 空）
 	# R367：灰显道具 / Boss 战果。**必须在 `relics` 之后、下面盆与火柴的复查之前**赋值 ——
 	# 那两处用 `has_relic()`（已排除 spent）决定要不要补满点数。

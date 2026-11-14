@@ -1691,3 +1691,33 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **商店保底复核**：`SHOP_MIN` / `SHOP_MAX` 早已是 2（R369 定案），加上固定那间，每层至少 3 间，**无需改**，`test_engine` 的 R369 段一直钉着。
 - **回归**：assemble 0 / mana PASS / engine **5963✓** / reward 26 / bgm 39 / traps **56✓**（新增「六件工具都写明发动方式」与使用型结算 9 条）/ trapinput 36 / smoke **72✓**；`test_i18n` **35✓**（新增工具三语 5 条：条目齐全 / 无中文残留（**日文查假名**，不能查汉字）/ 操作口径 / 桥路逐语言非回退）；`validate_spanish.py` 22073 项 OK、`validate_glossary.py` OK。
 - **踩过的坑**：`test_i18n` 切语言会写 `profile.json` → 跑之前务必备份 `app_userdata/卡牌肉鸽` 并断言含 `profile.json` + `run_save.sav`，跑完逐文件还原、`RESTORE_VERIFY OK`。
+## 2026-11-14 R694 任何战斗 10% 概率掉落工具（带工具自己的图标）
+- **用户口径**：任何战斗都有 10% 概率掉落工具，用对应（那件工具的）图标显示。
+- **判定位置**：`battle_scene` 的胜利结算里、`offer_relic_drop` 之后 —— `RunState.roll_battle_tool_drop()`。
+  **不收 node_type**：普通 / 精英 / Boss / 事件里的遭遇战走的是同一个调用点，不存在「某类战斗漏掉」。
+- **随机流（关键）**：走 `seed_of("tool_drop", tool_roll_seq)` 的**派生流**，**不碰 `run_rng`**（R312 口径）。
+  战斗结算里多抽一个 `run_rng` 会把同一 seed 下后续的道具 / 关卡整体推歪。
+  `tool_roll_seq` = 本局第几次战斗结算，**随存档走**（`run_save` 新键，老档缺键 → 0），
+  每场结算 +1（与「摇没摇中」「有没有空位」无关），所以同一条种子不会被摇第二遍。
+  五个种子各 1000 场的实测掉率：106 / 99 / 120 / 99 / 89（‰，即 8.9%~12.0%），无偏。
+- **满栏不掉**：`trap_free_slots() <= 0` 直接返回 -1 —— 掉了也装不进 3 格工具栏，
+  塞进奖励队列只会变成一条「领不了、又卡着不让走」的待办。
+- **队列口径**：与道具掉同一套「先看后领」——`queue_tool_reward()` 入 `pending_rewards`，
+  `kind = "tool"`；`claim_pending_reward()` 领取时 `gain_trap()` 填第一个空槽，
+  `skip_pending_reward()` 放弃则只置灰（**不登记 skipped**：工具没有「本局不再出」的语义）。
+- **界面**：`reward_panel` 复用道具那条详情页（标题 + 图标 + 完整 desc + 领取 / 放弃）。
+  列表行与详情标题都走 `UiAssets.trap_icon(id)` —— 与战斗工具栏 / 商店格**同一个取图口**，
+  缺图才退回语义色盾。标签按 `TrapData.is_usable()` 分两种：
+  「战斗掉落 · 放置型（拖到战场空格）」/「战斗掉落 · 使用型（轻点即用）」。
+  详情正文直接用 `TrapData.desc`（已是当前语言，且「拖到战场空格上放置 / 轻点即可使用」在句首）。
+- **文案**：`interface` 新增 4 条（REWARD_TOOL_NAME / TAG_PLACE / TAG_USE / DESC_MISSING），
+  四语齐；`REWARD_CLAIM_ALL_NOTE` 与 `REWARD_MANUAL_PROCESSING_NOTE` 补上「工具」二字
+  （否则挂着一条工具时，底部说明列的三类里没有它）。`expected_counts.reward` 120 → 124，
+  `validate_spanish.py` 的 interface 锁 790 → 794。
+- **出图核验**：新增演示入口 `-- --screenshot --tooldemo`（列表：毒瓶 + 小血瓶）与 `--tooldemo --tooldetail`
+  （详情页）。截图 `_shots/r694_tool_drop_list.png` / `_shots/r694_tool_drop_detail.png`
+  （`_shots/` 是 gitignore 的，只在本地）。
+- **回归**：assemble 0 / mana PASS / engine 5963✓ / reward 26 / bgm 39 / **traps 68✓**（新增 12 条：
+  概率常量、1000 场掉率 70~130、满栏不掉、入队 / 领取进栏 / 置已领、放弃不进栏、三处接线守卫）/
+  trapinput 36 / smoke 72✓；`test_i18n` 35✓；`validate_interface` 794 条 OK、`validate_spanish` 22113 项 OK、
+  `validate_glossary` OK；`RESTORE_VERIFY OK`。

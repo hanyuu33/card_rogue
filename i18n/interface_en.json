@@ -73,10 +73,6 @@
       "SHOP_MENU_BACK": "Keep Shopping",
       "SHOP_MENU_SUBTITLE": "Mysterious Shop",
       "SHOP_MENU_VIEW_DECK": "View Deck",
-      "SHOP_MENU_BACK_TITLE": "Back to Title",
-      "SHOP_MENU_BACK": "Keep Shopping",
-      "SHOP_MENU_SUBTITLE": "Mysterious Shop",
-      "SHOP_MENU_VIEW_DECK": "View Deck",
       "SHOP_MENU_BACK_TITLE": "Back to Title"
     },
     "reward": {
@@ -120,8 +116,8 @@
       "REWARD_LIST_SUMMARY": "%d total · %d pending　(Tap any entry for details)",
       "REWARD_CLAIM_ALL_RELICS": "Claim All Relics",
       "REWARD_DARK_POWER_MUST_PICK": "Dark Drive: you must take a card now; you cannot leave it to claim later",
-      "REWARD_CLAIM_ALL_NOTE": "\"Claim All Relics\" leaves Card Rewards untouched — you must choose a card yourself",
-      "REWARD_MANUAL_PROCESSING_NOTE": "Card / Card Removal / Core rewards must be opened and handled (cannot be claimed with one click)",
+      "REWARD_CLAIM_ALL_NOTE": "\"Claim All Relics\" leaves Card and Tool Rewards untouched — you must choose a card yourself",
+      "REWARD_MANUAL_PROCESSING_NOTE": "Card / Card Removal / Core / Tool rewards must be opened and handled (cannot be claimed with one click)",
       "REWARD_ALL_SETTLED_NOTE": "All rewards have been resolved. You can click \"Done\"",
       "REWARD_DONE": "Done",
       "REWARD_DECK_BUTTON": "Deck",
@@ -199,7 +195,11 @@
       "REWARD_GOLD_PART_BOUNTY_HUNTER": "Bounty Hunter %d",
       "REWARD_GOLD_LEGACY_SUMMARY": "Gold +%d (%s)　Current: %d",
       "REWARD_EVENT_ARCANE_TITLE": "Arcane Spring",
-      "REWARD_EVENT_CORE_TITLE": "Heart of the Contract"
+      "REWARD_EVENT_CORE_TITLE": "Heart of the Contract",
+      "REWARD_TOOL_NAME": "Tool: %s",
+      "REWARD_TOOL_TAG_PLACE": "Battle drop · Placement tool (drag onto a battlefield cell)",
+      "REWARD_TOOL_TAG_USE": "Battle drop · Usable tool (tap to use)",
+      "REWARD_TOOL_DESC_MISSING": "(This tool's description is missing)"
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "Starting Point",

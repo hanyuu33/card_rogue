@@ -73,10 +73,6 @@
       "SHOP_MENU_BACK": "Seguir comprando",
       "SHOP_MENU_SUBTITLE": "Tienda misteriosa",
       "SHOP_MENU_VIEW_DECK": "Ver mazo",
-      "SHOP_MENU_BACK_TITLE": "Volver al título",
-      "SHOP_MENU_BACK": "Seguir comprando",
-      "SHOP_MENU_SUBTITLE": "Tienda misteriosa",
-      "SHOP_MENU_VIEW_DECK": "Ver mazo",
       "SHOP_MENU_BACK_TITLE": "Volver al título"
     },
     "reward": {
@@ -120,8 +116,8 @@
       "REWARD_LIST_SUMMARY": "%d en total · %d pendientes　(toca una entrada para ver detalles)",
       "REWARD_CLAIM_ALL_RELICS": "Reclamar todas las Reliquias",
       "REWARD_DARK_POWER_MUST_PICK": "Poder oscuro: debes tomar una carta ahora; no puedes dejarla para después",
-      "REWARD_CLAIM_ALL_NOTE": "«Reclamar todas las Reliquias» no afecta a las recompensas de cartas; debes elegir una carta",
-      "REWARD_MANUAL_PROCESSING_NOTE": "Las recompensas de cartas, eliminación y Núcleo deben abrirse y gestionarse (no se reclaman con un clic)",
+      "REWARD_CLAIM_ALL_NOTE": "«Reclamar todas las Reliquias» no afecta a las recompensas de cartas ni de herramientas; debes elegir una carta",
+      "REWARD_MANUAL_PROCESSING_NOTE": "Las recompensas de cartas, eliminación, Núcleo y herramientas deben abrirse y gestionarse (no se reclaman con un clic)",
       "REWARD_ALL_SETTLED_NOTE": "Todas las recompensas están resueltas. Pulsa «Listo»",
       "REWARD_DONE": "Listo",
       "REWARD_DECK_BUTTON": "Mazo",
@@ -199,7 +195,11 @@
       "REWARD_GOLD_PART_BOUNTY_HUNTER": "Cazarrecompensas %d",
       "REWARD_GOLD_LEGACY_SUMMARY": "Oro +%d (%s)　Actual: %d",
       "REWARD_EVENT_ARCANE_TITLE": "Manantial arcano",
-      "REWARD_EVENT_CORE_TITLE": "Corazón del contrato"
+      "REWARD_EVENT_CORE_TITLE": "Corazón del contrato",
+      "REWARD_TOOL_NAME": "Herramienta: %s",
+      "REWARD_TOOL_TAG_PLACE": "Botín de combate · De colocación (arrástrala a una casilla del campo)",
+      "REWARD_TOOL_TAG_USE": "Botín de combate · De uso (tócala para usar)",
+      "REWARD_TOOL_DESC_MISSING": "(Falta la descripción de esta herramienta)"
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "Punto de partida",

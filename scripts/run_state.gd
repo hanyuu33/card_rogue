@@ -342,12 +342,18 @@ static var pending_fly := false              # R555 飞行器：待在地图上�
 ##    `self_relics.has(id)`，混进去会串高亮（独立 7001+ 段也是为了这个）。
 const TRAP_SLOTS := 3
 static var traps: Array[int] = [-1, -1, -1]   # -1 = 空槽；其余 = traps.json 的 id
+## R694（用户口径「任何战斗都有 10% 概率掉落工具」）：**任何**战斗胜利都摇一次这个概率。
+## `tool_roll_seq` = 本局第几次战斗结算，只用来派生随机种子 —— 随存档一起走，
+## 续档之后接着往下数，同一条种子不会被摇第二遍。
+const TOOL_DROP_CHANCE := 0.10
+static var tool_roll_seq := 0
 
 # ---- R119：待领奖励队列（奖励悬浮窗的数据源）----
 ## 「获得奖励」不再当场发放，而是**先入队** → 由 RewardPanel 悬浮窗逐项展示。
 ## 玩家自行决定查看顺序，看过可以退回列表再看、再领取；领取 / 放弃过的那一条置灰。
 ## 每项字典（kind 决定字段）：
 ##   {"kind": "relic", "id": int, "state": String}
+##   {"kind": "tool", "id": int, "state": String}     # R694：战斗掉落的工具（7001~7006）
 ##   {"kind": "cards", "type": String, "kinds": Array[String],
 ##    "candidates": Array[int], "picked": int, "state": String}
 ## ⚠️ 只在 start_run 清空（**end_run 故意不清**）：通关那一场的奖励是「打完才弹窗看」的，
@@ -1104,6 +1110,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	relics = []
 	key_relics = []   # R543：新的一局没有信物
 	traps = [-1, -1, -1]   # R663：新的一局陷阱栏 3 空槽
+	tool_roll_seq = 0      # R694：新的一局 → 战斗掉落工具的重摇序号归零
 	bandage_pending = 0
 	skipped_relics = []
 	pending_relic = -1
@@ -1218,6 +1225,7 @@ static func end_run(clear_save: bool = true) -> void:
 	relics = []
 	key_relics = []   # R543：本局结束 → 信物清空
 	traps = [-1, -1, -1]   # R663：本局结束 → 陷阱栏清空
+	tool_roll_seq = 0      # R694：本局结束 → 掉落工具的序号也归零
 	spent_relics.clear()       # R367：灰显标记随本局一起清掉
 	boss_kills.clear()         # R367：本局 Boss 战果不跨局
 	bandage_pending = 0
@@ -1403,6 +1411,41 @@ static func consume_trap(slot: int) -> int:
 		return -1
 	traps[slot] = -1
 	return id
+
+
+static func roll_battle_tool_drop() -> int:
+	## R694（用户口径「任何战斗都有 10% 概率掉落工具」）：**每一场**战斗胜利都摇一次 ——
+	## 普通 / 精英 / Boss / 事件里的遭遇战一视同仁（不收 node_type，所以不存在漏掉哪一类）。
+	## 命中就返回要掉的工具 id，没掉返回 -1；真正的发放交给 `queue_tool_reward()`。
+	##
+	## 随机流：走 `seed_of("tool_drop", n)` 的**派生流**，不碰 `run_rng`（R312 口径）——
+	## 战斗结算里多抽一个 `run_rng` 会把同一种子下后续的道具 / 关卡整体推歪。
+	## 序号 `tool_roll_seq` 每场结算 +1（与「摇没摇中」「有没有空位」无关），
+	## 所以同一条种子不会被摇第二遍，续档之后也不会。
+	##
+	## 满栏（3/3）直接不掉：掉了也装不进去，塞进奖励队列只会变成一条领不了的待办。
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_of("tool_drop", tool_roll_seq)
+	tool_roll_seq += 1
+	if rng.randf() >= TOOL_DROP_CHANCE:
+		return -1
+	if trap_free_slots() <= 0:
+		return -1
+	var pool: Array[TrapData] = TrapRepo.load_json().all_traps()
+	if pool.is_empty():
+		return -1
+	return int(pool[rng.randi() % pool.size()].id)
+
+
+static func queue_tool_reward(id: int) -> bool:
+	## R694：掉落的工具入队（与道具掉落**同一套**「先看后领」口径）——
+	## 奖励页里带它自己的图标与完整说明（商店里那份 desc），点「领取」才真进工具栏。
+	## 返回是否入队成功（id 非法返回 false）。
+	if id <= 0:
+		return false
+	_drop_settled_batch()
+	pending_rewards.append({"kind": "tool", "id": id, "state": REWARD_PENDING})
+	return true
 
 
 static func gain_relic(id: int) -> void:
@@ -2203,6 +2246,14 @@ static func claim_pending_reward(idx: int) -> bool:
 		return true
 	if str(e.get("kind", "")) == "deck_delete":
 		return false
+	if str(e.get("kind", "")) == "tool":
+		# R694：工具掉落 → 领取时填进工具栏的第一个空槽。
+		# 满栏只是**防守分支**（入队那一刻判过有空位，待领期间又进不了战斗 / 商店），
+		# 真挤满了就不领、留着 —— 玩家先放弃这条或用掉一个工具再来。
+		if not gain_trap(int(e.get("id", 0))):
+			return false
+		e["state"] = REWARD_CLAIMED
+		return true
 	if str(e.get("kind", "")) != "relic":
 		return false
 	var rid := int(e.get("id", 0))
@@ -2228,6 +2279,11 @@ static func skip_pending_reward(idx: int) -> bool:
 	if str(e.get("kind", "")) == "cards" and relics.has(DARK_POWER_RELIC_ID):
 		return false
 	if str(e.get("kind", "")) == "deck_delete":
+		e["state"] = REWARD_SKIPPED
+		return true
+	# R694：工具掉落可以放弃（放弃不登记任何账本 —— 工具没有「本局不再出」的语义，
+	# 下一场战斗照样按 10% 摇）。
+	if str(e.get("kind", "")) == "tool":
 		e["state"] = REWARD_SKIPPED
 		return true
 	# R531：金币 / 最大生命也可以放弃（点了就置灰，什么都不发生）。

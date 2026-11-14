@@ -230,6 +230,54 @@ func _init() -> void:
 	check(e7.state.hp_self == e7.state.max_hp_self, "小血瓶：满血不溢出上限")
 	check(not e7.use_tool(7001), "炼金炸弹不能用 use_tool（它要放置）")
 
+	# ---- ⑥c R694：任何战斗 10% 概率掉落工具 ----
+	# 概率 / 满栏 / 入队 / 领取 / 放弃 五件事都钉在这里；「哪一类战斗」由
+	# `battle_scene` 的调用点决定（它不收 node_type，所以普通、精英、Boss、事件遭遇战
+	# 走的是同一条路）。
+	check(is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10), "掉落概率常量就是 10%")
+	var saved_seed := RunState.run_seed
+	RunState.run_seed = 20261114
+	RunState.tool_roll_seq = 0
+	# 1000 场：每场先清空栏位，只测「摇不摇得中」。二项分布 n=1000 p=0.1 的 ±3σ ≈ ±9.5，
+	# 所以放宽到 70~130 —— 掉率真漂成 5% 或 15% 一定被抓到，又不会因为个别取样变随机红。
+	var hits := 0
+	for i in 1000:
+		RunState.traps = [-1, -1, -1]
+		if RunState.roll_battle_tool_drop() > 0:
+			hits += 1
+	check(hits >= 70 and hits <= 130, "1000 场战斗的掉率落在 70~130 次（实测 %d）" % hits)
+	# 满栏（3/3）：一场也不掉 —— 掉了也装不进去
+	RunState.traps = [7001, 7002, 7003]
+	var full_hits := 0
+	for i in 200:
+		if RunState.roll_battle_tool_drop() > 0:
+			full_hits += 1
+	check(full_hits == 0, "工具栏满（3/3）时一场都不掉（实测 %d）" % full_hits)
+	# 入队 → 领取：工具进空槽、条目置为已领取
+	RunState.traps = [-1, -1, -1]
+	RunState.pending_rewards = []
+	RunState.queue_tool_reward(7005)
+	var idx := RunState.pending_rewards.size() - 1
+	check(idx == 0 and str(RunState.pending_rewards[idx].get("kind", "")) == "tool",
+			"掉落的工具以 kind=tool 入奖励队列")
+	check(RunState.claim_pending_reward(idx), "工具奖励能领取")
+	check(RunState.traps.has(7005), "领取后填进工具栏")
+	check(str(RunState.pending_rewards[idx].get("state", "")) == RunState.REWARD_CLAIMED,
+			"领取后条目置为已领取")
+	# 放弃：不占栏位、条目置灰（不登记「本局不再出」—— 工具没有这个语义）
+	RunState.traps = [-1, -1, -1]
+	RunState.pending_rewards = []
+	RunState.queue_tool_reward(7006)
+	var idx2 := RunState.pending_rewards.size() - 1
+	check(RunState.skip_pending_reward(idx2), "工具奖励能放弃")
+	check(not RunState.traps.has(7006)
+			and str(RunState.pending_rewards[idx2].get("state", "")) == RunState.REWARD_SKIPPED,
+			"放弃后既不进栏位、条目也置为已放弃")
+	RunState.pending_rewards = []
+	RunState.traps = [-1, -1, -1]
+	RunState.tool_roll_seq = 0
+	RunState.run_seed = saved_seed
+
 	# ---- ⑦ 源码守卫：三处 UI 与引擎接线不许被后续改动抹掉 ----
 	var shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
 	var battle_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
@@ -265,6 +313,15 @@ func _init() -> void:
 			"R690：使用型工具的引擎 / 界面 / 图标三处接线")
 	check(battle_src.contains("is_usable") and battle_src.contains("点一下就能用"),
 			"R690：使用型工具拒绝进入拖放（轻点即用）")
+	var rp_src := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	check(battle_src.contains("RunState.roll_battle_tool_drop()")
+			and battle_src.contains("RunState.queue_tool_reward("),
+			"R694：战斗结算摇工具 → 入奖励队列（任何战斗走同一条）")
+	check(not battle_src.contains("roll_battle_tool_drop(node_type)"),
+			"R694：掉率不看 node_type —— 不存在只给某一类战斗的情况")
+	check(rp_src.contains("UiAssets.trap_icon") and rp_src.contains("REWARD_TOOL_NAME")
+			and rp_src.contains("REWARD_TOOL_TAG_USE"),
+			"R694：奖励面板用工具自己的图标与分类标签显示掉落")
 	var fx_all := true
 	for fx_id in [7001, 7002, 7003, 7004]:
 		if not FileAccess.file_exists(UiAssets.trap_fx_path(int(fx_id))):

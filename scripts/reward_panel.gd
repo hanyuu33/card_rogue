@@ -132,6 +132,7 @@ var _ench_cards: Array = []      # R323：演示用的两份卡面（已烤好�
 var _ench_ids: Array = []        # R323：对应的附魔 id
 var _repo_cards: CardRepo
 var _repo_relics: RelicRepo
+var _repo_traps: TrapRepo = null   # R694：工具掉落的条目要用（懒加载，见 `_tool_of`）
 ## R216：跳去选卡页**之前**让宿主收尾（战斗：房间标记完成 / Boss 推进层；事件：房间完成）。
 ## 顺序很重要 —— 先收尾再换场景，否则「跳走」会把没做完的结算甩掉。
 var on_before_pick: Callable = Callable()
@@ -308,6 +309,11 @@ func _cards_entry_with(card_id: int) -> int:
 
 func _entry_name(e: Dictionary) -> String:
 	var k := str(e.get("kind", ""))
+	# R694：战斗掉落的工具 —— 名字前加「工具：」，与道具条目同一种「类型：名字」写法。
+	if k == "tool":
+		var td_n: TrapData = _tool_of(e)
+		return GameI18n.ui("reward", "REWARD_TOOL_NAME", "工具：%s") % (
+				td_n.trap_name if td_n != null else str(int(e.get("id", 0))))
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		var rn := r.relic_name if r != null else GameI18n.ui("reward", "REWARD_UNKNOWN_RELIC", "未知道具")
@@ -352,6 +358,13 @@ func _entry_tag(e: Dictionary) -> String:
 		if k == RunState.BONUS_RELIC:
 			var rb: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 			return (GameI18n.ui("reward", "REWARD_BONUS_RELIC_TAG", "掉落 · %s") % rb.tag_line()) if rb != null else GameI18n.ui("reward", "REWARD_BONUS_RELIC_FALLBACK_TAG", "掉落 · 道具")
+	# R694：工具掉落的说明行 —— 顺带把「怎么用」写在标签里（放置型拖到格子 / 使用型轻点），
+	# 玩家在列表页就能知道拿到的这一件是哪种，不用点进详情。
+	if k == "tool":
+		var td_t: TrapData = _tool_of(e)
+		if td_t != null and td_t.is_usable():
+			return GameI18n.ui("reward", "REWARD_TOOL_TAG_USE", "战斗掉落 · 使用型（轻点即用）")
+		return GameI18n.ui("reward", "REWARD_TOOL_TAG_PLACE", "战斗掉落 · 放置型（拖到战场空格）")
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r == null:
@@ -377,6 +390,9 @@ func _entry_tag(e: Dictionary) -> String:
 
 func _entry_color(e: Dictionary) -> Color:
 	var k := str(e.get("kind", ""))
+	# R694：工具条目用那件工具自己的语义色（与战斗工具栏 / 商店格同一个口）。
+	if k == "tool":
+		return TrapArt.color_of(int(e.get("id", 0)))
 	if k == "relic":
 		var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 		if r != null:
@@ -419,11 +435,26 @@ func _settled(e: Dictionary) -> bool:
 
 
 func _relic_desc_text(e: Dictionary) -> String:
+	# R694：工具掉落复用这个详情页 —— 正文就是商店里那份 desc（已按当前语言桥过），
+	# 「拖到战场空格上放置 / 轻点即可使用」这半句本来就在句首。
+	if str(e.get("kind", "")) == "tool":
+		var td: TrapData = _tool_of(e)
+		if td == null:
+			return GameI18n.ui("reward", "REWARD_TOOL_DESC_MISSING", "（这件工具的说明缺失）")
+		return td.desc
 	var r: RelicData = _repo_relics.get_relic(int(e.get("id", 0)))
 	if r == null:
 		return GameI18n.ui("reward", "REWARD_RELIC_DESC_MISSING", "（这件道具的说明缺失）")
 	var note := RunState.relic_state_note(r.id)
 	return r.desc if note == "" else GameI18n.ui("reward", "REWARD_RELIC_DESC_WITH_STATE", "%s  （%s）") % [r.desc, note]
+
+
+func _tool_of(e: Dictionary) -> TrapData:
+	## R694：工具条目的数据（名字 / 说明都已按当前语言桥过）。
+	## 懒加载一次就缓存 —— 列表里每行每帧都会问，`TrapRepo.load_json()` 是读文件的。
+	if _repo_traps == null:
+		_repo_traps = TrapRepo.load_json()
+	return _repo_traps.get_trap(int(e.get("id", 0)))
 
 
 func _wrap(text: String, max_w: float, size: int) -> Array[String]:
@@ -642,7 +673,8 @@ func _open_entry(i: int) -> void:
 			return
 		_open_dup_view()
 		return
-	if k == "relic":
+	if k == "relic" or k == "tool":
+		# R694：工具走同一个详情页（标题 + 图标 + 完整说明 + 领取 / 放弃）。
 		_view = VIEW_RELIC
 	else:
 		_view = VIEW_CARDS
@@ -1015,10 +1047,10 @@ func _draw_list() -> void:
 		_root.draw_string(_font_bold, Vector2(r.position.x + PAD, done.position.y + 16),
 				warn, HORIZONTAL_ALIGNMENT_LEFT, 620, UiTheme.FS_CAPTION, Color("8c1a10"))
 	elif any_relic:
-		_foot_note(r, done.position.y, GameI18n.ui("reward", "REWARD_CLAIM_ALL_NOTE", "「领取全部道具」不碰卡牌奖励 —— 卡牌要自己挑一张"))
+		_foot_note(r, done.position.y, GameI18n.ui("reward", "REWARD_CLAIM_ALL_NOTE", "「领取全部道具」不碰卡牌与工具奖励 —— 卡牌要自己挑一张"))
 	else:
 		_foot_note(r, done.position.y,
-				GameI18n.ui("reward", "REWARD_MANUAL_PROCESSING_NOTE", "卡牌 / 删卡 / 核心奖励要点进去处理（不能一键领取）") if pend > 0 else GameI18n.ui("reward", "REWARD_ALL_SETTLED_NOTE", "全部奖励都已处理，可以点「完成」"))
+				GameI18n.ui("reward", "REWARD_MANUAL_PROCESSING_NOTE", "卡牌 / 删卡 / 核心 / 工具奖励要点进去处理（不能一键领取）") if pend > 0 else GameI18n.ui("reward", "REWARD_ALL_SETTLED_NOTE", "全部奖励都已处理，可以点「完成」"))
 	_draw_btn(done, GameI18n.ui("reward", "REWARD_DONE", "完成"), false, must_pick)
 	# R463：右上角「卡组」—— 领奖励之前先看一眼这局攒了什么（选卡时最常想翻）
 	_draw_btn(_btn_view_deck_rect(r), GameI18n.ui("reward", "REWARD_DECK_BUTTON", "卡组"), false, false)
@@ -1264,6 +1296,9 @@ func _draw_relic() -> void:
 	var icon680_tex: Texture2D = null
 	if str(e.get("kind", "")) == "relic":
 		icon680_tex = UiAssets.relic_icon(int(e.get("id", 0)))
+	elif str(e.get("kind", "")) == "tool":
+		# R694：工具条目的详情标题也带图 —— 与列表行同一个取图口。
+		icon680_tex = UiAssets.trap_icon(int(e.get("id", 0)))
 	var group680_w := title680_w + (14.0 + 44.0 if icon680_tex != null else 0.0)
 	var gx680 := r.position.x + PANEL_W / 2.0 - group680_w / 2.0
 	_root.draw_string(_font_bold, Vector2(gx680, r.position.y + 66), title680,
@@ -2504,6 +2539,26 @@ func _demo_start() -> void:
 		add_child(tmb)
 		tmb.start()
 		return
+	# R694 出图：战斗掉落的工具 —— 核验列表行贴的是**工具自己的图标**（不是色盾），
+	# 以及「放置型 / 使用型」两行标签能不能一眼分清。
+	#   `-- --screenshot --tooldemo`                列表：一件放置型 + 一件使用型
+	#   `-- --screenshot --tooldemo --tooldetail`   再点开第一条（详情页标题也带图标）
+	if "--tooldemo" in args:
+		RunState.run_active = true
+		RunState.traps = [-1, -1, -1]
+		RunState.pending_rewards = []
+		RunState.queue_tool_reward(7003)   # 毒瓶（放置型）
+		RunState.queue_tool_reward(7005)   # 小血瓶（使用型）
+		var tmt := Timer.new()
+		tmt.wait_time = 0.25
+		tmt.one_shot = true
+		tmt.timeout.connect(func():
+			open()
+			if "--tooldetail" in args:
+				_open_entry(0))
+		add_child(tmt)
+		tmt.start()
+		return
 	# R674：大宝箱「奖励道具 / 生命之种」二选一视图（难度 ≥ 11 才出现）。
 	#   `battle.tscn -- --screenshot --keydemo --shotframe 200`
 	if "--keydemo" in args:
@@ -2728,6 +2783,14 @@ func _draw_entry_icon(e: Dictionary, center: Vector2) -> void:
 			var s2 := 64.0
 			_root.draw_texture_rect(rtex,
 					Rect2(center - Vector2(s2, s2) * 0.5, Vector2(s2, s2)), false)
+			return
+	# R694：工具条目贴工具图标（战斗工具栏 / 商店格同一个取图口）；缺图才退回色盾。
+	if str(e.get("kind", "")) == "tool":
+		var ttex := UiAssets.trap_icon(int(e.get("id", 0)))
+		if ttex != null:
+			var s3 := 64.0
+			_root.draw_texture_rect(ttex,
+					Rect2(center - Vector2(s3, s3) * 0.5, Vector2(s3, s3)), false)
 			return
 	_row_badge(center, _entry_color(e))
 

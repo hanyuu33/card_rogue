@@ -8237,6 +8237,14 @@ func _show_over(win: bool) -> void:
 			var dropped := RunState.offer_relic_drop(node_type)
 			if dropped > 0:
 				RunState.queue_relic_reward(dropped)
+			# R694（用户口径「任何战斗都有 10% 概率掉落工具」）：普通 / 精英 / Boss / 事件里的
+			# 遭遇战**一视同仁** —— 概率、随机流、满栏判据全在 `roll_battle_tool_drop()`，
+			# 这里只负责摇一次 + 入队。掉的是 traps.json 那六件工具之一，奖励页里带它
+			# 自己的图标（`UiAssets.trap_icon`），领取之后才填进工具栏。
+			# ⚠️ 满栏（3/3）时不掉：那边直接返回 -1，不会留下一条领不了的待办。
+			var tool_drop := RunState.roll_battle_tool_drop()
+			if tool_drop > 0:
+				RunState.queue_tool_reward(tool_drop)
 			# R342：战斗胜利的卡牌奖励**只走这一个口** —— 持有「采集刀」6050 时
 			# 它内部会多入队一组（各自独立三选一）。别在这里直接调 queue_card_reward。
 			# R467：关卡若点名了 `reward_cards`（洞穴 → 传说卡「枭熊」），这一场的卡牌奖励
