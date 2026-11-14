@@ -371,7 +371,7 @@
   },
   "9004": {
    "name": "Knockback",
-   "effect_text": "Knock an enemy unit back 2 tiles; it stops if it collides with an obstacle."
+   "effect_text": "Knock an enemy unit back 2 tiles. If it is blocked and cannot move the full 2 tiles, deal 8 damage to it."
   },
   "9005": {
    "name": "Wisdom",

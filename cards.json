@@ -444,7 +444,7 @@
       "traits": [
         "风"
       ],
-      "effect_text": "将一个敌方单位击退 2 格，撞到阻挡则停下。",
+      "effect_text": "将一个敌方单位击退 2 格。若因阻挡未能移动满 2 格，则对其造成 8 点伤害。",
       "target_mode": "unit",
       "color": "黄",
       "image": ""

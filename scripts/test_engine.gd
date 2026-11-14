@@ -9056,11 +9056,38 @@ func _init() -> void:
 
 	var k2_at := eng_k.state.unit_at(Vector2i(2, 1))
 
-	check(k2_at != null and k2_at.card == k2 and kdetail.contains("挡住"),
+	check(k2_at != null and k2_at.card == k2 and kdetail.contains("挡住")
 
-			"击退被阻挡 → 原地不动")
+			and k2_at.health == 22 and kdetail.contains("撞击"),
+
+			"R721 击退被阻挡 → 原地不动，并追加 8 点撞击伤害")
 
 
+
+	# R721：未走满 2 格（只退 1 格后撞到阻挡）同样追加 8 伤；完整后退 2 格不追加。
+	check(k1_at != null and k1_at.health == 30,
+
+			"R721 击退完整移动 2 格 → 不受撞击伤害")
+
+	var k3 := _card(9001, "鸭子骑士", "盟友", 6, 5, 30)
+
+	var blocker3 := _card(1053, "骷髅兵", "盟友", 1, 1, 2)
+
+	eng_k.state.place(k3, Vector2i(3, 2), GameEngine.SIDE_OPPONENT)
+
+	eng_k.state.place(blocker3, Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+
+	eng_k.state.hand.append(_card(9004, "击退", "技能", 1, 0, 0))
+
+	var k3detail := eng_k.use_spell(eng_k.state.hand.size() - 1, Vector2i(3, 2))
+
+	var k3_at := eng_k.state.unit_at(Vector2i(2, 2))
+
+	check(k3_at != null and k3_at.card == k3 and k3_at.health == 22
+
+			and k3detail.contains("撞击"),
+
+			"R721 击退只退 1 格被挡 → 停在 (2,2)，并追加 8 点撞击伤害")
 
 	# ---- 技能：智慧（抽 2 张） ----
 
@@ -20352,7 +20379,7 @@ func _init() -> void:
 
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
 
-	# 判据唯一口 `CardData.is_damage_spell()`：103 张玩家技能卡里恰好 41 张能直接造成伤害（R582 +2 技能 / +1 伤害判据；R580 +2 技能 / +1 伤害判据）
+	# 判据唯一口 `CardData.is_damage_spell()`：103 张玩家技能卡里恰好 42 张能直接造成伤害（R721 击退新增条件伤害 +1）（R582 +2 技能 / +1 伤害判据；R580 +2 技能 / +1 伤害判据）
 
 	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
 
@@ -20378,7 +20405,7 @@ func _init() -> void:
 
 			r226_leak.append(r226_card.card_name)
 
-	check(r226_skills == 103 and r226_dmg == 41 and r226_leak.is_empty(),
+	check(r226_skills == 103 and r226_dmg == 42 and r226_leak.is_empty(),
 
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 

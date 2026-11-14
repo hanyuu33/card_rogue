@@ -1421,6 +1421,10 @@ const BREAKTHROUGH_PER_STACK:= 4
 const IMPACT_CANNON_ID:= 9163
 const IMPACT_CANNON_DMG:= 10        # R369：8 → 10（用户口径）
 const IMPACT_CANNON_STEPS:= 1       # R369：2 → 1 格（用户口径）
+# 「击退」（9004，R721）：击退 2 格；若因阻挡未移动满 2 格，补 8 点撞击伤害。
+const KNOCKBACK_CARD_ID:= 9004
+const KNOCKBACK_CARD_STEPS:= 2
+const KNOCKBACK_COLLISION_DMG:= 8
 
 
 # ── R473 武术大师（第一、二层事件）：三张事件专属技能卡 ──
@@ -8917,6 +8921,7 @@ func hand_bonus_text(card: CardData) -> String:
 const SPELL_BASE_DMG := {
 	8002: 4,     # 攻击
 	9003: 17,    # 火焰箭
+	9004: 8,     # 击退（仅在因阻挡未走满 2 格时结算）
 	9006: 11,    # 闪电链（每个被连到的单位）
 	9007: 20,    # 火球术
 	9011: 3,     # 寒冰箭
@@ -8974,7 +8979,8 @@ const SPELL_DYNAMIC_IDS: Array[int] = [9083, 9086, 9090, 9093, 9104, 9162]
 #   * 9054 龙息：4 点 × 5 次打同一批，每下**分别过减伤链**，总量 ≠ 5 × 单下；
 #   * 9160 弹跳飞刀：主目标 5、弹跳 4 / 3，同一张卡对不同格数字不同。
 # 这些卡仍享受 AOE 覆盖 / 自伤警告预览，只是不报数字（宁可不说，也不许说错）。
-const SPELL_NO_CELL_PREVIEW: Array[int] = [DRAGON_BREATH_ID, METEOR_SHOWER_ID, 9160]
+# 9004 击退：8 伤是「没走满 2 格」才触发的条件伤害，目标格上不能预先报 8。
+const SPELL_NO_CELL_PREVIEW: Array[int] = [DRAGON_BREATH_ID, METEOR_SHOWER_ID, 9160, 9004]
 
 
 func mass_mnemosyne_bonus_ready(side: String = SIDE_SELF) -> bool:
@@ -9064,6 +9070,9 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	if card == null or card.kind != "技能":
 		return {}
 	if not SPELL_BASE_DMG.has(card.id):
+		return {}
+	# R721 击退：8 伤只在「被阻挡没走满 2 格」时发生，不能把条件伤害说成每次必有。
+	if card.id == KNOCKBACK_CARD_ID:
 		return {}
 	var plays: int = state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
 	# ---------- ① 动态卡 ----------
@@ -11374,7 +11383,9 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 		9003:
 			return str(_op_deal_damage(side, _spell_dmg(side, 17, card), target))
 		9004:
-			return _knockback(side, target, 2)
+			# R721：完整后退 2 格不追加伤害；被单位 / 边界 / 非法落点挡在 0 或 1 格时
+			# 再补 8 点撞击伤害。位移免疫不进入伤害分支（那不是「被阻挡」）。
+			return _knockback_card(side, target, card)
 		9005:
 			# R663：新增「自己效果卡区有至少 2 张卡时，回复 1 点费用」（先抽牌再加费，
 			# 与卡面语序一致；两种顺序对效果区张数没有影响）。
@@ -13678,6 +13689,28 @@ func _knockback(side: String, target, steps: int, dir_override:= Vector2i.ZERO) 
 	action.emit("move", {"src": src, "dst": cell, "card": p.card, 
 		"side": p.owner, "path": kb_path})
 	return "%s 后退 %d 格" % [p.card.card_name, moved]
+
+
+func _knockback_card(side: String, target, card: CardData) -> String:
+	## R721「击退」9004 的卡专属结算：通用 `_knockback()` 只负责位移，不改其它卡口径。
+	## 位移后量实际走了几格（曼哈顿距离）；少于 2 格 = 中途被挡，补 8 点撞击伤害。
+	## 特例：位移免疫 / 无目标 / 已离场都不补 —— 它们不是「因阻挡没走满」。
+	var p:= _target_placement(side, target)
+	var src:= _cell_of(p) if p != null else Vector2i(-1, -1)
+	var msg:= _knockback(side, target, KNOCKBACK_CARD_STEPS)
+	if p == null or p.health <= 0 or src == Vector2i(-1, -1) or _displace_immune(p):
+		return msg
+	var dst:= _cell_of(p)
+	if dst == Vector2i(-1, -1):
+		return msg
+	var traveled:= absi(dst.x - src.x) + absi(dst.y - src.y)
+	if traveled >= KNOCKBACK_CARD_STEPS:
+		return msg
+	# 撞击伤害走单目标技能的统一落地口：易伤 / 减伤 / 快速符文 / 击杀与受击特效全在。
+	# 走 `_spell_dmg()` 才能吃到附魔 / 魔法塔这类伤害加成，与其它伤害技能同口径。
+	var hit_dmg:= _spell_dmg(side, KNOCKBACK_COLLISION_DMG, card)
+	var hit_msg:= _op_deal_damage(side, hit_dmg, dst)
+	return "%s；被阻挡，撞击伤害 %s" % [msg, hit_msg]
 
 
 func _vortex_pull(cell: Vector2i) -> void :

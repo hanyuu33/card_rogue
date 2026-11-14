@@ -371,7 +371,7 @@
   },
   "9004": {
    "name": "Retroceso",
-   "effect_text": "Empuja una unidad enemiga 2 casillas hacia atrás; se detiene si choca con un obstáculo."
+   "effect_text": "Empuja una unidad enemiga 2 casillas hacia atrás. Si un obstáculo le impide moverse las 2 casillas completas, inflige 8 de daño a esa unidad."
   },
   "9005": {
    "name": "Sabiduría",
