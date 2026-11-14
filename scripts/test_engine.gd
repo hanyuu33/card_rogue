@@ -16575,7 +16575,7 @@ func _init() -> void:
 
 			and RunState.pending_relic == -1, "失忆药水：删除一张卡后解除待选")
 
-	# 源数之力（6002）：获得时代价 = 失去 5 点最大生命（当前生命同 -5）
+	# 源数之力（6002）：获得时代价 = 只削 5 点最大生命（满血时削完仍是满血）
 
 	RunState.reset(50)
 
@@ -16603,7 +16603,7 @@ func _init() -> void:
 
 			"源数之力：选中的卡变成随机奖励卡")
 
-	# ---- 失去最大生命：当前生命同步下降 / 不低于 0 / 至少保留 1 点上限 ----
+	# ---- 失去最大生命：只削上限、当前生命只做钳制 / 不低于 0 / 至少保留 1 点上限 ----
 
 	RunState.reset(50)
 
@@ -16613,9 +16613,9 @@ func _init() -> void:
 
 	RunState.take_damage(15)                 # 30/45
 
-	check(RunState.lose_max_hp(5) == 5 and RunState.max_hp == 40 and RunState.hp == 25,
+	check(RunState.lose_max_hp(5) == 5 and RunState.max_hp == 40 and RunState.hp == 30,
 
-			"失去最大生命：残血 30/45 → 25/40（当前生命同步 -5）")
+			"失去最大生命：残血 30/45 → 30/40（R727：当前生命不再跟着扣）")
 
 	RunState.reset(5)
 

@@ -1001,14 +1001,16 @@ static func gain_max_hp(amount: int) -> int:
 
 
 static func lose_max_hp(amount: int) -> int:
-	## 失去指定点数的最大生命（「源数之力」的代价）：
-	## 当前生命同步下降相同的点数，且不超过新的上限、不低于 0；
+	## 失去指定点数的最大生命（「源数之力」的代价）。
+	## R727（店长口径）：**不再扣当前生命** —— 源数之力固定是「一层初始」拿到，
+	## 那一刻玩家是满血，扣不扣当前血结果完全一样，描述里那句括号只是噪音。
+	## 现在只把当前生命钳到新上限以内（满血时自然仍是满血）。
 	## 至少保留 1 点最大生命（否则玩家会直接暴毙）。返回实际失去的点数。
 	var lost: int = mini(maxi(0, amount), maxi(0, max_hp - 1))
 	if lost <= 0:
 		return 0
 	max_hp -= lost
-	hp = clampi(hp - lost, 0, max_hp)
+	hp = mini(hp, max_hp)
 	return lost
 
 

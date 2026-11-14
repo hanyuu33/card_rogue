@@ -9,7 +9,7 @@
     },
     "6002": {
       "name": "Fuerza Numeron",
-      "desc": "Al recoger: pierde hasta 5 de Vida máxima (conserva al menos 1; tu Vida actual disminuye en la cantidad perdida real) y luego elige 1 carta del mazo que se pueda eliminar y transfórmala en una carta de recompensa aleatoria. Su Encantamiento original se elimina."
+      "desc": "Al recoger: pierde hasta 5 de Vida máxima (conserva al menos 1) y luego elige 1 carta del mazo que se pueda eliminar y transfórmala en una carta de recompensa aleatoria. Su Encantamiento original se elimina."
     },
     "6004": {
       "name": "Poción de amnesia",

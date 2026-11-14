@@ -9,7 +9,7 @@
     },
     "6002": {
       "name": "Numeron Force",
-      "desc": "On pickup: Lose up to 5 Max Health (retain at least 1; your current Health decreases by the actual amount lost), then choose 1 card that can be removed from your Deck and transform it into a random reward card. Its original Enchant is cleared."
+      "desc": "On pickup: Lose up to 5 Max Health (retain at least 1), then choose 1 card that can be removed from your Deck and transform it into a random reward card. Its original Enchant is cleared."
     },
     "6004": {
       "name": "Amnesia Potion",
