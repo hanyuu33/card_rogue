@@ -554,6 +554,16 @@ func _tap(pos: Vector2) -> void:
 		_hover_idx = k   # R618：同时是描述条的持久来源（移开鼠标也不清空）
 		if not is_view():
 			_toggle(k)   # R301：浏览模式点卡只换描述条，不选中
+		else:
+			# R699（安卓用户上报「点卡进不了详情页、看不到效果」）：
+			# **浏览模式点卡不会走 `_toggle()`，也就没有任何 `queue_redraw()`** ——
+			# `_hover_idx` 改了、`_desc_idx()` 也变了，可屏幕上一帧都没重画。
+			# 电脑上看不出来，因为鼠标划过卡面走 `InputEventMouseMotion` 分支、
+			# 那里自带 `queue_redraw()`；触屏没有 motion 事件，于是：
+			#   点卡 → 描述条不出现 → 描述条上的「详情」按钮根本没被画出来
+			#   → 无论怎么点都进不了详情页（不是按钮点不动，是**按钮不存在**）。
+			# 描述条与详情按钮都只在 `_draw()` 里画，所以这里必须自己重绘。
+			queue_redraw()
 
 
 func _card_at(pos: Vector2) -> int:
