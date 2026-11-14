@@ -4162,7 +4162,15 @@ func _init() -> void:
 
 	eng_wh.whale_pick(1)
 
-	check(eng_wh.whale_remaining == 1 and eng_wh.state.hand.has(wh_first),
+	# R737：从弃牌区回手的是**独立副本**（own_copy），不再与弃牌区那个对象同一身份 ——
+	# 判据改成「手里最后那张就是它」（id 相同、且已独立化），语义不变。
+	var wh_back: CardData = null
+
+	if eng_wh.state.hand.size() > 0:
+		wh_back = eng_wh.state.hand[eng_wh.state.hand.size() - 1]
+
+	check(eng_wh.whale_remaining == 1 and wh_back != null and wh_back.id == wh_first.id
+			and wh_back.own_copy,
 
 			"鲸鱼之怒：取回第 1 张（%s）入手，还剩 1 张" % wh_first.card_name)
 
@@ -10444,6 +10452,97 @@ func _init() -> void:
 	check(r123_km_e.cost_of(r123_km2) == 8,
 
 			"R123 陨石术：永久减费继续累加（9 → 8）")
+
+	# ---- R737：绕开 draw() 的取牌入口必须先把卡独立化，否则减费洗回再抽就静默清零 ----
+
+	var r737_e := _new_engine([], 20, 20, -1, false)
+
+	r737_e.start_game(0)
+
+	r737_e.state.hand.clear()
+
+	r737_e.state.deck.clear()
+
+	r737_e.state.discard.clear()
+
+	r737_e.state.deck.append(repo.get_card(9077))   # 牌库里放的是卡库共享实例
+
+	r737_e.wish_pending = true
+
+	check(r737_e.wish_pick(0), "R737：许愿从牌库取一张卡")
+
+	var r737_m: CardData = r737_e.state.hand[0]
+
+	check(r737_m != null and r737_m.id == 9077 and r737_m.own_copy,
+			"R737：许愿取出的卡是独立实例（own_copy，不再是牌库共享实例）")
+
+	r737_e.state.card_discount[r737_m] = 3
+
+	r737_e.state.discard.append(r737_m)
+
+	r737_e.state.hand.clear()
+
+	r737_e.state.deck = r737_e.state.discard.duplicate()
+
+	r737_e.state.discard.clear()
+
+	var r737_m2: CardData = r737_e.state.draw()
+
+	check(r737_m2 == r737_m, "R737：弃回牌库再抽到仍是同一实例（`_own_card` 不复制已独立化的卡）")
+
+	check(r737_e.cost_of(r737_m2) == 7,
+			"R737 陨石术：许愿取出 → 弃回 → 再抽，减费仍在（10-3=7，旧代码会回到 10）")
+
+	# ---- R737②：卡组取技能卡（连刺 / 影子猫 / 预判② 共用口）也必须独立化 ----
+
+	var r737f_e := _new_engine([], 20, 20, -1, false)
+
+	r737f_e.start_game(0)
+
+	r737f_e.state.hand.clear()
+
+	r737f_e.state.deck.clear()
+
+	r737f_e.state.discard.clear()
+
+	r737f_e.state.deck.append(repo.get_card(9077))
+
+	var r737f_c: CardData = r737f_e._fetch_skill_from_deck(0)
+
+	check(r737f_c != null and r737f_c.own_copy,
+			"R737：卡组取技能卡取出的是独立实例（原先把牌库共享实例直接塞进手牌）")
+
+	# ---- R737③：改造＝「同一张卡换实例」，实例级减费必须跟着走 ----
+
+	var r737u_e := _new_engine([], 20, 20, -1, false)
+
+	r737u_e.start_game(0)
+
+	r737u_e.state.hand.clear()
+
+	r737u_e.state.deck.clear()
+
+	r737u_e.state.discard.clear()
+
+	r737u_e.state.hand.append(_card(8001, "木栅栏", "工事", 2, 0, 6))
+
+	r737u_e.state.hand.append(CardData.from_dict(repo.get_card(8039).to_dict()))
+
+	var r737u_t: CardData = r737u_e.state.hand[0]
+
+	r737u_e.state.card_discount[r737u_t] = 2
+
+	r737u_e.state.energy = 20
+
+	r737u_e.cast_sys_upgrade(1, 0, false)
+
+	var r737u_after: CardData = r737u_e.state.hand[0]
+
+	check(r737u_after != null and r737u_after != r737u_t,
+			"R737：系统升级换了一个实例（from_dict 副本 + 原位替换）")
+
+	check(int(r737u_e.state.card_discount.get(r737u_after, 0)) == 2,
+			"R737：改造后永久减费跟着新实例走（旧代码会静默清零）")
 
 
 

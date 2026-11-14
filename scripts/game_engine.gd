@@ -3723,6 +3723,79 @@ func _draw_many(n: int) -> int:
 	return got
 
 
+func _move_key(tbl: Dictionary, a: CardData, b: CardData) -> void:
+	## R737 内部件：把「以卡对象为键」的一张表项从 a 搬到 b（a 不在表里就什么都不做）。
+	if not tbl.has(a):
+		return
+	var v: Variant = tbl[a]
+	tbl.erase(a)
+	tbl[b] = v
+
+
+func _migrate_card_state(old_card: CardData, new_card: CardData) -> void:
+	## R737：**同一张卡换实例**（改造 / 加附魔 / 离场还原）时必须调这里。
+	## `FieldState` 里那 7 张实例表全部以 **CardData 对象**为键，而改造一律是
+	## 「from_dict 造副本 + 原位替换」—— 换完新对象在表里查不到 → 这张卡身上的
+	## 减费 / 免费 / 手卡内折扣**静默清零**（玩家视角：「我给它减过费，改造一下费又回去了」）。
+	## 所以替换口统一走：造副本 → `_migrate_card_state(旧, 新)` → 再改字段 / 放回去。
+	if old_card == null or new_card == null or old_card == new_card:
+		return
+	_move_key(state.card_discount, old_card, new_card)
+	_move_key(state.turn_free, old_card, new_card)
+	_move_key(state.hand_free, old_card, new_card)
+	_move_key(state.hand_cost_delta, old_card, new_card)
+	_move_key(state.hand_cost_turn, old_card, new_card)
+	_move_key(state.turn_card_discount, old_card, new_card)
+	_move_key(state.curse_raise, old_card, new_card)
+	var tk: int = state.turn_keep.find(old_card)
+	if tk >= 0:
+		state.turn_keep[tk] = new_card
+
+
+func _renew_field_card(p: Placement) -> CardData:
+	## R737：**场上单位换实例**的唯一口（改造 / 加附魔 / 融合前的复制）。
+	## 以前各处直接写 `p.card = CardData.from_dict(p.card.to_dict())`，换完就丢了
+	## 记在它身上的实例级状态（灵魂收割者 9233 的减费就记在被打中的那张卡上）。
+	## ⚠️ 必须在**赋值之前**调（此时 `p.card` 还是旧的）。
+	if p == null or p.card == null:
+		return null
+	var old: CardData = p.card
+	var fresh := CardData.from_dict(old.to_dict())
+	_migrate_card_state(old, fresh)
+	return fresh
+
+
+func _own_card(card: CardData) -> CardData:
+	## R737：**这张卡要进手之前，先在实例上独立化**的唯一口。
+	## 牌库 / 弃牌区 / 卡库里放的是**共享实例**，而 `draw()` 抽到时才复制成独立副本
+	##（`own_copy = true`）。凡绕开 `draw()` 的取牌路径（许愿 / 猫头鹰 / 巨鼠 / 集束炮台 /
+	## 各「从弃牌区回手」面板 / 卡组取技能卡…）不会自动独立化，后果两条：
+	##   ① 共享实例直接进手 → 给它减费等于给牌库里**所有同名卡**减费（R281）；
+	##   ② 它身上若已记着实例级减费（`state.card_discount` 以**卡对象**为键），
+	##      弃回牌库再被 `draw()` 抽到时会换成一个新对象 → 旧键永远查不到 → 减费**静默清零**
+	##      （R123 的教训；R737 把这条从「只在 draw 里兜」扩到所有取牌入口）。
+	## 所以：`own_copy == false` → 复制一份并打标；**已经是独立实例就原样返回**。
+	## ⚠️ 后者同样关键：无条件 `from_dict` 会把带减费的原对象换掉，等于当场清零。
+	if card == null or card.own_copy:
+		return card
+	var own := CardData.from_dict(card.to_dict())
+	own.own_copy = true
+	return own
+
+
+func _new_own_card(proto: CardData) -> CardData:
+	## R737：按原型造一张**全新的、已独立化的**卡（进手 / 进牌库都安全）。
+	## 与 `_own_card()` 的分工：这里**总是**造新对象 —— 调用方要的是「凭空多出来的一张卡」
+	##（机械核心的素体 / 种子 / 荧光草 / 组合动作加卡…），而不是「把现有那张拿出来」。
+	## 统一打 `own_copy` 是为了让它在「弃回牌库 → 再抽到」之后不会被 `draw()` 再复制一次
+	##（再复制会让以它为键的实例表全部失配）。
+	if proto == null:
+		return null
+	var c := CardData.from_dict(proto.to_dict())
+	c.own_copy = true
+	return c
+
+
 func _grant_to_hand(card: CardData, source: String) -> bool:
 	## R299（用户规则）：**一切「加入手卡」的唯一口**。
 	## * 手牌未满 → 进手牌，返回 true；
@@ -3789,7 +3862,7 @@ func apply_battle_start_relics(repo: CardRepo) -> void :
 				# 独立副本：素体带「留手」，若与牌库里的共享实例同对象，
 				# 回合结束的不弃判定与「按张记账」的表都会互相串。
 				# R299：手牌满 → 素体**直接进弃牌区**（不再「满就停」把这张蒸发掉）。
-				if _grant_to_hand(CardData.from_dict(proto.to_dict()), "机械核心"):
+				if _grant_to_hand(_new_own_card(proto), "机械核心"):
 					added += 1
 			if added > 0:
 				_log("机械核心：开场手牌加入 %d 张「素体」（1 费 1/3，回合结束不弃）" % added)
@@ -5242,7 +5315,7 @@ func _wisdom_surge() -> void :
 			break
 
 
-		var inst:= CardData.from_dict(card.to_dict())
+		var inst := _new_own_card(card)
 		state.hand.pop_back()
 		state.hand.append(inst)
 		got += 1
@@ -5277,7 +5350,7 @@ func _endless_blessing() -> void :
 	var given:= 0
 	for i in copies:
 		var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
-		var copy:= CardData.from_dict(pick.to_dict())
+		var copy := _new_own_card(pick)
 		# R299：手牌满 → 这张效果卡**直接进弃牌区**（照抽照给，只是不进手）。
 		if _grant_to_hand(copy, "无尽加护"):
 			given += 1
@@ -5554,8 +5627,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	if card.has_affix(AFFIX_SWAP):
 		var occ := state.unit_at(cell)
 		if occ != null and occ.owner == SIDE_SELF:
-			var back := _card_leaving_field(occ)
-			back = CardData.from_dict(back.to_dict())
+			var back := _own_card(_card_leaving_field(occ))
 			back.traits = (back.traits as Array).duplicate()
 			state.board.erase(cell)
 			if state.hand_full():
@@ -5592,7 +5664,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 
 	var p:= state.place(card, cell, SIDE_SELF)
 	if binder_atk > 0 or binder_hp > 0:
-		p.card = CardData.from_dict(p.card.to_dict())
+		p.card = _renew_field_card(p)
 		p.card.traits = (p.card.traits as Array).duplicate()
 		p.card.affixes = (p.card.affixes as Array).duplicate()
 		p.upgrade_atk += binder_atk
@@ -5775,6 +5847,7 @@ func _upgrade_hand_allies(hp_gain: int, tag: String) -> int:
 		var mh: int = _upgrade_hp_gain(up, hp_gain)
 		up.health += mh
 		up.upgrade_stacks += 1        # R209：层数随身带（上场由 place() 接到 Placement）
+		_migrate_card_state(c, up)
 		state.hand[i] = up
 		hand_got += 1
 	_log("%s：手牌 %d 个盟友各获得改造（生命 +%d）" % [tag, hand_got, hp_gain])
@@ -6512,7 +6585,7 @@ func _spawn_self_clone(card: CardData) -> void :
 	## 手牌满了就**不生成**（不给白拿的牌，也不洗牌）—— 与 _fetch_skill_card 同一口径。
 	## 注：实际流程里**几乎走不到**这个分支 —— 复制发生在「打出的那张已离手」之后，
 	## 手牌刚好腾出一格，所以永远是「不满」。留着是防御（例如将来改成从别处触发复制）。
-	var clone:= CardData.from_dict(card.to_dict())
+	var clone := _new_own_card(card)
 	# R638（店长口径，**推翻 R624**）：复制品**完整继承商店附魔** —— 已烤进 cost / power /
 	# health 的数值、附魔带出来的 affix（保存 / 次元）、「【附魔】…」标注与 `enchant` 标记
 	# 一起带走。口径与鸭血 6024（R636「完整复制」）统一：复制就是复制，不做减法。
@@ -6764,7 +6837,7 @@ func _cluster_turret_reload(p: Placement) -> void :
 	if di < 0:
 		_log("集束炮台：卡组里已经没有「聚能炮击」了")
 		return
-	var c: CardData = state.deck[di]
+	var c: CardData = _own_card(state.deck[di])
 	state.deck.remove_at(di)
 	_grant_to_hand(c, "集束炮台")
 	_log("集束炮台：%s 获得改造 → 从卡组取「%s」（牌库 %d 张）" % [
@@ -6786,7 +6859,7 @@ func _refract_grant_cannon() -> void:
 	if proto == null:
 		_log("折射炮：卡库缺少「聚能炮击」(9145)，未能加入手卡")
 		return
-	var c := CardData.from_dict(proto.to_dict())
+	var c := _new_own_card(proto)
 	c.traits = (c.traits as Array).duplicate()
 	var landed := _grant_to_hand(c, "折射炮")
 	_log("折射炮：%s「聚能炮击」（手牌 %d 张）" % [
@@ -7228,7 +7301,7 @@ func _field_upgrade_grant(p: Placement, atk: int, hp: int, source: String,
 	## ⚠️ 末尾必须调 `_on_unit_upgraded(p)`（所有改造入口的统一后置口）。
 	if p == null or p.card == null:
 		return
-	p.card = CardData.from_dict(p.card.to_dict())
+	p.card = _renew_field_card(p)
 	p.card.traits = (p.card.traits as Array).duplicate()
 	# R269：可选附带一个**字段**（共享护盾 8069）。必须在 `_on_unit_upgraded()` **之前**挂上 ——
 	# 否则「每次被改造」那条链（侦察塔 / 堡垒 / 无限装甲 / 模仿者 / 废弃机器人）读到的
@@ -7308,7 +7381,7 @@ func _upgrade_unit(target, side:= SIDE_SELF) -> String :
 	# 场上那张卡换成**独立副本**再改数值：卡库里的卡是**共享实例**，
 	# 直接改 `p.card.health` 会连卡库那份一起改（下一场、甚至本场后续再抽到就已是加血版）。
 	# 无条件复制最省心 —— 哪怕它本来就是独立副本，多一次 from_dict 也不影响正确性。
-	p.card = CardData.from_dict(p.card.to_dict())
+	p.card = _renew_field_card(p)
 	p.card.traits = (p.card.traits as Array).duplicate()
 	# R120：改造奖励走**唯一口**（素体 +1 血 / 战斗骨骼 +2 力 +2 血 / 侦察塔不加攻）。
 	var atk_gain: int = _upgrade_atk_gain(p.card, UPGRADE_ATK)
@@ -7389,7 +7462,7 @@ func _feed_upgrade_card(p: Placement) -> void :
 		return
 	# ⚠️ **必须 from_dict 复制成独立实例**（卡库是共享实例）：直接 append 卡库那张
 	# 会让 `hand_free` 的按实例标记串到别处，且以后改它会污染卡库。
-	var got := CardData.from_dict(src.to_dict())
+	var got := _new_own_card(src)
 	got.traits = (got.traits as Array).duplicate()
 	# R299：手牌满 → 这张「升级」直接进弃牌区（以前是「供能落空」，等于白产出一张）。
 	# ⚠️ 仍然算「本回合已供过能」：产出的动作发生了，只是去处不同 —— 否则手牌一空出来，
@@ -7438,7 +7511,7 @@ func _transcend(target, side:= SIDE_SELF) -> String :
 		return "%s 已拥有超负荷" % p.card.card_name
 	# 换成独立副本再改（卡库共享实例纪律，与 _upgrade_unit 同）：否则直接改
 	# `p.card.affixes` 会连卡库那份一起加字段，下一场/本场再抽到就已是超负荷版。
-	p.card = CardData.from_dict(p.card.to_dict())
+	p.card = _renew_field_card(p)
 	p.card.traits = (p.card.traits as Array).duplicate()
 	p.card.add_affix(AFFIX_OVERLOAD)
 	_add_upgrade_stack(p)   # 算一层改造 → 侦察塔光环 / 堡垒按层数反应
@@ -7474,9 +7547,8 @@ func _reboot(target, side:= SIDE_SELF) -> String :
 	if p.card.kind != "盟友" and not p.card.is_fort():
 		return "%s 不能被重启" % p.card.card_name
 	# 离场还原（栅栏修复术/加厚装甲等场上加固不带走），拿回手卡的是原本那张卡。
-	var back:= _card_leaving_field(p)
+	var back := _own_card(_card_leaving_field(p))
 	# 切断与卡库共享引用（_card_leaving_field 在「无场上加成」时直接交还原实例）。
-	back = CardData.from_dict(back.to_dict())
 	back.traits = (back.traits as Array).duplicate()
 	state.board.erase(target)
 	if state.hand_full():
@@ -7516,6 +7588,7 @@ func _batch_upgrade(_side: String) -> String :
 		if c.kind != "盟友" and not c.is_fort():
 			continue
 		var up := _batch_adapt(c)
+		_migrate_card_state(c, up)
 		state.hand[i] = up
 		touched += 1
 		names.append("%s %d血" % [c.card_name, up.health])
@@ -7588,6 +7661,7 @@ func _sys_upgrade_hand_card(hand_index: int) -> String :
 	# R209：记一层「改造」随身带 —— 否则它上场后 `upgrade_stacks` 从 0 开始：
 	# 侦察塔拿不到光环的 +1 易伤、卡面也看不到「改造 ×1」（用户实测报的缺陷）。
 	up.upgrade_stacks += 1
+	_migrate_card_state(c, up)
 	state.hand[hand_index] = up
 	_log("系统升级：%s 改造完成（费用 +%d / 力量 +%d / 生命 +%d → %d 费 %d 攻 %d 血，本场战斗永久）"
 		% [c.card_name, SYS_UPGRADE_COST_ADD, SYS_UPGRADE_ATK, SYS_UPGRADE_HP,
@@ -7629,6 +7703,7 @@ func _lighten_hand_card(hand_index: int) -> String :
 	up.power += li_atk
 	up.health += li_hp
 	up.upgrade_stacks += 1        # 一层改造（同系统升级 8039）
+	_migrate_card_state(c, up)
 	state.hand[hand_index] = up
 	_log("轻量化：%s 改造完成（费用 %d → %d / 移速 %d → %d / 力量 +%d / 生命 +%d，本场战斗永久）" % [
 			c.card_name, cost_before, up.cost, speed_before, up.move_speed, li_atk, li_hp])
@@ -7665,6 +7740,7 @@ func _batch_transfer(side: String) -> String :
 		up.power += _upgrade_atk_gain(up, BATCH_TRANSFER_ATK)
 		up.health += _upgrade_hp_gain(up, BATCH_TRANSFER_HP)
 		up.upgrade_stacks += 1        # R209：层数随身带（同系统升级）
+		_migrate_card_state(c, up)
 		state.hand[i] = up
 		touched += 1
 		names.append("%s（%d 费 %d 攻 %d 血）" % [c.card_name, up.cost, up.power, up.health])
@@ -7755,7 +7831,7 @@ func _self_repair(target, side:= SIDE_SELF) -> String :
 	if p.card.kind != "盟友":
 		return "%s 不是盟友" % p.card.card_name
 	# 场上那张换成独立副本再改（卡库是共享实例）
-	p.card = CardData.from_dict(p.card.to_dict())
+	p.card = _renew_field_card(p)
 	p.card.traits = (p.card.traits as Array).duplicate()
 	# R120：改造奖励走**唯一口** —— 以前这里只加 SELF_REPAIR_HP，素体被「自我修复」
 	# 改造白挨 +1 血（用户报的缺陷）。
@@ -7800,7 +7876,7 @@ func _armor_plate(target, side:= SIDE_SELF) -> String :
 	if p.card.kind != "盟友":
 		return "%s 不是盟友" % p.card.card_name
 	# 场上那张换成独立副本再改（卡库是共享实例，直接改会跨 run 泄漏）
-	p.card = CardData.from_dict(p.card.to_dict())
+	p.card = _renew_field_card(p)
 	p.card.traits = (p.card.traits as Array).duplicate()
 	# R120：走**唯一口**（原来是手写的 `p.card.upgrade_*_bonus`，容易与别的入口分叉）。
 	var atk_gain: int = _upgrade_atk_gain(p.card, 0)
@@ -8054,7 +8130,7 @@ func _mimic_relay(src: Placement, atk_gain: int, hp_gain: int, affix: String = "
 		if q == null or q == src or q.card.id != MIMIC_ID or q.owner != SIDE_SELF:
 			continue
 		# 卡库是共享实例 → 先换成独立副本（与 _upgrade_unit 同一条纪律）
-		q.card = CardData.from_dict(q.card.to_dict())
+		q.card = _renew_field_card(q)
 		q.card.traits = (q.card.traits as Array).duplicate()
 		if atk_gain > 0:
 			q.upgrade_atk += atk_gain
@@ -8229,7 +8305,7 @@ func _owl_fetch() -> void :
 		_log("猫头鹰：卡组里没有效果卡")
 		return
 	var pick: int = cand[rng.randi() % cand.size()]
-	var chosen: CardData = state.deck[pick]
+	var chosen: CardData = _own_card(state.deck[pick])
 	state.deck.remove_at(pick)
 	# R299：手牌满 → 直接进弃牌区（不再「满就落空」，白丢这次取牌）
 	_grant_to_hand(chosen, "猫头鹰")
@@ -8271,7 +8347,7 @@ func _fetch_skill_card(source: String, discount: int = FETCH_SKILL_DISCOUNT) -> 
 	var pick:= skill_idx[rng.randi() % skill_idx.size()]
 	var chosen: CardData = state.deck[pick]
 	state.deck.remove_at(pick)
-	var copy:= CardData.from_dict(chosen.to_dict())
+	var copy := _own_card(chosen)
 	# R299：手牌满 → 直接进弃牌区；减费标记照旧挂着（本回合有效，回合结束清空）。
 	_grant_to_hand(copy, source)
 	state.turn_card_discount[copy] = int(state.turn_card_discount.get(copy, 0)) \
@@ -9243,7 +9319,7 @@ func _fetch_skill_from_deck(mode: int) -> CardData:
 	if cand.is_empty():
 		return null
 	var pick := cand[rng.randi() % cand.size()]
-	var c: CardData = state.deck[pick]
+	var c: CardData = _own_card(state.deck[pick])
 	state.deck.remove_at(pick)
 	_grant_to_hand(c, "卡组取技能卡")
 	return c
@@ -9438,7 +9514,7 @@ func _glowgrass_supply(side: String) -> void:
 
 	var repo := CardRepo.load_json()
 	var base: CardData = repo.get_card(GLOWGRASS_ID)
-	var grass := CardData.from_dict(base.to_dict()) if base != null else _fallback_glowgrass()
+	var grass := _new_own_card(base) if base != null else _fallback_glowgrass()
 	# R299：手牌满 → 荧光草直接进弃牌区（不再「没有加入」凭空消失）
 	_grant_to_hand(grass, "幽光")
 	_log("幽光：一张「荧光草」加入手卡")
@@ -9586,7 +9662,7 @@ func _fate_reject(side: String) -> String:
 	var i := 0
 	# ⚠️ 取走一张后**不推进 i**（后面的卡顺移上来）；手牌满了就停 —— 「不超过手牌上限」。
 	while i < state.discard.size() and not state.hand_full():
-		var c: CardData = state.discard[i]
+		var c: CardData = _own_card(state.discard[i])
 		if c != null and not c.x_cost and c.cost <= FATE_CHEAP_MAX:
 			state.discard.remove_at(i)
 			state.hand.append(c)
@@ -9701,7 +9777,7 @@ func foresight_pick_card(discard_index: int) -> bool:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
 		return false
-	var c: CardData = state.discard[discard_index]
+	var c: CardData = _own_card(state.discard[discard_index])
 	if c.kind != "技能" or c.cost != 0:
 		return false
 	state.discard.remove_at(discard_index)
@@ -10082,7 +10158,7 @@ func _life_cycle_death(p: Placement, cell: Vector2i) -> void :
 	if base == null:
 		_log("生命循环：卡库里缺少种子（%d）" % SEED_ID)
 		return
-	var copy:= CardData.from_dict(base.to_dict())
+	var copy := _new_own_card(base)
 	copy.affixes = (base.affixes as Array).duplicate()
 	_grant_to_hand(copy, "生命循环")
 	_log("生命循环：%s 被破坏 → 手卡加入「%s」" % [p.card.card_name, copy.card_name])
@@ -10421,6 +10497,7 @@ func _transform_hand_card(side: String, hand_index: int, new_card: CardData,
 	var old_card: CardData = state.hand[hand_index]
 	var copy: CardData = CardData.from_dict(new_card.to_dict())
 	copy.traits = (copy.traits as Array).duplicate()   # 切断与卡库的共享引用
+	copy.own_copy = true   # R737：换进来的也是一张「新卡」，别让 draw() 再复制一次
 	copy.random_born = random_born
 	state.hand[hand_index] = copy
 	if random_born:
@@ -10657,7 +10734,7 @@ func _egg_to_hand(reason: String) -> void :
 	if base == null:
 		_log("%s：找不到鸭蛋（9022）" % reason)
 		return
-	var egg:= CardData.from_dict(base.to_dict())
+	var egg := _new_own_card(base)
 	# R299：手牌满 → 鸭蛋直接进弃牌区
 	_grant_to_hand(egg, reason)
 	_log("%s：一张「%s」加入手卡" % [reason, egg.card_name])
@@ -10760,7 +10837,7 @@ func _seed_tick(side: String) -> void :
 			if pick == null:
 				_log("种子：卡池里没有可加的卡，这一张落空")
 				continue
-			var copy:= CardData.from_dict(pick.to_dict())
+			var copy := _new_own_card(pick)
 			copy.affixes = (pick.affixes as Array).duplicate()
 			_grant_to_hand(copy, "种子")
 			_log("种子：第 %d/%d 张破坏 → 手卡加入「%s」" % [i + 1, n, copy.card_name])
@@ -10891,7 +10968,7 @@ func _crow_to_hand(side: String) -> void :
 		return
 	var repo:= CardRepo.load_json()
 	var base: CardData = repo.get_card(CROW_ID)
-	var crow:= CardData.from_dict(base.to_dict()) if base != null else _fallback_crow()
+	var crow:= _new_own_card(base) if base != null else _fallback_crow()
 	# 当回合免费：不改卡本身的费用（那会永久变成 0 费），而是记进「本回合免费」名单，
 	# 回合结束随 turn_free 一起清空 → 之后再抽到就是原本的 1 费。
 	state.turn_free[crow] = true
@@ -11158,7 +11235,7 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			if ff_c == null:
 				_log("森林的朋友们：卡池里没有森林精魄盟友卡")
 				return "卡池里没有森林精魄盟友，效果落空"
-			var ff_copy := CardData.from_dict(ff_c.to_dict())
+			var ff_copy := _new_own_card(ff_c)
 			ff_copy.affixes = (ff_c.affixes as Array).duplicate()
 			if not _grant_to_hand(ff_copy, "森林的朋友们"):
 				_log("森林的朋友们：手牌已满 → 「%s」直接进弃牌区" % ff_copy.card_name)
@@ -12021,7 +12098,7 @@ func revive_recall(discard_index: int) -> bool:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
 		return false
-	var c: CardData = state.discard[discard_index]
+	var c: CardData = _own_card(state.discard[discard_index])
 	if c.kind != "盟友":
 		return false
 	state.discard.remove_at(discard_index)
@@ -12085,7 +12162,7 @@ func overhaul_recall(discard_index: int) -> bool:
 	if state.hand_full():
 		_log("返修：手牌已满，无法取回 %s" % c.card_name)
 		return false
-	var up := CardData.from_dict(c.to_dict())
+	var up := _own_card(c)
 	up.traits = (up.traits as Array).duplicate()   # 切断与卡库的共享引用
 	# R120：改造奖励走**唯一口**（素体被返修也额外 +1 血）。
 	var oh_hp: int = _upgrade_hp_gain(up, OVERHAUL_HP)
@@ -12138,7 +12215,7 @@ func shadow_step_recall(discard_index: int) -> bool:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
 		return false
-	var c: CardData = state.discard[discard_index]
+	var c: CardData = _own_card(state.discard[discard_index])
 	if state.hand_full():
 		_log("暗影步：手牌已满，无法取回 %s" % c.card_name)
 		return false
@@ -12382,7 +12459,7 @@ func _legacy_try_return(p: Placement) -> bool:
 	if state.hand_full():
 		_log("传承记忆：%s 被击破 → 手牌已满，本次不回收（名额留着）" % p.card.card_name)
 		return false
-	var back := _card_leaving_field(p)
+	var back := _own_card(_card_leaving_field(p))
 	if back == null:
 		return false
 	state.hand.append(back)
@@ -12488,7 +12565,7 @@ func _rat_trigger(source: String = "巨鼠") -> void :
 		_log("%s：抽牌库里没有盟友" % source)
 		return
 	var pick:= cand[rng.randi() % cand.size()]
-	var chosen: CardData = state.deck[pick]
+	var chosen: CardData = _own_card(state.deck[pick])
 	state.deck.remove_at(pick)
 	# R299：手牌满 → 那张费用最低的盟友直接进弃牌区
 	_grant_to_hand(chosen, source)
@@ -12738,7 +12815,7 @@ func wish_pick(deck_index: int) -> bool:
 		return false
 	if deck_index < 0 or deck_index >= state.deck.size():
 		return false
-	var c: CardData = state.deck[deck_index]
+	var c: CardData = _own_card(state.deck[deck_index])
 	state.deck.remove_at(deck_index)
 	state.hand.append(c)
 	wish_pending = false
@@ -12765,7 +12842,7 @@ func crow_recall(discard_index: int) -> bool:
 		return false
 	if discard_index < 0 or discard_index >= state.discard.size():
 		return false
-	var c: CardData = state.discard[discard_index]
+	var c: CardData = _own_card(state.discard[discard_index])
 	if c.kind != "盟友" or _is_crow(c):
 		return false   # 乌鸦不能把另一张乌鸦叫回手里
 	state.discard.remove_at(discard_index)
@@ -12818,7 +12895,7 @@ func whale_pick(discard_index: int) -> bool:
 		whale_pending = false
 		whale_remaining = 0
 		return false
-	var c: CardData = state.discard[discard_index]
+	var c: CardData = _own_card(state.discard[discard_index])
 	state.discard.remove_at(discard_index)
 	state.hand.append(c)
 	whale_remaining -= 1
@@ -14411,7 +14488,7 @@ func _theseus_on_blood(p: Placement, hp_before: int) -> void :
 	if proto == null:
 		_log("忒修斯奇械：卡库缺少「聚能炮击」(9145)，未能加入手卡")
 		return
-	var c := CardData.from_dict(proto.to_dict())
+	var c := _new_own_card(proto)
 	c.traits = (c.traits as Array).duplicate()
 	var landed := _grant_to_hand(c, "忒修斯奇械")
 	_log("忒修斯奇械：生命降到 %d → %s「聚能炮击」（手牌 %d 张）" % [
@@ -15153,7 +15230,7 @@ func _recycler_trigger(r: Placement, victim_power: int) -> void :
 	var repo := CardRepo.load_json()
 	var proto: CardData = repo.get_card(PROTO_ID)
 	if proto != null:
-		if _grant_to_hand(CardData.from_dict(proto.to_dict()), "零件回收者"):
+		if _grant_to_hand(_new_own_card(proto), "零件回收者"):
 			_log("零件回收者：手牌 +1 张「素体」")
 	action.emit("recycler", {"cell": _cell_of(r), "power": victim_power, "side": SIDE_SELF})
 
@@ -15277,7 +15354,7 @@ func _demolish(target: Vector2i, side: String) -> String :
 	var proto: CardData = repo.get_card(PROTO_ID) if repo != null else null
 	# R299：手牌满 → 素体 / 升级直接进弃牌区；产出张数照算（日志说清给了什么）。
 	if proto != null:
-		_grant_to_hand(CardData.from_dict(proto.to_dict()), "拆解")
+		_grant_to_hand(_new_own_card(proto), "拆解")
 		got_proto += 1
 	var got_upg:= 0
 	if was_upgraded:
@@ -15419,7 +15496,7 @@ func _destroy(cell: Vector2i) -> void :
 				_log("货物被破坏（卡组内已无货物可删）")
 		elif p.card.id == LYNX_ID:
 
-			var back:= CardData.from_dict(p.card.to_dict())
+			var back := _new_own_card(p.card)
 			back.cost = 1
 			if state.hand_full():
 				_log("%s 被击破，返回手牌被手牌上限挡下 → 进弃牌区（1 费）"
@@ -16475,7 +16552,7 @@ func _field_aura_tick(side: String) -> void :
 		var fac_atk: int = 0
 		var fac_hp: int = 0
 		if f.traits.has(PERSIST_UPGRADE_TRAIT):
-			p.card = CardData.from_dict(p.card.to_dict())
+			p.card = _renew_field_card(p)
 			p.card.traits = (p.card.traits as Array).duplicate()
 			# R120：① 改造奖励走**唯一口**（素体 +1 血 / 侦察塔不加攻）；
 			#       ② **补记一层 `upgrade_stacks`** —— 以前这里不加层，于是「改造工厂」
@@ -17160,7 +17237,7 @@ func rebirth_pick(hand_index: int) -> bool:
 			_log("新生：%s 消失（本职业奖励池为空，没有可加入的牌）" % c.card_name)
 		else:
 			var pick: CardData = pool[rng.randi_range(0, pool.size() - 1)]
-			var copy:= CardData.from_dict(pick.to_dict())
+			var copy := _new_own_card(pick)
 			# R299：手牌满 → 直接进弃牌区（不再「本次不加入」白丢）
 			_grant_to_hand(copy, "新生")
 			given_name = copy.card_name
@@ -19128,10 +19205,10 @@ func _assemble_apply_fx(p: Placement, cell: Vector2i, fx: Variant) -> void:
 						if ac_di < 0:
 							_log("组合：卡组里没有「%s」" % ac_src.card_name)
 							continue
-						ac_inst = state.deck[ac_di]
+						ac_inst = _own_card(state.deck[ac_di])
 						state.deck.remove_at(ac_di)
 					else:
-						ac_inst = CardData.from_dict(ac_src.to_dict())
+						ac_inst = _new_own_card(ac_src)
 					if state.hand_full():
 						state.discard.append(ac_inst)
 					else:
@@ -19159,7 +19236,7 @@ func _assemble_apply_fx(p: Placement, cell: Vector2i, fx: Variant) -> void:
 			else:
 				_assemble_opponent_draw(value)
 		"buff":
-			p.card = CardData.from_dict(p.card.to_dict())
+			p.card = _renew_field_card(p)
 			p.upgrade_atk += value
 			p.upgrade_hp += value
 			p.card.health += value
@@ -19169,7 +19246,7 @@ func _assemble_apply_fx(p: Placement, cell: Vector2i, fx: Variant) -> void:
 		"shield":
 			p.first_hit_shield = true
 		"taunt":
-			p.card = CardData.from_dict(p.card.to_dict())
+			p.card = _renew_field_card(p)
 			p.card.add_affix("嘲讽")
 		"absorb_linked":
 			# R583：嵌合暴君 8047 的下半零件，与 R96 共用 `_fuse_linked_allies`。
@@ -19180,7 +19257,7 @@ func _assemble_apply_fx(p: Placement, cell: Vector2i, fx: Variant) -> void:
 		"summon":
 			_summon_token(int(fx.get("value", 0)), cell, p.owner, int(fx.get("count", 1)))
 		"upgrade":
-			p.card = CardData.from_dict(p.card.to_dict())
+			p.card = _renew_field_card(p)
 			p.card.traits = (p.card.traits as Array).duplicate()
 			p.upgrade_atk += value
 			p.upgrade_hp += value
@@ -19190,7 +19267,7 @@ func _assemble_apply_fx(p: Placement, cell: Vector2i, fx: Variant) -> void:
 		"range":
 			# R565：攻击距离+N（榴弹击手「每次获得改造时，攻击距离+1」的零件）。
 			# 与 trait「改造攻程」同一套记法：`upgrade_range` 记加成，卡面按差值显示基础值。
-			p.card = CardData.from_dict(p.card.to_dict())
+			p.card = _renew_field_card(p)
 			p.card.attack_range += value
 			p.upgrade_range += value
 		"purge_curse":
@@ -19566,6 +19643,7 @@ func assemble_combo_commit() -> bool:
 		_log("传授：手牌已满，组合卡落空")
 		assemble_combo_cancel()
 		return false
+	result.own_copy = true
 	state.hand.append(result)
 	if was_dark_fusion:
 		result.add_affix("保存")
