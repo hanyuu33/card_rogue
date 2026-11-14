@@ -44,7 +44,7 @@ static func reply(layer: int, cls: String) -> String:
 		PlayerClass.DRUID:
 			return GameI18n.ui("shell", "CURTAIN_REPLY_DRUID", "我也是。")
 		PlayerClass.ROGUE:
-			return GameI18n.ui("shell", "CURTAIN_REPLY_ROGUE", "……")
+			return GameI18n.ui("shell", "CURTAIN_REPLY_ROGUE", "我就喜欢这种有趣的工作。")
 		PlayerClass.MECH:
 			return GameI18n.ui("shell", "CURTAIN_REPLY_MECH", "是的，这个节奏让我安心。")
 	return ""

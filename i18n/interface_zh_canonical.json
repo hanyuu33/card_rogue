@@ -2501,7 +2501,7 @@
       },
       "CURTAIN_REPLY_ROGUE": {
         "source": "scripts/curtain_lines.gd:47",
-        "zh": "……"
+        "zh": "我就喜欢这种有趣的工作。"
       },
       "CURTAIN_REPLY_MECH": {
         "source": "scripts/curtain_lines.gd:49",

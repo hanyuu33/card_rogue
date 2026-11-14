@@ -50873,7 +50873,7 @@ func _init() -> void:
 
 	check(CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.DRUID) == "我也是。"
 
-			and CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.ROGUE) == "……"
+			and CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.ROGUE) == "我就喜欢这种有趣的工作。"
 
 			and CurtainLines.reply(GameLayers.LAYER_TWO, PlayerClass.MECH)
 
