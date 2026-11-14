@@ -657,8 +657,10 @@ func _refresh_detail() -> void:
 	# R106：图鉴正文同样是「纯文本降级」—— 隐藏「（…）」补注、去掉 `**加粗**` 标记，
 	# 免得 Label 里出现裸星号（这里是 Label 不是 RichTextLabel，用 naturalize 而非 bbcode）。
 	# R602：正文框 236×230 固定 → 长效果文先折行、再缩字号，缩到底才裁。
+	# R717：长译文下限与 CardDetailOverlay / DeckViewer 统一为 9px。英文「毒沼」连同行距
+	# 在 11px 仍需 249px，旧下限会让末行压出框；短卡仍从 16px 起，只有确实放不下才降。
 	UiTheme.autoshrink_label(detail_text, CardText.naturalize(c.effect_text),
-			16, 11, B_BODY)
+			16, 9, B_BODY)
 	# 编号附在名字后
 	# R632：玩家不需要看到卡牌编号（内部 id）—— 只写卡名。
 	UiTheme.autoshrink_label(detail_name, GameI18n.card_name(c.id, c.card_name), 20, 13, B_TITLE)

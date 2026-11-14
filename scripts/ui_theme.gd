@@ -695,27 +695,35 @@ static func _unify_night_fonts(btn: Button) -> void:
 #    绘制期死循环的表现是整帧不返回（游戏未响应），R164 踩过。
 
 static func fit_font_size(face: Font, text: String, max_w: float, max_h: float,
-		fs_max: int, fs_min: int, wrap := false) -> int:
+		fs_max: int, fs_min: int, wrap := false, line_spacing := 0.0) -> int:
 	## 从 `fs_max` 逐级往下试，返回第一个「放得进 max_w × max_h」的字号。
 	## `wrap=true` 时按折行后的整块尺寸判断（多行正文）；否则按单行宽度 + 行高。
+	## R717：Label 的行间距也算进高度 —— Font 的多行度量不含它，漏算会让正文框被撑高。
 	## 缩到 `fs_min` 仍放不下就返回 `fs_min` —— **截断与否交给调用方**，这里不悄悄丢字。
 	if face == null or text.strip_edges() == "" or max_w <= 1.0:
 		return maxi(fs_min, fs_max)
 	var hi := maxi(fs_min, fs_max)
 	var fs := hi
 	while fs > fs_min:
-		var need := text_need(face, text, max_w, fs, wrap)
+		var need := text_need(face, text, max_w, fs, wrap, line_spacing)
 		if need.x <= max_w + 0.5 and need.y <= max_h + 0.5:
 			return fs
 		fs -= 1
 	return fs_min
 
 
-static func text_need(face: Font, text: String, max_w: float, fs: int, wrap := false) -> Vector2:
+static func text_need(face: Font, text: String, max_w: float, fs: int, wrap := false,
+		line_spacing := 0.0) -> Vector2:
 	## 文字在 `fs` 字号下的实际占位（宽, 高）。绘制与测量共用这一口。
 	if wrap:
 		var sz := face.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT,
 				max_w, fs)
+		# R717：`get_multiline_string_size()` 只给「行数 × 字体行高」，Label 还会在相邻两行
+		# 之间插 `line_spacing`（本工程主题为 3px）。从同一份多行高度反推行数，再补回间距，
+		# 测量与真实 Label 的 minimum size 才一致；不能另走一套估算行数（西文折行会不同）。
+		var line_h := maxf(1.0, float(face.get_height(fs)))
+		var rows := maxi(1, roundi(sz.y / line_h))
+		sz.y += float(maxi(0, rows - 1)) * maxf(0.0, line_spacing)
 		return Vector2(minf(sz.x, max_w), sz.y)
 	# ⚠️ 单行只判**宽度**，高度一律返回 0（= 不参与判定）。
 	#   实测这个 FontFile 的高度度量按字号**跳变**：20px→60、18→54、16→25、14→42
@@ -732,6 +740,7 @@ static func autoshrink_label(lb: Label, text: String, fs_max := -1, fs_min := 10
 	## `box` 传**场景里写死的框**（Label 自己的 size 会被长文本的 minimum size 撑大，
 	## 拿 lb.size 当判据等于用「已经被撑开的框」去量，永远不超）。
 	## 缩到 `fs_min` 仍放不下 → `clip_text = true` 兜底，绝不画到框外。
+	## R717：固定框必须同时做到「每次换内容都收回来」+「测量计入 Label 行间距」。
 	if lb == null or not is_instance_valid(lb):
 		return
 	var face := lb.get_theme_font("font")
@@ -744,12 +753,15 @@ static func autoshrink_label(lb: Label, text: String, fs_max := -1, fs_min := 10
 		return
 	var hi := fs_max if fs_max > 0 else lb.get_theme_font_size("font_size")
 	var wrap := lb.autowrap_mode != TextServer.AUTOWRAP_OFF
-	var fs := fit_font_size(face, text, b.x, b.y, hi, fs_min, wrap)
+	var spacing := float(lb.get_theme_constant("line_spacing")) if wrap else 0.0
+	var fs := fit_font_size(face, text, b.x, b.y, hi, fs_min, wrap, spacing)
+	# R717：先在赋值前打开裁剪，长文本才不会借 minimum size 把控件撑出固定框；随后无论上一张
+	# 卡 / 上一种语言把控件撑到多宽，都重新压回场景给定的 b。旧版只在“本次仍超”时开裁剪，
+	# 且从不恢复 size，复制术会沿用前一张卡的宽度折行，正文因此横穿出右侧羊皮纸边框。
+	lb.clip_text = true
 	lb.add_theme_font_size_override("font_size", fs)
 	lb.text = text
-	var need := text_need(face, text, b.x, fs, wrap)
-	if need.x > b.x + 0.5 or (wrap and need.y > b.y + 0.5):
-		lb.clip_text = true
+	lb.size = b
 
 
 static func _fit_action_button(btn: Button, primary: bool, night := false) -> void:

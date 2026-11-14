@@ -344,7 +344,7 @@ func _initialize() -> void:
 				RunState.relic_choice = []
 				RunState.relics = [RunState.WHISPER_RELIC_ID],
 			_check_whisper],
-		["res://scenes/gallery.tscn", func(): _reset()],
+		["res://scenes/gallery.tscn", func(): _reset(), _check_gallery_text_bounds],
 		# R216：鸭血领取后**立刻**转去选卡页（不能等奖励界面关闭、回到地图才结算）。
 		# 用 `route_fn` 接缝截获目标 —— headless 里真换场景会把用例的树掀掉。
 		["res://scenes/map.tscn", func():
@@ -1152,6 +1152,55 @@ func _check_record_list(scene: Variant) -> void:
 		var pf := FileAccess.open(RunRecord.PENDING_PATH, FileAccess.WRITE)
 		pf.store_string(_rec_pend_bak)
 		pf = null
+
+
+func _check_gallery_text_bounds(scene: Variant) -> void:
+	## R717（用户报「复制术等许多卡描述换行溢出、压住边框」）：两条根因都钉在真场景。
+	##   ① 固定框会被前一张卡 / 前一种语言撑宽，换卡必须重新收回到 236×230；
+	##   ② Font 多行度量不含 Label 的 line_spacing，缩字必须把它算进去，否则正文向下长出去。
+	## 不只验复制术：玩家卡全量 × 四语言都走真实 `_refresh_detail()`，再量同一份正文。
+	var copy: CardData = null
+	var checked := 0
+	for lang in ["zh", "en", "ja", "es"]:
+		GameSettings.language = lang
+		for c in scene._all:
+			if c.group != "player":
+				continue
+			ProfileData.mark_card_seen(c.id)
+			if c.id == 9165:
+				copy = c
+			scene._selected = c
+			scene._refresh_detail()
+			var lb: Label = scene.detail_text
+			var box := Vector2(236.0, 230.0)
+			if lb.size != box:
+				GameSettings.language = "zh"
+				_smoke_fail("R717 图鉴正文框被撑开：lang=%s id=%d size=%s，应为 %s"
+						% [lang, c.id, str(lb.size), str(box)])
+				return
+			var fs := lb.get_theme_font_size("font_size")
+			var spacing := float(lb.get_theme_constant("line_spacing"))
+			var need := UiTheme.text_need(lb.get_theme_font("font"), lb.text,
+					box.x, fs, true, spacing)
+			if need.x > box.x + 0.5 or need.y > box.y + 0.5:
+				GameSettings.language = "zh"
+				_smoke_fail("R717 图鉴正文仍越界：lang=%s id=%d need=%s > %s（fs=%d）"
+						% [lang, c.id, str(need), str(box), fs])
+				return
+			checked += 1
+	GameSettings.language = "zh"
+	if copy == null:
+		_smoke_fail("R717：卡库里找不到复制术 9165")
+		return
+	# 人工制造截图同形的「上一张卡把 Label 撑到 520px」状态，再切回复制术。
+	# 旧实现会沿用 520px 折成两行并穿出右框；现在必须当次收回 236px。
+	scene._selected = copy
+	scene.detail_text.size = Vector2(520.0, 230.0)
+	scene._refresh_detail()
+	if scene.detail_text.size != Vector2(236.0, 230.0):
+		_smoke_fail("R717 复制术沿用了残留宽度：%s" % str(scene.detail_text.size))
+		return
+	print("SMOKE OK R717 图鉴详情：%d 个卡牌×语言正文均在安全框内；复制术残留宽度收回" % checked)
 
 
 func _check_language_pick(scene: Variant) -> void:
