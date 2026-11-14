@@ -9018,6 +9018,31 @@ static func spell_first_hit(card: CardData) -> int:
 	return maxi(0, int(SPELL_BASE_DMG[card.id]))
 
 
+func enter_damage_now(card: CardData) -> Dictionary:
+	## R706（店长口径）：**入场效果里的伤害**也要像技能那样报「现在打出会是多少」——
+	## 土元素写的是 `3X`，不落到具体数就永远读不出这一掌几点。
+	## 与 `spell_now()` **刻意分开**，不合并：
+	##   * 那个只认 `kind == "技能"`；左栏还拿它判「会伤到自己 HP」的红色警告
+	##     （`spell_now(card).dmg > 0` 且目标是我方后排）—— 把盟友塞进去，土元素这种
+	##     「只打敌方单位」的卡会被误标成自伤；
+	##   * 这里只回答「正文里那个数现在是多少」，返回结构照 `spell_now()` 抄，多一个
+	##     `amount`：正文里是个整体标记、不是纯数字（见 `CardText.inline_amount()`）。
+	## ⚠️ 多段伤害（火元素：每清 1 张诅咒造成 2 点）**在这里不乘段数** —— 店长口径：
+	##    「多段只需要照常显示单段伤害 2 点即可，不需要乘以段数」。所以它一律返回 {}。
+	## ⚠️ 只读：左栏每帧都可能调它。
+	if card == null or card.id != EARTH_PRIMAL_ID:
+		return {}
+	# X = **本次战斗已使用的盟友数（含本卡）**。本卡还在手上、`self_ally_plays` 还没记它
+	# → +1，与 `_earth_primal_enter()` 结算时的 +1 同源（那边也是 +1）。
+	var x: int = state.self_ally_plays + 1
+	var pool: int = EARTH_PRIMAL_PER_ALLY * x
+	return {"dmg": pool, "base": EARTH_PRIMAL_PER_ALLY,
+			"anchor": "%dX" % EARTH_PRIMAL_PER_ALLY,
+			"expr": ("%d×%d" % [EARTH_PRIMAL_PER_ALLY, x]) if x > 1 else "",
+			"amount": true, "hot": x > 1,
+			"note": "%d × %d 张盟友" % [EARTH_PRIMAL_PER_ALLY, x]}
+
+
 func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	## R262（用户口径）：**「现在打出会造成多少伤害」** —— 战斗左栏详情用。
 	## R348 重构：从「手挑 4 张特例」改成**统一口** —— `SPELL_BASE_DMG` 登记全部伤害技能的

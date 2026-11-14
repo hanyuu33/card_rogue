@@ -17443,16 +17443,21 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	var out: Array = []
 	# ① 数值框（只有场上单位 / 工事才有值意义）
 	if card.kind == "盟友" or card.kind == "工事":
+		# R706（店长口径）：数值只要**和卡库原型不同就写红色的当前值**，不再「11（原 8）」——
+		# 详细面板只回答「现在是多少」；来源（成长 / 附魔 / 场上修正）由卡面染色与 buff 框交代。
+		# 基准走 `CardFace.base_stats()`：与卡面染色同一口，含难度档位 diff（R325 不算「变强」）。
+		var proto := CardFace.base_stats(card)
 		var hp_now: int = pl.health if pl != null else card.health
 		var hp_txt: String = "%d/%d" % [hp_now, card.health] if pl != null else str(card.health)
 		var pw_now: int = pl.effective_power() if pl != null else card.power
 		var pw_txt: String = str(pw_now)
-		if pl != null and pw_now != card.power:
-			pw_txt = "%d（原 %d）" % [pw_now, card.power]
+		var pw_hot: bool = proto.has("power") and pw_now != int(proto["power"])
+		# 生命**本来就是红的**（`STAT_HEALTH` = c1121f = `DMG_NOW`），上限被成长抬高时不用再换色。
 		out.append({
 			"type": "stats", "kind": "stats", "col": Color("6b6155"),
 			"items": [
-				{"icon": UiAssets.badge_icon("power"), "text": pw_txt, "col": UiTheme.STAT_POWER},
+				{"icon": UiAssets.badge_icon("power"), "text": pw_txt,
+						"col": UiTheme.DMG_NOW if pw_hot else UiTheme.STAT_POWER},
 				{"icon": UiAssets.badge_icon("health"), "text": hp_txt,
 						"col": UiTheme.STAT_HEALTH},
 			],
@@ -17461,20 +17466,19 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 		# 场上修正都要看得见（旧注释里那条「栏里写速 2、实际只走得动 1 格」的教训）。
 		var rng_shown: int = pl.effective_range() if pl != null else card.attack_range
 		var spd_shown: int = pl.effective_speed() if pl != null else card.move_speed
-		# 场上修正（夜鸭 / 暗影领主 / 动员）改了数值时标出原值 —— 否则玩家会以为卡面写错了
+		# 场上修正（夜鸭 / 暗影领主 / 动员）改了数值 → 同样写红字当前值。R706 一条规则到底：
+		# 「与卡库原型不同」就红，不再写「（原 X）」—— 否则同一块面板里两套写法。
 		var rng_txt: String = str(rng_shown)
-		if pl != null and rng_shown != card.attack_range:
-			rng_txt = "%d（原 %d）" % [rng_shown, card.attack_range]
+		var rng_hot: bool = proto.has("range") and rng_shown != int(proto["range"])
 		var spd_txt: String = str(spd_shown)
-		if pl != null and spd_shown != card.move_speed:
-			spd_txt = "%d（原 %d）" % [spd_shown, card.move_speed]
+		var spd_hot: bool = proto.has("speed") and spd_shown != int(proto["speed"])
 		var mv_items: Array = [
 			{"icon": UiAssets.badge_icon("range"), "text": rng_txt,
-					"col": UiTheme.INK_600},
+					"col": UiTheme.DMG_NOW if rng_hot else UiTheme.INK_600},
 		]
 		if card.kind == "盟友":
 			mv_items.append({"icon": UiAssets.badge_icon("speed"), "text": spd_txt,
-					"col": UiTheme.INK_600})
+					"col": UiTheme.DMG_NOW if spd_hot else UiTheme.INK_600})
 		out.append({"type": "stats", "kind": "stats", "col": Color("6b6155"), "items": mv_items})
 	# ② 效果正文：单独一个框，**高度随文字量**（`CardInfoBoxes.box_h` 折行数出来）
 	out.append({"type": "caption", "kind": "caption", "title": "效果", "col": Color("2a5a8a")})
@@ -17485,9 +17489,17 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	# 这里若还读 `effect_text` 原文，左栏会一直印基础伤害。
 	var body_segs: Array = CardText.parse_card(card)
 	if not now.is_empty():
-		body_segs = CardText.inline_damage(body_segs, int(now.get("dmg", 0)),
-				int(now.get("base", 0)), str(now.get("expr", "")),
-				str(now.get("anchor", "")))
+		if bool(now.get("amount", false)):
+			# R706：`3X` 这种**整体标记**（土元素）→ `30（3×10）`。X=1 时只换字、不染红：
+			# `inline_damage()` 那条「dmg == base 就静默不动」在这儿不适用 —— `3X` 本身
+			# 读不出点数，永远得落到具体值才看得懂。
+			body_segs = CardText.inline_amount(body_segs, str(now.get("anchor", "")),
+					int(now.get("dmg", 0)), str(now.get("expr", "")),
+					bool(now.get("hot", true)))
+		else:
+			body_segs = CardText.inline_damage(body_segs, int(now.get("dmg", 0)),
+					int(now.get("base", 0)), str(now.get("expr", "")),
+					str(now.get("anchor", "")))
 	out.append({"type": "text", "kind": "text", "col": Color("2a5a8a"),
 			"segs": body_segs})
 	# ③ 字段解释框：每个字段一个，框内「图标 名字：解释」
@@ -17614,6 +17626,10 @@ func _draw_info_panel() -> void:
 	if hand_idx >= 0 and hand_idx < engine.state.hand.size() \
 				and engine.state.hand[hand_idx] == card:
 		now = engine.spell_now(card)
+		if now.is_empty():
+			# R706：技能之外的**入场伤害**（土元素 `3X`）也要报「现在打出会是多少」——
+			# `spell_now()` 只认技能、还被「会伤到自己 HP」的红色警告复用，不能往里塞盟友。
+			now = engine.enter_damage_now(card)
 	if not card.traits.is_empty():
 		var tt := ""
 		for t in card.traits:

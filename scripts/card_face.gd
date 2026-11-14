@@ -1319,17 +1319,12 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	# 力 / 程 / 速：单一维度（高 = 绿 / 低 = 红 / 一样 = 白）。
 	# 生命：**四态**（受伤红 / 高于原本绿 / 等于原本白 / 低于原本黄）—— 见 `_health_col()`。
 	# 手卡 / 场上 / 弃牌区 / 图鉴全部走这里，调用方不用管（也不用各自判涨跌）。
-	var bv := _base_vals(card)
 	# R325：难度档位给的攻 / 血**不算「变强」** —— 算进基准，卡面保持白字
 	#（用户口径「因难度选择而增加的，依然显示白色，视为没有增加过」）。
-	# ⚠️ 只加在本地副本上：`_base_vals()` 的字典是**按 id 缓存**的，改它会污染同 id 的
-	#    所有卡（手牌里那张没有难度加成，也会跟着变成「本来就这么高」）。
+	# R706：基准统一走 `base_stats()`（原型 + 难度 diff），与战斗左栏详细面板**同一口**。
+	var bv := base_stats(card)
 	var base_power: Variant = bv.get("power")
-	if base_power != null:
-		base_power = int(base_power) + card.diff_power
 	var base_health: Variant = bv.get("health")
-	if base_health != null:
-		base_health = int(base_health) + card.diff_health
 	var shown_power: int = power_override if power_override >= 0 else card.power
 	# R467：**X 费单位**（传说卡「枭熊」9213）—— 力 / 生都要等落地才有值，卡面写 X / 9X，
 	# 否则手牌里永远是「0 攻 0 血」，读起来像张废卡。
@@ -1378,6 +1373,21 @@ static func _base_repo() -> CardRepo:
 	if _repo_cache == null:
 		_repo_cache = CardRepo.load_json()
 	return _repo_cache
+
+
+static func base_stats(card: CardData) -> Dictionary:
+	## R706：**「没变过」的基准** —— 卡库原型四项数值 + 难度档位修正，唯一口。
+	## 卡面染色（`_delta_col` / `_health_col`）与战斗左栏详细面板都读它：两处各算一遍
+	## 迟早会打架（面板标了「变了」、卡面还是白字，最像卡面写错）。
+	## 返回 {power, health, range, speed}；找不到原型（动态衍生物 / 卡库外 id）→ 空字典
+	## = 一律按「没变」处理，绝不给一个来路不明的红字。
+	var bv := _base_vals(card).duplicate()
+	if bv.is_empty() or card == null:
+		return {}
+	# ⚠️ 只改**副本**：`_base_vals()` 的字典按 id 缓存，改它会污染同 id 的所有卡。
+	bv["power"] = int(bv["power"]) + card.diff_power
+	bv["health"] = int(bv["health"]) + card.diff_health
+	return bv
 
 
 static func _base_vals(card: CardData) -> Dictionary:

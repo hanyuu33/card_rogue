@@ -461,6 +461,26 @@ static func inline_damage(segs: Array, dmg: int, base: int, expr: String,
 	var token := anchor
 	if token == "":
 		token = str(base) if expr != "" else str(dmg)
+	return _swap_token(segs, token, dmg, expr, true, tag)
+
+
+static func inline_amount(segs: Array, anchor: String, shown: int, expr := "",
+		hot := true, tag := "") -> Array:
+	## R706（店长口径）：把正文里的**整体标记**换成「当前值（算式）」—— 土元素写的是 `3X`，
+	## 落地前必须算出 `30（3×10）`，否则「会给敌人多少伤害」这句话读不出来。
+	## 与 `inline_damage()` 只差一条判据：那边 `dmg == base` 就静默不动（卡面已经写清了），
+	## 可 `3X` 本身不是数值，「没偏离」也就无从判断 —— 所以这里**一律替换**。
+	##   `hot = false`（X = 1，正好等于 3×1）→ 只换字、不染红：本来就没变，红字是噪音。
+	if segs.is_empty() or anchor == "":
+		return segs
+	return _swap_token(segs, anchor, shown, expr, hot, tag)
+
+
+static func _swap_token(segs: Array, token: String, shown: int, expr: String,
+		hot: bool, tag: String) -> Array:
+	## `inline_damage()` / `inline_amount()` 共用的替换体：找到 token 的**首次**出现，
+	## 换成 `shown`（hot 时 DMG_NOW + 加粗），后面按需补 `（expr）`（DMG_CALC）。
+	## ⚠️ 只换第一个：正文后面同数字的回合数 / 次数不是伤害，不许跟着改。
 	for idx in segs.size():
 		var seg: Dictionary = segs[idx]
 		var t := str(seg.get("text", ""))
@@ -486,7 +506,10 @@ static func inline_damage(segs: Array, dmg: int, base: int, expr: String,
 			if last_t != "" and last_t[last_t.length() - 1] != " " \
 					and _is_cjk(last_t[last_t.length() - 1]):
 				out[last_i] = _carry(out[last_i] as Dictionary, last_t + " ")
-		out.append(_seg_colored(seg, str(dmg), UiTheme.DMG_NOW, true))
+		if hot:
+			out.append(_seg_colored(seg, str(shown), UiTheme.DMG_NOW, true))
+		else:
+			out.append(_carry(seg, str(shown)))
 		if expr != "":
 			var calc := _seg_colored(seg, "（" + expr + "）", UiTheme.DMG_CALC)
 			if tag != "":

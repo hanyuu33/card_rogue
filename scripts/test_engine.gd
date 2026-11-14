@@ -62310,6 +62310,110 @@ func _init() -> void:
 
 	RunState.card_growth = {}
 
+	# ================= R706：详细面板「数值变了就写红色当前值」 =================
+	var r706_repo := CardRepo.load_json()
+	var r706_bsc: GDScript = load("res://scripts/battle_scene.gd")
+	var r706_fs := FieldState.new()
+	# ① 秃鹰：一场首杀 = +3 力 / +6 血 → 面板只写红色的 11，不再「11（原 8）」
+	var r706_vulture: CardData = CardData.from_dict(r706_repo.get_card(9206).to_dict())
+	var r706_pl := r706_fs.place(r706_vulture, Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r706_pl.atk_buff = 3
+	r706_vulture.health += 6
+	r706_pl.health += 6
+	var r706_blocks: Array = r706_bsc._info_blocks(r706_vulture, r706_pl)
+	var r706_pw: Dictionary = ((r706_blocks[0] as Dictionary)["items"] as Array)[0]
+	var r706_hp: Dictionary = ((r706_blocks[0] as Dictionary)["items"] as Array)[1]
+	var r706_pw_col: Color = r706_pw.get("col", Color(0, 0, 0, 0))
+	check(str(r706_pw.get("text", "")) == "11" and not str(r706_pw.get("text", "")).contains("原"),
+			"R706 秃鹰：力量只写当前值 11、不再「11（原 8）」（%s）" % str(r706_pw.get("text", "")))
+	check(r706_pw_col == UiTheme.DMG_NOW and r706_pw_col != UiTheme.STAT_POWER,
+			"R706 秃鹰：力量与卡库原型不同 → 红字（%s）" % r706_pw_col.to_html(false))
+	check(str(r706_hp.get("text", "")) == "16/16",
+			"R706 秃鹰：生命写成长后的 16/16（%s）" % str(r706_hp.get("text", "")))
+	check(r706_repo.get_card(9206).power == 8 and r706_repo.get_card(9206).health == 10,
+			"R706 秃鹰：卡库原型没被成长 / 面板写脏（%d/%d）"
+			% [r706_repo.get_card(9206).power, r706_repo.get_card(9206).health])
+	# ② 没变过的卡：保持原本的颜色与数值（别把「一直都正常」也染红）
+	var r706_plain: CardData = CardData.from_dict(r706_repo.get_card(8056).to_dict())
+	var r706_ppl := r706_fs.place(r706_plain, Vector2i(2, 1), GameEngine.SIDE_SELF)
+	var r706_ppw: Dictionary = (((r706_bsc._info_blocks(r706_plain, r706_ppl)[0]
+			as Dictionary)["items"] as Array)[0])
+	var r706_ppw_col: Color = r706_ppw.get("col", Color(0, 0, 0, 0))
+	check(str(r706_ppw.get("text", "")) == str(r706_plain.power)
+			and r706_ppw_col == UiTheme.STAT_POWER,
+			"R706 没变过的卡：力量仍是原本的色与值（%s）" % str(r706_ppw.get("text", "")))
+	# ③ 土元素：`3X` 要落到具体数（店长口径「显示为 30（3x10）这种形式」）
+	var r706_e := _new_engine([], 30, 30, -1, false)
+	r706_e.start_game(0)
+	var r706_earth: CardData = CardData.from_dict(r706_repo.get_card(9235).to_dict())
+	r706_e.state.self_ally_plays = 9      # 已用 9 张盟友 → 含本卡 X = 10
+	var r706_now := r706_e.enter_damage_now(r706_earth)
+	check(int(r706_now.get("dmg", -1)) == 30 and str(r706_now.get("expr", "")) == "3×10"
+			and str(r706_now.get("anchor", "")) == "3X",
+			"R706 土元素：X = 已用 9 + 本卡 = 10 → 30（3×10）（%s）" % str(r706_now))
+	var r706_segs: Array = []
+	for b: Dictionary in r706_bsc._info_blocks(r706_earth, null, r706_now):
+		if str(b.get("kind", "")) == "text":
+			r706_segs = b.get("segs", [])
+	var r706_etxt := CardText.segments_plain(r706_segs)
+	check(r706_etxt.contains("分配 30（3×10）") and not r706_etxt.contains("3X"),
+			"R706 土元素：正文写「30（3×10）」点伤害、不再留 3X（%s）" % r706_etxt)
+	var r706_hot: Color = Color(0, 0, 0, 0)
+	var r706_calc: Color = Color(0, 0, 0, 0)
+	for sg: Dictionary in r706_segs:
+		if str(sg.get("text", "")) == "30":
+			r706_hot = sg.get("col", Color(0, 0, 0, 0))
+		elif str(sg.get("text", "")) == "（3×10）":
+			r706_calc = sg.get("col", Color(0, 0, 0, 0))
+	check(r706_hot == UiTheme.DMG_NOW and r706_calc == UiTheme.DMG_CALC,
+			"R706 土元素 配色：30 走 DMG_NOW 红（%s）/（3×10）走 DMG_CALC 暖褐（%s）"
+			% [r706_hot.to_html(false), r706_calc.to_html(false)])
+	# X=1：正好等于 3×1 → 只换字，不套括号也不染红（没偏离，红字是噪音）
+	r706_e.state.self_ally_plays = 0
+	var r706_now1 := r706_e.enter_damage_now(r706_earth)
+	var r706_seg1: Array = []
+	for b: Dictionary in r706_bsc._info_blocks(r706_earth, null, r706_now1):
+		if str(b.get("kind", "")) == "text":
+			r706_seg1 = b.get("segs", [])
+	var r706_t1 := CardText.segments_plain(r706_seg1)
+	check(int(r706_now1.get("dmg", -1)) == 3 and r706_t1.contains("分配 3 点伤害")
+			and not r706_t1.contains("3X") and not r706_t1.contains("（3×"),
+			"R706 土元素：X=1 → 只写 3、不套括号（%s）" % r706_t1)
+	# ④ 火元素（反例）：多段伤害只写单段，绝不乘段数
+	var r706_fire: CardData = CardData.from_dict(r706_repo.get_card(9236).to_dict())
+	check(r706_e.enter_damage_now(r706_fire).is_empty(),
+			"R706 火元素：多段伤害不报总数（enter_damage_now 返回空）")
+	var r706_ftxt := CardText.segments_plain(CardText.parse(r706_fire.effect_text))
+	check(r706_ftxt.contains("造成 2 点伤害") and not r706_ftxt.contains("×"),
+			"R706 火元素：正文照旧只写单段 2 点、不乘段数（%s）" % r706_ftxt)
+	# ⑤ 译文里的 3X 一样要换（i18n 整句硬编码，锚点只在「译文之后」找）
+	var r706_lang := GameSettings.language
+	for r706_lg in ["en", "ja", "es"]:
+		GameSettings.language = r706_lg
+		GameI18n.reset_cache()
+		var r706_itxt := CardText.segments_plain(CardText.inline_amount(
+				CardText.parse(r706_earth.effect_text), "3X", 30, "3×10", true))
+		check(r706_itxt.contains("30（3×10）") and not r706_itxt.contains("3X"),
+				"R706 土元素（%s）：译文里的 3X 一样换成 30（3×10）（%s）" % [r706_lg, r706_itxt])
+	GameSettings.language = r706_lang
+	GameI18n.reset_cache()
+	# ⑥ 源码锁：面板不再拼「（原 X）」，基准走唯一口
+	var r706_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r706_bsrc.find("CardFace.base_stats(card)") >= 0
+			and not r706_bsrc.contains('"%d（原 %d）" % [pw_now')
+			and not r706_bsrc.contains('"%d（原 %d）" % [rng_shown')
+			and not r706_bsrc.contains('"%d（原 %d）" % [spd_shown'),
+			"R706 源码：详细面板走 base_stats、不再拼「（原 X）」")
+	check_src(r706_bsrc.find("enter_damage_now(card)") >= 0
+			and r706_bsrc.find("CardText.inline_amount(") >= 0,
+			"R706 源码：入场伤害走 enter_damage_now + CardText.inline_amount")
+	check_src(FileAccess.get_file_as_string("res://scripts/card_face.gd").find(
+			"static func base_stats(") >= 0
+			and FileAccess.get_file_as_string("res://scripts/game_engine.gd").find(
+			"func enter_damage_now(") >= 0,
+			"R706 源码：基准唯一口 CardFace.base_stats() / 入场伤害口 GameEngine.enter_damage_now()")
+
+
 	# ================= R390：商店重进（货架原样）+ 平台分叉购买 =================
 
 	# 用户口径：「商店在下一次移动之前能重新进，店内保持原样」；
