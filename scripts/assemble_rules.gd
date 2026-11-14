@@ -2,6 +2,20 @@ extends RefCounted
 
 const BLACKLIST := ["card_played", "kill"]
 const DEFERRED := ["random_gained"]
+## R716：下半 `note` 里的**时机制** —— 拼装拆掉的只是「上半那个扳机」，下半那句时机是
+## **效果自身的结算时点**，不能当描述前缀吞掉（用户口径：「拆掉了使用时板机，剩下应该
+## 依然保持回合结束才结算」）。
+##   · 黑暗领主 8021 的零件 = 「在本回合结束时回复5点费用」；拼到「攻击后」上时，
+##     攻击那一刻只该**记账**，真正加费等到本方回合结束（且按母卡口径优先结算）。
+##   · 之前把 note 当纯描述 → 攻击后立刻 +5：卡面写「回合结束」、实际立刻到账，
+##     显示与结算打架（正是这一条测试 R567 当年把错口径锁住了）。
+##   · 主扳机**本来就是**该时机（`turn_end`）时不另走一遍，当场结算即可。
+const NOTE_DEFER := {"在本回合结束时": "turn_end"}
+
+static func defer_of(note: String) -> String:
+	## 下半 note 对应的**延后时机**（"" = 纯描述，跟着上半扳机立刻结算）。
+	## 判据唯一口：引擎 `_assemble_execute` 与测试都走这一份，不许各写一套。
+	return str(NOTE_DEFER.get(note.strip_edges(), ""))
 ## R589：三条新扳机 ——
 ##   · `use_after`「使用后」：母卡原文写「使用后」的那批（小精灵 9074 / 巨鼠 9046 /
 ##     乌鸦 9039 / 斑鸠 9052）。结算时机与 `use` 同处（打出结算完立刻），区别只在卡面文案 ——
@@ -140,7 +154,8 @@ static func valid_lower(part: Variant) -> bool:
 	## R571：下半半边的合法性（与 `valid_upper` 同源共用，理由同上）。
 	## R567（用户口径）：「下半不应该是完整效果，需要裁掉上半部分 —— 扳机是在上半的，
 	## 不应该也分发到下半」。所以下半**结构上不允许有 trigger**：有就是数据写错了，直接判废。
-	## 下半只承载「效果」+ 可选的 `note`（纯描述，如「在本回合结束时」，不是扳机），
+	## 下半只承载「效果」+ 可选的 `note`（如「在本回合结束时」—— R716 起它**是结算时点**，
+	## 见 `NOTE_DEFER` / `defer_of()`，不是纯文案），
 	## 且至少要有一条效果 —— 一句效果都没有的下半等于什么都没兑现。
 	if not part is Dictionary:
 		return false
@@ -262,7 +277,8 @@ static func body_text(part: Dictionary) -> String:
 	## R567：用户口径「下半不应该是完整效果，需要裁掉上半部分」。这里不再有任何
 	## 「跨时机就补扳机前缀」的分支 —— 那种补法会让下半重新变成整句，
 	## 而且产物卡面写 A 时机、实际按 B 时机结算，显示与结算必然打架。
-	## `note` 是**描述性前缀**（如黑暗领主的「在本回合结束时」），不是扳机，不带冒号。
+	## `note` 是**效果自身的结算时点**（如黑暗领主的「在本回合结束时」，R716 起由引擎
+	## 延后到那一刻结算，见 `defer_of()`），不是上半的扳机，也不带冒号。
 	var body := effects_text(part.get("effects", []))
 	return str(part.get("note", "")) + body
 
@@ -270,7 +286,8 @@ static func body_text(part: Dictionary) -> String:
 static func assembled_text(asm: Dictionary) -> String:
 	## 组合卡的效果文本 = 独立段（入场 / 永续，不跟扳机）+ **一个扳机** + 上半效果 + 下半效果。
 	## 上半可以是**空钩子**（只提供扳机、没有效果，用户口径「上半只有钩子也无所谓」）。
-	## 下半的 `lower_note` 是描述性前缀，紧贴在下半效果前面（黑暗领主 =「在本回合结束时获得5点费用」）。
+	## 下半的 `lower_note` 是**结算时点**（黑暗领主 =「在本回合结束时获得5点费用」；
+	## R716 起引擎按 `defer_of()` 延后到那一刻，主扳机那一刻只记账）。
 	var t := str(asm.get("trigger", ""))
 	var s1 := effects_text(asm.get("effects", []))
 	var s2 := str(asm.get("lower_note", "")) + effects_text(asm.get("lower_effects", []))

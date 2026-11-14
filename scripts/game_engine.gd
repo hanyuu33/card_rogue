@@ -16819,6 +16819,9 @@ func _end_turn_surplus(side: String) -> void :
 	##   5) 暗影锁链 9112：left/3（向下取整）次，每次把随机一个敌人击退 2 格。
 	## 「优先结算」= 第 0 步先跑：黑暗领主给的 5 点会被第 1~5 步一起读到。
 	_dark_lord_energy(side)
+	# R716：组合产物里「下半 note = 在本回合结束时」的费用回复也在这**同一档** —— 必须在
+	# 重读 left **之前**到账，否则地狱猫 / 鲜血堡垒 / 活力转移读不到这 5 点（母卡 8021 口径）。
+	_assemble_deferred_turn_end(side)
 	var left := state.energy_of(side)
 	# 蓄势（9156，R232）：回合结束、费用清零之前 —— 手卡里每张「蓄势」按 left 涨伤害。
 	if side == SIDE_SELF:
@@ -18914,6 +18917,9 @@ func apply_battle(d: Dictionary) -> bool:
 # Structured assembly. Pool contents are supplied by future cards, not hardcoded IDs.
 const AssembleRules = preload("res://scripts/assemble_rules.gd")
 var _assemble_active: Dictionary = {}
+## R716：组合产物「下半 note 自带时机」的**记账队列**（此刻还没到结算时点）。
+## 元素 = {"side","iid","name","when","effects"}；在 `_end_turn_surplus` 里按 when 兑现。
+var _assemble_deferred: Array = []
 var assemble_combo_pending := false   # R559 组合（传授 8084）：等玩家拖 3 张卡组合
 ## R580 黑暗嵌合：当前这次组合由它发起（确认时给产物加「保存」+ 按力量值扫全场）。
 ## 排队中的机会把标记存在 `_combo_queue` 的 `fusion` 键里，弹出时再灌回这里。
@@ -18968,232 +18974,292 @@ func _assemble_execute(p: Placement, cell: Vector2i, trigger: String) -> void:
 	if has_main:
 		_assemble_active[execution_key] = true
 		fx_queue.append_array((p.card.assemble.get("effects", []) as Array).duplicate(true))
-		fx_queue.append_array((p.card.assemble.get("lower_effects", []) as Array).duplicate(true))
+		# R716：下半 note 自带**结算时点**（黑暗领主「在本回合结束时」）时，主扳机这一刻
+		# 只记账、不当场结算 —— 否则「攻击后：在本回合结束时回复5点费用」会变成攻击后
+		# 立刻 +5（卡面写 A 时机、实际按 B 结算）。记账的段在回合结束走同一个执行循环。
+		# 主扳机**本来就是**那一刻（turn_end）就不必绕，当场结算。
+		var lower_q: Array = (p.card.assemble.get("lower_effects", []) as Array).duplicate(true)
+		var defer_tr := AssembleRules.defer_of(str(p.card.assemble.get("lower_note", "")))
+		if defer_tr != "" and defer_tr != trigger:
+			_assemble_defer(p, lower_q, defer_tr)
+		else:
+			fx_queue.append_array(lower_q)
 	for fx in fx_queue:
-		if not AssembleRules.valid_effect(fx):
-			_log("组合：无效动作 " + str(fx))
-			continue
-		var value := int(fx.get("value", 0))
-		match str(fx.type):
-			"add_card":
-				# R584：把指定卡加入手卡（组合只能由玩家发动）。每张都造独立实例，
-				# 不共享 CardData 引用；手牌满时按既有口径改投弃牌区。
-				# R585：from="deck" 时改成**从卡组捞**（与 _cluster_turret_reload 同口径）：
-				# 卡组里没有就跳过，不凭空造卡；手牌满照样进弃牌区。
-				var ac_src: CardData = CardRepo.load_json().get_card(int(fx.get("card_id", 0)))
-				if ac_src == null:
-					_log("组合：加卡目标不存在 %d" % int(fx.get("card_id", 0)))
-				else:
-					var ac_n: int = maxi(1, value)
-					var ac_from_deck := str(fx.get("from", "")) == "deck"
-					for ac_i in range(ac_n):
-						var ac_inst: CardData = null
-						if ac_from_deck:
-							var ac_di := -1
-							for ac_j in state.deck.size():
-								if state.deck[ac_j].id == int(fx.get("card_id", 0)):
-									ac_di = ac_j
-									break
-							if ac_di < 0:
-								_log("组合：卡组里没有「%s」" % ac_src.card_name)
-								continue
-							ac_inst = state.deck[ac_di]
-							state.deck.remove_at(ac_di)
-						else:
-							ac_inst = CardData.from_dict(ac_src.to_dict())
-						if state.hand_full():
-							state.discard.append(ac_inst)
-						else:
-							state.hand.append(ac_inst)
-					_log("组合：加入 %d 张「%s」" % [ac_n, ac_src.card_name])
-			"add_card_to_deck":
-				# R585：集束炮台入场句 —— 往抽牌库塞 N 张指定卡的独立实例。
-				# 与 _cluster_turret_enter 同一条路：from_dict 复制，不共享卡库引用。
-				if p.owner != SIDE_SELF:
-					_log("组合：非我方跳过入库")
-				else:
-					var ad_src: CardData = CardRepo.load_json().get_card(int(fx.get("card_id", 0)))
-					if ad_src == null:
-						_log("组合：入库目标不存在 %d" % int(fx.get("card_id", 0)))
-					else:
-						var ad_n: int = maxi(1, value)
-						for ad_i in range(ad_n):
-							var ad_inst := CardData.from_dict(ad_src.to_dict())
-							state.deck.append(ad_inst)
-							action.emit("deck_added", {"card": ad_inst, "side": p.owner})
-						_log("组合：抽牌库 +%d 张「%s」" % [ad_n, ad_src.card_name])
-			"draw":
-				if p.owner == SIDE_SELF:
-					_draw_many(value)
-				else:
-					_assemble_opponent_draw(value)
-			"buff":
-				p.card = CardData.from_dict(p.card.to_dict())
-				p.upgrade_atk += value
-				p.upgrade_hp += value
-				p.card.health += value
-				p.health += value
-			"heal":
-				p.health = mini(p.card.health, p.health + value)
-			"shield":
-				p.first_hit_shield = true
-			"taunt":
-				p.card = CardData.from_dict(p.card.to_dict())
-				p.card.add_affix("嘲讽")
-			"absorb_linked":
-				# R583：嵌合暴君 8047 的下半零件，与 R96 共用 `_fuse_linked_allies`。
-				var al_got := _fuse_linked_allies(p, 0)
-				_log("组合：接通吸收 %d 张 → 力量 +%d、生命 +%d" % [
-						int(al_got.get("absorbed", 0)), int(al_got.get("atk", 0)),
-						int(al_got.get("hp", 0))])
-			"summon":
-				_summon_token(int(fx.get("value", 0)), cell, p.owner, int(fx.get("count", 1)))
-			"upgrade":
-				p.card = CardData.from_dict(p.card.to_dict())
-				p.card.traits = (p.card.traits as Array).duplicate()
-				p.upgrade_atk += value
-				p.upgrade_hp += value
-				_add_upgrade_stack(p)
-				p.card.health += value
-				p.health += value
-			"range":
-				# R565：攻击距离+N（榴弹击手「每次获得改造时，攻击距离+1」的零件）。
-				# 与 trait「改造攻程」同一套记法：`upgrade_range` 记加成，卡面按差值显示基础值。
-				p.card = CardData.from_dict(p.card.to_dict())
-				p.card.attack_range += value
-				p.upgrade_range += value
-			"purge_curse":
-				# R569：火元素式的「清除自己的全部诅咒，每清 1 张 → 随机敌人 N 伤」。
-				# 与 `_fire_primal_enter` 共用唯一口 `_purge_self_curses`（两处各写一遍必然走形）。
-				# ⚠️ 组合只能由玩家发动，这里固定清**自己**；敌方没有真实牌库。
-				_purge_self_curses(value, "组合")
-			"add_random_effect":
-				# R569：随机一张**效果卡**加入手卡。
-				#   · 默认「凭空给」：从本职业奖励池取（无尽加护 9061 同口径），牌库不减少。
-				#   · `from = "deck"`：**从牌库取**（猫头鹰 9073「从卡组加入手卡」），牌库当场少一张。
-				# 两条路都走引擎 rng → 回放可复现；`from_dict` 复制后再给，不污染卡库。
-				if str(fx.get("from", "")) == "deck":
-					var ae_got := 0
-					for _j in maxi(1, value):
-						var ae_idx: Array[int] = []
-						for di in state.deck.size():
-							var dc: CardData = state.deck[di]
-							if dc != null and dc.is_effect():
-								ae_idx.append(di)
-						if ae_idx.is_empty():
-							break
-						var di2: int = ae_idx[rng.randi_range(0, ae_idx.size() - 1)]
-						var ae_taken: CardData = state.deck[di2]
-						state.deck.remove_at(di2)
-						_grant_to_hand(CardData.from_dict(ae_taken.to_dict()), "组合")
-						ae_got += 1
-					if ae_got == 0:
-						_log("组合：牌库里没有效果卡，取牌落空")
-				else:
-					var ae_pool: Array[CardData] = []
-					var ae_repo := CardRepo.load_json()
-					if ae_repo != null:
-						for c: CardData in ae_repo.reward_pool_for(RunState.player_class):
-							if c.is_effect():
-								ae_pool.append(c)
-					if ae_pool.is_empty():
-						_log("组合：没有可以给予的效果卡")
-					else:
-						for _j in maxi(1, value):
-							var ae_pick: CardData = ae_pool[rng.randi_range(0, ae_pool.size() - 1)]
-							_grant_to_hand(CardData.from_dict(ae_pick.to_dict()), "组合")
-			"hand_upgrade":
-				# R569：手牌里的盟友各获得一次改造：生命 +N（改装者 8076 同口径，
-				# 共用 `_upgrade_hand_allies`；改造走唯一口 → 素体 / 战斗骨骼照常响应）。
-				_upgrade_hand_allies(value, "组合")
-			"hand_discount":
-				# R569：随机一张手牌本回合费用 -N（雪豹 8081 同口径，共用 `_discount_random_hand`）。
-				_discount_random_hand(value, "组合")
-			"buff_per_ally":
-				# R570：猎犬 9040「自己场上每有一个其他盟友，获得 +N 力量」
-				# （共用 `_buff_per_other_ally`；「其他」= 排除本卡自己）。
-				_buff_per_other_ally(p, value, "组合")
-			"buff_per_energy":
-				# R570：地狱猫 8019 / 鲜血堡垒 8020「剩余费用每有 1 点 → +A 力 +H 血」
-				# （共用 `_buff_by_surplus_energy`；组合没有 end_turn 那层上下文，自己读费用）。
-				_buff_by_surplus_energy(p, int(fx.get("atk", 0)), int(fx.get("hp", 0)), "组合")
-			"heal_per_energy":
-				# R570：夜蚀 8062「回复 X 点生命，X = 剩余费用」（共用 `_night_erosion_heal`）。
-				# ⚠️ 那个函数自带「满血静默跳过 / 不超过上限」，这里不要自己再写一遍 clamp。
-				_night_erosion_heal(p, state.energy_of(p.owner), p.owner, value)
-			"draw_random_skill":
-				# R570：赤狐 9034「从卡组随机抽一张技能牌，该卡本回合费用 -N」
-				# （共用 `_fetch_skill_card`，牌库当场少一张、减费只挂那一张）。
-				_fetch_skill_card("组合", value)
-			"hand_cost_raise":
-				# R570：契约签订者 8024「本回合手卡中所有卡费用 +N」
-				# （共用 `_raise_hand_cost`；赋同一个值不累加，回合结束随表清空）。
-				_raise_hand_cost(value, "组合")
-			"add_copy":
-				# R570：野兔 9032「手牌增加一张此卡的短暂复制」
-				# （共用 `_spawn_self_clone`：复制品带次元 + is_ephemeral，离场/回合结束消失）。
-				# ⚠️ `p.card` 是组合产物本身 —— 复制出来的也是产物，保留同一套 assemble。
-				for _j in maxi(1, value):
-					_spawn_self_clone(p.card)
-			"buff_allies_atk":
-				# R570b：老虎 9038「自己场上其他盟友攻击 +N」（共用 `_buff_other_allies_atk`）。
-				_buff_other_allies_atk(p, value, "组合")
-			# ── R589：七条新动作。每条都复用母卡那一个实现口，别在这里重写一份。 ──
-			"next_effect_discount":
-				# 小精灵 9074（共用 `_sprite_trigger`）。
-				_sprite_trigger(value, "组合")
-			"next_ally_discount":
-				# 斑鸠 9052（共用 `_dove_trigger`）。
-				_dove_trigger(value, "组合")
-			"add_effect_from_deck":
-				# 「从卡组将 N 张效果卡加入手卡，每张减 discount 费」（共用 `_demon_fetch`）。
-				# R690：水元素 9068 已改用 `add_card`（抓漩涡），本条暂无卡使用。
-				for _j in maxi(1, value):
-					_demon_fetch(p, int(fx.get("discount", 0)), "组合")
-			"hand_skill_discount":
-				# 影魔 8007 前半（共用 `_discount_hand_skills`）：只减费、不算生命。
-				_discount_hand_skills(p, value, 0, "组合")
-			"hp_per_zero_skill":
-				# 影魔 8007 后半：只算生命、不再减一次费（n = 0）。
-				_discount_hand_skills(p, 0, value, "组合")
-			"fetch_cheapest_ally":
-				# 巨鼠 9046（共用 `_rat_trigger`）。
-				_rat_trigger("组合")
-			"recall_ally_from_discard":
-				# 乌鸦 9039（共用 `crow_trigger`）：设 `crow_pending`，由战斗页弹选择面板。
-				crow_trigger()
-			"energy":
-				if p.owner == SIDE_SELF:
-					state.energy += value
-				else:
-					state.opp_energy += value
-			"knockback":
-				var kb_cell := _assemble_nearest_enemy_cell(p, cell)
-				if kb_cell != Vector2i(-1, -1):
-					_knockback(p.owner, kb_cell, value)
-			"freeze":
-				var fr_cell := _assemble_nearest_enemy_cell(p, cell)
-				if fr_cell != Vector2i(-1, -1):
-					_apply_frozen(state.board[fr_cell], "组合")
-			"stun":
-				var st_cell := _assemble_nearest_enemy_cell(p, cell)
-				if st_cell != Vector2i(-1, -1):
-					_apply_stun(state.board[st_cell], "组合")
-			"damage":
-				var targets: Array[Vector2i] = _assemble_enemy_cells(p)
-				if targets.is_empty():
-					_log("组合：没有敌方目标")
-					continue
-				match str(fx.get("target", "nearest")):
-					"nearest":
-						targets = [_pick_nearest(cell, targets)]
-					"random":
-						targets = [targets[rng.randi_range(0, targets.size() - 1)]]
-				for target in targets:
-					if state.board.has(target):
-						_hit_unit(state.board[target], value, "组合")
+		_assemble_apply_fx(p, cell, fx)
 
 	_assemble_active.erase(execution_key)
+
+func _assemble_apply_fx(p: Placement, cell: Vector2i, fx: Variant) -> void:
+	## R716：组合动作的**唯一执行循环** —— 上半段 / 入场段 / 下半段 / 延后段全走这一份。
+	## 抽成函数只为让「下半 note 自带时机」的延后结算原样复用它；另写一份 match
+	## 必然跟这里漂移（少一个动作就静默不结算，卡面和实际对不上）。
+	if not AssembleRules.valid_effect(fx):
+		_log("组合：无效动作 " + str(fx))
+		return
+	var value := int(fx.get("value", 0))
+	match str(fx.type):
+		"add_card":
+			# R584：把指定卡加入手卡（组合只能由玩家发动）。每张都造独立实例，
+			# 不共享 CardData 引用；手牌满时按既有口径改投弃牌区。
+			# R585：from="deck" 时改成**从卡组捞**（与 _cluster_turret_reload 同口径）：
+			# 卡组里没有就跳过，不凭空造卡；手牌满照样进弃牌区。
+			var ac_src: CardData = CardRepo.load_json().get_card(int(fx.get("card_id", 0)))
+			if ac_src == null:
+				_log("组合：加卡目标不存在 %d" % int(fx.get("card_id", 0)))
+			else:
+				var ac_n: int = maxi(1, value)
+				var ac_from_deck := str(fx.get("from", "")) == "deck"
+				for ac_i in range(ac_n):
+					var ac_inst: CardData = null
+					if ac_from_deck:
+						var ac_di := -1
+						for ac_j in state.deck.size():
+							if state.deck[ac_j].id == int(fx.get("card_id", 0)):
+								ac_di = ac_j
+								break
+						if ac_di < 0:
+							_log("组合：卡组里没有「%s」" % ac_src.card_name)
+							continue
+						ac_inst = state.deck[ac_di]
+						state.deck.remove_at(ac_di)
+					else:
+						ac_inst = CardData.from_dict(ac_src.to_dict())
+					if state.hand_full():
+						state.discard.append(ac_inst)
+					else:
+						state.hand.append(ac_inst)
+				_log("组合：加入 %d 张「%s」" % [ac_n, ac_src.card_name])
+		"add_card_to_deck":
+			# R585：集束炮台入场句 —— 往抽牌库塞 N 张指定卡的独立实例。
+			# 与 _cluster_turret_enter 同一条路：from_dict 复制，不共享卡库引用。
+			if p.owner != SIDE_SELF:
+				_log("组合：非我方跳过入库")
+			else:
+				var ad_src: CardData = CardRepo.load_json().get_card(int(fx.get("card_id", 0)))
+				if ad_src == null:
+					_log("组合：入库目标不存在 %d" % int(fx.get("card_id", 0)))
+				else:
+					var ad_n: int = maxi(1, value)
+					for ad_i in range(ad_n):
+						var ad_inst := CardData.from_dict(ad_src.to_dict())
+						state.deck.append(ad_inst)
+						action.emit("deck_added", {"card": ad_inst, "side": p.owner})
+					_log("组合：抽牌库 +%d 张「%s」" % [ad_n, ad_src.card_name])
+		"draw":
+			if p.owner == SIDE_SELF:
+				_draw_many(value)
+			else:
+				_assemble_opponent_draw(value)
+		"buff":
+			p.card = CardData.from_dict(p.card.to_dict())
+			p.upgrade_atk += value
+			p.upgrade_hp += value
+			p.card.health += value
+			p.health += value
+		"heal":
+			p.health = mini(p.card.health, p.health + value)
+		"shield":
+			p.first_hit_shield = true
+		"taunt":
+			p.card = CardData.from_dict(p.card.to_dict())
+			p.card.add_affix("嘲讽")
+		"absorb_linked":
+			# R583：嵌合暴君 8047 的下半零件，与 R96 共用 `_fuse_linked_allies`。
+			var al_got := _fuse_linked_allies(p, 0)
+			_log("组合：接通吸收 %d 张 → 力量 +%d、生命 +%d" % [
+					int(al_got.get("absorbed", 0)), int(al_got.get("atk", 0)),
+					int(al_got.get("hp", 0))])
+		"summon":
+			_summon_token(int(fx.get("value", 0)), cell, p.owner, int(fx.get("count", 1)))
+		"upgrade":
+			p.card = CardData.from_dict(p.card.to_dict())
+			p.card.traits = (p.card.traits as Array).duplicate()
+			p.upgrade_atk += value
+			p.upgrade_hp += value
+			_add_upgrade_stack(p)
+			p.card.health += value
+			p.health += value
+		"range":
+			# R565：攻击距离+N（榴弹击手「每次获得改造时，攻击距离+1」的零件）。
+			# 与 trait「改造攻程」同一套记法：`upgrade_range` 记加成，卡面按差值显示基础值。
+			p.card = CardData.from_dict(p.card.to_dict())
+			p.card.attack_range += value
+			p.upgrade_range += value
+		"purge_curse":
+			# R569：火元素式的「清除自己的全部诅咒，每清 1 张 → 随机敌人 N 伤」。
+			# 与 `_fire_primal_enter` 共用唯一口 `_purge_self_curses`（两处各写一遍必然走形）。
+			# ⚠️ 组合只能由玩家发动，这里固定清**自己**；敌方没有真实牌库。
+			_purge_self_curses(value, "组合")
+		"add_random_effect":
+			# R569：随机一张**效果卡**加入手卡。
+			#   · 默认「凭空给」：从本职业奖励池取（无尽加护 9061 同口径），牌库不减少。
+			#   · `from = "deck"`：**从牌库取**（猫头鹰 9073「从卡组加入手卡」），牌库当场少一张。
+			# 两条路都走引擎 rng → 回放可复现；`from_dict` 复制后再给，不污染卡库。
+			if str(fx.get("from", "")) == "deck":
+				var ae_got := 0
+				for _j in maxi(1, value):
+					var ae_idx: Array[int] = []
+					for di in state.deck.size():
+						var dc: CardData = state.deck[di]
+						if dc != null and dc.is_effect():
+							ae_idx.append(di)
+					if ae_idx.is_empty():
+						break
+					var di2: int = ae_idx[rng.randi_range(0, ae_idx.size() - 1)]
+					var ae_taken: CardData = state.deck[di2]
+					state.deck.remove_at(di2)
+					_grant_to_hand(CardData.from_dict(ae_taken.to_dict()), "组合")
+					ae_got += 1
+				if ae_got == 0:
+					_log("组合：牌库里没有效果卡，取牌落空")
+			else:
+				var ae_pool: Array[CardData] = []
+				var ae_repo := CardRepo.load_json()
+				if ae_repo != null:
+					for c: CardData in ae_repo.reward_pool_for(RunState.player_class):
+						if c.is_effect():
+							ae_pool.append(c)
+				if ae_pool.is_empty():
+					_log("组合：没有可以给予的效果卡")
+				else:
+					for _j in maxi(1, value):
+						var ae_pick: CardData = ae_pool[rng.randi_range(0, ae_pool.size() - 1)]
+						_grant_to_hand(CardData.from_dict(ae_pick.to_dict()), "组合")
+		"hand_upgrade":
+			# R569：手牌里的盟友各获得一次改造：生命 +N（改装者 8076 同口径，
+			# 共用 `_upgrade_hand_allies`；改造走唯一口 → 素体 / 战斗骨骼照常响应）。
+			_upgrade_hand_allies(value, "组合")
+		"hand_discount":
+			# R569：随机一张手牌本回合费用 -N（雪豹 8081 同口径，共用 `_discount_random_hand`）。
+			_discount_random_hand(value, "组合")
+		"buff_per_ally":
+			# R570：猎犬 9040「自己场上每有一个其他盟友，获得 +N 力量」
+			# （共用 `_buff_per_other_ally`；「其他」= 排除本卡自己）。
+			_buff_per_other_ally(p, value, "组合")
+		"buff_per_energy":
+			# R570：地狱猫 8019 / 鲜血堡垒 8020「剩余费用每有 1 点 → +A 力 +H 血」
+			# （共用 `_buff_by_surplus_energy`；组合没有 end_turn 那层上下文，自己读费用）。
+			_buff_by_surplus_energy(p, int(fx.get("atk", 0)), int(fx.get("hp", 0)), "组合")
+		"heal_per_energy":
+			# R570：夜蚀 8062「回复 X 点生命，X = 剩余费用」（共用 `_night_erosion_heal`）。
+			# ⚠️ 那个函数自带「满血静默跳过 / 不超过上限」，这里不要自己再写一遍 clamp。
+			_night_erosion_heal(p, state.energy_of(p.owner), p.owner, value)
+		"draw_random_skill":
+			# R570：赤狐 9034「从卡组随机抽一张技能牌，该卡本回合费用 -N」
+			# （共用 `_fetch_skill_card`，牌库当场少一张、减费只挂那一张）。
+			_fetch_skill_card("组合", value)
+		"hand_cost_raise":
+			# R570：契约签订者 8024「本回合手卡中所有卡费用 +N」
+			# （共用 `_raise_hand_cost`；赋同一个值不累加，回合结束随表清空）。
+			_raise_hand_cost(value, "组合")
+		"add_copy":
+			# R570：野兔 9032「手牌增加一张此卡的短暂复制」
+			# （共用 `_spawn_self_clone`：复制品带次元 + is_ephemeral，离场/回合结束消失）。
+			# ⚠️ `p.card` 是组合产物本身 —— 复制出来的也是产物，保留同一套 assemble。
+			for _j in maxi(1, value):
+				_spawn_self_clone(p.card)
+		"buff_allies_atk":
+			# R570b：老虎 9038「自己场上其他盟友攻击 +N」（共用 `_buff_other_allies_atk`）。
+			_buff_other_allies_atk(p, value, "组合")
+		# ── R589：七条新动作。每条都复用母卡那一个实现口，别在这里重写一份。 ──
+		"next_effect_discount":
+			# 小精灵 9074（共用 `_sprite_trigger`）。
+			_sprite_trigger(value, "组合")
+		"next_ally_discount":
+			# 斑鸠 9052（共用 `_dove_trigger`）。
+			_dove_trigger(value, "组合")
+		"add_effect_from_deck":
+			# 「从卡组将 N 张效果卡加入手卡，每张减 discount 费」（共用 `_demon_fetch`）。
+			# R690：水元素 9068 已改用 `add_card`（抓漩涡），本条暂无卡使用。
+			for _j in maxi(1, value):
+				_demon_fetch(p, int(fx.get("discount", 0)), "组合")
+		"hand_skill_discount":
+			# 影魔 8007 前半（共用 `_discount_hand_skills`）：只减费、不算生命。
+			_discount_hand_skills(p, value, 0, "组合")
+		"hp_per_zero_skill":
+			# 影魔 8007 后半：只算生命、不再减一次费（n = 0）。
+			_discount_hand_skills(p, 0, value, "组合")
+		"fetch_cheapest_ally":
+			# 巨鼠 9046（共用 `_rat_trigger`）。
+			_rat_trigger("组合")
+		"recall_ally_from_discard":
+			# 乌鸦 9039（共用 `crow_trigger`）：设 `crow_pending`，由战斗页弹选择面板。
+			crow_trigger()
+		"energy":
+			if p.owner == SIDE_SELF:
+				state.energy += value
+			else:
+				state.opp_energy += value
+		"knockback":
+			var kb_cell := _assemble_nearest_enemy_cell(p, cell)
+			if kb_cell != Vector2i(-1, -1):
+				_knockback(p.owner, kb_cell, value)
+		"freeze":
+			var fr_cell := _assemble_nearest_enemy_cell(p, cell)
+			if fr_cell != Vector2i(-1, -1):
+				_apply_frozen(state.board[fr_cell], "组合")
+		"stun":
+			var st_cell := _assemble_nearest_enemy_cell(p, cell)
+			if st_cell != Vector2i(-1, -1):
+				_apply_stun(state.board[st_cell], "组合")
+		"damage":
+			var targets: Array[Vector2i] = _assemble_enemy_cells(p)
+			if targets.is_empty():
+				_log("组合：没有敌方目标")
+				return
+			match str(fx.get("target", "nearest")):
+				"nearest":
+					targets = [_pick_nearest(cell, targets)]
+				"random":
+					targets = [targets[rng.randi_range(0, targets.size() - 1)]]
+			for target in targets:
+				if state.board.has(target):
+					_hit_unit(state.board[target], value, "组合")
+
+func _assemble_defer(p: Placement, fx_list: Array, when: String) -> void:
+	## R716：把下半这段「还没到时机」的效果记在本方账上，等 `when` 那一刻再结算。
+	## 记 `iid` 而不是 `Placement` 引用：结算时按实例 id 回场上找人，
+	## 中途被打死 / 离场就落空（与母卡 8021「黑暗领主还站着才 +5」同一口径）。
+	_assemble_deferred.append({
+		"side": p.owner,
+		"iid": int(p.get_instance_id()),
+		"name": str(p.card.card_name),
+		"when": when,
+		"effects": fx_list.duplicate(true),
+	})
+	_log("组合：「%s」——%s结算（此刻只记账）" % [
+			p.card.card_name, str(AssembleRules.LABELS.get(when, when))])
+
+func _assemble_deferred_turn_end(side: String) -> void:
+	## R716：回合结束时的延后结算口。在 `_end_turn_surplus` 里、重读剩余费用**之前**调用，
+	## 与黑暗领主 8021 的「优先结算」同一档 —— 这 5 点要能被地狱猫 / 鲜血堡垒 / 活力转移读到。
+	if _assemble_deferred.is_empty():
+		return
+	var keep: Array = []
+	for item in _assemble_deferred:
+		if str(item.get("when", "")) != "turn_end" or str(item.get("side", "")) != side:
+			keep.append(item)
+			continue
+		var dp: Placement = _placement_of_iid(int(item.get("iid", 0)))
+		if dp == null:
+			_log("组合：「%s」的回合结束结算落空（已离场）" % str(item.get("name", "")))
+			continue
+		var dcell := _cell_of(dp)
+		for fx in item.get("effects", []):
+			_assemble_apply_fx(dp, dcell, fx)
+	_assemble_deferred = keep
+
+func _placement_of_iid(iid: int) -> Placement:
+	## 按实例 id 回场上找人（`_assemble_deferred_turn_end` 用）。
+	## ⚠️ `get_instance_id()` 不是正整数：Godot 4 在 ObjectID 高位打标记，转成 int64 会变成
+	##    **负数**（实测 -9223371981389298014）。所以这里只能排除 0，写 `<= 0` 会把所有
+	##    合法 id 全挡掉 —— 表现是「记了账、回合结束永远不兑现」（R716 踩过一次）。
+	if iid == 0:
+		return null
+	for q: Placement in state.board.values():
+		if int(q.get_instance_id()) == iid:
+			return q
+	return null
 
 func _assemble_enemy_cells(p: Placement) -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []

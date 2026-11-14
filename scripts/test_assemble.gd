@@ -84,6 +84,7 @@ func _init() -> void:
 	_test_r589_materials()
 	_test_r592_combo_dimension()
 	_test_r604_opening()
+	_test_r714_defer_note()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -291,7 +292,14 @@ func _test_r565_fidelity() -> void:
 	eng._assemble_execute(p, eng._cell_of(p), "turn_end")
 	check(eng.state.energy == 0, "R567：下半自己的原扳机（turn_end）不再生效")
 	eng._assemble_execute(p, eng._cell_of(p), "use")
-	check(eng.state.energy == 5, "R567：整张产物按**上半**扳机（use）结算一次 +5 费")
+	# R716：下半 `note` 是**结算时点**，不是描述 —— use 那一刻只记账。
+	# （R567 原来这条断言「use 立即 +5」，正是店长指出的错口径：卡面写回合结束、实际立刻到账。）
+	check(eng.state.energy == 0, "R716：下半 note=在本回合结束时 → use 只记账，费用不动")
+	check(eng._assemble_deferred.size() == 1,
+			"R716：记账 1 条（when=turn_end / side=self / effects 1 个）")
+	eng._end_turn_surplus("self")
+	check(eng.state.energy == 5, "R716：回合结束才 +5（母卡 8021 同一时点）")
+	check(eng._assemble_deferred.is_empty(), "R716：兑现后清账")
 	# range 动作：攻击距离 +N
 	var eng2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
 	eng2.ai_enabled = false
@@ -1618,3 +1626,81 @@ func _test_r604_opening() -> void:
 			"R609 标题页按钮分两行（Buttons/Row1 + Buttons/Row2）")
 	check(ts.find("Vector2(220, 0)") >= 0 and ts.find("Vector2(136, 52)") < 0,
 			"R609 按钮宽度回到 220、高度不自定（保持原版外观）")
+
+func _test_r714_defer_note() -> void:
+	## R716：组合产物「下半 note 自带结算时点」—— 店长实测的那张：
+	## 属性槽 = 无限装甲 8038（4 费 5/19），上半 = 「攻击后」空钩子，
+	## 下半 = 黑暗领主 8021 的「在本回合结束时回复 5 点费用」。
+	## 产物卡面写「攻击后：在本回合结束时回复5点费用」→ **攻击时不加费**，回合结束才加。
+	## 旧口径把 note 当纯描述，攻击后立刻 +5（卡面写 A 时机、实际按 B 结算）。
+	check(Rules.defer_of("在本回合结束时") == "turn_end",
+			"R716：defer_of 认「在本回合结束时」→ turn_end")
+	check(Rules.defer_of("") == "" and Rules.defer_of("之后横置") == "",
+			"R716：其它 note 仍是纯描述（不延后）")
+	var repo := CardRepo.load_json()
+	var dark := repo.get_card(8021)
+	var armor := repo.get_card(8038)
+	check(dark != null and armor != null
+			and str(dark.lower_effect.get("note", "")) == "在本回合结束时"
+			and int(dark.lower_effect.effects[0].value) == 5,
+			"R716：素材 = 黑暗领主 8021（note 回合结束 + 5 费）")
+	# 真实拼装：属性槽无限装甲 + 上半「攻击后」空钩子 + 下半黑暗领主的 5 费
+	var built := Rules.build(armor, {"trigger": "attack", "effects": []}, dark.lower_effect)
+	check(built != null and built.assemble.trigger == "attack"
+			and str(built.assemble.get("lower_note", "")) == "在本回合结束时"
+			and built.effect_text == "攻击后：在本回合结束时回复5点费用",
+			"R716：卡面逐字（实际「%s」）" % (built.effect_text if built != null else "null"))
+	check(built != null and not built.traits.has("黑暗领主") and not built.traits.has("改造供能"),
+			"R716：产物不继承属性槽 / 上半的 trait（否则黑暗领主的 +5 会被算两次）")
+
+	# ① 攻击那一刻：只记账，费用不动
+	var e1 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e1.ai_enabled = false
+	var q1 := e1.state.place(CardData.from_dict(built.to_dict()), Vector2i(3, 0), "self")
+	e1.state.energy = 2
+	e1._assemble_execute(q1, Vector2i(3, 0), "attack")
+	check(e1.state.energy == 2, "R716：攻击后不加费（此刻 2 费不动）")
+	check(e1._assemble_deferred.size() == 1
+			and str((e1._assemble_deferred[0] as Dictionary).get("when", "")) == "turn_end"
+			and str((e1._assemble_deferred[0] as Dictionary).get("side", "")) == "self",
+			"R716：攻击记了 1 笔账（when=turn_end / side=self）")
+	# ② 回合结束：才 +5（且在重读剩余费用之前，与黑暗领主同一档）
+	e1._end_turn_surplus("self")
+	check(e1.state.energy == 7, "R716：回合结束 2 → 7（+5 到账）")
+	check(e1._assemble_deferred.is_empty(), "R716：兑现后清账（不会下回合再来一次）")
+
+	# ③ 主扳机本来就是 turn_end：当场结算，不绕记账
+	var e2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e2.ai_enabled = false
+	var q2 := e2.state.place(CardData.from_dict(built.to_dict()), Vector2i(4, 0), "self")
+	q2.card.assemble["trigger"] = "turn_end"
+	e2.state.energy = 0
+	e2._assemble_execute(q2, Vector2i(4, 0), "turn_end")
+	check(e2.state.energy == 5 and e2._assemble_deferred.is_empty(),
+			"R716：主扳机即回合结束 → 当场 +5、不重复记账")
+
+	# ④ 记账后单位离场：回合结束落空，不凭空给费
+	var e3 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e3.ai_enabled = false
+	var q3 := e3.state.place(CardData.from_dict(built.to_dict()), Vector2i(5, 0), "self")
+	e3.state.energy = 0
+	e3._assemble_execute(q3, Vector2i(5, 0), "attack")
+	check(e3._assemble_deferred.size() == 1, "R716：离场前已记账")
+	e3.state.board.erase(Vector2i(5, 0))
+	e3._end_turn_surplus("self")
+	check(e3.state.energy == 0 and e3._assemble_deferred.is_empty(),
+			"R716：单位已离场 → 回合结束落空、账目清掉")
+
+	# ⑤ 敌方账目不在我方回合兑现（side 必须对上）
+	var e4 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e4.ai_enabled = false
+	var q4 := e4.state.place(CardData.from_dict(built.to_dict()), Vector2i(6, 0), "foe")
+	e4.state.opp_energy = 0
+	e4._assemble_execute(q4, Vector2i(6, 0), "attack")
+	e4._end_turn_surplus("self")
+	check(e4._assemble_deferred.size() == 1 and e4.state.opp_energy == 0,
+			"R716：我方回合结束不兑现敌方账目")
+	e4._end_turn_surplus("foe")
+	check(e4.state.opp_energy == 5 and e4._assemble_deferred.is_empty(),
+			"R716：敌方回合结束才兑现它自己那笔 +5")
+
