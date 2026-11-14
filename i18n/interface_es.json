@@ -519,7 +519,9 @@
       "LEVEL_TWIN_CANNON": "Formación de cañones gemelos",
       "LEVEL_LASER_LINE": "Línea de cañones gigantes",
       "LEVEL_STEEL_FORTRESS": "Fortaleza de acero",
-      "LEVEL_CAPTAIN": "El Capitán Pato entra en escena"
+      "LEVEL_CAPTAIN": "El Capitán Pato entra en escena",
+      "BATTLE_ENEMY_EFFECTS_TITLE": "Efectos enemigos",
+      "BATTLE_EE_CONTINUE": "Continuar (%d s)"
     },
     "shell": {
       "STORY_MENU_CONTINUE": "Reanudar",

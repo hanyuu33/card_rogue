@@ -38802,9 +38802,35 @@ func _init() -> void:
 
 	check_src(r215_besrc.find("ee_popup_expired()") >= 0
 
-			and r215_besrc.find("继续（%d 秒）") >= 0,
+			and r215_besrc.find("BATTLE_EE_CONTINUE") >= 0,
 
-		"R215 敌方效果弹窗：到期由 _process 收起 + 底部「继续」按钮带倒计时（R353）")
+		"R215/R718 敌方效果弹窗：到期由 _process 收起 + 底部「继续」按钮带倒计时（走译文键）")
+
+	# ⑧a R718：弹窗排版 —— 三阶段说明搬进效果卡后正文从 2 行涨到 7 行，
+	# 旧版行高**写死 17px**（字号 18）会叠成一团。判据：够长也能 `fits`，
+	# 且行高恒 ≥ 字号 × 1.3；短文案该用最大字号（不许无脑缩）。
+
+	var r713_font: Font = UiTheme.font()
+
+	var r713_long_lay: Dictionary = r215_bs.ee_popup_layout(r713_font,
+
+			[{"name": "电磁屏障", "desc": "测".repeat(150)}], 328.0, 184.0)
+
+	check(bool(r713_long_lay["fits"])
+
+			and float(r713_long_lay["line_h"]) >= float(r713_long_lay["fs"]) * 1.3,
+
+			"R718 弹窗排版：150 字放得下且行高 ≥ 字号×1.3（fs=%d / lh=%.1f）"
+
+			% [int(r713_long_lay["fs"]), float(r713_long_lay["line_h"])])
+
+	var r713_short_lay: Dictionary = r215_bs.ee_popup_layout(r713_font,
+
+			[{"name": "电磁屏障", "desc": "两行的短文案。"}], 328.0, 184.0)
+
+	check(int(r713_short_lay["fs"]) == 18,
+
+			"R718 弹窗排版：短文案用最大字号 18（实际 %d）" % int(r713_short_lay["fs"]))
 
 	# ⑧b R710：转阶段「效果区换卡」—— 段落切分是纯函数，接线靠源码断言
 
@@ -39083,17 +39109,44 @@ func _init() -> void:
 
 		r297_c[k] = int(r297_c.get(k, 0)) + 1
 
+	# R718：8056（救援构装体）的正文是**空的** —— 旧断言要求「效果框恒为 1」，
+	# 那是建立在「无条件 append 一个空框」之上的行为；按店长口径「本体不写、只展示面板」，
+	# 空正文连「效果」标题都不画（否则左栏会留一个小标题 + 一个空框，读成文案丢了）。
+
 	check(int(r297_c["affix"]) == r297_card.affixes.size()
 
 			and int(r297_c["buff"]) == r297_pl.status_entries().size()
 
-			and int(r297_c["enchant"]) == 1 and int(r297_c["text"]) == 1,
+			and int(r297_c["enchant"]) == 1 and int(r297_c["text"]) == 0,
 
-			"R297 组装：字段框 %d = 字段数 %d / buff 框 %d = 状态数 %d / 附魔框 1 / 效果框 1"
+			"R297/R718 组装：字段框 %d = 字段数 %d / buff 框 %d = 状态数 %d / 附魔框 1 / 无正文 → 效果框 %d"
 
 			% [int(r297_c["affix"]), r297_card.affixes.size(),
 
-			int(r297_c["buff"]), r297_pl.status_entries().size()])
+			int(r297_c["buff"]), r297_pl.status_entries().size(), int(r297_c["text"])])
+
+	# 反向锁：同一条卡补上正文后，「效果」标题与正文框各回一个（别把正常卡也饿死）
+	r297_card.effect_text = "测试正文"
+
+	var r297_texts := 0
+
+	var r297_caps := 0
+
+	for b: Dictionary in r297_bsc._info_blocks(r297_card, r297_pl):
+
+		if str(b.get("kind", "")) == "text":
+
+			r297_texts += 1
+
+		elif str(b.get("kind", "")) == "caption":
+
+			r297_caps += 1
+
+	check(r297_texts == 1 and r297_caps == 1,
+
+			"R718 组装：有正文时「效果」标题与正文框各 1 个（实际 %d / %d）"
+
+			% [r297_texts, r297_caps])
 
 	check(int(r297_c["stats"]) == 2,
 
@@ -57723,21 +57776,76 @@ func _init() -> void:
 
 			% r356_e.state.unit_actions(r356_boss, GameEngine.SIDE_OPPONENT))
 
-	var r439_txt: String = r356_boss_card.effect_text
+	# R718：文案从 9200 本体搬到「当前阶段的那张效果卡」上 —— 判据跟着搬。
+	# 三条锁：① 本体只剩数值面板（空正文）；② 两动写在电磁屏障 / 紧急呼叫上；
+	#        ③ 转阶段条件用 **2/3 · 1/3 比例**，不许写死 200 / 100（难度 3 起血量 ×1.1）。
+	var r713_repo := CardRepo.load_json()
 
-	var r439_hits := 0
+	var r713_p1: CardData = r713_repo.get_card(GameEngine.REVELATOR_NAVAL_GUN_ID)
 
-	var r439_at := r439_txt.find("每回合可行动两次")
+	var r713_p2: CardData = r713_repo.get_card(GameEngine.REVELATOR_SHIELD_ID)
 
-	while r439_at >= 0:
+	var r713_p3: CardData = r713_repo.get_card(GameEngine.REVELATOR_CALL_ID)
 
-		r439_hits += 1
+	check(r356_boss_card.effect_text.strip_edges() == "",
 
-		r439_at = r439_txt.find("每回合可行动两次", r439_at + 1)
+			"R718 卡面：启示者 9200 本体不写效果文（只留数值面板，实际 %d 字）"
 
-	check(r439_hits == 2,
+			% r356_boss_card.effect_text.length())
 
-			"R439 卡面：9200 第二、第三阶段都写了「每回合可行动两次」（实际 %d 处）" % r439_hits)
+	check(r713_p1 != null and r713_p2 != null and r713_p3 != null
+
+			and r713_p2.effect_text.find("每回合可行动两次") >= 0
+
+			and r713_p3.effect_text.find("每回合可行动两次") >= 0,
+
+			"R439/R718 卡面：电磁屏障与紧急呼叫都写了「每回合可行动两次」")
+
+	check(r713_p1.effect_text.find("剩余生命降到 2/3") >= 0
+
+			and r713_p2.effect_text.find("剩余生命降到 1/3") >= 0,
+
+			"R718 卡面：转阶段条件写在效果卡上，且是 2/3 · 1/3 比例（不写死 200 / 100）")
+
+	check(r713_p2.effect_text.find("技能伤害减半") >= 0
+
+			and r713_p3.effect_text.find("代它承受一半伤害") >= 0
+
+			and r713_p3.effect_text.find("攻击距离 +2") >= 0
+
+			and r713_p1.effect_text.find("免疫位置移动") >= 0
+
+			and r713_p2.effect_text.find("免疫位置移动") >= 0
+
+			and r713_p3.effect_text.find("免疫位置移动") >= 0,
+
+			"R718 卡面：阶段效果卡写全「启示者自身」——技伤减半 / 接通代受 / 攻击距离 +2 / 三阶段免疫位移")
+
+	# R718 译文同源：改了中文原文就必须同改 `i18n/cards_en.json` 里**同 id** 那一行，
+	# 否则整串查不到 → 非中文环境掉回中文（R702 踩过一次，R718 一开始也差点漏）。
+	# 判据直接读显示层输出：en 下不看得到英文关键词，就是掉回去了。
+
+	var r713_lang_bak: String = GameSettings.language
+
+	GameSettings.language = "en"
+
+	GameI18n.reset_cache()
+
+	var r713_en2: String = CardText.naturalize_card(r713_p2)
+
+	var r713_en3: String = CardText.naturalize_card(r713_p3)
+
+	GameSettings.language = r713_lang_bak
+
+	GameI18n.reset_cache()
+
+	check(r713_en2.find("Skill damage taken halved") >= 0
+
+			and r713_en3.find("Mass-Produced") >= 0
+
+			and r713_en2.find("第二阶段") < 0,
+
+			"R718 译文：电磁屏障 / 紧急呼叫在 en 下真有译文（不掉回中文）")
 
 	# 行为：阶段 3 一拳打死同列第一只 → 溢出**不再**沿列穿透第二只（阶段 2 会穿）。
 
@@ -62413,11 +62521,14 @@ func _init() -> void:
 
 	var r702_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
+	# R718：弹窗那句原来是 `naturalize_card(card)`，排版重做后取的是合并表里的
+	# `card`（`_merged_effects` 的条目），字面串对不上 —— 改成锁「desc 字段由它生成」，
+	# 判据比变量名稳（变量名一改就又假红）。
 	check_src(r702_bs.find("CardText.parse_card(card)") >= 0
 
-			and r702_bs.find("CardText.naturalize_card(card)") >= 0,
+			and r702_bs.find("\"desc\": CardText.naturalize_card(") >= 0,
 
-			"R702 源码：战斗左栏 + 敌方效果弹窗都走 parse_card / naturalize_card")
+			"R702/R718 源码：战斗左栏 + 敌方效果弹窗都走 parse_card / naturalize_card")
 
 	var r702_dvs := FileAccess.get_file_as_string("res://scripts/deck_viewer.gd")
 

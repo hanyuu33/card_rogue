@@ -519,7 +519,9 @@
       "LEVEL_TWIN_CANNON": "双機砲陣",
       "LEVEL_LASER_LINE": "巨砲防線",
       "LEVEL_STEEL_FORTRESS": "鋼鉄要塞",
-      "LEVEL_CAPTAIN": "カモ隊長登場"
+      "LEVEL_CAPTAIN": "カモ隊長登場",
+      "BATTLE_ENEMY_EFFECTS_TITLE": "敵の効果",
+      "BATTLE_EE_CONTINUE": "続ける（%d秒）"
     },
     "shell": {
       "STORY_MENU_CONTINUE": "続ける",

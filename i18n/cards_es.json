@@ -1080,19 +1080,19 @@
   },
   "9200": {
    "name": "El Revelador",
-   "effect_text": "Tres fases: cuando su Vida restante baja a 2/3 y 1/3, avanza una fase, retrocede al centro de la última fila y cambia su efecto de campo. Es inmune al movimiento forzado en las tres fases. Primera fase - Cañoneo: cada turno, bombardea una columna aleatoria e inflige 5 de daño a todas las unidades enemigas de esa columna; si no hay ninguna unidad en esa columna, golpea directamente los HP del jugador. Sí mismo: +1 de Poder cada turno. Segunda fase - Barrera Electromagnética: las unidades que lo atacan reciben 5 de daño; cada vez que recibe daño de Habilidad, añade una «Parálisis» (Maldición de Coste 0 - no puede jugarse - se destierra si sigue en la mano al final del turno) a tu pila de descarte. Sí mismo: Atropellar, daño de Habilidad recibido reducido a la mitad, velocidad de movimiento -1, puede actuar dos veces por turno. Tercera fase - Llamada de Emergencia: al comienzo de cada turno del jugador, invoca una unidad de Producción en Serie con +10 de Poder. Sí mismo: al entrar al campo, destruye todas las demás unidades del campo; puede actuar dos veces por turno, alcance de ataque +2, velocidad de movimiento 0, inmune a todo daño que no provenga de ataques mientras haya otras unidades aliadas en el campo, y las unidades aliadas vinculadas a él reciben la mitad de su daño en su lugar."
+   "effect_text": ""
   },
   "9201": {
    "name": "Cañoneo",
-   "effect_text": "Cada turno, bombardea una columna aleatoria: todas las unidades enemigas de esa columna reciben 5 de daño; si no hay ninguna unidad en esa columna, golpea directamente los HP del jugador. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Primera fase. Cada turno, bombardea una columna aleatoria: todas las unidades enemigas de esa columna reciben 5 de daño; si no hay ninguna unidad en esa columna, golpea directamente los HP del jugador. El Revelador: +1 de Poder cada turno e inmune al movimiento forzado. Cuando su Vida restante baja a 2/3, entra en la segunda fase: retrocede al centro de la última fila y cambia esta carta."
   },
   "9202": {
    "name": "Barrera Electromagnética",
-   "effect_text": "Las unidades que atacan a El Revelador reciben 5 de daño. Cada vez que El Revelador recibe daño de Habilidad, añade una «Parálisis» (Maldición de Coste 0 - no puede jugarse - se destierra si sigue en la mano al final del turno) a tu pila de descarte. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Segunda fase. Las unidades que atacan a El Revelador reciben 5 de daño; cada vez que El Revelador recibe daño de Habilidad, añade una «Parálisis» (Maldición de Coste 0 - no puede jugarse - se destierra si sigue en la mano al final del turno) a tu pila de descarte. El Revelador: Atropellar, daño de Habilidad recibido reducido a la mitad, velocidad de movimiento -1, puede actuar dos veces por turno e inmune al movimiento forzado. Cuando su Vida restante baja a 1/3, entra en la tercera fase: retrocede al centro de la última fila y cambia esta carta."
   },
   "9203": {
    "name": "Llamada de Emergencia",
-   "effect_text": "Al comienzo de cada turno del jugador, invoca un enemigo aleatorio de Producción en Serie con +10 de Poder. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Tercera fase (final). Al comienzo de cada turno del jugador, invoca una unidad de Producción en Serie con +10 de Poder. El Revelador: al entrar en esta fase, destruye todas las demás unidades del campo; puede actuar dos veces por turno, alcance de ataque +2, velocidad de movimiento 0, inmune a todo daño que no provenga de ataques mientras haya otras unidades aliadas en el campo, las unidades aliadas vinculadas a él reciben la mitad de su daño en su lugar e inmune al movimiento forzado."
   },
   "9204": {
    "name": "Cazarrecompensas",

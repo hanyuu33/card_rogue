@@ -56,8 +56,8 @@ const TAP_H := CARD_W
 const PANEL_LIFT := 44.0
 const EE_POP_W := 768.0
 const EE_POP_H := 540.0
-const EE_TEXT_HW := 168.0
-const EE_TEXT_HH := 126.0
+const EE_TEXT_HW := 178.0   # R718：168 → 178（三阶段说明搬进效果卡后正文 7 行，旧宽只能塞到 12px）
+const EE_TEXT_HH := 145.0   # R718：126 → 145（同上；虚空门 r=225，最外侧字半径约 220）
 const EE_POPUP_SEC := 5.0
 const RELIC_PANEL_W := 860.0
 const RELIC_P_NAME := 16          # 名称字号
@@ -1052,6 +1052,15 @@ func _ready() -> void:
 		pass  # 卡组构筑已移除（肉鸽版固定初始卡组），参数保留兼容旧命令
 	# R325：`--diff N` = 难度档位（出图核验「难度加成仍是白字」用）。
 	# ⚠️ 必须**先于** `--level` 生效 —— 敌方攻 / 血是在 load_level 里按难度缩放的。
+	# R718 出图：`--lang en|ja|es` 临时换语言 —— 核验译文与弹窗排版时不必去改 settings.cfg
+	# （那份的 `chosen=false` 会被「自动探测系统语言」顶掉，手改 language 根本不生效）。
+	# 只改内存里的静态值，进程退出即恢复，不落盘。
+	for i in args.size():
+		if args[i] == "--lang" and i + 1 < args.size():
+			var want_lang := str(args[i + 1]).strip_edges().to_lower()
+			if GameI18n.LANGS.has(want_lang):
+				GameSettings.language = want_lang
+				GameI18n.reset_cache()
 	for i in args.size():
 		if args[i] == "--diff" and i + 1 < args.size():
 			RunState.set_difficulty(clampi(int(args[i + 1]), 0,
@@ -3679,6 +3688,10 @@ func _demo_tick() -> void:
 				bp_want = clampi(int(_demo_args[bp_i + 1]), 2, 3)
 		var bp_p := engine.state.unit_at(GameEngine.REVELATOR_HOME)
 		if bp_p != null:
+			# 出图：开场那份「敌方效果」弹窗还挂着（5 秒才收），
+			# 而重弹走的是 `_maybe_open_enemy_effect_popup()`，它见 `_ee_popup` 为真会直接 return
+			# —— 不先收掉，`--bossphase` 永远拍不到「重弹后的效果卡全文」（实测 3000ms 空手）。
+			_ee_popup = false
 			while bp_p.boss_phase < bp_want:
 				engine._revelator_enter_phase(bp_p, bp_p.boss_phase + 1)
 		_shot_t0 = _now()
@@ -16299,9 +16312,36 @@ func _draw_void_portal_fallback(r: Rect2) -> void:
 	draw_arc(c, 248.0, 0.0, TAU, 72, Color(0.30, 0.55, 0.78), 2.0)
 
 
+static func ee_popup_layout(font: Font, items: Array, max_w: float,
+		avail_h: float) -> Dictionary:
+	## R718：敌方效果弹窗的**排版唯一口**（纯函数，headless 测试直接喂）。
+	## 旧版正文行高**写死 17px**（字号 18）—— 两行的短文案看不出问题，
+	## 换上三阶段说明（9202 约 150 字 → 7 行）后行与行直接叠成一团，末行还被
+	## 「继续」按钮压住（出图实测）。
+	## 口径：**行高恒 = 字号 × 1.32**，字号从 18 逐档降到 12，取第一个放得下的；
+	## 降到 12 仍放不下就原样返回（`fits = false`），由调用方画「查看全部」的退路。
+	## `items` = `[{name, desc}]`；返回 `{fs, name_sz, line_h, rows, fits}`。
+	var sizes := [18, 17, 16, 15, 14, 13, 12]
+	for idx in sizes.size():
+		var cand: int = int(sizes[idx])
+		var lh := float(cand) * 1.32
+		var name_sz: int = cand + 4
+		var need := 0.0
+		var rows: Array = []
+		for it: Dictionary in items:
+			var lines: Array = TextWrap.wrap_plain(font, str(it.get("desc", "")), max_w, cand)
+			rows.append({"name": str(it.get("name", "")), "lines": lines})
+			need += float(name_sz) * 1.32 + float(lines.size()) * lh + 12.0
+		if need <= avail_h or idx == sizes.size() - 1:
+			return {"fs": cand, "name_sz": name_sz, "line_h": lh,
+					"rows": rows, "fits": need <= avail_h}
+	return {"fs": 12, "name_sz": 16, "line_h": 15.84, "rows": [], "fits": false}
+
+
 func _draw_enemy_effect_popup() -> void:
 	## R197：虚空洞口底 + 中心纯黑区白色文字。素材与弹窗 1:1（不缩放），
 	## 纯黑圆盘圆心 = 弹窗中心；文字全部画在该圆盘内，白字黑底对比拉满。
+	## R718：排版改成「字号自适应 + 行高跟随」——见 `ee_popup_layout()`。
 	var r := _enemy_effect_popup_rect()
 	var c := r.get_center()
 	var tex := UiAssets.void_portal()
@@ -16311,35 +16351,58 @@ func _draw_enemy_effect_popup() -> void:
 		_draw_void_portal_fallback(r)
 	var merged := _merged_effects(engine.state.enemy_effects)
 	var max_w := EE_TEXT_HW * 2.0 - 28.0
-	_draw_string_center(_font_bold, UI_FS_SUBHEAD, "敌方效果",
+	# R718：标题走界面译文 —— 旧版硬编码中文，en / ja / es 下弹窗顶上挂着四个汉字。
+	_draw_string_center(_font_bold, UI_FS_SUBHEAD,
+			GameI18n.ui("battle", "BATTLE_ENEMY_EFFECTS_TITLE", "敌方效果"),
 			c + Vector2(0.0, -EE_TEXT_HH + 26.0), Color.WHITE, -1)
-	var y := c.y - EE_TEXT_HH + 62.0
-	var bottom := c.y + EE_TEXT_HH - 30.0
+	var top := c.y - EE_TEXT_HH + 62.0
+	# R718：下边界**让开「继续」按钮**（按钮顶边在 `c.y + EE_TEXT_HH - 37`）。
+	# 旧值 -30 正好压在按钮身上，文案一长末行就被盖掉（出图实测末句只剩半截）。
+	var bottom := c.y + EE_TEXT_HH - 44.0
+	var items: Array = []
 	for m in merged:
-		if y > bottom - 24.0:
-			_draw_string_center(_font, UI_FS_CAPTION,
-					"……共 %d 张，点右侧「敌方效果」区查看全部" % merged.size(),
-					Vector2(c.x, bottom), Color(0.72, 0.72, 0.78), -1)
-			break
-		var card: CardData = m["card"]
-		var nm: String = card.card_name
+		# R718：卡名也要走译文（`card_name` 是卡库原文）—— 否则正文是外语、名字是中文。
+		var mc: CardData = m["card"]
+		var nm: String = GameI18n.card_name(mc.id, mc.card_name)
 		if int(m["count"]) > 1:
 			nm += " ×%d" % int(m["count"])
-		_draw_string_center(_font_bold, UI_FS_BODY, nm,
+		items.append({"name": nm,
+				"desc": CardText.naturalize_card(m["card"]).replace("\n", " ").strip_edges()})
+	var lay := ee_popup_layout(_font, items, max_w, bottom - top)
+	var lfs := int(lay["fs"])
+	var lh := float(lay["line_h"])
+	var name_lh := float(lay["name_sz"]) * 1.32
+	var y := top
+	var cut := false
+	for row: Dictionary in (lay["rows"] as Array):
+		if y > bottom - lh:
+			cut = true
+			break
+		_draw_string_center(_font_bold, int(lay["name_sz"]), str(row["name"]),
 				Vector2(c.x, y), Color.WHITE, -1)
-		y += 24.0
-		var desc := CardText.naturalize_card(card).replace("\n", " ").strip_edges()
-		for ln in _wrap_lines(_font, UI_FS_CAPTION, desc, max_w):
-			_draw_string_center(_font, UI_FS_CAPTION, ln,
-					Vector2(c.x, y), Color(0.93, 0.93, 0.97), -1)
-			y += 17.0
+		y += name_lh
+		for ln: String in (row["lines"] as Array):
+			if y > bottom - lh * 0.6:
+				cut = true
+				break
+			_draw_string_center(_font, lfs, ln, Vector2(c.x, y), Color(0.93, 0.93, 0.97), -1)
+			y += lh
+		if cut:
+			break
 		y += 12.0
+	if cut:
+		# 退路：宁可少画几行也不许叠字 —— 全文在右栏「敌方效果」区点开可看。
+		_draw_string_center(_font, UI_FS_CAPTION,
+				"……共 %d 张，点右侧「敌方效果」区查看全部" % merged.size(),
+				Vector2(c.x, bottom), Color(0.72, 0.72, 0.78), -1)
 	var left := maxi(0, int(ceil(ee_popup_left_sec(_ee_popup_t0, _now()))))
 	# R353：「继续」画成按钮 —— 可交互性靠 UI 表达，不写「点击任意处继续」。
 	var ee_btn := Rect2(c.x - 70.0, c.y + EE_TEXT_HH - 37.0, 140.0, 30.0)
 	draw_rect(ee_btn, Color(0.30, 0.40, 0.26, 0.95), true)
 	draw_rect(ee_btn, Color("c8f0a0"), false, 1.5)
-	_draw_string_center(_font_bold, UI_FS_CAPTION, "继续（%d 秒）" % left,
+	# R718：按钮文案也走译文（原来 en / ja / es 下这里是四个汉字 + 「秒」）
+	_draw_string_center(_font_bold, UI_FS_CAPTION,
+			GameI18n.ui("battle", "BATTLE_EE_CONTINUE", "继续（%d 秒）") % left,
 			ee_btn.get_center() + Vector2(0, 1), Color("0e2010"), -1)
 
 
@@ -16357,7 +16420,10 @@ func _draw_enemy_effects() -> void:
 	# 不藏的话旧卡还在熄灭、新卡已经好端端插在槽里，「替换」就读不出来。
 	var hide_ee := _ee_swap_hide_id()
 	if n_ee == 1 and (merged_e[0]["card"] as CardData).id != hide_ee:
-		_draw_string_nw(_font_bold, 17, (merged_e[0]["card"] as CardData).card_name, z.position + Vector2(108, 63), UiTheme.PAGE_INK, -1)
+		# R718：同上，右栏这张卡名也走译文（原来一律印中文原文）。
+		var e0: CardData = merged_e[0]["card"]
+		_draw_string_nw(_font_bold, 17, GameI18n.card_name(e0.id, e0.card_name),
+				z.position + Vector2(108, 63), UiTheme.PAGE_INK, -1)
 	var cap_e := _enemy_effect_zone_max_slots()
 	if n_ee <= cap_e:
 		for i in n_ee:
@@ -17703,7 +17769,6 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 					"col": _stat_col(spd_shown, proto.get("speed", null), UiTheme.INK_600)})
 		out.append({"type": "stats", "kind": "stats", "col": Color("6b6155"), "items": mv_items})
 	# ② 效果正文：单独一个框，**高度随文字量**（`CardInfoBoxes.box_h` 折行数出来）
-	out.append({"type": "caption", "kind": "caption", "title": "效果", "col": Color("2a5a8a")})
 	# R349（用户口径）：伤害**内联进正文**，不再另起一行「现在打出」。
 	#   `now` 只有「这张卡正在手牌上」时才非空 → 弃牌区 / 卡组 / 敌方卡一律原样。
 	#   例：集中突破 `造成 **10** 点伤害` → `造成 18（10＋8）点伤害`。
@@ -17722,8 +17787,17 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 			body_segs = CardText.inline_damage(body_segs, int(now.get("dmg", 0)),
 					int(now.get("base", 0)), str(now.get("expr", "")),
 					str(now.get("anchor", "")))
-	out.append({"type": "text", "kind": "text", "col": Color("2a5a8a"),
-			"segs": body_segs})
+	# R718（店长口径「本体不写，只展示面板」）：**正文为空就连「效果」标题一起不画**。
+	# 启示者 9200 的三阶段说明全搬到「当前阶段那张效果卡」上了，本体只剩数值面板；
+	# 不做这个判断的话，左栏会留一个小标题 + 一个空框，读起来像文案丢了。
+	# ⚠️ 判据必须是「拼起来的字是不是空的」，**不能写 `body_segs.is_empty()`**：
+	#    `CardText.parse("")` 会**兜底塞一个空文本段**（见 parse 尾部 `segs.append(_seg(""))`），
+	#    数组永远非空 —— 这么写等于没判断（R718 第一版就踩了，出图才发现框还在）。
+	if not CardText.segments_plain(body_segs).strip_edges().is_empty():
+		out.append({"type": "caption", "kind": "caption", "title": "效果",
+				"col": Color("2a5a8a")})
+		out.append({"type": "text", "kind": "text", "col": Color("2a5a8a"),
+				"segs": body_segs})
 	# ③ 字段解释框：每个字段一个，框内「图标 名字：解释」
 	for a: String in card.affixes:
 		var ac := CardData.affix_colors(a)

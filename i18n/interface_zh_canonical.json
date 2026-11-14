@@ -2300,6 +2300,14 @@
       "LEVEL_CAPTAIN": {
         "source": "scripts/game_levels.gd:1505",
         "zh": "鸭子队长登场"
+      },
+      "BATTLE_ENEMY_EFFECTS_TITLE": {
+        "source": "scripts/battle_scene.gd:16319",
+        "zh": "敌方效果"
+      },
+      "BATTLE_EE_CONTINUE": {
+        "source": "scripts/battle_scene.gd:16403",
+        "zh": "继续（%d 秒）"
       }
     },
     "shell": {

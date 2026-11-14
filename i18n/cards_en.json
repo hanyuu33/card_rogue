@@ -1080,19 +1080,19 @@
   },
   "9200": {
    "name": "The Revelator",
-   "effect_text": "Three phases: when its remaining Health drops to 2/3 and 1/3, it advances a phase, retreats to the middle of the back row and swaps its field effect. It is immune to forced movement in all three phases. Phase 1 - Cannonade: each turn, bombards a random column, dealing 5 damage to all enemy units in that column; if there is no unit in that column, it hits the player's HP directly instead. Self: +1 Power each turn. Phase 2 - Electromagnetic Barrier: units that attack it take 5 damage; each time it takes Skill damage, add a \"Paralysis\" (0-cost Curse - cannot be played - Banished if still in your Hand at the end of the turn) to your Discard Pile. Self: Trample, Skill damage taken halved, Move Speed -1, may act twice per turn. Phase 3 - Emergency Call: at the start of each of the player's turns, Summon a Mass-Produced unit with +10 Power. Self: On Play, Destroy all other units on the field; may act twice per turn, Attack Range +2, Move Speed 0, immune to all damage except attacks while other friendly units are on the field, and friendly units Linked to it take half of its damage instead."
+   "effect_text": ""
   },
   "9201": {
    "name": "Cannonade",
-   "effect_text": "Each turn, bombards a random column: all enemy units in that column take 5 damage; if there is no unit in that column, it hits the player's HP directly instead. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Phase 1. Each turn, bombards a random column: all enemy units in that column take 5 damage; if there is no unit in that column, it hits the player's HP directly instead. The Revelator itself: +1 Power each turn, immune to forced movement. When its remaining Health drops to 2/3, it enters Phase 2, retreating to the middle of the back row and swapping this card."
   },
   "9202": {
    "name": "Electromagnetic Barrier",
-   "effect_text": "Units that attack The Revelator take 5 damage. Each time The Revelator takes Skill damage, add a \"Paralysis\" (0-cost Curse - cannot be played - Banished if still in your Hand at the end of the turn) to your Discard Pile. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Phase 2. Units that attack The Revelator take 5 damage; each time The Revelator takes Skill damage, add a \"Paralysis\" (0-cost Curse - cannot be played - Banished if still in your Hand at the end of the turn) to your Discard Pile. The Revelator itself: Trample, Skill damage taken halved, Move Speed -1, may act twice per turn, immune to forced movement. When its remaining Health drops to 1/3, it enters Phase 3, retreating to the middle of the back row and swapping this card."
   },
   "9203": {
    "name": "Emergency Call",
-   "effect_text": "At the start of each of the player's turns, Summon a random Mass-Produced enemy with +10 Power. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Phase 3 (final). At the start of each of the player's turns, Summon a Mass-Produced unit with +10 Power. The Revelator itself: on entering this phase, Destroy all other units on the field; may act twice per turn, Attack Range +2, Move Speed 0, immune to all damage except attacks while other friendly units are on the field, friendly units Linked to it take half of its damage instead, immune to forced movement."
   },
   "9204": {
    "name": "Bounty Hunter",

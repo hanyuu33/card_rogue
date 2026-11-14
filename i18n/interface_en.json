@@ -519,7 +519,9 @@
       "LEVEL_TWIN_CANNON": "Twin Cannon Formation",
       "LEVEL_LASER_LINE": "Giant Cannon Line",
       "LEVEL_STEEL_FORTRESS": "Steel Fortress",
-      "LEVEL_CAPTAIN": "Captain Duck Appears"
+      "LEVEL_CAPTAIN": "Captain Duck Appears",
+      "BATTLE_ENEMY_EFFECTS_TITLE": "Enemy Effects",
+      "BATTLE_EE_CONTINUE": "Continue (%ds)"
     },
     "shell": {
       "STORY_MENU_CONTINUE": "Resume",
