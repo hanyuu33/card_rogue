@@ -79,6 +79,30 @@ func _init() -> void:
 	check(not bomb.is_usable() and not frost.is_usable() and not poison.is_usable()
 			and not spike.is_usable(), "四个放置型工具都不走使用型分支")
 
+	# ---- ①b R690：描述必须写清「怎么发动」—— 放置型拖到格子、使用型轻点 ----
+	# 玩家唯一能读到操作方式的地方就是这条 desc（商店悬浮、战斗里轻点工具栏）。
+	# 断言读原始底本 traps.json：TrapData.desc 会按当前语言翻译，不能用来验中文口径。
+	var raw_doc: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://traps.json"))
+	var op_bad := ""
+	if not (raw_doc is Dictionary):
+		op_bad = "traps.json 读不出来"
+	else:
+		var raw_rows: Dictionary = {}
+		for row in raw_doc.get("traps", []):
+			raw_rows[str(int(row.get("id", 0)))] = str(row.get("desc", ""))
+		for tid in ["7001", "7002", "7003", "7004"]:
+			if not str(raw_rows.get(tid, "")).contains("拖到战场空格上放置"):
+				op_bad += "%s 缺拖放说明 " % tid
+		for tid in ["7005", "7006"]:
+			var d := str(raw_rows.get(tid, ""))
+			if not d.contains("轻点即可使用") or not d.contains("无需拖到战场格子上"):
+				op_bad += "%s 缺轻点说明 " % tid
+		for tid in raw_rows:
+			if str(raw_rows[tid]).contains("陷阱消失"):
+				op_bad += "%s 残留旧机制名 " % tid
+	check(op_bad == "", "六件工具都写明发动方式（拖到格子 / 轻点）%s"
+			% ("" if op_bad == "" else " —— " + op_bad.strip_edges()))
+
 	# ---- ② 栏位：定长 3 槽、满了拒收、取出即空 ----
 	RunState.run_active = true
 	RunState.traps = [-1, -1, -1]

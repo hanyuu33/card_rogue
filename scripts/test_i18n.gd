@@ -44,7 +44,89 @@ func _initialize() -> void:
 			== noncard["classes"]["森林精魄"]["subtitle"])
 
 	var traps: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://i18n/traps_es.json"))
-	_check("陷阱按 ID", GameI18n.trap_name(7001, "") == traps["traps"]["7001"]["name"])
+	_check("工具按 ID", GameI18n.trap_name(7001, "") == traps["traps"]["7001"]["name"])
+
+	# R690：工具三语（en / ja / es 各自成文件，缺条目就回退中文 —— 这正是要拦的）
+	var tool_langs: Array[String] = ["en", "ja", "es"]
+	var tool_ids: Array[String] = ["7001", "7002", "7003", "7004", "7005", "7006"]
+	var place_ids: Array[String] = ["7001", "7002", "7003", "7004"]
+	var use_ids: Array[String] = ["7005", "7006"]
+	var tool_missing := ""
+	var tool_op_bad := ""
+	var tool_cjk := ""
+	var tool_packs := {}
+	for code in tool_langs:
+		var pack: Variant = JSON.parse_string(
+				FileAccess.get_file_as_string("res://i18n/traps_%s.json" % code))
+		if not (pack is Dictionary) or not pack.has("traps"):
+			tool_missing = "%s 文件缺失或结构不对" % code
+			continue
+		tool_packs[code] = pack["traps"]
+		var rows: Dictionary = pack["traps"]
+		for tid in tool_ids:
+			var row: Variant = rows.get(tid, null)
+			if not (row is Dictionary) or str(row.get("name", "")).strip_edges() == "" \
+					or str(row.get("desc", "")).strip_edges() == "":
+				tool_missing = "%s / %s 条目缺失" % [code, tid]
+				continue
+			# 中文底本 vs 译文：拉丁语种不能残留汉字；日文本就用汉字，改查「有没有假名」——
+			# 一条日文说明里连一个假名都没有，基本就是整条回退成了中文。
+			var body := str(row["name"]) + str(row["desc"])
+			if code == "ja":
+				var has_kana := false
+				for ci in body.length():
+					var u := body.unicode_at(ci)
+					if u >= 0x3040 and u <= 0x30FF:
+						has_kana = true
+						break
+				if not has_kana:
+					tool_cjk = "ja / %s 无假名，疑似中文回退" % tid
+			elif GameI18n._has_cjk(body):
+				tool_cjk = "%s / %s 残留中文：%s" % [code, tid, body.substr(0, 24)]
+	_check("工具三语条目齐全（en·ja·es × 6 件）", tool_missing == "", tool_missing)
+	_check("工具三语无中文残留（日文查假名）", tool_cjk == "", tool_cjk)
+	# 操作口径：放置型必须写「拖到格子」，使用型必须写「轻点 / 不要拖」
+	for code in tool_langs:
+		if not tool_packs.has(code):
+			continue
+		var rows2: Dictionary = tool_packs[code]
+		for tid in place_ids:
+			if not rows2.has(tid):
+				continue
+			var dsc := str(rows2[tid].get("desc", "")).to_lower()
+			var drag_ok := dsc.contains("arrástrala") or dsc.contains("ドラッグ") \
+					or dsc.contains("drag ")
+			if not drag_ok:
+				tool_op_bad += "%s/%s 缺拖放说明 " % [code, tid]
+		for tid in use_ids:
+			if not rows2.has(tid):
+				continue
+			var dsc2 := str(rows2[tid].get("desc", "")).to_lower()
+			var tap_ok := dsc2.contains("tócala") or dsc2.contains("タップ") \
+					or dsc2.contains("tap it")
+			if not tap_ok:
+				tool_op_bad += "%s/%s 缺轻点说明 " % [code, tid]
+	_check("工具操作口径三语齐全（放置＝拖到格子 / 使用＝轻点）", tool_op_bad == "",
+			tool_op_bad.strip_edges())
+	# 桥路：切到 en / ja 时取到的必须是文件里的值，而不是中文回退
+	var bridge_bad := ""
+	for code in tool_langs:
+		GameSettings.language = code
+		GameI18n.reset_cache()
+		if not tool_packs.has(code):
+			continue
+		var bp: Dictionary = tool_packs[code]
+		for tid in tool_ids:
+			if not bp.has(tid):
+				continue
+			var want := str(bp[tid]["name"])
+			var got := GameI18n.trap_name(int(tid), "")
+			if got != want:
+				bridge_bad += "%s/%s 取到 %s " % [code, tid, got]
+	_check("工具译名经 GameI18n 逐语言取到（非中文回退）", bridge_bad == "",
+			bridge_bad.strip_edges())
+	GameSettings.language = "es"
+	GameI18n.reset_cache()
 
 	var narrative: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://i18n/narrative_es.json"))
 	var story: Dictionary = narrative["stories"]["episode1"]

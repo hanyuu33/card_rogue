@@ -1,0 +1,31 @@
+{
+ "version": 1,
+ "lang": "en",
+ "source": "traps.json",
+ "traps": {
+  "7001": {
+   "name": "Alchemical Bomb",
+   "desc": "Drag it onto an empty battlefield cell to place it. When an enemy steps on it, it deals 18 damage; the tool is then used up."
+  },
+  "7002": {
+   "name": "Frost Trap",
+   "desc": "Drag it onto an empty battlefield cell to place it. When an enemy steps on it, it deals 2 damage and inflicts Frozen for 1 turn; the tool is then used up."
+  },
+  "7003": {
+   "name": "Poison Flask",
+   "desc": "Drag it onto an empty battlefield cell to place it. When an enemy steps on it, it deals 8 damage and inflicts Poisoned; afterwards that enemy takes 8 more damage at the end of each enemy turn, for 3 resolutions in total (same rule as Poison Mire); the tool is then used up."
+  },
+  "7004": {
+   "name": "Piercing Trap",
+   "desc": "Drag it onto an empty battlefield cell to place it. When an enemy steps on it, it deals 10 damage and inflicts Rooted for 1 turn; the tool is then used up."
+  },
+  "7005": {
+   "name": "Minor Health Flask",
+   "desc": "Tap it to use it, no dragging needed. Instantly restores 20% Health (up to max Health); the tool is then used up."
+  },
+  "7006": {
+   "name": "Mana Potion",
+   "desc": "Tap it to use it, no dragging needed. Instantly restores 2 Cost; the tool is then used up."
+  }
+ }
+}

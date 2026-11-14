@@ -403,7 +403,7 @@
   },
   "9012": {
    "name": "Capitán Pato",
-   "effect_text": "Puede actuar dos veces por turno."
+   "effect_text": ""
   },
   "9013": {
    "name": "Poder del Pato",
@@ -476,7 +476,7 @@
   },
   "9031": {
    "name": "Lobo Blanco",
-   "effect_text": "Puede actuar dos veces por turno."
+   "effect_text": ""
   },
   "9032": {
    "name": "Liebre",
@@ -672,7 +672,7 @@
   },
   "9080": {
    "name": "Gólem",
-   "effect_text": "Provocar: las unidades enemigas deben atacarlo primero."
+   "effect_text": ""
   },
   "9082": {
    "name": "Elemental de Viento",
@@ -852,7 +852,7 @@
   },
   "9134": {
    "name": "Fortaleza de Acero",
-   "effect_text": "Provocar: las unidades enemigas deben atacarla primero."
+   "effect_text": ""
   },
   "9135": {
    "name": "Hefesto",
@@ -1256,7 +1256,7 @@
   },
   "9245": {
    "name": "Autómata Veloz",
-   "effect_text": "Puede actuar dos veces por turno."
+   "effect_text": ""
   },
   "9246": {
    "name": "Bestia de Gemas",
