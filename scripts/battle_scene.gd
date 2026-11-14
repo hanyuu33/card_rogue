@@ -18568,9 +18568,15 @@ const RELIC_TIP_LINE := 18.0
 ## 「有没有一个能看见的字符」，**判输出，不判输入**（与 R718 的
 ## `CardText.segments_plain(...).strip_edges()` 同一口径）。
 static func relic_tip_visible_text(tip: String) -> bool:
-	for ch in tip:
-		if ch == "\u200b" or ch == "\u200c" or ch == "\u200d" or ch == "\ufeff":
+	# R723：判零宽/不可见字符必须比**码点**（int），不能比字符串字面量。
+	# 实测：导出包（binary tokens）里这行的 `"\ufeff"` 常量对不上 —— 编辑器里正常、
+	# 打包后 `relic_tip_visible_text("\ufeff")` 却返回 true，害得发布自检唯一一条红。
+	# 同一条比较写在普通脚本里是对的，只有这个超长脚本踩到；比 int 则两边一致。
+	for i in tip.length():
+		var code := tip.unicode_at(i)
+		if code == 0x200b or code == 0x200c or code == 0x200d or code == 0xfeff:
 			continue
+		var ch := tip[i]
 		if not ch.strip_edges().is_empty():
 			return true
 	return false
