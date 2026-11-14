@@ -333,6 +333,48 @@ static func draw_glyph(cv: CanvasItem, c: Vector2, r: float, glyph: String, col:
 			var bm_e := bm.duplicate()
 			bm_e.append(bm[0])
 			cv.draw_polyline(bm_e, col, 1.4)
+		"field":                   # 场地（R707）：方格 + 中心点（钉在格子上）
+			cv.draw_rect(Rect2(c - Vector2(r * 0.72, r * 0.72), Vector2(r * 1.44, r * 1.44)),
+					Color(col.r, col.g, col.b, 0.16), true)
+			cv.draw_rect(Rect2(c - Vector2(r * 0.72, r * 0.72), Vector2(r * 1.44, r * 1.44)),
+					col, false, 1.5)
+			cv.draw_circle(c, r * 0.22, col)
+		"roar":                    # 战吼（R707）：中心点 + 三道扩散弧
+			cv.draw_circle(c + Vector2(-r * 0.60, 0.0), r * 0.18, col)
+			for i in 3:
+				var rr := r * (0.34 + 0.24 * float(i))
+				cv.draw_arc(c + Vector2(-r * 0.60, 0.0), rr, -0.9, 0.9, 12,
+						Color(col.r, col.g, col.b, 1.0 - 0.22 * float(i)), 1.5)
+		"heal":                    # 自愈（R707）：十字 + 外环
+			cv.draw_line(c + Vector2(-r * 0.56, 0.0), c + Vector2(r * 0.56, 0.0), col, 2.0)
+			cv.draw_line(c + Vector2(0.0, -r * 0.56), c + Vector2(0.0, r * 0.56), col, 2.0)
+			cv.draw_arc(c, r * 0.70, 0.0, TAU, 20, Color(col.r, col.g, col.b, 0.50), 1.3)
+		"sleep":                   # 沉睡（R707）：Z 字
+			cv.draw_polyline(PackedVector2Array([
+				c + Vector2(-r * 0.50, -r * 0.52), c + Vector2(r * 0.50, -r * 0.52),
+				c + Vector2(-r * 0.50, r * 0.52), c + Vector2(r * 0.50, r * 0.52)]), col, 1.5)
+			cv.draw_line(c + Vector2(-r * 0.50, -r * 0.52), c + Vector2(r * 0.50, -r * 0.52),
+					col, 2.2)
+		"gear":                    # 改造（R707）：齿轮（八边形 + 轴心）
+			var gpts := PackedVector2Array()
+			for gi in 8:
+				var ga: float = TAU * float(gi) / 8.0 + PI / 8.0
+				gpts.append(c + Vector2(cos(ga), sin(ga)) * r * 0.74)
+			gpts.append(gpts[0])
+			cv.draw_polyline(gpts, col, 1.5)
+			cv.draw_circle(c, r * 0.24, Color(col.r, col.g, col.b, 0.30))
+			cv.draw_arc(c, r * 0.24, 0.0, TAU, 14, col, 1.3)
+		"player":                  # 仅玩家可放置（R707）：人形（头 + 肩）
+			cv.draw_circle(c + Vector2(0.0, -r * 0.34), r * 0.26,
+					Color(col.r, col.g, col.b, 0.26))
+			cv.draw_arc(c + Vector2(0.0, -r * 0.34), r * 0.26, 0.0, TAU, 14, col, 1.4)
+			cv.draw_arc(c + Vector2(0.0, r * 0.66), r * 0.52, PI + 0.5, TAU - 0.5, 16, col, 1.4)
+		"link":                    # 接通（R707）：两个节点 + 中间连线（相邻连通）
+			for s in 2:
+				var lc := c + Vector2(-r * 0.58 + float(s) * r * 1.16, 0.0)
+				cv.draw_circle(lc, r * 0.26, Color(col.r, col.g, col.b, 0.28))
+				cv.draw_arc(lc, r * 0.26, 0.0, TAU, 16, col, 1.4)
+			cv.draw_line(c + Vector2(-r * 0.32, 0.0), c + Vector2(r * 0.32, 0.0), col, 1.8)
 		"combine":                 # 组合：两个拼块左右拼接（左实右虚）
 			cv.draw_rect(Rect2(c + Vector2(-r * 0.62, -r * 0.40), Vector2(r * 0.58, r * 0.80)),
 					col, false, 1.5)
