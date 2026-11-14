@@ -2012,14 +2012,15 @@ func _draw_trap_slots() -> void:
 			TRAP_BADGE_SIZE + 16.0,
 			3.0 * (TRAP_BADGE_SIZE + TRAP_BADGE_GAP) - TRAP_BADGE_GAP + 16.0)
 	TrapArt.draw_bar_bg(self, bar)
-	var head := Rect2(TRAP_BADGE_X, TRAP_BADGE_Y - 20.0, 176.0, 18.0)
+	# R696c（店长口径）：标题只写「工具」，宽度对齐下方工具框，不再拖一条 176 宽的横条。
+	# 为什么删掉「0/3」：槽位本来就画在下面，一格一眼数得出来；那个计数还把标题拉长到
+	# 三倍宽 —— 右边一大截空黑条压在地图上，看着像另一件东西。
+	# ⚠️ 宽度 / x 必须跟 `bar` 同口径（`TRAP_BADGE_X - 8` 起、`TRAP_BADGE_SIZE + 16` 宽），
+	#    否则上下两条边错开 8px，比变短之前更难看。
+	var head := Rect2(bar.position.x, TRAP_BADGE_Y - 20.0, bar.size.x, 18.0)
 	draw_rect(head, Color(0.03, 0.04, 0.06, 0.60), true)
-	var filled := 0
-	for i in RunState.TRAP_SLOTS:
-		if RunState.trap_at(i) > 0:
-			filled += 1
-	draw_string(_font, head.position + Vector2(6, 14), "工具 %d/%d" % [filled, RunState.TRAP_SLOTS],
-			HORIZONTAL_ALIGNMENT_LEFT, head.size.x - 12.0, 13, Color("e4bd62"))
+	draw_string(_font, head.position + Vector2(0, 14), "工具",
+			HORIZONTAL_ALIGNMENT_CENTER, head.size.x, 13, Color("e4bd62"))
 	for i in RunState.TRAP_SLOTS:
 		var r := Rect2(TRAP_BADGE_X, TRAP_BADGE_Y + float(i) * (TRAP_BADGE_SIZE + TRAP_BADGE_GAP),
 				TRAP_BADGE_SIZE, TRAP_BADGE_SIZE)
