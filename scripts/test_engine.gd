@@ -7187,6 +7187,79 @@ func _init() -> void:
 
 
 
+	# ---- R733（店长实报「漩涡的伤害无法正确击杀单位」）：非出牌路径的伤害也要真能打死 ----
+
+	# 根因：`_hit_unit()` 只扣血、**不删卡** —— 死亡收尾得调用方显式做。漩涡 / 中毒 /
+
+	# 噩兆（回合结束链）与陷阱踩踏当年都只调了 `_hit_unit()`，于是被打到负血的单位会
+
+	# 顶着「-7/8」留在场上：占格、挡路、还能被选为目标。
+
+	# 收尾口：回合结束链 → `end_turn()` 里 `_overload_tick()` 之后统一调一次
+
+	# `_destroy_dead()`；陷阱 → `_trap_path_check()` 循环外调一次。
+
+	# ① 漩涡 9186：我方回合结束结算 15 点，10 血骷髅必死
+
+	var r730_ve := _new_engine([], 20, 30, -1, false)
+
+	r730_ve.state.set_field(CardData.from_dict(repo.get_card(9186).to_dict()),
+
+			Vector2i(2, 2), GameEngine.SIDE_SELF)
+
+	var r730_vp: Placement = r730_ve.state.place(
+
+			CardData.from_dict(repo.get_card(1053).to_dict()),
+
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+
+	check(r730_vp != null and r730_vp.health == 10, "R733 前置：10 血骷髅站上漩涡格")
+
+	r730_ve.end_turn()
+
+	check(r730_ve.state.unit_at(Vector2i(2, 2)) == null,
+
+			"R733 漩涡：15 点结算致死 → 单位离场（不再留着负血挡路）")
+
+	# ② 中毒（毒沼 8082 那条链）：回合结束的毒伤致死
+
+	var r730_pe := _new_engine([], 20, 30, -1, false)
+
+	var r730_pp: Placement = r730_pe.state.place(
+
+			CardData.from_dict(repo.get_card(1053).to_dict()),
+
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+
+	r730_pp.health = 3
+
+	r730_pe._apply_poison(r730_pp, 9, 2)
+
+	r730_pe.end_turn()
+
+	check(r730_pe.state.unit_at(Vector2i(1, 1)) == null,
+
+			"R733 中毒：回合结束的毒伤致死 → 单位离场")
+
+	# ③ 陷阱踩踏（`_trap_path_check` → `_trigger_trap`）：炼金炸弹 18 点打死 10 血
+
+	var r730_te := _new_engine([], 20, 30, -1, false)
+
+	r730_te.state.place(CardData.from_dict(repo.get_card(1053).to_dict()),
+
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	r730_te.state.trap_fields[Vector2i(1, 1)] = 7001
+
+	var r730_path: Array[Vector2i] = [Vector2i(0, 1), Vector2i(1, 1)]
+
+	r730_te._trap_path_check(r730_path, GameEngine.SIDE_OPPONENT)
+
+	check(r730_te.state.unit_at(Vector2i(1, 1)) == null,
+
+			"R733 陷阱：炼金炸弹致死 → 单位离场")
+
+
 	# ---- 鸭窝（9069）：2 费稀有效果；给鸭蛋；每回合前 X 次用效果牌（X=张数）再给一张 ----
 
 	var nc_dn := repo.get_card(9069)

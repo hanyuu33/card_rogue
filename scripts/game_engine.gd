@@ -4340,6 +4340,17 @@ func end_turn() -> void :
 	_omen_tick(current_side)
 	# 超负荷（旧式机兵 8050，R98）：己方回合结束时，生命仍为负数的超负荷单位死亡。
 	_overload_tick(current_side)
+	# R733（店长实报「漩涡的伤害无法正确击杀单位」）：
+	# `_hit_unit()` 只扣血、**不删卡** —— 死亡收尾必须由调用方显式做。
+	# 上面这串「回合结束结算伤害」的 tick（漩涡 9186 → `_vortex_damage()`、
+	# 中毒 8082 → `_poison_tick()`、噩兆 9231 → `_omen_tick()`）都只调了 `_hit_unit()`，
+	# 于是被打到负血的单位会顶着「-7/8」继续站在场上：占格、挡路、还能被选为目标。
+	# 它们本来就是同一条「回合收尾」链上的伤害，收尾也只该有一处，统一在这里收。
+	# ⚠️ 必须排在 `_overload_tick()` **之后**：超负荷（旧式机兵 8050）要等自己的
+	#    回合结束才死，提前收会把它的「负数存活」误判成正常死亡。
+	# ⚠️ `_destroy_dead()` 自带溢出伤害 / 击杀记功 / 胜负判定（`_check_game_over`），
+	#    下面 `if over: return` 会接住它 —— 别在各 tick 内部再各调一遍。
+	_destroy_dead()
 	# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：**我方回合结束** -1（用户口径）。
 	# ⚠️ 由「是谁的回合在结束」驱动，而**不看单位归属** —— 场上只有敌方单位带这个字段，
 	#    若按归属判就变成「敌方回合结束才减」，和卡面写的那句话对不上。
@@ -16551,6 +16562,8 @@ func _vortex_damage(cell: Vector2i) -> void :
 	##     单位死亡 / 离场随 Placement 消失；
 	##   * 伤害走 `_hit_unit` → 减伤 / 护盾 / 超负荷 / 标记加成照常；可致死（改 board），
 	##     所以不能放在 `_field_aura_tick` 的遍历里结算（那里可能边遍历边杀）。
+	##   * R733：**死亡收尾不在这里做** —— `_hit_unit()` 只扣血，删卡统一由
+	##     `end_turn()` 在 tick 链末尾调一次 `_destroy_dead()`（漩涡 / 中毒 / 噩兆共用）。
 	var p: Placement = state.unit_at(cell)
 	if p == null or p.health <= 0:
 		return
@@ -16697,6 +16710,11 @@ func _trap_path_check(path: Array[Vector2i], side: String) -> void:
 		if p.health <= 0:
 			break
 		_trigger_trap(hc, p)
+	# R733（与漩涡同一条根因）：`_trigger_trap()` 里只 `_hit_unit()` 扣血，
+	# 打死人不收尾 —— 单位会顶着负血留在场上（`move()` 里那句 `if p.health <= 0: return`
+	# 只是「别再往下结算」，不是清理）。循环外收一次，且放在 `_apply_frozen` /
+	# 禁足 / 挂毒都判过 `p.health > 0` 之后，不会打断那些附带效果。
+	_destroy_dead()
 
 
 func _trigger_trap(cell: Vector2i, p: Placement) -> void:
