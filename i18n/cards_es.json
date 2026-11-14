@@ -636,7 +636,7 @@
   },
   "9071": {
    "name": "Cercado Resistente",
-   "effect_text": "Invoca una Valla de Hierro con 0 de Ataque y 12 de Vida en la posición elegida. Recibe daño en lugar de tus HP; mientras permanezca en el campo, tus HP no reciben daño. Cada carta de Efecto que uses este turno reduce en 1 el Coste de esta carta."
+   "effect_text": "Invoca una Valla de Hierro con 0 de Poder y 12 de Vida en la posición elegida. Recibe daño en lugar de tus HP; mientras permanezca en el campo, tus HP no reciben daño. Cada carta de Efecto que uses este turno reduce en 1 el Coste de esta carta."
   },
   "9072": {
    "name": "Valla de Hierro",

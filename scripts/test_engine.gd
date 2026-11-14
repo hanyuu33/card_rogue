@@ -342,7 +342,7 @@ func _init() -> void:
 
 			and duck.attack_range == 1 and duck.move_speed == 2 and duck.rarity == 4
 
-			and duck.effect_text == "每击杀一个敌人，攻击力 +2。",
+			and duck.effect_text == "每击杀一个敌人，力量 +2。",
 
 			"鸭子骑士：怪物 3/30 程1 速2（2026-10-01 由 5 攻下调，改为击杀成长）")
 

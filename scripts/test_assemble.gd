@@ -115,7 +115,7 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 			return text.contains("技能牌") and text.contains("本回合费用 -%d" % n)
 		"hand_cost_raise": return text.contains("费用 +%d" % n)
 		"add_copy": return text.contains("复制")
-		"buff_allies_atk": return text.contains("其他盟友攻击 +%d" % n)
+		"buff_allies_atk": return text.contains("其他盟友力量 +%d" % n)
 		# R583：补回原本漏掉的两个分支（taunt 以前直接落 return true，零校验）。
 		"taunt": return text.contains("嘲讽")
 		"absorb_linked": return text.contains("破坏所有与这张卡接通的己方卡") and text.contains("力量与生命加到这张卡上")
@@ -1238,7 +1238,7 @@ func _test_r570_actions() -> void:
 
 	# ⑧ 有出处的数量：本轮 7 张各自的下半文本要能逐字对上原卡
 	var want := {9040: "每有一个其他盟友", 8019: "剩余费用每有 1 点", 8020: "剩余费用每有 1 点",
-			8062: "剩余费用", 9034: "技能牌", 8024: "费用 +4", 9032: "复制", 9038: "其他盟友攻击 +2"}
+			8062: "剩余费用", 9034: "技能牌", 8024: "费用 +4", 9032: "复制", 9038: "其他盟友力量 +2"}
 	for cid: int in want.keys():
 		var c: CardData = repo.get_card(cid)
 		check(c != null and not c.lower_effect.is_empty(),

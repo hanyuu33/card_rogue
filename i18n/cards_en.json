@@ -199,7 +199,7 @@
   },
   "8045": {
    "name": "Autonomous Upgrade",
-   "effect_text": "**At the start of your turn**, a random Ally or Structure **in your Hand** gains an Upgrade: +1 Attack and +3 Health. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "**At the start of your turn**, a random Ally or Structure **in your Hand** gains an Upgrade: +1 Power and +3 Health. Multiple copies of this card in the Effect Zone do not stack."
   },
   "8046": {
    "name": "Parts Reclaimer",
@@ -359,7 +359,7 @@
   },
   "9001": {
    "name": "Duck Knight",
-   "effect_text": "+2 Attack for each enemy it kills."
+   "effect_text": "+2 Power for each enemy it kills."
   },
   "9002": {
    "name": "Deep Echo",
@@ -395,7 +395,7 @@
   },
   "9010": {
    "name": "Weaken",
-   "effect_text": "Give a unit -9 Attack next turn."
+   "effect_text": "Give a unit -9 Power next turn."
   },
   "9011": {
    "name": "Ice Arrow",
@@ -636,7 +636,7 @@
   },
   "9071": {
    "name": "Sturdy Enclosure",
-   "effect_text": "Summon an Iron Fence with 0 Attack and 12 Health at the chosen position. It takes damage in place of your HP; as long as it remains on the field, your HP takes no damage. Each Effect card you use this turn reduces this card's Cost by 1."
+   "effect_text": "Summon an Iron Fence with 0 Power and 12 Health at the chosen position. It takes damage in place of your HP; as long as it remains on the field, your HP takes no damage. Each Effect card you use this turn reduces this card's Cost by 1."
   },
   "9072": {
    "name": "Iron Fence",

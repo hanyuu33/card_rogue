@@ -252,7 +252,7 @@ static func effect_text(fx: Dictionary) -> String:
 		"add_copy":
 			return "手牌增加一张此卡的「短暂复制」"
 		"buff_allies_atk":
-			return "自己场上其他盟友攻击 +%d" % n
+			return "自己场上其他盟友力量 +%d" % n
 	return ""
 
 

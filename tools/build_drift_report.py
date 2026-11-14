@@ -130,6 +130,43 @@ leak_body = "".join(
        esc(zcards.get(str(c["id"]), {}).get("effect_text", "")))
     for c in leak_rows) or "<tr><td colspan=3>无</td></tr>"
 
+# R726 把这套口径定下来了：玩家看到的一律是「力量」（显示层早就把「攻击力」换掉，
+# 数据侧这回也跟着改齐），译文相应是 Power / 攻撃力 / Poder。
+POWER_DONE = [
+    ("9001", "鸭子骑士", "攻击力 +2", "力量 +2", "en +2 Attack → +2 Power"),
+    ("9010", "削弱", "攻击力 -9", "力量 -9", "en -9 Attack → -9 Power"),
+    ("9071", "坚固围栏", "0 点攻击力", "0 点力量", "en 0 Attack → 0 Power · es 0 de Ataque → 0 de Poder"),
+    ("9151", "拾荒者", "攻击力 +3", "力量 +3", "en 原本就是 Power，只改原文"),
+    ("9038", "老虎", "盟友攻击 +2", "盟友力量 +2", "底本早已是力量，原文跟齐"),
+    ("8045", "自主升级", "改造：攻击 +1", "改造：力量 +1", "底本 + en 一起改（+1 Attack → +1 Power）"),
+]
+
+
+def build_power_section():
+    if power_rows or leak_rows:
+        return (
+            "<section>\n  <h2>③ 力量 / 攻击力 两套写法"
+            '<span class="tag t-warn">需你定</span></h2>\n'
+            '  <div class="lead">原文与底本写法不一致的条目。</div>\n'
+            "  <table>" + th + "<tbody>" + power_body + "</tbody></table>\n"
+            '  <div class="lead">' + leak_lead + "</div>\n"
+            "  <table>" + th + "<tbody>" + leak_body + "</tbody></table>\n"
+            "</section>")
+    rows_html = "".join(
+        "<tr><td><code>%s</code><br><span class=n>%s</span></td><td class=raw>%s</td>"
+        "<td class=canon>%s</td><td class=why>%s</td></tr>"
+        % (esc(a), esc(b), esc(c), esc(d), esc(e)) for a, b, c, d, e in POWER_DONE)
+    return (
+        "<section>\n  <h2>③ 力量 / 攻击力：已统一为「力量」"
+        '<span class="tag t-ok">已处理</span></h2>\n'
+        '  <div class="lead">显示层早就把「攻击力」换成「力量」了，但数据侧还留着旧写法 ——'
+        "玩家看到的和译文说的会在个别卡上打架。R726 一次改齐：原文的「攻击力」「攻击 +N」"
+        "全部写成「力量 +N」，译文相应 Power / 攻撃力 / Poder，"
+        "「Attack」「Ataque」只剩「攻击距离」和「3 攻 15 血」这种缩写场合。</div>\n"
+        "  <table><thead><tr><th>卡号 / 名称</th><th>原来</th><th>现在</th>"
+        "<th>译文</th></tr></thead><tbody>" + rows_html + "</tbody></table>\n"
+        "</section>")
+
 fixed_body = "".join(
     "<tr><td><code>%s</code><br><span class=n>%s</span></td><td><b>%s</b></td><td class=why>%s</td></tr>"
     % (esc(a), esc(b), esc(c), esc(d)) for a, b, c, d in FIXED)
@@ -140,7 +177,7 @@ trans_body = "".join(
 doc = """<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>底本与原文差异专版 · card_rogue R725</title>
+<title>底本与原文差异专版 · card_rogue R726</title>
 <style>
 :root{--bg:#f5f2ec;--paper:#fffdf8;--ink:#24262d;--muted:#71727b;--line:#e2dbcc;--accent:#6a4f9c;
 --soft:#efe9f6;--warn:#b8562c;--warnbg:#fdf0e8;--ok:#2f6b4f;--okbg:#eaf4ee}
@@ -179,7 +216,7 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:8px 20px 40
   <div class="stats">
     <div><b>__TOTAL__</b>剩余差异</div>
     <div><b>__TERM__</b>纯术语规范化</div>
-    <div><b>__POWER__</b>力量/攻击力待定</div>
+    <div><b>__POWER__</b>__POWERLABEL__</div>
     <div><b>__OTHER__</b>其他内容差异</div>
     <div><b>__FIXED__</b>本轮已修</div>
   </div>
@@ -200,18 +237,10 @@ footer{text-align:center;color:var(--muted);font-size:11.5px;padding:8px 20px 40
   <tbody>__TRANSBODY__</tbody></table>
 </section>
 
-<section>
-  <h2>③ 力量 / 攻击力 两套写法<span class="tag t-warn">需你定</span></h2>
-  <div class="lead">原文写「攻击力」，底本已统一成「力量」。日文两边都译「攻撃力」，所以日文侧永远发现不了这个分歧 ——
-  只有中文玩家会看到同一个数值两个名字。要统一成哪一套，你定，我照改。</div>
-  <table>__TH__<tbody>__POWERBODY__</tbody></table>
-  <div class="lead">__LEAKLEAD__</div>
-  <table>__TH__<tbody>__LEAKBODY__</tbody></table>
-</section>
+__POWERSECTION__
 
 <section>
-  <h2>④ 其他内容差异</h2>
-  <div class="lead">除去术语替换后仍不一致的条目。<b>现在是 0</b>：原先被算进来的 9095 / 9102 / 9127
+  <h2>④ 其他内容差异</h2>  <div class="lead">除去术语替换后仍不一致的条目。<b>现在是 0</b>：原先被算进来的 9095 / 9102 / 9127
   只是「返回手卡 → 收回手牌」这条显示规则的两头写法不同，已归入⑤。</div>
   <table>__TH__<tbody>__OTHERBODY__</tbody></table>
 </section>
@@ -235,6 +264,9 @@ if(location.hash==='#dark')document.body.classList.add('dark');
 doc = (doc.replace("__TOTAL__", str(len(rows)))
           .replace("__TERM__", str(len(term_rows)))
           .replace("__POWER__", str(len(power_rows)))
+          .replace("__POWERLABEL__", "力量/攻击力待定" if (power_rows or leak_rows)
+                   else "力量已统一（改 %d 张）" % len(POWER_DONE))
+          .replace("__POWERSECTION__", build_power_section())
           .replace("__OTHER__", str(len(other_rows)))
           .replace("__FIXED__", str(len(FIXED)))
           .replace("__FIXEDBODY__", fixed_body)
