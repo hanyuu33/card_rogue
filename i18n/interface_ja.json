@@ -613,6 +613,7 @@
       "RECORD_FINAL_DECK": "最終デッキ（%d 枚 / %d 種）",
       "RECORD_ENCHANT": "付呪：%s",
       "RECORD_DECK_RANGE": "デッキ %d–%d 行 / 全 %d 行",
+      "RECORD_RELIC_RANGE": "レリック %d–%d 件目 / 全 %d 件",
       "RECORD_ROW_CLASS": "クラス：%s",
       "RECORD_ROW_DIFFICULTY_TIME": "難易度 %d · 時間 %s",
       "RECORD_ROW_END_TIME": "終了日時 %s",

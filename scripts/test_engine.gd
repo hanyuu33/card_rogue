@@ -63938,6 +63938,214 @@ func _init() -> void:
 
 			"R405 源码：战斗道具面板支持按住拖动")
 
+	# ---- ⑤ R715：对战记录页的卡组列 / 列表也要能翻（安卓没有滚轮） ----
+
+	var r713_src := FileAccess.get_file_as_string("res://scripts/record_list_scene.gd")
+
+	check_src(r713_src.find("UiDrag.scroll_delta") >= 0,
+
+			"R715 源码：对战记录页接入手势唯一口（触屏可拖）")
+
+	check_src(r713_src.find("func _detail_input") >= 0 and r713_src.find("func _tap_list") >= 0,
+
+			"R715 源码：详情滚动与列表点击拆开（列表「抬起且没拖」才算点击）")
+
+
+
+	# 静态几何：720 高时卡组列可见多少行、40 种能滚多少
+
+	var r713_rl = load("res://scripts/record_list_scene.gd").new()
+
+	r713_rl.size = Vector2(1280, 720)
+
+	for r713_i in range(40):
+
+		r713_rl._cache_deck.append({"name": "卡%d" % r713_i, "n": 1, "ench": ""})
+
+		r713_rl._rows.append({})
+
+	check(r713_rl._deck_max_rows() == 15 and r713_rl._deck_max_scroll() == 25,
+
+			"R715 布局：卡组列可见 15 行 / 40 种可滚 25 行（%d / %d）"
+
+			% [r713_rl._deck_max_rows(), r713_rl._deck_max_scroll()])
+
+
+
+	# 滚轮：正是旧版死掉的那条路 —— `pressed` 的 MouseButton 被「左键关闭」那段提前 return
+
+	var r713_wheel := InputEventMouseButton.new()
+
+	r713_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+
+	r713_wheel.pressed = true
+
+	r713_wheel.position = Vector2(800, 300)      # 右列（卡组）
+
+	r713_rl._detail_input(r713_wheel)
+
+	check(r713_rl._deck_scroll == 3,
+
+			"R715 行为：详情里滚一格 = 翻 3 行（旧版纹丝不动，%d）" % r713_rl._deck_scroll)
+
+
+
+	# 触屏拖动：一次 10px，不足一行先攒着；满 21px 翻一格，余量留到下一次
+
+	r713_rl._deck_scroll = 0
+
+	r713_rl._deck_drag_acc = 0.0
+
+	var r713_drag := InputEventMouseMotion.new()
+
+	r713_drag.button_mask = MOUSE_BUTTON_MASK_LEFT
+
+	r713_drag.relative = Vector2(0, -10)
+
+	r713_drag.position = Vector2(800, 300)       # 右列（真实触摸必然带坐标）
+
+	r713_rl._detail_input(r713_drag)
+
+	r713_rl._detail_input(r713_drag)
+
+	check(r713_rl._deck_scroll == 0 and is_equal_approx(r713_rl._deck_drag_acc, 20.0),
+
+			"R715 拖动：20px 还没到一行 → 先攒着不翻（%d / %.1f）"
+
+			% [r713_rl._deck_scroll, r713_rl._deck_drag_acc])
+
+	r713_rl._detail_input(r713_drag)
+
+	check(r713_rl._deck_scroll == 1 and is_equal_approx(r713_rl._deck_drag_acc, 9.0),
+
+			"R715 拖动：攒满 21px 翻一格，余量留给下一次（%d / %.1f）"
+
+			% [r713_rl._deck_scroll, r713_rl._deck_drag_acc])
+
+	for r713_i in range(100):
+
+		r713_rl._detail_input(r713_drag)
+
+	check(r713_rl._deck_scroll == 25,
+
+			"R715 拖动：拖到底停在最后一行，不会越界（%d）" % r713_rl._deck_scroll)
+
+
+
+	# 列表轴同理：滚轮 3 条；而且「按下」绝不能立刻开详情（否则触摸拖动根本起不来）
+
+	r713_rl._scroll = 0
+
+	r713_rl._list_input(r713_wheel)
+
+	check(r713_rl._scroll == 3,
+
+			"R715 行为：记录列表滚一格 = 翻 3 条")
+
+	var r713_push := InputEventMouseButton.new()
+
+	r713_push.button_index = MOUSE_BUTTON_LEFT
+
+	r713_push.pressed = true
+
+	r713_push.position = Vector2(400, 200)
+
+	r713_rl._list_input(r713_push)
+
+	check(r713_rl._sel == -1 and not r713_rl._press.is_empty(),
+
+			"R715 行为：列表按下只记账不打开详情（抬起且没拖才算点击）")
+
+	# R715：道具列原来「塞不下就写…还有 N 件」，那 N 件永远看不到 —— 现在也走滚动
+
+	check_src(r713_src.find("RECORD_RELIC_RANGE") >= 0 and r713_src.find("RECORD_MORE_RELICS") < 0,
+
+			"R715 源码：道具列改成滚动（「…还有 N 件」已撤）")
+
+	for r713_i in range(16):
+
+		r713_rl._cache_relics.append({"name": "道具%d" % r713_i, "col": Color.WHITE, "ncol": Color.WHITE})
+
+	check(r713_rl._relic_max_rows() == 14 and r713_rl._relic_max_scroll() == 2,
+
+			"R715 布局：道具列可见 14 件 / 16 件可滚 2 件（%d / %d）"
+
+			% [r713_rl._relic_max_rows(), r713_rl._relic_max_scroll()])
+
+
+
+	var r713_wheel_l := InputEventMouseButton.new()
+
+	r713_wheel_l.button_index = MOUSE_BUTTON_WHEEL_DOWN
+
+	r713_wheel_l.pressed = true
+
+	r713_wheel_l.position = Vector2(400, 300)     # 左列（道具）
+
+	var r713_deck_before: int = r713_rl._deck_scroll
+
+	r713_rl._detail_input(r713_wheel_l)
+
+	check(r713_rl._relic_scroll == 2 and r713_rl._deck_scroll == r713_deck_before,
+
+			"R715 行为：滚左列只滚道具、不动卡组（%d / %d）"
+
+			% [r713_rl._relic_scroll, r713_rl._deck_scroll])
+
+
+
+	# 两列不串轴：按下锁列 + 拖动换算
+
+	r713_rl._relic_scroll = 0
+
+	r713_rl._relic_drag_acc = 0.0
+
+	var r713_push_l := InputEventMouseButton.new()
+
+	r713_push_l.button_index = MOUSE_BUTTON_LEFT
+
+	r713_push_l.pressed = true
+
+	r713_push_l.position = Vector2(400, 300)
+
+	r713_rl._detail_input(r713_push_l)
+
+	check(r713_rl._drag_col == "relic",
+
+			"R715 行为：在左列按下 → 锁定道具列（%s）" % r713_rl._drag_col)
+
+	var r713_drag30 := InputEventMouseMotion.new()
+
+	r713_drag30.button_mask = MOUSE_BUTTON_MASK_LEFT
+
+	r713_drag30.relative = Vector2(0, -30)
+
+	r713_rl._detail_input(r713_drag30)
+
+	check(r713_rl._relic_scroll == 1 and r713_rl._deck_scroll == r713_deck_before,
+
+			"R715 行为：拖左列 30px = 翻 1 件，卡组列不动（%d / %d）"
+
+			% [r713_rl._relic_scroll, r713_rl._deck_scroll])
+
+	var r713_release := InputEventMouseButton.new()
+
+	r713_release.button_index = MOUSE_BUTTON_LEFT
+
+	r713_release.pressed = false
+
+	r713_release.position = Vector2(400, 300)
+
+	r713_rl._detail_input(r713_release)
+
+	check(r713_rl._drag_col == "",
+
+			"R715 行为：松手解除列锁定")
+
+	r713_rl._press = {}
+
+	r713_rl.free()
+
 	# ============================================================
 
 	#  R406：独行 9189（暗影刺客 · 2 费技能）

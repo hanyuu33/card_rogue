@@ -613,6 +613,7 @@
       "RECORD_FINAL_DECK": "Mazo final (%d cartas / %d tipos)",
       "RECORD_ENCHANT": "Encantamiento: %s",
       "RECORD_DECK_RANGE": "Filas del mazo %d–%d / %d en total",
+      "RECORD_RELIC_RANGE": "Filas de reliquias %d–%d / %d en total",
       "RECORD_ROW_CLASS": "Clase: %s",
       "RECORD_ROW_DIFFICULTY_TIME": "Dificultad %d · Tiempo %s",
       "RECORD_ROW_END_TIME": "Terminó a las %s",

@@ -613,6 +613,7 @@
       "RECORD_FINAL_DECK": "Final Deck (%d cards / %d types)",
       "RECORD_ENCHANT": "Enchant: %s",
       "RECORD_DECK_RANGE": "Deck rows %d–%d / %d total",
+      "RECORD_RELIC_RANGE": "Relic rows %d–%d / %d total",
       "RECORD_ROW_CLASS": "Class: %s",
       "RECORD_ROW_DIFFICULTY_TIME": "Difficulty %d · Time %s",
       "RECORD_ROW_END_TIME": "Ended at %s",

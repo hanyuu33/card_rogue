@@ -2676,6 +2676,10 @@
         "source": "scripts/record_list_scene.gd:436",
         "zh": "卡组 第 %d–%d 行 / 共 %d 行"
       },
+      "RECORD_RELIC_RANGE": {
+        "source": "scripts/record_list_scene.gd:645",
+        "zh": "道具 第 %d–%d 件 / 共 %d 件"
+      },
       "RECORD_ROW_CLASS": {
         "source": "scripts/record_list_scene.gd:454",
         "zh": "角色：%s"
