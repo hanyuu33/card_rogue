@@ -1383,6 +1383,10 @@ const OWLBEAR_FOE_ID:= 9214
 #   * 沉睡 / 力量成长都不写进这里：沉睡沿用 `FieldState.SLEEP_TRAIT`（恶魔鸭同一套，
 #     回合结束 -1、挨打也 -1），成长用关卡 `enemy_growth`（每回合 +1）——都是现成机制的复用。
 const LASER_TRAIT:= "激光炮"
+# R722（店长口径）：一轮**随机选两列**，不是三列全打 —— 「只站一两列就安全」仍然不成立，
+# 但也不再是每回合固定漏一次 HP。选列在**玩家回合开始**就定下来（`_laser_aim_mark`），
+# 界面据此画提示线，玩家有整整一个回合可以挪人。
+const LASER_SALVO_COLS:= 2
 # ── R541：普罗诺亚之影（9242）与三种「构状体」（9243 炮击 / 9244 护盾 / 9245 迅捷）──
 # 它本身是个普通单位（8/150/程 1/速 1，走通用 AI 推进 + 攻击）；特色全在**敌方回合开始时**：
 #   * 统计玩家**上一个回合**打出的卡（`FieldState.self_turn_kinds`）：
@@ -2086,7 +2090,12 @@ const CONTRACTOR_RAISE:= 4         # 本回合手卡涨价
 #      两个口并存：既保证「没人打它也一定会醒」，又保留「打它 = 帮它提前醒」的决策。
 #   ② 已醒之后再受伤 → end_atk +1（永久加攻，进 effective_power）。
 const DEMON_DUCK_ID:= 9116
-const DEMON_DUCK_ATK_GAIN:= 1      # 醒着受伤时永久 +1 力量
+const DEMON_DUCK_ATK_GAIN:= 1      # 醒着受伤时永久 +1 力量（**只给下面这张**）
+# R722：「醒着挨打变强」是**恶魔鸭 9116** 自己的设计，不是「沉睡」trait 的通用语义。
+# 别再按 trait 判 —— 激光巨炮 9241 同样带「沉睡」，那样等于罚玩家拆炮
+#（店长口径：「醒着时候受伤 +1 力量不是这张卡的效果，移除」）。
+# 新增带「沉睡」的单位默认**不吃**这条；要吃的必须显式加进这里。
+const SLEEP_WAKE_RAGE_IDS:= [9116]
 # 恶魔鸭（复仇）（9118 敌方盟友 5/100 程2 速1，R73）：
 #   彩蛋 Boss「恶魔鸭（复仇）」= 第一层摇到恶魔鸭时 50% 触发，**第二层的 boss 换成它**。
 #   ① **没有「沉睡」trait** → 上场即可行动（FieldState.place 只对带 SLEEP_TRAIT 的卡置 sleep_left）；
@@ -2585,6 +2594,7 @@ func _begin_turn(side: String) -> void :
 		_assembly_tick(SIDE_SELF)     # 流水线装配 9147（R219，对称保留）
 		_emergency_call()             # R356 紧急呼叫 9203：**玩家**回合开始 → 启示者身边召唤量产型
 		_air_raid_mark(SIDE_SELF)     # R451 空袭 9209：玩家回合开始随机标记 5 格
+		_laser_aim_mark(SIDE_SELF)    # R722 激光巨炮 9241：玩家回合开始定下这轮打哪两列
 		_demon_summon(SIDE_SELF)      # 恶魔使魔 9117：每 2 回合随机空格召唤使魔鸭子
 		_auto_upgrade(SIDE_SELF)          # 自主升级 8045（R95）：回合开始随机改造抽牌堆 1 张
 		_breach_tick(SIDE_SELF)           # R231 破绽：己方俄倪厄往对方卡组塞诅咒（对称保留）
@@ -16742,6 +16752,8 @@ func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :
 	## 按 trait 分派两种互斥的「挨打变强」：
 	##   沉睡（9116 恶魔鸭）→ 还在睡：sleep_left -1（受伤口；与回合口 _sleep_tick 并存）；
 	##                              已醒：end_atk +1（**永久**，不受 GROW_CAP 封顶）。
+	##      ⚠️ R722：这一条**只属于恶魔鸭这一族**（`SLEEP_WAKE_RAGE_IDS`），不是「沉睡」的
+	##         通用语义 —— 激光巨炮 9241 也带「沉睡」，越挨打越强等于罚玩家拆炮。
 	##   复仇（9118 恶魔鸭（复仇））→ **本回合** atk_buff_turn +1（可叠加，回合开始清零）。
 	## 两者都只认 trait，所以任何带该 trait 的单位都吃这套。
 	if p.card.traits.has(REVENGE_TRAIT):
@@ -16761,7 +16773,7 @@ func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :
 			_log("%s 被击中：沉睡 -1（还剩 %d 次挨打）" % [p.card.card_name, p.sleep_left])
 			action.emit("wake", {"cell": cell, "card": p.card, "side": p.owner,
 				"hurt": true, "awake": false})
-	else:
+	elif p.card.id in SLEEP_WAKE_RAGE_IDS:
 		p.end_atk += DEMON_DUCK_ATK_GAIN
 		_log("%s 暴怒：力量永久 +%d（当前 %d）" % [
 			p.card.card_name, DEMON_DUCK_ATK_GAIN, p.effective_power()])
@@ -18387,6 +18399,54 @@ func _owlbear_act(cell: Vector2i, p: Placement) -> void :
 
 # ================= R539/R540：激光巨炮专属 AI =================
 
+func _laser_pick_columns() -> Array[int]:
+	## R722：这一轮打哪**两列**（3 选 2，升序返回）。
+	## 只摇一次「排除哪一列」，比「洗牌取前二」省一步、也更难写错；
+	## 走 `rng` 而不是全局 `randi()` —— `rng.seed` 进存档（`to_dict`），回放才追得回来。
+	var out: Array[int] = []
+	var skip := rng.randi_range(0, FieldState.BOARD_COLS - 1)
+	for c in FieldState.BOARD_COLS:
+		if c != skip:
+			out.append(c)
+	return out
+
+
+func _laser_aim_mark(side: String) -> void:
+	## R722（店长口径「玩家回合开始就要提示这回合打哪两列」）：
+	## **玩家回合开始**就把这一轮的炮击列定下来，存进 `state.laser_aim_cols`；
+	## 界面只读这一份画提示线 —— 数据源唯一，界面**绝不**自己摇。
+	## 开火（`_laser_cannon_act`）读的也是同一份，所以「提示线」== 「真挨打的两列」。
+	## 三条边界：
+	##   * 场上没有激光巨炮（没进这关 / 已经被拆）→ 清空，不给假警报；
+	##   * 炮睡着 / 冰封 / 眩晕（`cannot_act_next_turn()`）→ 这个敌方回合根本不会开火，
+	##     同样清空 —— 提示线亮着却不开火，比不亮更糟；
+	##   * 只在 `SIDE_SELF` 回合摇：敌方回合摇等于开火前一瞬间才告诉玩家，没有反应窗口。
+	if side != SIDE_SELF:
+		return
+	state.laser_aim_cols.clear()
+	var gun: Placement = null
+	for c: Vector2i in state.board:
+		var q: Placement = state.unit_at(c)
+		if q != null and q.owner == SIDE_OPPONENT and q.card.traits.has(LASER_TRAIT):
+			gun = q
+			break
+	if gun == null or gun.cannot_act_next_turn():
+		return
+	for c2 in _laser_pick_columns():
+		state.laser_aim_cols.append(c2)
+	_log("激光巨炮：本轮锁定第 %s 列（下一轮齐射）" % _laser_cols_text(state.laser_aim_cols))
+	action.emit("laser_aim", {"cols": state.laser_aim_cols.duplicate(),
+			"cell": _cell_of(gun), "side": side})
+
+
+func _laser_cols_text(cols: Array) -> String:
+	## 列号给人看：内部 0 起，日志 / 飘字写 1 起（与「第 N 列」的既有说法一致）。
+	var parts: Array[String] = []
+	for c: Variant in cols:
+		parts.append(str(int(c) + 1))
+	return "、".join(parts)
+
+
 func _laser_column_target(cell: Vector2i, foe: String) -> Vector2i:
 	## 同列「第一个」敌方单位：从激光巨炮所在行朝**对方半场**逐行扫，
 	## 第一个 owner == foe 的格子就是目标；整列扫完都没有 → (-1, -1)。
@@ -18407,19 +18467,34 @@ func _laser_column_target(cell: Vector2i, foe: String) -> Vector2i:
 
 func _laser_cannon_act(cell: Vector2i, p: Placement) -> void :
 	## 激光巨炮（9241）的唯一行动：不能常规攻击（程 0）→ 整条行动换成这一轮炮击。
-	## R540「三合一」：三座小炮并成一门巨炮，所以**一轮打满三列**，每列各打自己那一列的
-	## 「第一个」，列与列之间互不替代：
+	## R722（店长口径）：**一轮随机两列**（不再三列全打），每列各打自己那一列的
+	## 「第一个」，列与列之间互不替代。打哪两列**在玩家回合开始就摇好了**
+	## （`_laser_aim_mark` → `state.laser_aim_cols`），界面提前一个回合亮提示线 ——
+	## 这里只负责照单执行：读同一份列号，绝不现摇，否则「提示线」会骗人。
 	##   * 该列有我方单位 → 打**最靠前的那一个**（等同力量的伤害，按攻击类结算）；
 	##   * 该列全空 → 直击对方 HP（护盾代受 / 减伤 / 不锈钢盆都照吃，与 attack_hp 同路）。
-	## 三列是**三次独立结算**：空两列就是两笔 HP —— 不要套 `_hp_once_*`（那是给「单次多格 AOE」
-	## 只落地一次的规则，套上去会把这门炮的「一列一发」压成一发）。
+	## 两列是**两次独立结算**：两列都空就是两笔 HP —— 不要套 `_hp_once_*`（那是给
+	## 「单次多格 AOE」只落地一次的规则，套上去会把这门炮的「一列一发」压成一发）。
 	## 收尾与 `attack()` / `attack_hp()` 一致：先播报、再收尸、`_tap()` 结束这一轮，
 	## 最后才 `_check_game_over()`（顺序反了会在 over 之后还写日志 / 播动作）。
 	var foe := SIDE_OPPONENT if p.owner == SIDE_SELF else SIDE_SELF
 	var power:= p.effective_power() + _turn_dmg_bonus(p.owner) + _ally_dmg_bonus(p.card, p.owner)
+	# 列号读**玩家回合开始**摇好的那一份；读不到（老存档 / 中途召唤出来的炮）才现摇兜底。
+	var cols: Array[int] = state.laser_aim_cols.duplicate()
+	if cols.size() != LASER_SALVO_COLS:
+		cols = _laser_pick_columns()
+	# 先把这一轮的**弹道**算出来、一次播报给界面，再逐列结算：
+	# 界面收到 `laser_salvo` 就能先拉起光柱（预热 → 张开 → 淡出），
+	# 伤害数字 / 闪红跟着光柱**落到那一格**的时刻走 —— 不能先掉血、后见光。
+	# `shots[]` 里 `cell` = 这一列第一个我方单位的格子；(-1,-1) = 该列空，改打 HP。
+	var shots: Array = []
+	for _c in cols:
+		shots.append({"col": _c, "cell": _laser_column_target(Vector2i(cell.x, _c), foe)})
+	action.emit("laser_salvo", {"src": cell, "side": p.owner, "shots": shots,
+			"damage": power, "atk_name": p.card.card_name})
 	var n_hit := 0
 	var n_hp := 0
-	for col in FieldState.BOARD_COLS:
+	for col in cols:
 		if over:
 			break            # 某列已经打空 HP → 后面几列不再开火（胜负已定）
 		var target:= _laser_column_target(Vector2i(cell.x, col), foe)
@@ -18430,7 +18505,8 @@ func _laser_cannon_act(cell: Vector2i, p: Placement) -> void :
 			_damage_player(foe, power, "激光巨炮")
 			n_hp += 1
 			action.emit("hp", {"src": cell, "dst": banner, "damage": _last_hp_damage,
-					"raw": power, "side": p.owner, "atk_name": p.card.card_name})
+					"raw": power, "side": p.owner, "col": col,
+					"atk_name": p.card.card_name})
 			continue
 		var q: Placement = state.unit_at(target)
 		if q == null:

@@ -777,6 +777,13 @@ const CANNON_BEAM_FADE_MS := 220    # 淡出
 const CANNON_HIT_RING_MS := 520     # R449 命中处冲击环扩散时长（锚在卡牌中心）
 const CANNON_MUZZLE_Y := -14.0      # 炮口在画面顶端之外（被顶栏 / 敌方 HP 行挡住）
 const CANNON_BEAM_W := 168.0        # 主光柱全宽（比舰炮 118 更宽：激光是「点穴但很粗」的一击）
+## R722：激光巨炮（9241，巨炮防线）的**两列齐射**。与充能巨炮的区别只在炮口位置 ——
+## 它是棋盘上的工事（中排正中），所以光柱从**它自己身上**往下走，而不是从画面顶端；
+## 画法整套复用 `_cannon_beams`（同一个字典、同一个 `_draw_cannon_beams`），
+## 只多带一个 `top` 键覆盖起画 y。两列之间错开 `LASER_SALVO_GAP_MS`，
+## 读得出「两炮」而不是「一整片光」。
+var _laser_lands: Dictionary = {}   # {col: land}   这一轮两列各自的落地时刻（hp 分支对齐用）
+const LASER_SALVO_GAP_MS := 150     # 两列之间的错峰
 ## R433：弹跳飞刀（9160）—— 主刀 + 每一跳排成一条**飞行链**（刀从上一个目标飞向下一个）。
 ## 引擎同步算完所有伤害，节奏只能在演出侧排；伤害数字与掉血由 `_fx_retime_hit`
 ## 把那一格的通用受击推到刀落地那一刻（删掉会连生命冻结一起丢，数字就永远不动了）。
@@ -1131,6 +1138,29 @@ func _ready() -> void:
 		status_text = "公用初始卡 · " + RunState.player_class
 		_clear_hover_state()
 		selection = null
+		queue_redraw()
+	if "--salvo" in args and engine != null:
+		# R722 出图：巨炮防线（配合 `--level 16`）—— 把炮直接唤醒、重摇提示列，
+		# 再在 ~1.1s 后自动交回合，用来截「玩家回合的提示线」和「两列齐射的光柱」两张图。
+		# 出图：`--screenshot --level 16 --salvo --shotms 800`    → 提示线
+		#       `--screenshot --level 16 --salvo --shotms 1500`   → 光柱
+		_grid_intro_t = -1.0            # 关掉开场巡场（它会抢镜头，出图必须钉死构图）
+		engine.ai_enabled = true
+		var sv_repo := CardRepo.load_json()
+		# 三列各摆一个我方单位：两列会被光柱打到、剩下那列留作「没被点名」的对照
+		for sv_c in FieldState.BOARD_COLS:
+			engine.state.place(CardData.from_dict(sv_repo.get_card(9014).to_dict()),
+					Vector2i(4, sv_c), GameEngine.SIDE_SELF)
+		# 炮原本睡 2 回合，出图等不起 —— 直接唤醒（只影响演示）
+		for sv_cell: Vector2i in engine.state.board:
+			var sv_q := engine.state.unit_at(sv_cell)
+			if sv_q != null and sv_q.card.traits.has(GameEngine.LASER_TRAIT):
+				sv_q.sleep_left = 0
+		engine.state.laser_aim_cols.clear()
+		engine._laser_aim_mark(GameEngine.SIDE_SELF)   # 演示专用：立刻产出提示列
+		_delayed.append({"at": _now() + 1100, "kind": "salvo_demo", "data": {}})
+		_shot_t0 = _now()   # 让 `--shotms` 从这一刻起算（否则会落到默认帧，拍不到提示线）
+		status_text = "巨炮防线 · 两列齐射"
 		queue_redraw()
 	if "--r288pulse" in args and engine != null:
 		# R288 出图：通用效果演出 —— 虚骨龙吐息（我方 4,1 → 敌方 2,1，两格同屏一段演完）。
@@ -9436,6 +9466,7 @@ func _draw() -> void:
 	_draw_flashes()
 	_draw_ghosts()
 	_draw_air_raid_marks()   # R451：空袭标记格（红色准星）—— 在可点高亮之下
+	_draw_laser_aim()        # R722：激光巨炮的两列瞄准提示线（整列警告，压在准星同层）
 	_draw_highlights()
 	_draw_bursts()
 	_draw_trap_fx()      # R669：陷阱触发素材图（压在卡牌之上、通用光带之下）
@@ -11596,6 +11627,8 @@ func _tick_anims() -> bool:
 		_naval_beam = {}   # R431：光柱淡出后收掉（留着会让 busy 永远为真、队列不走）
 	# R449：炮击同理 —— 必须自己收掉并计入 busy，否则不逐帧重绘、动画卡在中间一格
 	_cannon_beams = _cannon_beams.filter(func(cb): return n <= int(cb.get("end", 0)))
+	if _cannon_beams.is_empty() and not _laser_lands.is_empty():
+		_laser_lands = {}   # 光柱都收完了 → 落地表一起清（留着只会让 hp 分支读到旧时刻）
 	_knives = _knives.filter(func(k): return n < int(k.land))   # R433：落地即交给火花
 	# R434：火焰 / 护盾 / 冲击波按各自时长收掉。**要和 `_bursts` 一样计入 busy** ——
 	# 不给 busy 就不会逐帧重绘，动画会卡在中间一格。
@@ -11986,7 +12019,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 攻击演出排在「该单位已排队的动作」之后：AI 一步内常连做「移动 + 攻击」，
 			# 若两段同时起播，滑行会盖住蓄力/后坐，看起来就是「怪物一闪就打完了」。
 			var a_start := n
-			if atk_pl != null:
+			# R722：炮台不打拳。激光巨炮是程 0 的工事，走通用攻击演出会看到一张
+			# 不动的卡「冲过去撞人」—— 它的表现是光柱，这里只排伤害数字、不排动作。
+			var a_laser := atk_pl != null and atk_pl.card.traits.has(GameEngine.LASER_TRAIT)
+			if atk_pl != null and not a_laser:
 				a_start = maxi(n, _anim_end_for(atk_pl))
 				_set_attack_anim(atk_pl, {"kind": "unit", "dir": adir, "src": src_c,
 						"dst": dst_c, "sc": _grid_scroll,
@@ -11996,7 +12032,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"dst_cell": data["dst"],
 						"start": a_start, "dur": ATK_DUR_MS, "dmg": int(data["damage"])})
 			# 弹体命中时刻 = ATK_IMPACT_T × 总时长：爆点/闪红/伤害数字那时才出现
-			_delayed.append({"at": a_start + int(ATK_IMPACT_T * ATK_DUR_MS), "kind": "hit",
+			var a_hit_at := a_start + int(ATK_IMPACT_T * ATK_DUR_MS)
+			# R722：激光巨炮的两列各自错峰落地 —— 数字跟着**这一格**的光柱走，
+			# 不能两列同一刻跳字（那会读成「一次打了两列」）。
+			if a_laser and data.get("dst") is Vector2i:
+				var ab := _cannon_beam_land_for(data["dst"] as Vector2i)
+				if ab > 0:
+					a_hit_at = ab
+			_delayed.append({"at": a_hit_at, "kind": "hit",
 					"data": {"pos": dst_c, "sc": _grid_scroll,
 							"dmg": int(data["damage"]), "def": def_pl,
 							# R361：播报跟撞击同一刻（原来 t=0 就写「攻击了」，比动画早 930ms）
@@ -12032,8 +12075,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if hp_dmg > 0:
 				_freeze_hp(hp_key, hp_dmg)   # 横幅数字冻结到撞击演出才掉
 			var hp_atk := engine.state.unit_at(data["src"])
+			# R722：炮台不冲锋 —— 激光巨炮「该列无目标 → 直击 HP」也是拉光柱打横幅，
+			# 排冲锋动作会变成「一门不会动的工事冲上去撞 HP 横幅」。
+			var hp_laser := hp_atk != null and hp_atk.card.traits.has(GameEngine.LASER_TRAIT)
 			var h_start := n
-			if hp_atk != null:
+			if hp_atk != null and not hp_laser:
 				h_start = maxi(n, _anim_end_for(hp_atk))
 				var hs := _cell_center(data["src"])
 				var hd := _cell_center(data["dst"])
@@ -12043,7 +12089,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"start": h_start, "dur": ATK_DUR_MS, "dmg": hp_dmg})
 			if hp_dmg > 0:
 				# 撞击时刻才出爆点/飘字/震屏，与单位动作对齐
-				_delayed.append({"at": h_start + int(ATK_IMPACT_T * ATK_DUR_MS),
+				var h_hit_at := h_start + int(ATK_IMPACT_T * ATK_DUR_MS)
+				if hp_laser:
+					# 炮台：数字等**这一列**的光柱落到底（引擎在 hp 事件里带了 col）
+					var hl := int(_laser_lands.get(int(data.get("col", -1)), 0))
+					if hl > 0:
+						h_hit_at = hl
+				_delayed.append({"at": h_hit_at,
 						"kind": "hp_hit",
 						"data": {"pos": Vector2(GRID_X + GRID_W + 46, banner_y),
 						"dmg": hp_dmg, "hpkey": hp_key,
@@ -14198,6 +14250,51 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			status_text = "通缉令到期：敌方单位自毁"
 			_say("⌛ 通缉令到期 —— 它们被自己的通缉令清算了")
 			queue_redraw()
+		"laser_salvo":
+			# R722 激光巨炮（9241）：一轮随机**两列**，每列一道竖直光柱。
+			# 炮口在**炮自己身上**（棋盘上的工事，不是画面顶端的舰炮 / 充能巨炮），
+			# 所以复用 `_cannon_beams` 的画法，把起画 y 换成炮心略下方 ——
+			# 从卡心起画会让光柱像「这张卡在自己漏光」，从卡脚起才读成「炮口开火」。
+			var ls_src: Vector2i = data.get("src", Vector2i(-1, -1))
+			var ls_shots: Array = data.get("shots", [])
+			var ls_top := CANNON_MUZZLE_Y
+			if ls_src.x >= 0:
+				ls_top = _cell_center(ls_src).y + CELL * 0.34
+			_laser_lands = {}
+			var ls_i := 0
+			for sh: Dictionary in ls_shots:
+				var ls_col := int(sh.get("col", 0))
+				var ls_tg: Vector2i = sh.get("cell", Vector2i(-1, -1))
+				# 空列 → 光柱落到对面后排那一格（同一刻 `hp` 横幅掉血）
+				var ls_cell: Vector2i = ls_tg if ls_tg.x >= 0 \
+						else Vector2i(FieldState.BOARD_ROWS - 1, ls_col)
+				var ls_start := n + ls_i * LASER_SALVO_GAP_MS
+				var ls_land := ls_start + CANNON_BEAM_CHARGE_MS
+				_cannon_beams.append({"cell": ls_cell, "start": ls_start, "land": ls_land,
+						"end": ls_land + CANNON_BEAM_HOLD_MS + CANNON_BEAM_FADE_MS,
+						"top": ls_top})
+				_laser_lands[ls_col] = ls_land
+				_delayed.append({"at": ls_land, "kind": "cannon_land",
+						"data": {"cell": ls_cell}})
+				ls_i += 1
+			sfx.play("spell")
+			_shake(2.5, 180)
+			status_text = "激光巨炮：两列齐射"
+			_say("🜂 激光巨炮：两列齐射")
+			queue_redraw()
+		"laser_aim":
+			# R722：**玩家回合开始**的预告。提示线本体不在这里存副本 ——
+			# `_draw_laser_aim()` 每帧直接读 `state.laser_aim_cols`，
+			# 这里只负责播报 + 一声充能音，让玩家注意到「该看那两列了」。
+			var la_cols: Array = data.get("cols", [])
+			var la_txt: Array[String] = []
+			for lc: Variant in la_cols:
+				la_txt.append(str(int(lc) + 1))
+			var la_join := "、".join(la_txt)
+			status_text = "激光巨炮：本轮瞄准第 %s 列" % la_join
+			_say("🎯 激光巨炮：锁定第 %s 列（这一回合还来得及挪人）" % la_join)
+			sfx.play("spell")
+			queue_redraw()
 		"cannon_fire":
 			# R449：充能巨炮（9139，双机炮阵）原来只有一行日志 + 目标卡直接消失，用户报
 			# 「没有特效」。现在给一发竖直炮击：炮口在画面顶端，光柱落到被点名的这一格。
@@ -14951,6 +15048,78 @@ func _draw_naval_beam() -> void:
 		draw_texture_rect(_fx_glow_tex, Rect2(cx - 100 * grow, bot - 9, 200 * grow, 18),
 				false, Color(1.0, 0.70, 0.26, 0.55 * fade))
 
+func _draw_laser_aim() -> void:
+	## R722：激光巨炮（9241）这一轮要打的两列的**提示线**（店长口径：玩家回合开始就要亮）。
+	## 数据只读 `engine.state.laser_aim_cols` —— 引擎在**玩家回合开始**摇好，开火照单执行；
+	## 界面**绝不**自己摇，否则提示线和真挨打的两列会分叉（那比不提示更糟）。
+	## 只在**玩家回合**亮：敌方回合再提示没有任何操作空间，只会挡视线。
+	## 与空袭准星（`_draw_air_raid_marks`，红角括号点单格）刻意分开：这是**整列**的警告。
+	## 可读性上吃过一次亏（R722 出图）：单纯一层淡红底在这个关卡的水面 / 木桥底图上**基本
+	## 看不见**，所以现在靠三样叠加 —— ① 更实的底色 ② 一条自上而下循环的**锁定扫描带**
+	##（有东西在扫，眼睛才会停）③ 列底粗横杠 + 双箭头。
+	if engine == null:
+		return
+	if engine.current_side != GameEngine.SIDE_SELF:
+		return
+	var cols: Array = engine.state.laser_aim_cols
+	if cols.is_empty():
+		return
+	# 炮还在不在：拆掉之后残留的列号不该继续亮着（数据清空发生在下个回合开始）
+	var gun_cell := Vector2i(-1, -1)
+	for gc: Vector2i in engine.state.board:
+		var gq := engine.state.unit_at(gc)
+		if gq != null and gq.owner == GameEngine.SIDE_OPPONENT \
+				and gq.card.traits.has(GameEngine.LASER_TRAIT):
+			gun_cell = gc
+			break
+	if gun_cell.x < 0:
+		return
+	var t := float(_now()) / 1000.0
+	var pulse := (sin(t * 2.6) + 1.0) * 0.5
+	var fill_col := Color(1.0, 0.30, 0.20, 0.085 + pulse * 0.055)
+	var edge_col := Color(1.0, 0.46, 0.24, 0.45 + pulse * 0.35)
+	var bar_col := Color(1.0, 0.70, 0.36, 0.55 + pulse * 0.40)
+	for cv: Variant in cols:
+		var col := int(cv)
+		var x0 := GRID_X + float(col) * CELL_W
+		# 只铺**炮的前方**：炮身后那一格也铺会让它自己那张卡发红，读成「它在挨打」
+		var top := GRID_Y + float(gun_cell.x + 1) * CELL - _grid_scroll
+		var bot := GRID_Y + float(FieldState.BOARD_ROWS) * CELL - _grid_scroll
+		if bot <= top:
+			continue
+		draw_rect(Rect2(x0, top, CELL_W, bot - top), fill_col, true)
+		# ① 锁定扫描带：一条亮带自上而下循环（1.3s 一轮，两列相位错开）——
+		#    静态色块在亮底图上会被洗掉，「有东西在扫」才读得出这两列被点名了。
+		var sweep := fmod(t / 1.3 + float(col) * 0.17, 1.0)
+		var sy := lerpf(top, bot, sweep)
+		var fade_s := 1.0 - absf(sweep - 0.5) * 1.2
+		draw_rect(Rect2(x0, sy, CELL_W, 34.0),
+				Color(1.0, 0.55, 0.30, maxf(0.0, 0.16 * fade_s)), true)
+		draw_line(Vector2(x0, sy), Vector2(x0 + CELL_W, sy),
+				Color(1.0, 0.80, 0.54, 0.55 * pulse + 0.20), 2.0)
+		# ② 两侧纵向虚线（13 实 / 10 空）：比实线更像「警告线」，又不抢卡面
+		for sx in [x0 + 1.5, x0 + CELL_W - 1.5]:
+			var yy := top
+			while yy < bot:
+				draw_line(Vector2(sx, yy), Vector2(sx, minf(yy + 13.0, bot)), edge_col, 2.5)
+				yy += 23.0
+		# ③ 列底：粗横杠 + 两个向下的箭头 —— 指「这一列要挨炮」
+		draw_line(Vector2(x0 + 4.0, bot - 2.0), Vector2(x0 + CELL_W - 4.0, bot - 2.0),
+				bar_col, 4.0)
+		var cx := x0 + CELL_W * 0.5
+		for k in 2:
+			var ay := bot - 12.0 - float(k) * 11.0
+			draw_line(Vector2(cx - 8.0, ay - 6.0), Vector2(cx, ay), bar_col, 2.5)
+			draw_line(Vector2(cx + 8.0, ay - 6.0), Vector2(cx, ay), bar_col, 2.5)
+	# 角标：挂在**炮的下方**（炮身那格下沿再往下 16px）。挂上方会被顶带 / 炮自己的卡面
+	# 挤掉（R722 第一次出图就是这样，字被炮的美术和「敌方攻击力」压住），下方才是空的。
+	var board_cx := GRID_X + float(FieldState.BOARD_COLS) * CELL_W * 0.5
+	var tag_y := GRID_Y + float(gun_cell.x + 1) * CELL - _grid_scroll + 16.0
+	tag_y = clampf(tag_y, GRID_Y + 14.0, GRID_Y + GRID_H - 14.0)
+	_draw_string_box_center(_font_bold, UI_FS_LABEL, "瞄准 · 两列齐射",
+			Vector2(board_cx, tag_y), Color(1.0, 0.88, 0.78))
+
+
 func _naval_beam_land_for(cell: Vector2i) -> int:
 	## R431：这一格所在列是不是正在挨舰炮的光柱？是 → 返回光柱**落地时刻**（0 = 没有）。
 	## 给 `fx_impact` 用 —— 伤害数字 / 掉血要等光柱落到这一列，不能先冒出来。
@@ -14984,7 +15153,8 @@ func _draw_cannon_beams() -> void:
 		# 所有落点特效统一以卡心 `hit_y` 为锚。
 		var hit_y := ctr.y
 		var bot := hit_y
-		var top := CANNON_MUZZLE_Y
+		# R722：`top` 可由调用方覆盖 —— 激光巨炮从自己身上起画，充能巨炮仍用画面顶端。
+		var top := float(b.get("top", CANNON_MUZZLE_Y))
 		var hgt := maxf(24.0, bot - top)
 		var chg := clampf(float(n - st) / float(maxi(1, ld - st)), 0.0, 1.0)
 		# ① 蓄能：细光丝从上「画」到目标格 —— 划到底那一刻就是伤害落地
@@ -15618,6 +15788,14 @@ func _apply_delayed(kind: String, d: Dictionary) -> void:
 			var kl_pos: Vector2 = (d.pos as Vector2) + _scroll_dy(float(d.get("sc", _grid_scroll)))
 			_bursts.append({"pos": kl_pos, "sc": _grid_scroll, "start": n, "dur": 360,
 					"col": Color(0.92, 0.94, 1.0), "big": false})
+		"salvo_demo":
+			# R722 出图专用：直接让巨炮打一轮齐射 —— 不走「结束回合 → 对手回合横幅 → AI 队列」，
+			# 那条路会被横幅动画挡住、拍不到光柱。只演给镜头看，不进正式流程。
+			for sd_c: Vector2i in engine.state.board:
+				var sd_q := engine.state.unit_at(sd_c)
+				if sd_q != null and sd_q.card.traits.has(GameEngine.LASER_TRAIT):
+					engine._laser_cannon_act(sd_c, sd_q)
+					break
 		"cannon_land":
 			# R449：激光落到目标格那一帧 —— 白光爆点 + 横向散光 + 震屏（冷色阶，与舰炮的
 			# 暖色一眼分得开）。被点中的单位由 `destroy` 分支延到这一刻才演击破。

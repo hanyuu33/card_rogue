@@ -13700,13 +13700,13 @@ func _init() -> void:
 
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
 
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 10,
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 9,
 
-			"第二层普通池 10 关（专属：普通简单 4 + 普通困难 6；R539 巨炮防线；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员 / R228 废料场）")
+			"第二层普通池 9 关（专属：普通简单 4 + 普通困难 5；R722 巨炮防线已上调精英困难；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员 / R228 废料场）")
 
-	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 8,
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 9,
 
-			"第二层精英池 8 关（专属：精英简单 5 + 精英困难 3；R541 普罗诺亚之影（精英简单）；**R506 母舰空袭（精英困难）↔ 阿斯克勒庇厄斯的试炼（精英简单）互换档位**；R502 执法者的审判（精英简单）；R149 钢铁要塞 / R161 赫尔墨斯的试炼；R449 哈气骑士团已下调到第一层）")
+			"第二层精英池 9 关（专属：精英简单 5 + 精英困难 4；R722 巨炮防线上调到精英困难；R541 普罗诺亚之影（精英简单）；**R506 母舰空袭（精英困难）↔ 阿斯克勒庇厄斯的试炼（精英简单）互换档位**；R502 执法者的审判（精英简单）；R149 钢铁要塞 / R161 赫尔墨斯的试炼；R449 哈气骑士团已下调到第一层）")
 
 	var l2_battle_pool: Array[Dictionary] = []
 
@@ -63631,13 +63631,13 @@ func _init() -> void:
 
 
 
-	# ③ 三层精英池 = 第二层 6 关；挑关优先避开本局打过的
+	# ③ 三层精英池 = 第二层 9 关；挑关优先避开本局打过的
 
 	var r398_pool: Array[Dictionary] = GameLevels.elite_pool(GameLayers.LAYER_THREE)
 
-	check(r398_pool.size() == 8,
+	check(r398_pool.size() == 9,
 
-		"R398 三层精英池 = 第二层 8 关（content_layers [2, 3]；R541 普罗诺亚之影 +1；R449 哈气骑士团下调后 −1、R451 母舰空袭 +1、R502 执法者的审判 +1；实际 %d。**实际抽关只取困难档，见 R506b**）" % r398_pool.size())
+		"R398 三层精英池 = 第二层 9 关（content_layers [2, 3]；R541 普罗诺亚之影 +1；R449 哈气骑士团下调后 −1、R451 母舰空袭 +1、R502 执法者的审判 +1；**R722 巨炮防线上调精英困难 +1**；实际 %d。**实际抽关只取困难档，见 R506b**）" % r398_pool.size())
 
 	# 只剩最后一个没用过 → **必然**挑它（这就是「优先避免重复」）
 
@@ -63675,9 +63675,9 @@ func _init() -> void:
 
 	var r506b_pool: Array[Dictionary] = GameLevels.third_elite_pool()
 
-	check(r506b_pool.size() == 3,
+	check(r506b_pool.size() == 4,
 
-		"R506b 三层精英抽关池 = 第二层精英困难 3 关（实际 %d）" % r506b_pool.size())
+		"R506b 三层精英抽关池 = 第二层精英困难 4 关（R722 巨炮防线加入；实际 %d）" % r506b_pool.size())
 
 	var r506b_ok := true
 
@@ -63691,7 +63691,7 @@ func _init() -> void:
 
 	check(r506b_ok,
 
-		"R506b 三层精英池每关都是「第二层 + 精英困难」（机甲巨兵 / 钢铁要塞 / 母舰空袭）")
+		"R506b 三层精英池每关都是「第二层 + 精英困难」（机甲巨兵 / 钢铁要塞 / 母舰空袭 / 巨炮防线）")
 
 	RunState.used_levels = []
 
@@ -70313,11 +70313,11 @@ func _init() -> void:
 
 	check(not r539_lv.is_empty() and str(r539_lv.get("key", "")) == "laser_line"
 
-			and int(r539_lv.get("tier", -1)) == GameLevels.TIER_NORMAL_HARD
+			and int(r539_lv.get("tier", -1)) == GameLevels.TIER_ELITE_HARD
 
 			and int(r539_lv.get("layer", -1)) == GameLayers.LAYER_TWO,
 
-			"R539 巨炮防线：第二层 · 普通敌人-困难，key = laser_line")
+			"R722 巨炮防线：第二层 · **精英敌人-困难**，key = laser_line")
 
 	var r539_units: Array = r539_lv.get("enemy_units", [])
 
@@ -70369,11 +70369,13 @@ func _init() -> void:
 
 	# 池：只进第二层普通池，第一层抽不到
 
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r539_lv)
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).has(r539_lv)
 
-			and not GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r539_lv),
+			and not GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r539_lv)
 
-			"R539 巨炮防线：只进第二层普通池（第一层地图摇不到）")
+			and not GameLevels.elite_pool(GameLayers.LAYER_DEFAULT).has(r539_lv),
+
+			"R722 巨炮防线：进第二层精英池，不在普通池、也不进第一层（地图只在二层精英节点摇得到）")
 
 
 
@@ -70409,7 +70411,7 @@ func _init() -> void:
 
 
 
-	# ⑤ 行动：程 0 → 不能常规攻击；**一轮打满三列**，每列各打自己那一列的第一个；空列改打 HP
+	# ⑤ 行动：程 0 → 不能常规攻击；**一轮随机两列**，每列各打自己那一列的第一个；空列改打 HP
 
 	var r539_e2 := _new_engine([], 40, 40)
 
@@ -70441,17 +70443,23 @@ func _init() -> void:
 
 			"R540 激光巨炮：每列第一个 = 最靠前的那个（右列取 row 3，不是 row 4）")
 
+	# R722：打哪两列是在**玩家回合开始**定好的（`state.laser_aim_cols`）——
+	# 这里直接指定「第 1、2 列」，断言才不受随机影响；开火只照这份单执行。
+	var r539_aim722: Array[int] = [0, 1]
+
+	r539_e2.state.laser_aim_cols = r539_aim722
+
 	var r539_hp0: int = r539_e2.state.hp_self
 
 	r539_e2._laser_cannon_act(Vector2i(1, 1), r539_gun)
 
-	check(r539_c0.health == 25 and r539_c2f.health == 25 and r539_c2b.health == 30,
+	check(r539_c0.health == 25 and r539_c2f.health == 30 and r539_c2b.health == 30,
 
-			"R540 激光巨炮：一轮打满三列 → 左列 / 右列各吃 5 点（等同于力量），右列后排一点不掉")
+			"R722 激光巨炮：只打预告的两列 → 第 1 列吃 5 点，没被点名的第 3 列（两格）毫发无伤")
 
 	check(r539_e2.state.hp_self == r539_hp0 - 5,
 
-			"R540 激光巨炮：中间那列没人 → 该列直击我方 HP 5 点（%d → %d）" % [
+			"R722 激光巨炮：第 2 列没人 → 该列直击我方 HP 5 点（只一笔；%d → %d）" % [
 
 					r539_hp0, r539_e2.state.hp_self])
 
@@ -70459,7 +70467,7 @@ func _init() -> void:
 
 
 
-	# ⑤2 三列全空 → **三笔** HP（每列各一发，不做 `_hp_once` 去重）
+	# ⑤2 预告的两列全空 → **两笔** HP（每列各一发，不做 `_hp_once` 去重）
 
 	var r539_e3 := _new_engine([], 40, 40)
 
@@ -70469,13 +70477,17 @@ func _init() -> void:
 
 			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
 
+	var r539_aim722b: Array[int] = [0, 2]
+
+	r539_e3.state.laser_aim_cols = r539_aim722b
+
 	var r539_hp3: int = r539_e3.state.hp_self
 
 	r539_e3._laser_cannon_act(Vector2i(1, 1), r539_gun3)
 
-	check(r539_e3.state.hp_self == r539_hp3 - 15,
+	check(r539_e3.state.hp_self == r539_hp3 - 10,
 
-			"R540 激光巨炮：三列全空 → 每列各直击 5 点，共 15 点（%d → %d）" % [
+			"R722 激光巨炮：预告的两列全空 → 每列各直击 5 点，共 10 点（第 3 列不打；%d → %d）" % [
 
 					r539_hp3, r539_e3.state.hp_self])
 
@@ -70521,15 +70533,186 @@ func _init() -> void:
 
 			"R539 源码：激光巨炮走 `_ai_act()` 的专属分派（不混进通用流程）")
 
-	check_src(r539_eng_src.find("for col in FieldState.BOARD_COLS:") >= 0,
+	check_src(r539_eng_src.find("for col in cols:") >= 0
 
-			"R540 源码：一轮遍历 `BOARD_COLS` 打满三列（不是只看自己那一列）")
+			and r539_eng_src.find("const LASER_SALVO_COLS:= 2") >= 0
+
+			and r539_eng_src.find("func _laser_pick_columns(") >= 0,
+
+			"R722 源码：一轮只打 `cols`（两列），列号来自 `_laser_pick_columns()`")
 
 	check_src(r539_fs_src.find("if card.traits.has(SLEEP_TRAIT):") >= 0
 
 			and r539_fs_src.find("DEEP_SLEEP_TRAIT") < 0,
 
 			"R539 源码：`FieldState.place()` 的沉睡口只认 SLEEP_TRAIT（没有另造「深眠」）")
+
+	# ===== R722：激光巨炮改「随机两列 + 玩家回合开始提示线」＋抬到精英困难 =====
+
+	# ① 选列：每次恰好两列、升序、不重复；三列里每一列都有机会被排除（不是固定漏一列）
+
+	var r722_pick_ok := true
+
+	var r722_skipped := {}
+
+	for i in 60:
+
+		var r722_c := r539_e._laser_pick_columns()
+
+		if r722_c.size() != GameEngine.LASER_SALVO_COLS or r722_c[0] >= r722_c[1] \
+				or r722_c[0] < 0 or r722_c[1] >= FieldState.BOARD_COLS:
+			r722_pick_ok = false
+			break
+		for k: int in FieldState.BOARD_COLS:
+			if not r722_c.has(k):
+				r722_skipped[k] = true
+
+	check(r722_pick_ok, "R722 激光巨炮：`_laser_pick_columns()` 恰好返回两列、升序、不重复")
+
+	check(r722_skipped.size() == FieldState.BOARD_COLS,
+			"R722 激光巨炮：三列**每一列**都可能被排除（60 次摇到 %d 种排除）" % r722_skipped.size())
+
+	# ② 玩家回合开始定列：有炮 → 两列；炮睡着 → 不给假警报；没炮 → 空
+
+	var r722_e := _new_engine([], 40, 40)
+
+	r722_e.start_game(0)
+
+	var r722_gun := r722_e.state.place(CardData.from_dict(repo.get_card(9241).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	r722_gun.sleep_left = 0
+
+	r722_e._laser_aim_mark(GameEngine.SIDE_SELF)
+
+	check(r722_e.state.laser_aim_cols.size() == 2,
+			"R722 激光巨炮：玩家回合开始就定下两列（实际 %d）" % r722_e.state.laser_aim_cols.size())
+
+	r722_gun.sleep_left = FieldState.SLEEP_TURNS
+
+	r722_e._laser_aim_mark(GameEngine.SIDE_SELF)
+
+	check(r722_e.state.laser_aim_cols.is_empty(),
+			"R722 激光巨炮：炮还在睡 → 清空提示（这一轮根本不会开火，亮着是假警报）")
+
+	r722_gun.sleep_left = 0
+
+	var r722_e_none := _new_engine([], 40, 40)
+
+	r722_e_none.start_game(0)
+
+	r722_e_none._laser_aim_mark(GameEngine.SIDE_SELF)
+
+	check(r722_e_none.state.laser_aim_cols.is_empty(),
+			"R722 激光巨炮：场上没有这门炮 → 提示列为空（别的关卡不会平白亮红列）")
+
+	# ③ 开火照预告执行：提示线说的两列 == 真挨打的两列
+
+	var r722_e2 := _new_engine([], 40, 40)
+
+	r722_e2.start_game(0)
+
+	var r722_gun2 := r722_e2.state.place(CardData.from_dict(repo.get_card(9241).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	var r722_a := r722_e2.state.place(_card(8401, "一列", "盟友", 0, 3, 40, 1, 1),
+			Vector2i(3, 0), GameEngine.SIDE_SELF)
+
+	var r722_b := r722_e2.state.place(_card(8402, "二列", "盟友", 0, 3, 40, 1, 1),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+
+	var r722_c3 := r722_e2.state.place(_card(8403, "三列", "盟友", 0, 3, 40, 1, 1),
+			Vector2i(3, 2), GameEngine.SIDE_SELF)
+
+	var r722_want: Array[int] = [0, 1]
+
+	r722_e2.state.laser_aim_cols = r722_want
+
+	r722_e2._laser_cannon_act(Vector2i(1, 1), r722_gun2)
+
+	check(r722_a.health == 35 and r722_b.health == 35 and r722_c3.health == 40,
+			"R722 激光巨炮：开火只打预告的两列（第 1/2 列各 -5，第 3 列完好）")
+
+	# ④ 抬档：精英困难、进二层精英池、第三层精英节点的抽关池一起扩到 4 关
+
+	var r722_lv := _level_named("巨炮防线")
+
+	check(int(r722_lv.get("tier", -1)) == GameLevels.TIER_ELITE_HARD,
+			"R722 巨炮防线：档位 = 精英敌人-困难")
+
+	# ⑤ 已移除「醒着挨打 +1 力量」：激光巨炮不再越打越强，恶魔鸭 9116 照旧
+
+	var r722_e3 := _new_engine([], 40, 40)
+
+	r722_e3.start_game(0)
+
+	var r722_g3 := r722_e3.state.place(CardData.from_dict(repo.get_card(9241).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	r722_g3.sleep_left = 0
+
+	var r722_pw_a: int = r722_g3.effective_power()
+
+	for i in 5:
+		r722_e3._hit_unit(r722_g3, 4, "测试", true, true)
+
+	check(r722_g3.end_atk == 0 and r722_g3.effective_power() == r722_pw_a,
+			"R722 激光巨炮：醒着挨打**不再** +1 力量（end_atk = %d，力量 %d → %d）" % [
+					r722_g3.end_atk, r722_pw_a, r722_g3.effective_power()])
+
+	var r722_duck := r722_e3.state.place(CardData.from_dict(repo.get_card(9116).to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+
+	r722_duck.sleep_left = 0
+
+	var r722_pw_d: int = r722_duck.effective_power()
+
+	r722_e3._hit_unit(r722_duck, 1, "测试", true, true)
+
+	check(r722_duck.end_atk == GameEngine.DEMON_DUCK_ATK_GAIN \
+			and r722_duck.effective_power() == r722_pw_d + GameEngine.DEMON_DUCK_ATK_GAIN,
+			"R722 对照：恶魔鸭 9116 醒着挨打仍然永久 +1 力量（设计本意没有改动）")
+
+	# ⑥ 卡面：写「两列」和「预告」，四语同源（en 不许回落中文）
+
+	var r722_card := repo.get_card(9241)
+
+	check(r722_card.effect_text.find("两列") >= 0 and r722_card.effect_text.find("预告") >= 0,
+			"R722 激光巨炮：卡面写「随机选取两列并预告」")
+
+	# 直接读译文表，不动全局语言设置（改 settings 会污染同一次运行的其它用例）
+	var r722_en := ""
+
+	var r722_raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/cards_en.json"))
+
+	if r722_raw is Dictionary:
+		var r722_blk: Variant = (r722_raw as Dictionary).get("cards", {})
+		if r722_blk is Dictionary:
+			var r722_row: Variant = (r722_blk as Dictionary).get("9241", {})
+			if r722_row is Dictionary:
+				r722_en = str((r722_row as Dictionary).get("effect_text", ""))
+
+	check(r722_en.find("two columns") >= 0 and r722_en.find("telegraphs") >= 0,
+			"R722 激光巨炮：英译同步写两列 + 预告（不回落中文）")
+
+	# ⑦ 界面源码锁：提示线、两列光柱、炮台不排「冲过去撞人」的动作
+
+	var r722_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+
+	check_src(r722_bsrc.find("func _draw_laser_aim(") >= 0
+
+			and r722_bsrc.find("engine.state.laser_aim_cols") >= 0
+
+			and r722_bsrc.find('"laser_salvo":') >= 0
+
+			and r722_bsrc.find("var a_laser := atk_pl != null") >= 0,
+
+			"R722 界面：提示线读 `state.laser_aim_cols`；齐射走 `laser_salvo` 光柱；炮台不排攻击动作")
+
+	check_src(r722_bsrc.find("if engine.current_side != GameEngine.SIDE_SELF:") >= 0,
+
+			"R722 界面：提示线只在玩家回合亮（敌方回合没有操作空间，只会挡视线）")
 
 	# ===== R541：二层精英简单「普罗诺亚之影」（9242 + 三种构状体）=====
 

@@ -113,6 +113,10 @@ var harvest_hits: int = 0
 var air_raid_cells: Array[Vector2i] = []
 	## R451：空袭已经结算过几轮 → 落地值 = 卡面 value + 本值 × GameEngine.AIR_RAID_STEP。
 var air_raid_turns := 0
+	## R722：激光巨炮（9241）这一轮要打的两列（**玩家回合开始**摇好，界面画提示线读它）。
+	## 只存列号、不存卡：与 `air_raid_cells` 同一条理由 —— 它是「这轮往哪打」的临时指令，
+	## 不是场上有什么东西。开火照单执行，所以「提示线」和「真挨打」不会分叉。
+var laser_aim_cols: Array[int] = []
 
 var hp_self := 20
 var hp_opponent := 20
@@ -743,6 +747,7 @@ func save_dict() -> Dictionary:
 		"fields": _fields_save(),
 		"trap_fields": _trap_fields_save(),
 		"air_raid_cells": _air_raid_save(),
+		"laser_aim_cols": Array(laser_aim_cols),
 		"air_raid_turns": air_raid_turns,
 		"mark_bonus": mark_bonus,
 		"harvest_hits": harvest_hits,
@@ -832,6 +837,11 @@ func apply_dict(d: Dictionary) -> void:
 			if item3 is Dictionary:
 				air_raid_cells.append(Vector2i(int(item3["r"]), int(item3["c"])))
 	air_raid_turns = int(d.get("air_raid_turns", air_raid_turns))
+	laser_aim_cols.clear()
+	var la: Variant = d.get("laser_aim_cols", [])
+	if la is Array:
+		for item_la: Variant in la:
+			laser_aim_cols.append(int(item_la))
 	mark_bonus = int(d.get("mark_bonus", mark_bonus))
 	harvest_hits = int(d.get("harvest_hits", harvest_hits))
 	# 洗牌随机源：续档后继续抽牌 / 触发的随机必须接着同一条链（否则续档 = 换牌序）

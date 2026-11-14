@@ -1240,7 +1240,7 @@
   },
   "9241": {
    "name": "Laser Cannon",
-   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns. When it acts, deal damage equal to its Power to the first enemy unit in each column; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
+   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns. Each turn it picks two columns at random and telegraphs them; when it acts, deal damage equal to its Power to the first enemy unit in each of those two columns; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
   },
   "9242": {
    "name": "Shade of Pronoia",

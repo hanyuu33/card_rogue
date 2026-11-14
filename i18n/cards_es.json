@@ -1240,7 +1240,7 @@
   },
   "9241": {
    "name": "Cañón Láser",
-   "effect_text": "No puede realizar ataques normales. Duerme durante 2 turnos. Cuando actúa, inflige daño igual a su Poder a la primera unidad enemiga de cada columna; si no hay ningún objetivo en esa columna, golpea directamente los HP del oponente. +1 de Poder cada turno."
+   "effect_text": "No puede realizar ataques normales. Duerme durante 2 turnos. Cada turno elige dos columnas al azar y las anuncia; cuando actúa, inflige daño igual a su Poder a la primera unidad enemiga de cada una de esas dos columnas; si no hay ningún objetivo en esa columna, golpea directamente los HP del oponente. +1 de Poder cada turno."
   },
   "9242": {
    "name": "Sombra de Pronoia",
