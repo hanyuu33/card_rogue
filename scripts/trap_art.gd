@@ -16,6 +16,8 @@ static func color_of(id: int) -> Color:
 		7002: return Color(0.42, 0.79, 0.96)   # 冰冻陷阱 · 冰蓝
 		7003: return Color(0.52, 0.83, 0.35)   # 毒瓶 · 毒绿
 		7004: return Color(0.74, 0.59, 0.94)   # 穿刺陷阱 · 钢紫
+		7005: return Color(0.92, 0.36, 0.44)   # 小血瓶 · 血红
+		7006: return Color(0.36, 0.62, 0.95)   # 法力药剂 · 费用蓝
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -74,6 +76,8 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7002: _frost(ci, c, s, ink)
 		7003: _poison(ci, c, s, ink)
 		7004: _spike(ci, c, s, ink)
+		7005: _potion(ci, c, s, ink, false)
+		7006: _potion(ci, c, s, ink, true)
 		_: ci.draw_circle(c, s * 0.22, ink)
 
 
@@ -122,3 +126,39 @@ static func _spike(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 		ci.draw_colored_polygon(tri, col)
 	ci.draw_line(Vector2(c.x - s * 0.32, c.y + s * 0.29),
 			Vector2(c.x + s * 0.32, c.y + s * 0.29), col, w, true)
+
+
+static func _potion(ci: CanvasItem, c: Vector2, s: float, col: Color, mana: bool) -> void:
+	## R690：使用型工具（7005 小血瓶 / 7006 法力药剂）—— 同一只药瓶，只换中央标记：
+	## 血瓶画「+」十字，法力药剂画菱形（费用的形状语汇）。其余完全一致，
+	## 让人一眼看出这两个是同一套东西（与 9154/9185 共用路牌外框同一条原则）。
+	var w := maxf(1.5, s * 0.032)
+	var dark := Color(0.07, 0.08, 0.11, 0.92)
+	# 瓶塞
+	ci.draw_rect(Rect2(c.x - s * 0.085, c.y - s * 0.35, s * 0.17, s * 0.085), col, true)
+	# 瓶颈（描边）
+	ci.draw_rect(Rect2(c.x - s * 0.065, c.y - s * 0.27, s * 0.13, s * 0.21), col, false, w)
+	# 瓶身（描边 + 圆底用圆补）
+	var body := Rect2(c.x - s * 0.165, c.y - s * 0.07, s * 0.33, s * 0.30)
+	ci.draw_rect(body, col, false, w)
+	ci.draw_arc(Vector2(c.x, c.y + s * 0.23), s * 0.165, 0.0, PI, 16, col, w, true)
+	# 液体（瓶身下半）
+	var liq := Rect2(c.x - s * 0.125, c.y + s * 0.03, s * 0.25, s * 0.19)
+	ci.draw_rect(liq, col, true)
+	# 中央标记（镂空感：液体上挖深色）
+	if mana:
+		var d := s * 0.072
+		var dia := PackedVector2Array([
+			Vector2(c.x, c.y - d), Vector2(c.x + d * 0.8, c.y),
+			Vector2(c.x, c.y + d), Vector2(c.x - d * 0.8, c.y)])
+		ci.draw_colored_polygon(dia, dark)
+	else:
+		var arm := s * 0.085
+		var th := maxf(1.8, s * 0.032)
+		ci.draw_line(Vector2(c.x - arm, c.y + s * 0.125),
+				Vector2(c.x + arm, c.y + s * 0.125), dark, th * 1.6, true)
+		ci.draw_line(Vector2(c.x, c.y + s * 0.125 - arm),
+				Vector2(c.x, c.y + s * 0.125 + arm), dark, th * 1.6, true)
+	# 高光
+	ci.draw_line(Vector2(c.x - s * 0.10, c.y - s * 0.02),
+			Vector2(c.x - s * 0.10, c.y + s * 0.09), Color(1, 1, 1, 0.45), w * 0.9, true)

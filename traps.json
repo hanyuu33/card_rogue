@@ -7,6 +7,10 @@
     { "id": 7003, "name": "毒瓶", "price": 30, "damage": 8, "poison_turns": 3,
       "desc": "放置在战场空格上。敌人踩到时造成 8 点伤害并中毒；之后每个敌人回合结束再受 8 点伤害，共 3 次结算（与毒沼同口径），随后陷阱消失。", "icon": "trap_poison" },
     { "id": 7004, "name": "穿刺陷阱", "price": 40, "damage": 10, "root": 1,
-      "desc": "放置在战场空格上。敌人踩到时造成 10 点伤害并禁足一回合，随后陷阱消失。", "icon": "trap_spike" }
+      "desc": "放置在战场空格上。敌人踩到时造成 10 点伤害并禁足一回合，随后陷阱消失。", "icon": "trap_spike" },
+    { "id": 7005, "name": "小血瓶", "price": 50, "heal_pct": 20,
+      "desc": "使用后立即回复 20% 生命（上限为最大生命），随后工具消失。", "icon": "tool_potion_hp" },
+    { "id": 7006, "name": "法力药剂", "price": 35, "energy": 2,
+      "desc": "使用后立即回复 2 点费用，随后工具消失。", "icon": "tool_potion_mana" }
   ]
 }

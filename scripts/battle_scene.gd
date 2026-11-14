@@ -1032,6 +1032,11 @@ func _ready() -> void:
 			_shot_frame = maxi(int(args[i + 1]), 10)  # 截图时机（帧），捕弹体/爆点用
 		if args[i] == "--r363col" and i + 1 < args.size():
 			_r363_col = clampi(int(args[i + 1]), 0, FieldState.BOARD_COLS - 1)
+		if args[i] == "--tooldemo":
+			# R690 出图：工具栏塞三种（炼金炸弹 + 两个使用型），核验新药瓶图标与栏位观感。
+			# 出图：`battle.tscn -- --screenshot --tooldemo --level 0 --shotframe 200`
+			RunState.traps = [7001, 7005, 7006]
+			RunState.run_active = true   # 栏位绘制的前置：非 run 态整条工具栏不画
 		if args[i] == "--shotms" and i + 1 < args.size():
 			_shot_ms = maxi(int(args[i + 1]), 10)  # 截图时机（距演示动作的毫秒数）
 		if args[i] == "--gridscroll" and i + 1 < args.size():
@@ -4884,9 +4889,12 @@ func _gui_input(event: InputEvent) -> void:
 				return
 			elif _trap_press_slot >= 0:
 				# 轻点 = 只读看说明（不消耗）；「用了就没」只发生在成功放置那一刻。
+				# R690：使用型工具（小血瓶 / 法力药剂）没有落点 → 轻点即结算，用完从栏位移除。
 				var tid := RunState.trap_at(_trap_press_slot)
 				var td: TrapData = TrapRepo.load_json().get_trap(tid)
-				if td != null:
+				if td != null and td.is_usable():
+					_use_tool_slot(_trap_press_slot, td)
+				elif td != null:
 					_say("「%s」：%s" % [td.trap_name, td.desc])
 				_trap_press_slot = -1
 				_grid_drag_arm = false
@@ -9720,10 +9728,17 @@ func _trap_slot_at(pos: Vector2) -> int:
 func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	if engine == null or engine.current_side != GameEngine.SIDE_SELF:
 		_trap_press_slot = -1
-		_say("现在是敌方回合，等对手行动完再布置陷阱")
+		_say("现在是敌方回合，等对手行动完再使用工具")
 		return
 	if RunState.trap_at(slot) <= 0:
 		_trap_press_slot = -1
+		return
+	var t0: TrapData = TrapRepo.load_json().get_trap(RunState.trap_at(slot))
+	if t0 != null and t0.is_usable():
+		# R690：使用型工具（小血瓶 / 法力药剂）不需要落点 → 拒绝进入拖放。
+		# 松手那一下会走 _use_tool_slot，所以这里只把「拖」转成“点一下就能用”的提示。
+		_trap_press_slot = -1
+		_say("「%s」点一下就能用，不用拖" % t0.trap_name)
 		return
 	_clear_selection()          # 与拖手牌同口径：放下当前选中，别留两套高亮
 	_trap_drag_slot = slot
@@ -9732,7 +9747,30 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	_lp_active = false   # R667：进入拖放即作废长按计时（14 < 18 的窗口会误取消）
 	_trap_drag_cells = engine.trap_legal_cells()
 	if _trap_drag_cells.is_empty():
-		_say("没有可以布置陷阱的空格")
+		_say("没有可以放置工具的空格")
+	queue_redraw()
+
+
+func _use_tool_slot(slot: int, td: TrapData) -> void:
+	## R690：使用型工具（小血瓶 / 法力药剂）的界面唯一口。结算在 engine.use_tool，
+	## 这里只管「能不能点」「点完摘槽」「说什么」。
+	## 回血满了也允许使用（会把栏位浪费掉，但那是玩家的选择，不替他拦）；
+	## 敌方回合不允许 —— 与放置型工具同一条闸门。
+	if engine == null or td == null or not td.is_usable():
+		return
+	if engine.current_side != GameEngine.SIDE_SELF:
+		_say("现在是敌方回合，等对手行动完再使用工具")
+		return
+	var id := RunState.trap_at(slot)
+	if id <= 0:
+		return
+	if not engine.use_tool(id):
+		return
+	RunState.consume_trap(slot)   # 用了就没：从栏位移除（放置型在放下去那一刻移除）
+	if td.heal_pct > 0:
+		_say("已使用「%s」，回复 %d%% 生命" % [td.trap_name, td.heal_pct])
+	else:
+		_say("已使用「%s」，回复 %d 点费用" % [td.trap_name, td.energy])
 	queue_redraw()
 
 
@@ -9754,15 +9792,15 @@ func _finish_trap_drag(pos: Vector2) -> void:
 		return
 	var cell: Variant = _cell_at(pos)
 	if cell == null or not cells.has(cell):   # 拖到非法区 = 只取消，不消耗
-		_say("陷阱没有布置（松手要落在高亮空格里）")
+		_say("工具没有放置（松手要落在高亮空格里）")
 		return
 	var c2 := Vector2i(int(cell.x), int(cell.y))
 	if not engine.place_trap(id, c2):
-		_say("这格已经不能布置陷阱了")
+		_say("这格已经不能放置工具了")
 		return
 	RunState.consume_trap(slot)   # 放置那一刻才从栏位移除（R663 口径）
 	var td: TrapData = TrapRepo.load_json().get_trap(id)
-	var nm := td.trap_name if td != null else "陷阱"
+	var nm := td.trap_name if td != null else "工具"
 	_say("已布置「%s」，敌人踩到就会触发" % nm)
 	queue_redraw()
 
@@ -12965,6 +13003,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("大树守卫：效果区 %d 张效果卡 → +%d 力量、+%d 生命" % [
 					int(data.get("n", 0)), int(data.get("n", 0)), 2 * int(data.get("n", 0))])
 		"water_element":
+			var wv_name := "漩涡"
+			if data.get("card") is CardData:
+				wv_name = (data["card"] as CardData).card_name
+			_say("水元素：将一张「%s」加入手卡" % wv_name)
 		"duck_mother":
 			_say("鸭妈妈：两侧共召唤 %d 只「小鸭」" % int(data.get("count", 0)))
 		"duckling":
@@ -12975,10 +13017,6 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("小鸭：手卡没有效果卡 → 落空")
 			else:
 				_say("小鸭：手卡「%s」费用 -1" % dk_name)
-			var wv_name := "漩涡"
-			if data.get("card") is CardData:
-				wv_name = (data["card"] as CardData).card_name
-			_say("水元素：将一张「%s」加入手卡" % wv_name)
 		"owl_fetch":
 			var ow_name := "?"
 			if data.get("card") is CardData:

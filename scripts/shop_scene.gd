@@ -1007,7 +1007,7 @@ func _draw_row2_group_labels() -> void:
 			minf(r.size.x * 0.62, 132.0), 24.0))
 	draw_string(_font_bold, Vector2(l.position.x + 4.0, y), "附魔",
 			HORIZONTAL_ALIGNMENT_LEFT, l.size.x - 8.0, 15, col)
-	draw_string(_font_bold, Vector2(r.position.x + 4.0, y), "陷阱",
+	draw_string(_font_bold, Vector2(r.position.x + 4.0, y), "工具",
 			HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 8.0, 15, col)
 	var left_last := _row23_item_rect(1, TRAP_GROUP_LEFT - 1)
 	var right_first := _row23_item_rect(1, TRAP_GROUP_LEFT)
@@ -1700,7 +1700,7 @@ func _buy_trap(i: int) -> void:
 		return
 	var t: TrapData = e["trap"]
 	if RunState.trap_free_slots() <= 0:
-		_set_hint("陷阱栏已满（%d/%d），先在对战里用掉一个" % [
+		_set_hint("工具栏已满（%d/%d），先在对战里用掉一个" % [
 				RunState.TRAP_SLOTS, RunState.TRAP_SLOTS])
 		return
 	if not _pay(int(t.price)):
@@ -1709,7 +1709,7 @@ func _buy_trap(i: int) -> void:
 	e["sold"] = true
 	_sync_shop_state()      # R390：售罄位要进货架存档，重进店不重摇
 	RunState.gain_trap(int(t.id))
-	_set_hint("获得陷阱「%s」· %s" % [t.trap_name, _paid_tag(int(t.price))])
+	_set_hint("获得工具「%s」· %s" % [t.trap_name, _paid_tag(int(t.price))])
 
 
 func _buy_row3(i: int) -> void:

@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1d7c4-45de-7061-8be7-9d8a68b2ee31"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"我会按要求生成一张 1024×1024 的种子插画。\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"已生成一张「SEED」种子插画。"}}
+{"type":"turn.completed","usage":{"input_tokens":72773,"cached_input_tokens":60288,"cache_write_input_tokens":0,"output_tokens":621,"reasoning_output_tokens":18}}

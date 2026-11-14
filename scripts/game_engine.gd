@@ -16528,6 +16528,32 @@ func _poison_tick(side: String) -> void :
 ##    这次不打断移动（禁足交给下回合的 rooted），也没有把那 8 张卡加回来。
 
 
+func use_tool(id: int) -> bool:
+	## R690：**使用型工具**（7005 小血瓶 / 7006 法力药剂）的唯一结算口。
+	## 与 `place_trap` 并列：放置型拖到战场空格，这两个点一下直接结算，
+	## 结算完由界面调 `RunState.consume_trap(slot)` 从栏位移除。
+	## 回血走 `_op_heal`（吃「黄桃罐头」以外的既有回血口径 / 触发 game_over 检查），
+	## 回费直接 `state.energy +=`（与拆解 8049 同口径：不污染 self_energy_spent，允许超额）。
+	var t: TrapData = TrapRepo.load_json().get_trap(id)
+	if t == null or state == null or not t.is_usable():
+		return false
+	var healed := 0
+	if t.heal_pct > 0:
+		var amount := ceili(float(state.max_hp_self) * float(t.heal_pct) / 100.0)
+		amount = maxi(1, amount)      # 20% 至少 1 点，别因为四舍五入变成「用了没反应」
+		var before := state.hp_self
+		_op_heal(SIDE_SELF, amount, null)
+		healed = state.hp_self - before
+	if t.energy > 0:
+		state.energy += t.energy
+	_log("使用工具：「%s」（回血 %d / 回费 %d → HP %d/%d，费用 %d）" % [
+			t.trap_name, healed, t.energy, state.hp_self, state.max_hp_self, state.energy])
+	## 纯结算事件：界面据此播数字与提示。不掷随机数，回放确定性不受影响。
+	action.emit("tool_used", {"id": id, "name": t.trap_name, "healed": healed,
+			"energy": t.energy, "hp": state.hp_self, "max_hp": state.max_hp_self})
+	return true
+
+
 func place_trap(id: int, cell: Vector2i) -> bool:
 	## 放置唯一口（界面拖放调这里；**不走 play_from_hand** —— R484/485 那道闸门是给卡牌的）。
 	var t: TrapData = TrapRepo.load_json().get_trap(id)

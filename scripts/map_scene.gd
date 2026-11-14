@@ -2006,7 +2006,7 @@ func _draw_trap_slots() -> void:
 	for i in RunState.TRAP_SLOTS:
 		if RunState.trap_at(i) > 0:
 			filled += 1
-	draw_string(_font, head.position + Vector2(6, 14), "陷阱 %d/%d" % [filled, RunState.TRAP_SLOTS],
+	draw_string(_font, head.position + Vector2(6, 14), "工具 %d/%d" % [filled, RunState.TRAP_SLOTS],
 			HORIZONTAL_ALIGNMENT_LEFT, head.size.x - 12.0, 13, Color("e4bd62"))
 	for i in RunState.TRAP_SLOTS:
 		var r := Rect2(TRAP_BADGE_X, TRAP_BADGE_Y + float(i) * (TRAP_BADGE_SIZE + TRAP_BADGE_GAP),

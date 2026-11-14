@@ -18,6 +18,14 @@
   "7004": {
    "name": "Trampa Perforante",
    "desc": "Colócala en una casilla vacía del campo de batalla. Cuando un enemigo la pisa, le inflige 10 de daño y lo inmoviliza durante un turno; después, la trampa desaparece."
+  },
+  "7005": {
+   "name": "Frasco de Vida Pequeño",
+   "desc": "Al usarlo, recupera al instante un 20% de la vida (hasta el máximo de vida); después, la herramienta desaparece."
+  },
+  "7006": {
+   "name": "Poción de Maná",
+   "desc": "Al usarla, recupera al instante 2 puntos de coste; después, la herramienta desaparece."
   }
  }
 }

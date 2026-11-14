@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1d7c8-5f22-7f13-b2f4-4c4081a420d3"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square image with the mother duck and exactly two ducklings, using the reference only for drawing style.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one image featuring the mother duck and exactly two ducklings."}}
+{"type":"turn.completed","usage":{"input_tokens":90345,"cached_input_tokens":72576,"cache_write_input_tokens":0,"output_tokens":690,"reasoning_output_tokens":19}}

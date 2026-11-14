@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1d7c5-2547-7b03-8e4e-eaa1e25ac41f"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one square image using the attached character reference and your specified pose and style.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one image using your character reference."}}
+{"type":"turn.completed","usage":{"input_tokens":38462,"cached_input_tokens":12416,"cache_write_input_tokens":0,"output_tokens":672,"reasoning_output_tokens":0}}

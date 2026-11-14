@@ -54,7 +54,7 @@ func _engine() -> GameEngine:
 func _init() -> void:
 	# ---- ① 数据表：四条定义与用户口径逐项对齐 ----
 	var repo := TrapRepo.load_json()
-	check(repo.size() == 4, "traps.json 恰好 4 件陷阱")
+	check(repo.size() == 6, "traps.json 恰好 6 件工具（4 放置型 + 2 使用型）")
 	var bomb: TrapData = repo.get_trap(7001)
 	var frost: TrapData = repo.get_trap(7002)
 	var poison: TrapData = repo.get_trap(7003)
@@ -67,6 +67,17 @@ func _init() -> void:
 			and poison.price == 30, "毒瓶：8 伤 / 持续 3 回合 / 30 金")
 	check(spike != null and spike.damage == 10 and spike.root == 1
 			and spike.price == 40, "穿刺陷阱：10 伤 + 禁足 1 回合 / 40 金")
+	# R690：两个使用型工具（轻点即用，不放置）
+	var hp_pot: TrapData = repo.get_trap(7005)
+	var mana_pot: TrapData = repo.get_trap(7006)
+	check(hp_pot != null and hp_pot.trap_name == "小血瓶" and hp_pot.price == 50
+			and hp_pot.heal_pct == 20 and hp_pot.is_usable(),
+			"小血瓶：回复 20% 生命 / 50 金 / 使用型")
+	check(mana_pot != null and mana_pot.trap_name == "法力药剂" and mana_pot.price == 35
+			and mana_pot.energy == 2 and mana_pot.is_usable(),
+			"法力药剂：回复 2 点费用 / 35 金 / 使用型")
+	check(not bomb.is_usable() and not frost.is_usable() and not poison.is_usable()
+			and not spike.is_usable(), "四个放置型工具都不走使用型分支")
 
 	# ---- ② 栏位：定长 3 槽、满了拒收、取出即空 ----
 	RunState.run_active = true
@@ -181,6 +192,20 @@ func _init() -> void:
 	check(foe6b.poison_dmg == 4 and foe6b.poison_left == 5,
 			"毒瓶 / 毒沼共用施加口 _apply_poison")
 
+	# ---- ⑥b R690：使用型工具的结算（小血瓶回 20% 上限、法力药剂回 2 费）----
+	var e7 := _engine()
+	e7.state.max_hp_self = 50
+	e7.state.hp_self = 20
+	e7.state.energy = 1
+	check(e7.use_tool(7005), "小血瓶：use_tool 返回 true")
+	check(e7.state.hp_self == 30, "小血瓶：20 → 30（最大 50 的 20% = 10）")
+	check(e7.use_tool(7006), "法力药剂：use_tool 返回 true")
+	check(e7.state.energy == 3, "法力药剂：费用 1 → 3（+2）")
+	e7.state.hp_self = e7.state.max_hp_self
+	e7.use_tool(7005)
+	check(e7.state.hp_self == e7.state.max_hp_self, "小血瓶：满血不溢出上限")
+	check(not e7.use_tool(7001), "炼金炸弹不能用 use_tool（它要放置）")
+
 	# ---- ⑦ 源码守卫：三处 UI 与引擎接线不许被后续改动抹掉 ----
 	var shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
 	var battle_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
@@ -192,10 +217,10 @@ func _init() -> void:
 	check(shop_src.contains("TRAP_GROUP_GUTTER") and shop_src.contains("rr.size.x - 24.0"),
 			"商店：中行左右分组 + 图标格宽上限")
 	check(shop_src.contains("TRAP_SHOP_COUNT := 2") and shop_src.contains("_buy_trap"),
-			"商店：右组 2 个陷阱商品与购买分支")
+			"商店：右组 2 个工具商品与购买分支")
 	check(battle_src.contains("_trap_drag_slot") and battle_src.contains("_draw_trap_bar"),
 			"战斗：独立拖拽状态 + 自绘 3 槽栏")
-	check(map_src.contains("_draw_trap_slots"), "地图：左下只读陷阱栏")
+	check(map_src.contains("_draw_trap_slots"), "地图：左下只读工具栏")
 	check(ui_src.contains("trap_slot_frame") and ui_src.contains("trap_bar_bg")
 			and ui_src.contains("trap_group_tag"), "UI 素材：4 张贴图槽位已注册")
 	check(battle_src.contains("draw_bar_bg") and map_src.contains("draw_slot_frame"),
@@ -211,6 +236,11 @@ func _init() -> void:
 	check(battle_src.contains("_draw_trap_fx") and battle_src.contains("TrapArt.draw_trigger_fx")
 			and trap_src.contains("draw_trigger_fx"),
 			"R669：战场绘制口与 TrapArt 素材绘制口已接线")
+	check(eng_src.contains("func use_tool") and battle_src.contains("_use_tool_slot")
+			and trap_src.contains("_potion"),
+			"R690：使用型工具的引擎 / 界面 / 图标三处接线")
+	check(battle_src.contains("is_usable") and battle_src.contains("点一下就能用"),
+			"R690：使用型工具拒绝进入拖放（轻点即用）")
 	var fx_all := true
 	for fx_id in [7001, 7002, 7003, 7004]:
 		if not FileAccess.file_exists(UiAssets.trap_fx_path(int(fx_id))):
