@@ -67,12 +67,55 @@ static func text_width(w: float, b: Dictionary, size: int = FS) -> float:
 	return maxf(8.0, w - PAD_X * 2.0 * k - iw)
 
 
+static func stats_rows(items: Array, w: float, size: int = FS) -> Array:
+	## 数值框的**分行**结果（R712）。放不下就换行，绝不把数字顶到框外 —— 安卓实机
+	## 分辨率下「力量 17（原 15）＋ 生命 45/30」一行塞不进 218px，旧版一路累加画到框外，
+	## 被面板的 `clip_contents` 裁掉半截（`45/30` 的 `/30`、`0（原 2）` 的右括号）。
+	## ⚠️ 测量（`box_h`）与绘制（`_draw_stats`）**必须共用这一份**：各算一套的话，
+	##    行数一旦对不上就是「字戳出框外」或「框里空半截」，只有出图才看得出来。
+	## 宽度口径与 `_draw_stats` 严格一致：左起点 `PAD_X + 2`、右侧留 `PAD_X`，
+	## 每项 = 图标直径 + 3px 缝 + 文字宽，项间 12px；`segs`（同串多色，如生命 16/16）
+	## 按段累加，与逐段绘制同宽。
+	var k := k_of(size)
+	var font := UiTheme.font_bold()
+	var ir := 6.0 * k
+	var gap := 12.0 * k
+	var avail := w - (PAD_X * 2.0 + 2.0) * k
+	var rows: Array = []
+	var cur: Array = []
+	var used := 0.0
+	for it: Dictionary in items:
+		var tw := 0.0
+		var segs: Array = it.get("segs", [])
+		if segs.is_empty():
+			tw = font.get_string_size(str(it.get("text", "")),
+					HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		else:
+			for sg: Dictionary in segs:
+				tw += font.get_string_size(str(sg.get("text", "")),
+						HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		var need := ir * 2.0 + 3.0 * k + tw
+		var add := need if cur.is_empty() else gap + need
+		if not cur.is_empty() and used + add > avail:
+			rows.append(cur)
+			cur = []
+			used = 0.0
+			add = need
+		cur.append(it)
+		used += add
+	if not cur.is_empty():
+		rows.append(cur)
+	return rows
+
+
 static func box_h(b: Dictionary, w: float, size: int = FS) -> float:
 	## 单块高度：**文字行数决定**（这正是「框随文字量变」的实现处）。
 	var t := str(b.get("type", "text"))
 	var k := k_of(size)
 	if t == "stats":
-		return (STATS_PAD_Y * 2.0 + STATS_H) * k
+		# R712：行数由 `stats_rows()` 给（与绘制同源）—— 换行后框要跟着变高。
+		var srows := stats_rows(b.get("items", []), w, size).size()
+		return (STATS_PAD_Y * 2.0 + STATS_H * float(maxi(1, srows))) * k
 	if t == "caption":
 		return (PAD_Y * 0.6 + LINE_H) * k     # 小标题（不画框，只占一行）
 	var rows := rows_of(b.get("segs", []), text_width(w, b, size), size)
@@ -226,39 +269,46 @@ static func _draw_stats(cv: CanvasItem, font_bold: Font, b: Dictionary, rect: Re
 	##      最大生命在成长后走绿（店长口径「这个绿色只在左侧详情显示最大生命时生效」）。
 	var items: Array = b.get("items", [])
 	var k := k_of(size)
-	var cy := rect.position.y + rect.size.y * 0.5
-	var x := rect.position.x + (PAD_X + 2.0) * k
+	# R712：按 `stats_rows()` 分行画（与 `box_h` 同源）。行中心固定按 PAD_Y + 行高算，
+	# 不再用 `rect.size.y * 0.5` —— 多行时那个居中会让第一行贴在框顶上。
+	var rows := stats_rows(items, rect.size.x, size)
 	var ir := 6.0 * k
 	var asc := float(font_bold.get_ascent(size))
-	for it: Dictionary in items:
-		var col: Color = it.get("col", UiTheme.INK_600)
-		var cx := x + ir
-		var tex: Variant = it.get("icon")
-		if tex is Texture2D:
-			cv.draw_texture_rect(tex as Texture2D,
-				Rect2(Vector2(cx - ir, cy - ir), Vector2(ir, ir) * 2.0), false)
-		else:
-			cv.draw_circle(Vector2(cx, cy), ir * 0.82, col)
-		var tx := cx + ir + 3.0 * k
-		var segs: Array = it.get("segs", [])
-		if not segs.is_empty():
-			# 逐段画、宽度累加：不同颜色仍然是**同一串数字**，中间不留缝。
-			var adv := 0.0
-			for sg: Dictionary in segs:
-				var st := str(sg.get("text", ""))
-				if st == "":
-					continue
-				cv.draw_string(font_bold, Vector2(tx + adv, cy + asc * 0.42), st,
-						HORIZONTAL_ALIGNMENT_LEFT, -1, size, sg.get("col", col))
-				adv += font_bold.get_string_size(st, HORIZONTAL_ALIGNMENT_LEFT, -1,
+	for ri in rows.size():
+		var row: Array = rows[ri]
+		var cy: float = (rect.position.y + STATS_PAD_Y * k
+				+ (STATS_H * k) * (float(ri) + 0.5))
+		var x := rect.position.x + (PAD_X + 2.0) * k
+		for it: Dictionary in row:
+			var col: Color = it.get("col", UiTheme.INK_600)
+			var cx := x + ir
+			var tex: Variant = it.get("icon")
+			if tex is Texture2D:
+				cv.draw_texture_rect(tex as Texture2D,
+					Rect2(Vector2(cx - ir, cy - ir), Vector2(ir, ir) * 2.0), false)
+			else:
+				cv.draw_circle(Vector2(cx, cy), ir * 0.82, col)
+			var tx := cx + ir + 3.0 * k
+			var segs: Array = it.get("segs", [])
+			if not segs.is_empty():
+				# 逐段画、宽度累加：不同颜色仍然是**同一串数字**，中间不留缝。
+				var adv := 0.0
+				for sg: Dictionary in segs:
+					var st := str(sg.get("text", ""))
+					if st == "":
+						continue
+					cv.draw_string(font_bold, Vector2(tx + adv, cy + asc * 0.42), st,
+							HORIZONTAL_ALIGNMENT_LEFT, -1, size, sg.get("col", col))
+					adv += font_bold.get_string_size(st, HORIZONTAL_ALIGNMENT_LEFT, -1,
+							size).x
+				x = tx + adv + 12.0 * k
+			else:
+				var txt := str(it.get("text", ""))
+				cv.draw_string(font_bold, Vector2(tx, cy + asc * 0.42), txt,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
+				var tw := font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1,
 						size).x
-			x = tx + adv + 12.0 * k
-		else:
-			var txt := str(it.get("text", ""))
-			cv.draw_string(font_bold, Vector2(tx, cy + asc * 0.42), txt,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
-			var tw := font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-			x = tx + tw + 12.0 * k
+				x = tx + tw + 12.0 * k
 
 # ------------------------------------------------------------ 自绘图标
 # 字段 / buff 没有美术素材（`assets/ui/icon_*` 只有费用 / 力量 / 生命 / 箭 / 鞋），

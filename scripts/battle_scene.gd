@@ -4943,7 +4943,11 @@ func _gui_input(event: InputEvent) -> void:
 			_info_drag_arm = false
 			if _press_idx < 0 and not _grid_drag_arm:
 				# R417：点在左栏明细区且内容可滚 → 先 arm 滚动拖拽；松手没拖动才当点击（钉提及）
-				if _info_panel_rect().has_point(event.position) and _info_scroll_max_v > 0.0:
+				# R712：**不再要求 `_info_scroll_max_v > 0`** —— 那个值由上一帧的绘制算出，
+				# 刚切到一张长卡的第一帧它还是旧卡的（甚至是 0），这时按住就滑不动，
+				# 玩家读成「详情里的字拖不了」。arm 只是「可能想滑」的意图：真滚到头上
+				# `clampf` 自然停住，多 arm 一次没有任何副作用。
+				if _info_panel_rect().has_point(event.position):
 					_info_drag_arm = true
 					_info_drag_pos = event.position
 				else:
@@ -5363,6 +5367,11 @@ func _on_left_click(pos: Vector2) -> void:
 	if _ee_popup:
 		_ee_popup = false
 		queue_redraw()
+		return
+	# R712：点在卡牌详情里 = 只是想看、想滑，**到此为止**。底下那些分支（点空白取消、
+	# 区域面板、回合结束…）在左栏里一个都不该生效 —— 手指在长文本上滑完一抬手，
+	# 落到「点空白」就等于把正在看的那张卡关掉。提及钉选在更上面已经处理过了。
+	if _info_panel_rect().has_point(pos):
 		return
 	# R189：全屏选卡页接管 8 套旧面板。展开时点击被子节点吃掉、根本到不了这里；
 	# 收起态（看战场）点「查看待选牌」浮条回来，点其他地方只提示 —— pending
@@ -17882,6 +17891,10 @@ func _draw_info_panel() -> void:
 				_mention_hits, _info_scroll > 1.0)
 	if content_h > avail:
 		_draw_info_scroll_hint(top + GRID_H, false)   # 下面还有内容
+	if _info_scroll > 1.0:
+		# R712：滚下去之后也得告诉玩家「上面还有」—— 旧版只画了底部那一个提示，
+		# 一滚到底就再没有任何回顶线索，安卓上只能靠盲试。
+		_draw_info_scroll_hint(top, true)
 
 
 
@@ -18399,6 +18412,12 @@ func _process(delta: float) -> void:
 	if _demo_pick_sel >= 0 and _pick != null and _pick.visible and _pick.is_picking():
 		_pick._toggle(_demo_pick_sel)
 		_demo_pick_sel = -1
+	# R712：左栏（卡牌详情）里按住**不是**长按 —— 那里「按住」是「拖着看长文本」的手势。
+	# 安卓上没有滚轮，玩家想看启示者那种七八行的效果只能按住往上滑；旧版按住 500ms 就
+	# 转成右键 → `_on_right_click()` → `_clear_selection()` → 选中一清，面板当场消失，
+	# 表现成「一碰详情就关、长文本根本看不了」。这里先把计时作废，别的长按场景不受影响。
+	if _lp_active and _info_panel_rect().has_point(_lp_pos):
+		_lp_active = false
 	if _lp_active and not _lp_fired and _drag_idx < 0 and _trap_drag_slot < 0 and not _grid_dragging \
 			and (_pick == null or not _pick.visible) and _now() - _lp_t0 >= LP_MS:
 		_lp_fired = true

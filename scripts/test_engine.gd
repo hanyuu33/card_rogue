@@ -39149,6 +39149,54 @@ func _init() -> void:
 
 			"R302 提及：框体绘制把提及的命中矩形收进 hits_out")
 
+	# ---- R712：数值框换行 + 安卓触摸详情面板不会把自己关掉 ----
+
+	# ① 放不下就换行：安卓实机「17（原 15）＋ 45/30」撑破 218px，旧版一路累加画到框外被裁半截
+
+	var r712_boxes = load("res://scripts/card_info_boxes.gd")
+
+	var r712_items := [{"text": "17（原 15）"}, {"text": "45/30"}]
+
+	var r712_narrow: Array = r712_boxes.stats_rows(r712_items, 150.0, 13)
+
+	var r712_wide: Array = r712_boxes.stats_rows(r712_items, 900.0, 13)
+
+	check(r712_narrow.size() >= 2 and r712_wide.size() == 1,
+
+			"R712 数值框：窄宽换行（%d 行）、够宽单行（%d 行）" % [r712_narrow.size(), r712_wide.size()])
+
+	# ② 框高必须跟着行数走（测量与绘制同源，否则「框里空半截」）
+
+	var r712_h1: float = r712_boxes.box_h({"type": "stats", "items": r712_items}, 900.0, 13)
+
+	var r712_h2: float = r712_boxes.box_h({"type": "stats", "items": r712_items}, 150.0, 13)
+
+	check(r712_h2 > r712_h1,
+
+			"R712 数值框：换行后框跟着变高（%.1f → %.1f）" % [r712_h1, r712_h2])
+
+	# ③ 安卓按住左栏 = 想滑长文本，不能转成右键（右键 = `_clear_selection()` = 详情当场消失）
+
+	var r712_bsrc := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+
+	check_src(r712_bsrc.find("if _lp_active and _info_panel_rect().has_point(_lp_pos):") >= 0,
+
+			"R712 触摸：左栏里按住不算长按（不转右键，详情不会被自己关掉）")
+
+	var r712_lick_at := r712_bsrc.find("func _on_left_click(")
+
+	var r712_lick_end := r712_bsrc.find("\nfunc ", r712_lick_at + 1) if r712_lick_at >= 0 else -1
+
+	var r712_lick := ""
+
+	if r712_lick_end > r712_lick_at:
+
+		r712_lick = r712_bsrc.substr(r712_lick_at, r712_lick_end - r712_lick_at)
+
+	check_src(r712_lick.find("if _info_panel_rect().has_point(pos):") >= 0,
+
+			"R712 触摸：`_on_left_click` 在左栏内直接返回（滑完抬手不会落到「点空白取消」）")
+
 	# 文案里的「素体」确实能被识别成提及（与「升级」8027 的卡面文案同源）
 
 	var r298_m := Mention.scan("改造一个己方盟友或工事，使其力量 +2、生命 +10。若改造的是「素体」，它还会额外获得 +1 生命。")
