@@ -38832,6 +38832,25 @@ func _init() -> void:
 
 			"R718 弹窗排版：短文案用最大字号 18（实际 %d）" % int(r713_short_lay["fs"]))
 
+	# ⑧b R719：道具浮动说明的「值不值得画」判据 —— 店长报的那个空框（压在「回合结束」上、
+	# 有金边、一个字都没有）就是 `_hover_relic_tip` 还空着时旧版照画的结果：
+	# `TextWrap.wrap_plain("")` 返回 `[""]`（1 行空白），`h = 24 + 18 = 42` 正好一行高，
+	# 位置又落在道具栏上方 10px。判据必须问「有没有一个能看见的字符」，不是判长度。
+	# ⚠️ 零宽字符用 `String.chr()` 拼，**不许直接写进源码** —— 那玩意儿在编辑器里
+	#    就是两个空引号，后人读代码完全看不懂（本轮的第一次改写就踩了）。
+	var r719_zw: String = String.chr(0x200b) + String.chr(0x200c) + String.chr(0x200d) + String.chr(0xfeff)
+	# 纯空白串也用它拼：源码里写字面量空白转义太容易被工具链吃掉（本轮就吃过）。
+	var r719_blank: String = String.chr(32).repeat(3) + String.chr(10) + String.chr(9) + String.chr(32)
+	check(not r215_bs.relic_tip_visible_text("")
+			and not r215_bs.relic_tip_visible_text(r719_blank)
+			and not r215_bs.relic_tip_visible_text(r719_zw),
+			"R719 道具浮动说明：空串 / 纯空白 / 零宽字符一律不画框（否则留一个只有金边的空框）")
+	check(r215_bs.relic_tip_visible_text("「苹果」（道具）最大生命 +7。")
+			and r215_bs.relic_tip_visible_text(r719_zw + "苹果"),
+			"R719 道具浮动说明：正常文案照画，零宽字符夹在可见字之间不影响")
+	check_src(r215_besrc.find("if not relic_tip_visible_text(_hover_relic_tip):") >= 0,
+			"R719 源码：道具浮动说明的入口判据走 relic_tip_visible_text（不再是裸 strip_edges）")
+
 	# ⑧b R710：转阶段「效果区换卡」—— 段落切分是纯函数，接线靠源码断言
 
 	var r706_sw := {"start": 1000, "t_out": 280, "gap": 80, "t_in": 420, "land": 620}

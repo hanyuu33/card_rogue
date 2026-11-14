@@ -18376,9 +18376,31 @@ const RELIC_TIP_SIZE_MIN := 10
 const RELIC_TIP_LINE := 18.0
 
 
+## R719：道具浮动说明「值不值得画」的**唯一判据**（纯函数，headless 直接喂）。
+##
+## 店长报过「回合结束上面挂着一个空框」：`_hover_relic_tip` 还是空串时，旧版无条件
+## 往下画 —— `TextWrap.wrap_plain("")` 给回 `[""]`（1 行空白），于是
+## `h = PAD*2 + 1*lh` 正好一行高，画出来就是**有金边、一个字都没有**的空框，
+## 位置又恰好落在道具栏上方 10px（压着「回合结束」按钮）。R668 补了输入判空之后
+## 不再出现；这里再把判据放到**可见字符**这一层，堵住同类复发。
+##
+## 为什么不写成 `tip.strip_edges().is_empty()`：`strip_edges()` 去的是 Unicode
+## 「空白」，而零宽空格 U+200B / 零宽连接符 U+200D / BOM U+FEFF 都是**格式字符**，
+## 不算空白、拦不住 —— 它们折完同样是「有长度、没墨迹」的一行。所以这里直接问
+## 「有没有一个能看见的字符」，**判输出，不判输入**（与 R718 的
+## `CardText.segments_plain(...).strip_edges()` 同一口径）。
+static func relic_tip_visible_text(tip: String) -> bool:
+	for ch in tip:
+		if ch == "\u200b" or ch == "\u200c" or ch == "\u200d" or ch == "\ufeff":
+			continue
+		if not ch.strip_edges().is_empty():
+			return true
+	return false
+
+
 func _draw_relic_tip_panel() -> void:
 	## 道具悬停说明：浮动折行面板（长描述如「叠加态的鸭」不溢出）。
-	if _hover_relic_tip.strip_edges().is_empty():
+	if not relic_tip_visible_text(_hover_relic_tip):
 		return
 	## 位置优先贴在道具栏上方；上方放不下就翻到下方。两个轴都夹进窗口内。
 	##
@@ -18416,6 +18438,14 @@ func _draw_relic_tip_panel() -> void:
 		keep[max_lines - 1] = CardFace.ellipsize(_font,
 				keep[max_lines - 1] + "…", inner, fs)
 		lines = keep
+	# R719：折完再判一次（双保险）—— 输入那关没拦住的不可见字符，到这里一定现形。
+	# 拼回去仍然凑不出一个可见字符，就整块不画：宁可什么都不显示，也不留一个只有
+	# 金边的空框（那个框会正好压住「回合结束」按钮，看着像界面坏了）。
+	var flat := ""
+	for ln in lines:
+		flat += ln
+	if not relic_tip_visible_text(flat):
+		return
 	var h: float = RELIC_TIP_PAD * 2.0 + lines.size() * lh
 	var y: float = z.position.y - h - 10.0
 	if y < 8.0:
