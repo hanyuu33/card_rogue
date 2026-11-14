@@ -9529,6 +9529,9 @@ func _fate_reject(side: String) -> String:
 			state.discard.remove_at(i)
 			state.hand.append(c)
 			picked.append(c.card_name)
+			# R697：这张是**从弃牌区**回手的。拒绝命运「先丢 N 再捞 M」净值为正，
+			# 界面靠弃牌区张数差值判不出来 → 在这里点名，飞入动画才改用弃牌堆起点。
+			action.emit("card_gained", {"card": c, "how": "拒绝命运", "from": "discard"})
 			continue
 		i += 1
 	if picked.is_empty():

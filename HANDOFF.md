@@ -1862,3 +1862,18 @@ manifest 的 9018 条目已更新 ref / prompt / note。
   概率常量、1000 场掉率 70~130、满栏不掉、入队 / 领取进栏 / 置已领、放弃不进栏、三处接线守卫）/
   trapinput 36 / smoke 72✓；`test_i18n` 35✓；`validate_interface` 794 条 OK、`validate_spanish` 22113 项 OK、
   `validate_glossary` OK；`RESTORE_VERIFY OK`。
+
+## 2026-11-14 R697 效果入牌库 / 弃牌全线体检（批量入库错开 + 弃牌区回手起点）
+- **用户口径**：「检查一下所有这些用效果加入卡组和弃牌的正不正常，比如镜像之类」→ 全线体检，查出 4 处演出问题并修。
+- **体检结论（引擎侧全部正常，无需改）**：
+  - 新增入库的**发射点只有 5 个**：幽深回响 9002 `_echo_cast` / 镜像 9056 `_mirror_reflect` / 生产订单 8048 / 集束炮台 9166 `_cluster_turret_enter` / 组合 `add_card_to_deck`。五个都带 `side`、都 `from_dict` 复制（不污染卡库）、都发 `deck_added`。
+  - 另外 4 处 `state.deck` 写入**不该发**信号：破绽诅咒走 `curse_added`（有 R362 的卡面展示队列）；本能「打回原位」、警觉 9109 / 起手附魔「挪到牌库顶」都是重排不是新增。
+  - 镜像语义复核：`self_effect_plays += 1` 在 `_on_effect_card_played()` **之前**、而 `mir_n` 读的是**入区前**的效果区 → 打出镜像那一回合不触发（否则自我复制指数增殖），下一回合起每回合前 X 次各触发一次，X 叠加正确。
+  - 生产订单入库是 `1 攻 / 3+4+1=8 血`（卡面「+4 血」之外的 +1 是素体自带的改造加成，R120/R522 口径，注释已写明）。
+  - 弃牌侧：手牌满 `hand_burn`、满手「加入手卡」`_grant_to_hand`、回合结束 `discard_hand`、麻痹 `paralysis_added` 都齐；拒绝命运 / 猫鼠游戏的整批弃手牌靠 `_hand_sync` 的 LCS diff 兜底播「飞向弃牌堆」。
+- **修 ①：批量入库三件套完全重合**。生产订单 2 张 / 集束炮台 2 张 / 组合 N 张同一帧 emit，卡背起点、落点、金环、「+1」飘字共用同一组常量 → 视觉上只像加了 1 张。`deck_added` 的演出收进 `_on_deck_added(data, n)` 唯一口，按队列里「还在播 / 刚播完（<600ms）」的条目逐个后移 `DECK_FLY_GAP_MS = 70`；卡背 / 金环 / 飘字三者共用同一个 `at`。busy 判据含 `_deck_fly`，后移的几张会被等完，不会提前放开出牌。
+- **修 ②：金环语义被借走**。R696b 给「有卡入库」加的金环，被 `barrier_grant`（能量屏障 8033）与过载也 append 了 —— 那两条是「把库里的卡**改了**」，加金环会让玩家以为「加了 1 张」。撤掉两处，只留紫环（变幻）；全文件 `_deck_pulse.append` 现在只剩 1 处。
+- **修 ③：`deck_added` 没有 side 判断**。界面一律往玩家牌堆上画；引擎目前五个点都保证只有我方 emit，属防御性补齐 —— 现在 `_on_deck_added` 内判 `side != SIDE_SELF` 直接 return。
+- **修 ④：从弃牌区回手的卡从抽牌堆起飞**。怒涛 9095 / 鲸鱼之怒 9050 / 暗影步 9121 / 乌鸦 9039 / 传承记忆 9078 等都是「弃牌区 → 手牌」，`_play_hand_flyin` 却写死从 `DECK` 起飞，观感是「又凭空抽了一张」。改：`_hand_sync` 新增弃牌区张数快照 `_discard_known`，diff 期间净减少（`dd < 0`）即判为回手；`_play_hand_flyin(added, from_discard)` 从 `DISCARD` 中心起飞。拒绝命运 9098「先丢 N 再捞 M」净值为正判不出来 → 引擎捞回时补 `card_gained{from:"discard"}` 点名（界面 `_gained_from_discard` 一次性标记）。
+- **回归**：assemble 0 / mana PASS / engine **5964✓**（+1：拒绝命运捞回张数全带 `from=discard`）/ reward 26 / bgm 39 / traps **109✓**（+9：唯一口 / side / 错开常量 / 金环只剩 1 处 / 弃牌区起点 / 快照判据 / 点名 / 引擎点名 / 5 个发射点带 side）/ trapinput 36 / smoke **73✓**（+1：喂三条 `deck_added` 量 start 等差 70ms，敌方 side 不排演出）；`RESTORE_VERIFY OK`。
+- **没做的**：批量入库的错开是时序行为，`_shot_pending` 下不播、静态帧也看不出来，所以只上了行为断言（`test_smoke` 直接调 `_on_deck_added` 量差值），没出截图。

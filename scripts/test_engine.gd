@@ -19712,6 +19712,18 @@ func _init() -> void:
 
 	var r45_ft := _new_engine([], 30, 30)
 
+	# R697：捞回的那几张必须自报「来自弃牌区」—— 拒绝命运「先丢 N 再捞 M」净值为正，
+
+	# 界面靠弃牌区张数差值判不出来，飞入动画会错从抽牌堆起飞。
+
+	var r697_src: Array = []
+
+	r45_ft.action.connect(func(ev: String, pl: Dictionary) -> void:
+
+		if ev == "card_gained" and str(pl.get("from", "")) == "discard":
+
+			r697_src.append(pl.get("card")))
+
 	var r45_ft_a := _card(8001, "木栅栏", "工事", 1, 0, 2, 0, 0)          # 1 费 → 捞回
 
 	var r45_ft_hi := _card(9001, "鸭子骑士", "盟友", 6, 3, 30, 1, 2)     # 6 费 → 留弃牌区
@@ -19749,6 +19761,10 @@ func _init() -> void:
 	check(r45_ft.state.void_count == 1,
 
 			"拒绝命运：本卡带「次元」→ 进消耗区（void %d）" % r45_ft.state.void_count)
+
+	check(r697_src.size() == 2,
+
+			"R697：拒绝命运捞回的 %d 张全部点名 from=discard（飞入从弃牌堆起飞）" % r697_src.size())
 
 
 

@@ -143,6 +143,9 @@ const VOID_Y := DISCARD_Y - ZONE_H - 22.0
 ## y 与牌堆同高且低于「我方生命」面板 —— 全程不穿任何 UI。
 const DECK_FLY_FROM := Vector2(DECK_X - 230.0, DECK_Y + CARD_H / 2.0)
 const DECK_PULSE_MS := 640      # 落库脉冲时长（飞行 320ms 结束后仍留一段余光）
+## R697：同一次效果塞多张（生产订单 2 / 集束炮台 2 / 组合 N）时，逐张错开的间隔。
+## 三个演出（卡背飞行 / 金环 / 「+1」飘字）共用这个 lag，否则同帧完全重合 = 只看到 1 张。
+const DECK_FLY_GAP_MS := 70
 const ZONE_ICON := 62.0     # 区域内图标的绘制边长（正方形素材等比缩进这个方框）
 const ZONE_NAME_H := 18.0   # 区域名压条的厚度（压在方块下沿；R393 14 → 18 配 13px 字）
 # ---- R667 陷阱栏：右侧资源列**正上方**，与卡组/弃牌/消耗同列（同一中轴 x=1200）----
@@ -710,6 +713,12 @@ var _transform_fx: Array = []   # R284：变幻特效 {zone, slot, start, dur}�
 var _deck_pulse: Array = []     # R696：卡真的进了抽牌库 → 牌堆金色脉冲 {start, dur}
 var _earring_missed := 0        # 耳环连出期间压下的飞出数（>3 → 收尾合并一次整体淡出）
 var _void_known := 0            # void_count 快照：增量 = 这段时间被「消耗」的张数（飞出改上飞）
+## R697：弃牌区张数快照。diff 期间**净减少** = 有卡从弃牌区被捞回手牌 →
+## 飞入动画的起点要用弃牌堆（原来一律从抽牌堆起飞，玩家看到「凭空从牌堆抽来一张」）。
+var _discard_known := 0
+## R697：引擎报「这张是从弃牌区回手」的一次性标记（拒绝命运那种「先丢 N 再捞 M」
+## 净值为正、靠张数快照判不出来的情形）。消费一次即清空。
+var _gained_from_discard := false
 # R151 批 1 · P0-4：出牌落位 —— 「place」事件用它把 _slides 的 from 换成真实松手/手牌位置
 var _place_from := {}           # {pos, card_id, at}；_finish_play 武装，"place" 事件消费
 # R151 批 1 · P0-3：费用变化量飘字（HP 掉血已有飘字体系，费用原来什么都没有）
@@ -10916,6 +10925,7 @@ func _hand_sync() -> void:
 		_hand_known = cur
 		_hand_known_init = true
 		_void_known = engine.state.void_count
+		_discard_known = engine.state.discard.size()
 		# R151 P0-3：新一场战斗的滚动从「当前实际值」起锚（UiRoll 是 static 跨场景共享，
 		# 不起锚会从上一场的残值滚过来 —— 观感 = 血条空降 / 费用乱跳）
 		UiRoll.snap("hp_self", engine.state.hp_self)
@@ -10931,6 +10941,9 @@ func _hand_sync() -> void:
 		_flyin_skip.clear()
 		_flyout_skip_all = false
 		_void_known = engine.state.void_count
+		# R697：这一帧没有 diff，弃牌区快照也要跟上，否则差值会累积到下一次误判。
+		_discard_known = engine.state.discard.size()
+		_gained_from_discard = false
 		# R396：**id 序列一样 ≠ 没有抽牌** —— 打出一张 9145 又抽到另一张 9145 时，
 		# 序列一个字节都没变，diff 什么都看不出来。此时靠引擎报的 `_drawn_pending` 补播。
 		_play_hand_flyin(_take_drawn_pending([]))
@@ -10946,6 +10959,9 @@ func _hand_sync() -> void:
 	_hand_known = cur
 	var vd: int = engine.state.void_count - _void_known   # 这段时间被「消耗」的张数
 	_void_known = engine.state.void_count
+	# R697：弃牌区净减少 = 有卡被捞回手牌（怒涛 / 鲸鱼之怒 / 暗影步 / 乌鸦 / 传承记忆 …）
+	var dd: int = engine.state.discard.size() - _discard_known
+	_discard_known = engine.state.discard.size()
 	if _shot_pending:
 		# 探针 / 演示钉帧：只维护快照、不播（否则 --shotframe 会截到飞行中的卡）
 		_flyout_skip.clear()
@@ -10953,10 +10969,14 @@ func _hand_sync() -> void:
 		_flyout_skip_all = false
 		_drawn_pending.clear()
 		_earring_missed = 0
+		_gained_from_discard = false
 		return
 	var n := _now()
-	# 新增 → 卡背从抽牌堆飞入手牌位（逐张错开 60ms）
-	_play_hand_flyin(added)
+	# 新增 → 卡背飞入手牌位（逐张错开 60ms）。
+	# R697：来源判据 —— 弃牌区净减少（dd < 0）或引擎点名从弃牌区回手 → 从**弃牌堆**起飞。
+	var from_discard := dd < 0 or _gained_from_discard
+	_gained_from_discard = false
+	_play_hand_flyin(added, from_discard)
 	# 移除 → 默认飞弃牌区；消耗的份额（void 增量）改上飞；skip 名单 / 耳环连出不播
 	var earring := engine.earring_autoplay_active()
 	for r0 in removed:
@@ -10986,11 +11006,16 @@ func _hand_sync() -> void:
 	_flyout_skip_all = false
 
 
-func _play_hand_flyin(added: Array) -> void:
-	## 新增 → 卡背从抽牌堆飞入手牌位（逐张错开 60ms）。
+func _play_hand_flyin(added: Array, from_discard := false) -> void:
+	## 新增 → 卡背飞入手牌位（逐张错开 60ms）。
 	## R396：从 `_hand_sync` 里抽出来，因为「id 序列没变、但其实抽了一张」那条路也要播。
+	## R697：`from_discard` —— 从弃牌区捞回手牌的效果（怒涛 / 鲸鱼之怒 / 暗影步 …）
+	## 原来一律从**抽牌堆**起飞，玩家看到的是「凭空又抽了一张」；改从弃牌堆起飞。
 	if _shot_pending or added.is_empty():
 		return
+	var origin := Vector2(DECK_X + ZONE_W / 2.0, DECK_Y + ZONE_H / 2.0)
+	if from_discard:
+		origin = Vector2(DISCARD_X + ZONE_W / 2.0, DISCARD_Y + ZONE_H / 2.0)
 	var n := _now()
 	var seq := 0
 	for a: Dictionary in added:
@@ -11000,8 +11025,7 @@ func _play_hand_flyin(added: Array) -> void:
 		if _flyin_skip.has(card.id):
 			_flyin_skip.erase(card.id)
 			continue
-		_hand_fly.append({"mode": "in", "card": card,
-				"from": Vector2(DECK_X + ZONE_W / 2.0, DECK_Y + ZONE_H / 2.0),
+		_hand_fly.append({"mode": "in", "card": card, "from": origin,
 				"slot": int(a["idx"]), "start": n + 60 * seq, "dur": 260})
 		seq += 1
 
@@ -12062,21 +12086,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
 		"deck_added":
 			# R283：卡入牌库（镜面反射 / 生产订单）-> 卡背飞入卡组区（普通调，无紫）。
-			var da_card: CardData = data.get("card")
-			# R696：默认起点改走 `DECK_FLY_FROM`（牌堆左侧空地），来源仍可由 payload 指定。
-			var da_from: Vector2 = DECK_FLY_FROM
-			if data.get("from") is Vector2:
-				da_from = data["from"]
-			if not _shot_pending:
-				_deck_fly.append({"card": da_card, "from": da_from,
-					"start": n, "dur": 320, "curse": false})
-				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
-				# R696：卡背太小、320ms 一闪而过，玩家余光未必扫到右下角 →
-				# 补「+1」飘字 + 牌堆金环。飘字落点在牌堆**左侧**空地，不压张数徽章。
-				_deck_pulse.append({"start": n, "dur": DECK_PULSE_MS})
-				_floaters.append({"pos": Vector2(DECK_X - 30.0, DECK_Y + 26.0),
-						"text": "+1", "col": Color("ffd76a"),
-						"start": n + 300, "dur": 620, "size": 19})
+			# R697：抽成函数 —— ①只认我方（敌方牌库是抽象计数）；
+			#       ②同一次效果塞多张时逐张错开。两条都在 `_on_deck_added` 里判。
+			_on_deck_added(data, n)
 		"trample_hit":
 			# R225 践踏：击杀的溢出伤害沿**同一列**击穿下一个单位 —— 在**那个格子**
 			# 补一次命中演出（不重播攻击者的攻击动作），排在这次攻击「命中」之后再播，
@@ -12339,6 +12351,10 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# **实例**报上来，`_hand_sync()` 用 `_take_drawn_pending()` 补播。
 			if data.get("card") is CardData:
 				_drawn_pending.append(data["card"])
+				# R697：引擎点名「这张是从弃牌区回手」→ 飞入起点改用弃牌堆
+				#（拒绝命运这种「先丢 N 再捞 M」净值为正，靠张数快照判不出来）。
+				if str(data.get("from", "")) == "discard":
+					_gained_from_discard = true
 		"snow_leopard":
 			# R446 雪豹（8081）：攻击时随机一张手牌本回合 -1 费 → 手牌区上沿飘一条。
 			sfx.play("click")
@@ -12572,8 +12588,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("能量屏障：抽牌堆里没有「还没有能量屏障」的盟友 / 工事，效果落空（仍抽 %d 张）"
 						% int(data.get("drawn", 0)))
 			if bool(data.get("ok", false)) and data.get("card") is CardData and not _shot_pending:
+				# R697：这两条是「把库里的卡**改了**」（屏障 / 双动），不是「加了 1 张」——
+				#       金环 + 「+1」只认入库（`_on_deck_added`），这里只留紫环（变幻）。
 				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
-				_deck_pulse.append({"start": n, "dur": DECK_PULSE_MS})   # R696：真往库里塞了一张
 		"barrier":
 			# 护盾**挡下**伤害的瞬间（R87）：这是玩家最需要看到的反馈 —— 护盾消失且不扣血。
 			sfx.play("heal")
@@ -12790,8 +12807,9 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				# 落空要说清原因，否则玩家以为白花了 2 费
 				_say("过载：牌库里没有「没有一回合行动两次」的盟友，效果落空")
 			if bool(data.get("ok", false)) and data.get("card") is CardData and not _shot_pending:
+				# R697：这两条是「把库里的卡**改了**」（屏障 / 双动），不是「加了 1 张」——
+				#       金环 + 「+1」只认入库（`_on_deck_added`），这里只留紫环（变幻）。
 				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
-				_deck_pulse.append({"start": n, "dur": DECK_PULSE_MS})   # R696：真往库里塞了一张
 		"auto_upgrade":
 			# 自主升级 8045（R95，机械之心；R275 改口径）：回合开始随机改造**手牌**里一张
 			# 盟友 / 工事。飘字落在手牌区上方 —— 与「过载」（牌库）分开。
@@ -17111,6 +17129,38 @@ func _draw_curse_show() -> void:
 		var sub := "→ 你的卡组" if src == "" else "%s → 你的卡组" % src
 		_draw_string_center(_font_bold, UI_FS_CAPTION, sub,
 				Vector2(ctr.x, rect.end.y + 26.0), Color(0.78, 0.62, 1.0, 0.9))
+
+
+func _on_deck_added(data: Dictionary, n: int) -> void:
+	## R697：`deck_added` 的唯一演出入口（引擎 5 个发射点共用）。
+	## ⚠️ 同一帧可能连来 N 条（生产订单 2 张 / 集束炮台 2 张 / 组合 N 张）——
+	##    卡背起点、落点、金环、「+1」飘字全是同一组常量，不错开就**完全重合**，
+	##    玩家只会读到「加了 1 张」。所以按队列里刚排进来的条目逐个后移 DECK_FLY_GAP_MS。
+	##    busy 判据含 `_deck_fly`，后移的那几张也会被等完，不会提前放开出牌。
+	# 敌方没有真实牌库（只有 `opp_deck_count`）→ 真有敌方 emit 也不该往玩家牌堆上飞。
+	if str(data.get("side", GameEngine.SIDE_SELF)) != GameEngine.SIDE_SELF:
+		return
+	var card: CardData = data.get("card")
+	if card == null or _shot_pending:
+		return
+	var from_pos: Vector2 = DECK_FLY_FROM
+	# R696：来源仍可由 payload 指定（默认牌堆左侧空地）。
+	if data.get("from") is Vector2:
+		from_pos = data["from"]
+	var at := n
+	for f: Dictionary in _deck_fly:
+		var fs := int(f["start"])
+		if n - fs < 600:              # 只跟「还在播 / 刚播完」的那几条错开
+			at = maxi(at, fs + DECK_FLY_GAP_MS)
+	_deck_fly.append({"card": card, "from": from_pos,
+			"start": at, "dur": 320, "curse": false})
+	_transform_fx.append({"zone": "deck", "start": at, "dur": 460})
+	# R696：卡背太小、320ms 一闪而过，玩家余光未必扫到右下角 →
+	# 补「+1」飘字 + 牌堆金环。飘字落点在牌堆**左侧**空地，不压张数徽章。
+	_deck_pulse.append({"start": at, "dur": DECK_PULSE_MS})
+	_floaters.append({"pos": Vector2(DECK_X - 30.0, DECK_Y + 26.0),
+			"text": "+1", "col": Color("ffd76a"),
+			"start": at + 300, "dur": 620, "size": 19})
 
 
 func _draw_deck_fly() -> void:

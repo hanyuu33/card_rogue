@@ -442,6 +442,50 @@ func _init() -> void:
 	check(bs696.find("--deckfly") >= 0,
 			"R696：带 --deckfly 出图入口（验同类动画不必再打临时补丁）")
 
+	# ---- ⑨ R697：入库演出唯一口 / 批量错开 / 弃牌区回手起点 ----
+	check(bs696.find("func _on_deck_added") >= 0
+			and bs696.find("_on_deck_added(data, n)") >= 0,
+			"R697：deck_added 的演出收进 `_on_deck_added` 唯一口")
+	check(bs696.find('if str(data.get("side", GameEngine.SIDE_SELF)) != GameEngine.SIDE_SELF:') >= 0,
+			"R697：deck_added 只对我方播（敌方牌库只是抽象计数，不该往玩家牌堆飞）")
+	check(bs696.find("const DECK_FLY_GAP_MS") >= 0
+			and bs696.find("at = maxi(at, fs + DECK_FLY_GAP_MS)") >= 0,
+			"R697：同一次效果塞多张时逐张错开（否则卡背 / 金环 /「+1」完全重合 = 只看到 1 张）")
+	# 金环只认「入库」：全文件只剩 `_on_deck_added` 里一处 append
+	#（屏障 8033 / 过载走的是「改了一张」，借金环会让玩家以为加了 1 张）。
+	var pulse_n := 0
+	var pulse_at := 0
+	while true:
+		pulse_at = bs696.find("_deck_pulse.append", pulse_at)
+		if pulse_at < 0:
+			break
+		pulse_n += 1
+		pulse_at += 1
+	check(pulse_n == 1,
+			"R697：金环只在真正入库时出现（实际 %d 处 append；屏障/过载不该冒充「+1」）" % pulse_n)
+	check(bs696.find("func _play_hand_flyin(added: Array, from_discard := false)") >= 0
+			and bs696.find("origin = Vector2(DISCARD_X + ZONE_W / 2.0") >= 0,
+			"R697：从弃牌区捞回的卡从弃牌堆起飞（原来一律从抽牌堆，观感=又抽了一张）")
+	check(bs696.find("var _discard_known") >= 0
+			and bs696.find("var dd: int = engine.state.discard.size() - _discard_known") >= 0
+			and bs696.find("var from_discard := dd < 0 or _gained_from_discard") >= 0,
+			"R697：弃牌区张数快照 → 净减少即判「有卡从弃牌区回手」")
+	check(bs696.find('if str(data.get("from", "")) == "discard":') >= 0,
+			"R697：card_gained 带 from=discard 时点名来源（拒绝命运那种净值为正的）")
+	var eng697 := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check(eng697.find('"how": "拒绝命运", "from": "discard"') >= 0,
+			"R697：拒绝命运捞回时在引擎侧点名来源")
+	# 五个入库发射点必须都带 side（界面按 side 过滤）
+	var emit_all := true
+	for eid in ["{\"card\": c, \"side\": p.owner}",
+			"{\"card\": copy, \"side\": side}",
+			"{\"card\": mr_copy, \"side\": side}",
+			"{\"card\": up, \"side\": side}",
+			"{\"card\": ad_inst, \"side\": p.owner}"]:
+		if eng697.find(str(eid)) < 0:
+			emit_all = false
+	check(emit_all, "R697：5 个 deck_added 发射点都带 side（幽深回响/镜像/生产订单/集束炮台×2）")
+
 	RunState.traps = [-1, -1, -1]
 	print("TRAPS === 结束：%d 通过 / %d 失败 ===" % [_ok, _bad])
 	quit(1 if _bad > 0 else 0)

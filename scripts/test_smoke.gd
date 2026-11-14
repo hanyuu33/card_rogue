@@ -195,6 +195,14 @@ func _initialize() -> void:
 				RunState.pending_node = {"type": "battle"}
 				RunState.pending_level = RunState.next_level({"type": "battle"}),
 			_check_eliminate_panel],
+		# R697：同一次效果塞多张（生产订单 2 / 集束炮台 2 / 组合 N）时，入库演出必须逐张错开
+		# —— 卡背 / 金环 /「+1」共用同一组常量，同帧排进去就完全重合，只读到「加了 1 张」。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_deck_added_stagger],
 		# R314（用户口径）：道具栏**高亮** + 风妖精飘字**必须有时间维度**
 		# （不是贴一张静态字，要能在 start~dur 之间移动 / 淡出）。
 		["res://scenes/battle.tscn", func():
@@ -565,6 +573,50 @@ func _prep_records() -> void:
 	RunRecord.finish("win")
 	RunRecord.begin_run("森林精魄")
 	RunRecord.finish("interrupted")
+
+
+func _check_deck_added_stagger(scene: Variant) -> void:
+	## R697：`deck_added` 的批量错开 —— 生产订单 2 张 / 集束炮台 2 张 / 组合 N 张
+	## 全在同一帧 emit，演出三件套（卡背飞行 / 金环 /「+1」飘字）若不错开就**完全重合**，
+	## 玩家只会读到「加了 1 张」。这里直接喂三条，量 start 的等差。
+	var cmap: Dictionary = (load("res://scripts/battle_scene.gd") as Script).get_script_constant_map()
+	var gap_ms := int(cmap.get("DECK_FLY_GAP_MS", 0))
+	if gap_ms <= 0:
+		_smoke_fail("R697：DECK_FLY_GAP_MS 缺失或非正（%d）" % gap_ms)
+		return
+	scene._deck_fly.clear()
+	scene._deck_pulse.clear()
+	var repo := CardRepo.load_json()
+	var c1 := CardData.from_dict(repo.get_card(GameEngine.PROTO_ID).to_dict())
+	scene._on_deck_added({"card": c1, "side": GameEngine.SIDE_SELF}, 1000)
+	scene._on_deck_added({"card": c1, "side": GameEngine.SIDE_SELF}, 1000)
+	scene._on_deck_added({"card": c1, "side": GameEngine.SIDE_SELF}, 1000)
+	if scene._deck_fly.size() != 3 or scene._deck_pulse.size() != 3:
+		_smoke_fail("R697：三条入库应各排一条飞行 + 一条金环（实际 %d / %d）"
+				% [scene._deck_fly.size(), scene._deck_pulse.size()])
+		return
+	var ok := true
+	for i in range(1, 3):
+		var da: int = int(scene._deck_fly[i]["start"]) - int(scene._deck_fly[i - 1]["start"])
+		var dp: int = int(scene._deck_pulse[i]["start"]) - int(scene._deck_pulse[i - 1]["start"])
+		if da != gap_ms or dp != gap_ms:
+			ok = false
+	if not ok:
+		_smoke_fail("R697：三张应依次错开 %dms（实际飞行 %s / 金环 %s）" % [gap_ms,
+				str(scene._deck_fly.map(func(f): return int(f["start"]))),
+				str(scene._deck_pulse.map(func(f): return int(f["start"])))])
+		return
+	# 敌方 side：不排任何演出（敌方牌库只是抽象计数）
+	scene._deck_fly.clear()
+	scene._deck_pulse.clear()
+	scene._on_deck_added({"card": c1, "side": GameEngine.SIDE_OPPONENT}, 3000)
+	if not scene._deck_fly.is_empty() or not scene._deck_pulse.is_empty():
+		_smoke_fail("R697：敌方 deck_added 不该往玩家牌堆上画（飞行 %d / 金环 %d）"
+				% [scene._deck_fly.size(), scene._deck_pulse.size()])
+		return
+	scene._deck_fly.clear()
+	scene._deck_pulse.clear()
+	print("SMOKE OK R697 入库错开：三张依次错开 %dms，敌方不播" % gap_ms)
 
 
 func _check_eliminate_panel(scene: Variant) -> void:
