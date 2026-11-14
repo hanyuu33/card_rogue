@@ -4,7 +4,7 @@ extends SceneTree
 
 ## 覆盖：新数值（农民3费3/8、栅栏2费6血、攻击1费4伤）、费用机制、每回合抽 5、
 
-## 回合结束弃全部手牌、牌库空时弃牌洗回、抽空提示、效果卡（迅捷减伤）、
+## 回合结束弃全部手牌、牌库空时弃牌洗回、抽空提示、效果卡（幽深回响 / 减伤通道）、
 
 ## 击退/智慧/闪电链/火球术、鸭子骑士关卡、放置/移动/攻击/AI/胜负。
 
@@ -346,23 +346,27 @@ func _init() -> void:
 
 			"鸭子骑士：怪物 3/30 程1 速2（2026-10-01 由 5 攻下调，改为击杀成长）")
 
-	var swift := repo.get_card(9002)
+	var echo_card := repo.get_card(9002)
 
-	check(swift.is_effect() and swift.rarity == 1 and swift.cost == 2
+	check(echo_card.card_name == "幽深回响" and echo_card.is_effect() and echo_card.cost == 2
 
-			and swift.value == 2 and swift.traits.has("减伤"),
+			and echo_card.rarity == 1 and echo_card.traits.has("幽深回响") and echo_card.value == 6
 
-			"迅捷：效果卡 稀有 2 费 value=2（减伤，只护 HP；2026-09-30 由 3 费下调）")
+			and echo_card.effect_text.contains("加入抽牌库")
+
+			and echo_card.effect_text.contains("重复 X 次"),
+
+			"幽深回响（R688 取代迅捷）：稀有 2 费效果卡，trait 幽深回响 value=6，文案「加入抽牌库」+「重复 X 次」")
 
 	check(repo.get_card(9006).rarity == 1, "闪电链：稀有（R429 由史诗降为稀有）")
 
 	check(repo.get_card(9007).rarity == 1, "火球术：稀有")
 
-	var ser := swift.to_dict()
+	var ser := echo_card.to_dict()
 
-	check(CardData.from_dict(ser).value == 2 and CardData.from_dict(ser).is_effect(),
+	check(CardData.from_dict(ser).value == 6 and CardData.from_dict(ser).is_effect(),
 
-			"效果卡 value/kind 序列化保留")
+			"效果卡 value/kind 序列化保留（R688 幽深回响 value=6）")
 
 	var starter := repo.starter_deck()
 
@@ -642,7 +646,7 @@ func _init() -> void:
 
 			"R124 流星雨：敌方 0 费用同样可施放（同一口径）")
 
-	check(not ms_e.can_pay_card(repo.get_card(9002)),
+	check(not ms_e.can_pay_card(repo.get_card(9065)),
 
 			"R124：这条只对 X 费卡生效 —— 普通 2 费牌在 0 费用时仍不可用")
 
@@ -2347,8 +2351,8 @@ func _init() -> void:
 			"野兽之心：工事不是盟友，不吃伤害 +1（5 点，30 → 25）")
 
 	# R617：野兽之心多张真叠加（效果区 N 张 → 盟友伤害 +N、落地盟友 +2N 生命）
-	check(beast.effect_text.contains("可叠加"),
-			"R617：野兽之心卡面写明「可叠加」")
+	check(beast.effect_text.contains("X 为本卡在效果区的张数"),
+			"R617/R688：野兽之心卡面用 X 表述叠加（X = 效果区张数）")
 	var eng_beast3 := _new_engine([], 20, 20, -1, false)
 	eng_beast3.start_game(1)
 	eng_beast3.state.hand = [beast, beast, beast]
@@ -5102,9 +5106,11 @@ func _init() -> void:
 
 
 
-	# 镜像（9056）：2 费史诗效果卡；「每回合第一次使用效果牌时」把该牌的**同名副本**加入本局卡组，
+	# 镜像（9056）：2 费史诗效果卡；「每回合前 X 次使用效果牌时」把该牌的**同名副本**加入本局卡组，
 
-	# **并抽一张卡**。不可叠加 → 效果区几张都只触发一次、只加一份、只抽一张（打出自己那一下不算触发）。
+	# **并抽一张卡**。R688 起**可叠加** → X = 效果区张数（单张时 X=1，就是原来的「每回合第一次」）。
+
+	# 打出自己那一下仍然不算触发（调用时本卡还没进效果区）。
 
 	var nc_mirror := repo.get_card(9056)
 
@@ -5112,13 +5118,13 @@ func _init() -> void:
 
 			and nc_mirror.rarity == 2 and nc_mirror.traits.has("镜像") and nc_mirror.value == 1
 
-			and nc_mirror.effect_text.contains("每回合第一次使用效果牌时")
+			and nc_mirror.effect_text.contains("每回合前 X 次使用效果牌时")
 
 			and nc_mirror.effect_text.contains("抽一张卡")
 
-			and nc_mirror.effect_text.contains("不叠加"),
+			and nc_mirror.effect_text.contains("X 为本卡在效果区的张数"),
 
-			"镜像：史诗 2 费效果卡，trait 镜像，文案「每回合第一次」+「抽一张卡」+「不叠加」")
+			"镜像：史诗 2 费效果卡，trait 镜像，文案「每回合前 X 次」+「抽一张卡」+「X = 效果区张数」")
 
 	# 打出自身不触发（效果区当时为空 → 既不复制、也不抽卡）
 
@@ -5140,7 +5146,7 @@ func _init() -> void:
 
 			"镜像：打出自身那一下不触发（牌组不变、也不抽卡）")
 
-	# 镜像已在效果区 → 之后再打效果牌：复制「迅捷」入卡组，**再抽一张**（draw() 取牌库尾 → 抽回副本）
+	# 镜像已在效果区 → 之后再打效果牌：复制那张牌入卡组，**再抽一张**（draw() 取牌库尾 → 抽回副本）
 
 	var mir_e2 := _new_engine([], 20, 20, -1, false)
 
@@ -5150,7 +5156,7 @@ func _init() -> void:
 
 	mir_e2.state.deck = []
 
-	mir_e2.state.hand = [repo.get_card(9002)]
+	mir_e2.state.hand = [repo.get_card(9065)]
 
 	mir_e2.state.energy = 9
 
@@ -5160,7 +5166,7 @@ func _init() -> void:
 
 			and mir_e2.state.hand.size() == 1
 
-			and mir_e2.state.hand[0].card_name == "迅捷",
+			and mir_e2.state.hand[0].card_name == "自愈",
 
 			"镜像：本回合第一次使用效果牌 → 一份副本入卡组、再抽一张（副本被抽回手牌）")
 
@@ -5188,7 +5194,7 @@ func _init() -> void:
 
 	mir_e3.state.deck = [repo.get_card(8003), repo.get_card(8004)]
 
-	mir_e3.state.hand = [repo.get_card(9002)]
+	mir_e3.state.hand = [repo.get_card(9065)]
 
 	mir_e3.state.energy = 9
 
@@ -5196,11 +5202,11 @@ func _init() -> void:
 
 	check(mir_e3.state.deck.size() == 2 and mir_e3.state.hand.size() == 1
 
-			and mir_e3.state.hand[0].card_name == "迅捷",
+			and mir_e3.state.hand[0].card_name == "自愈",
 
 			"镜像：第一次使用效果牌 → 复制 1 份入卡组 + 抽 1 张（抽回副本，牌库其余 2 张不动）")
 
-	mir_e3.state.hand = [repo.get_card(9002)]
+	mir_e3.state.hand = [repo.get_card(9065)]
 
 	mir_e3.state.energy = 9
 
@@ -5210,7 +5216,7 @@ func _init() -> void:
 
 			"镜像：同回合第二次使用效果牌 → 不再复制、不再抽卡（牌库仍 2 张）")
 
-	# 不可叠加：效果区 2 张镜像 → 第一次使用仍只加 1 份、只抽 1 张，第 2 次使用也不触发
+	# R688 可叠加：效果区 2 张镜像 → 每次使用**只复制 1 份**（不会一次叠两份），但前 2 次都触发
 
 	var mir_e4 := _new_engine([], 20, 20, -1, false)
 
@@ -5222,7 +5228,7 @@ func _init() -> void:
 
 	mir_e4.state.deck = [repo.get_card(8003), repo.get_card(8004)]
 
-	mir_e4.state.hand = [repo.get_card(9002)]
+	mir_e4.state.hand = [repo.get_card(9065)]
 
 	mir_e4.state.energy = 9
 
@@ -5230,19 +5236,20 @@ func _init() -> void:
 
 	check(mir_e4.state.deck.size() == 2 and mir_e4.state.hand.size() == 1
 
-			and mir_e4.state.hand[0].card_name == "迅捷",
+			and mir_e4.state.hand[0].card_name == "自愈",
 
-			"镜像：不可叠加 → 效果区 2 张，第一次使用也只加 1 份、只抽 1 张")
+			"镜像（R688 可叠加）：2 张时每次使用仍只复制 1 份、只抽 1 张（不按张数乘）")
 
-	mir_e4.state.hand = [repo.get_card(9002)]
+	mir_e4.state.hand = [repo.get_card(9065)]
 
 	mir_e4.state.energy = 9
 
 	mir_e4.use_effect(0)
 
-	check(mir_e4.state.deck.size() == 2 and mir_e4.state.hand.is_empty(),
+	check(mir_e4.state.deck.size() == 2 and mir_e4.state.hand.size() == 1
+			and mir_e4.state.hand[0].card_name == "自愈",
 
-			"镜像：不可叠加 → 同回合第 2 次使用不触发（既不复制也不抽卡）")
+			"镜像（R688 可叠加）：2 张 → 同回合第 2 次使用**仍然触发**（再复制 1 份 + 抽 1 张）")
 
 	# 跨回合：新回合第一次使用效果牌 → 再复制 1 份 + 再抽 1 张
 
@@ -5254,7 +5261,7 @@ func _init() -> void:
 
 	var mir_deck0 := mir_e4.state.deck.size()
 
-	mir_e4.state.hand = [repo.get_card(9002)]
+	mir_e4.state.hand = [repo.get_card(9065)]
 
 	mir_e4.state.energy = 9
 
@@ -5262,7 +5269,7 @@ func _init() -> void:
 
 	check(mir_e4.state.deck.size() == mir_deck0 and mir_e4.state.hand.size() == 1
 
-			and mir_e4.state.hand[0].card_name == "迅捷",
+			and mir_e4.state.hand[0].card_name == "自愈",
 
 			"镜像：下一回合第一次使用效果牌 → 再复制 1 份 + 再抽 1 张（抽回副本）")
 
@@ -5292,7 +5299,7 @@ func _init() -> void:
 
 	det_e1.state.place(_card(9402, "自己人", "盟友", 5, 7, 30), Vector2i(4, 0))
 
-	det_e1.state.hand = [repo.get_card(9002)]
+	det_e1.state.hand = [repo.get_card(9065)]
 
 	det_e1.state.energy = 9
 
@@ -5340,7 +5347,7 @@ func _init() -> void:
 
 	for det_i in 2:
 
-		det_e3.state.hand = [repo.get_card(9002)]
+		det_e3.state.hand = [repo.get_card(9065)]
 
 		det_e3.state.energy = 9
 
@@ -5352,7 +5359,7 @@ func _init() -> void:
 
 			"威慑：2 张 → 前 2 次使用效果牌各触发一次（12 - 20 → 0）")
 
-	det_e3.state.hand = [repo.get_card(9002)]
+	det_e3.state.hand = [repo.get_card(9065)]
 
 	det_e3.state.energy = 9
 
@@ -5362,6 +5369,104 @@ func _init() -> void:
 
 			"威慑：2 张 → 本回合第 3 次使用不再触发（仍是 -20）")
 
+	# ---- R688 镜像可叠加：效果区 2 张 → 本回合前 2 次使用效果牌各触发一次 ----
+
+	var mir_e5 := _new_engine([], 20, 20, -1, false)
+
+	mir_e5.start_game(1)
+
+	mir_e5.state.effects.append(repo.get_card(9056))
+
+	mir_e5.state.effects.append(repo.get_card(9056))
+
+	for mir_i in 3:
+
+		mir_e5.state.hand = [repo.get_card(9065)]
+
+		mir_e5.state.energy = 9
+
+		mir_e5.use_effect(0)
+
+	var mir_cnt := 0
+
+	for mir_l in mir_e5.log:
+
+		if str(mir_l).contains("镜像：将一张"):
+
+			mir_cnt += 1
+
+	check(mir_cnt == 2,
+
+			"镜像（R688 可叠加）：2 张 → 前 2 次使用效果牌各触发一次，第 3 次不再触发（实际 %d）" % mir_cnt)
+
+	# ---- R688 幽深回响（9002）：使用时复制进抽牌库；回合开始按效果区张数打 X 下 6 点 ----
+
+	var echo_e := _new_engine([], 30, 30, -1, false)
+
+	echo_e.start_game(1)
+
+	echo_e.state.place(_card(9405, "沙包甲", "盟友", 0, 0, 60, 5), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)
+
+	echo_e.state.deck = [repo.get_card(9065)]
+
+	echo_e.state.hand = [repo.get_card(9002)]
+
+	echo_e.state.energy = 9
+
+	echo_e.use_effect(0)
+
+	check(echo_e.state.effects.size() == 1 and echo_e.state.deck.size() == 2
+
+			and echo_e.state.deck[1].id == 9002,
+
+			"幽深回响：本体留在效果区，同时一张同名副本进抽牌库（抽牌库 1 → 2）")
+
+	echo_e.end_turn()
+
+	echo_e.end_turn()
+
+	var echo_hp1: int = echo_e.state.unit_at(Vector2i(1, 0)).health
+
+	check(echo_hp1 == 54,
+
+			"幽深回响：回合开始按效果区 1 张 → 打 1 下 6 点（60 → 54，实际 %d）" % echo_hp1)
+
+	var echo_e2 := _new_engine([], 30, 30, -1, false)
+
+	echo_e2.start_game(1)
+
+	echo_e2.state.effects.append(repo.get_card(9002))
+
+	echo_e2.state.effects.append(repo.get_card(9002))
+
+	echo_e2.state.place(_card(9405, "沙包甲", "盟友", 0, 0, 60, 5), Vector2i(1, 0),
+			GameEngine.SIDE_OPPONENT)
+
+	echo_e2.end_turn()
+
+	echo_e2.end_turn()
+
+	check(echo_e2.state.unit_at(Vector2i(1, 0)).health == 48,
+
+			"幽深回响：效果区 2 张 → 本回合打 2 下（60 → 48）")
+
+	var echo_e3 := _new_engine([], 30, 30, -1, false)
+
+	echo_e3.start_game(1)
+
+	echo_e3.state.effects.append(repo.get_card(9002))
+
+	echo_e3.end_turn()
+
+	echo_e3.end_turn()
+
+	var echo_foe_hp: int = echo_e3.state.hp_opponent
+
+	check(echo_foe_hp == 24,
+
+			"幽深回响：场上没有敌方单位 → 直击对方 HP（30 → 24，实际 %d）" % echo_foe_hp)
+
 	# 敌方场上没有单位 → 不报错、不生效
 
 	var det_e2 := _new_engine([], 20, 20, -1, false)
@@ -5370,7 +5475,7 @@ func _init() -> void:
 
 	det_e2.state.effects.append(repo.get_card(9057))
 
-	det_e2.state.hand = [repo.get_card(9002)]
+	det_e2.state.hand = [repo.get_card(9065)]
 
 	det_e2.state.energy = 9
 
@@ -5414,7 +5519,7 @@ func _init() -> void:
 
 	check(arc_e1.state.energy == 4, "奥秘精通：打出自身那一下不回费（5 - 1 = 4）")
 
-	# 已在效果区 → 再打效果牌（迅捷 2 费）：扣费后回 1
+	# 已在效果区 → 再打效果牌（自愈 2 费）：扣费后回 1
 
 	var arc_e2 := _new_engine([], 20, 20, -1, false)
 
@@ -5422,7 +5527,7 @@ func _init() -> void:
 
 	arc_e2.state.effects.append(repo.get_card(9058))
 
-	arc_e2.state.hand = [repo.get_card(9002)]
+	arc_e2.state.hand = [repo.get_card(9065)]
 
 	arc_e2.state.energy = 10
 
@@ -5440,7 +5545,7 @@ func _init() -> void:
 
 	arc_e3.state.effects.append(repo.get_card(9058))
 
-	arc_e3.state.hand = [repo.get_card(9002)]
+	arc_e3.state.hand = [repo.get_card(9065)]
 
 	arc_e3.state.energy = 10
 
@@ -5478,7 +5583,7 @@ func _init() -> void:
 
 	wis_e.state.hand = []
 
-	wis_e.state.deck = [repo.get_card(9002)]
+	wis_e.state.deck = [repo.get_card(9065)]
 
 	for _i in 5:
 
@@ -5494,9 +5599,9 @@ func _init() -> void:
 
 	var wis_drawn: CardData = wis_e.state.hand[wis_e.state.hand.size() - 1]
 
-	check(wis_drawn.id == 9002 and wis_drawn.is_effect(),
+	check(wis_drawn.id == 9065 and wis_drawn.is_effect(),
 
-			"智慧喷涌：抽到的正是那张效果卡「迅捷」")
+			"智慧喷涌：抽到的正是那张效果卡「自愈」")
 
 	check(int(wis_e.state.card_discount.get(wis_drawn, 0)) == 1,
 
@@ -5504,9 +5609,9 @@ func _init() -> void:
 
 	check(wis_e.cost_of(wis_drawn) == 1,
 
-			"智慧喷涌：这张迅捷费用 2 → 1（实际 %d）" % wis_e.cost_of(wis_drawn))
+			"智慧喷涌：这张自愈费用 2 → 1（实际 %d）" % wis_e.cost_of(wis_drawn))
 
-	check(wis_e.cost_of(repo.get_card(9002)) == 2,
+	check(wis_e.cost_of(repo.get_card(9065)) == 2,
 
 			"智慧喷涌：卡组里同名的其它实例仍是原价 2（instance 级减费）")
 
@@ -5714,7 +5819,7 @@ func _init() -> void:
 
 			"使魔之夜：打出自己的那一下不给乌鸦（只对之后生效）")
 
-	fam_e.state.hand = [repo.get_card(9002)]
+	fam_e.state.hand = [repo.get_card(9065)]
 
 	fam_e.state.energy = 9
 
@@ -5774,21 +5879,21 @@ func _init() -> void:
 
 	ch_e.self_relics = [6020]
 
-	check(ch_e.cost_of(repo.get_card(9002)) == 1,
+	check(ch_e.cost_of(repo.get_card(9065)) == 1,
 
-			"奥秘护符：本回合第一张效果牌费用 -1（2 → %d）" % ch_e.cost_of(repo.get_card(9002)))
+			"奥秘护符：本回合第一张效果牌费用 -1（2 → %d）" % ch_e.cost_of(repo.get_card(9065)))
 
 	check(ch_e.cost_of(repo.get_card(8002)) == 1, "奥秘护符：技能不受影响（攻击仍 1 费）")
 
 	ch_e.state.self_effect_plays = 1
 
-	check(ch_e.cost_of(repo.get_card(9002)) == 2,
+	check(ch_e.cost_of(repo.get_card(9065)) == 2,
 
 			"奥秘护符：本回合用过效果牌后不再减费")
 
 	ch_e.self_relics = []
 
-	check(ch_e.cost_of(repo.get_card(9002)) == 2, "未持有奥秘护符 → 原价 2 费")
+	check(ch_e.cost_of(repo.get_card(9065)) == 2, "未持有奥秘护符 → 原价 2 费")
 
 
 
@@ -5854,7 +5959,7 @@ func _init() -> void:
 
 			"飓风咆哮：使用技能卡不触发（R268 只认效果卡）")
 
-	roar_e.state.hand = [repo.get_card(9002)]
+	roar_e.state.hand = [repo.get_card(9065)]
 
 	roar_e.state.energy = 9
 
@@ -5866,7 +5971,7 @@ func _init() -> void:
 
 			"飓风咆哮：本回合首次使用效果卡 → 两个敌人各 8-4=4")
 
-	roar_e.state.hand = [repo.get_card(9002)]
+	roar_e.state.hand = [repo.get_card(9065)]
 
 	roar_e.state.energy = 9
 
@@ -5880,7 +5985,7 @@ func _init() -> void:
 
 	roar_e.end_turn()   # 敌方 → 我方（新回合，标记重置）
 
-	roar_e.state.hand = [repo.get_card(9002)]
+	roar_e.state.hand = [repo.get_card(9065)]
 
 	roar_e.state.energy = 9
 
@@ -5896,7 +6001,7 @@ func _init() -> void:
 
 	roar_e2.state.effects.append(repo.get_card(9063))
 
-	roar_e2.state.hand = [repo.get_card(9002)]
+	roar_e2.state.hand = [repo.get_card(9065)]
 
 	roar_e2.state.energy = 9
 
@@ -5946,7 +6051,7 @@ func _init() -> void:
 
 			"和风守护：使用技能卡不触发（R268 只认效果卡）")
 
-	sg_e.state.hand = [repo.get_card(9002)]
+	sg_e.state.hand = [repo.get_card(9065)]
 
 	sg_e.state.energy = 9
 
@@ -6004,7 +6109,7 @@ func _init() -> void:
 
 			GameEngine.SIDE_OPPONENT)
 
-	x2_e.state.hand = [repo.get_card(9002)]                 # 第三张无关效果卡
+	x2_e.state.hand = [repo.get_card(9065)]                 # 第三张无关效果卡
 
 	x2_e.state.energy = 9
 
@@ -6124,7 +6229,7 @@ func _init() -> void:
 
 	check(sk_e.effect_counter(repo.get_card(9066)) == 4
 
-			and sk_e.effect_counter(repo.get_card(9002)) == -1,
+			and sk_e.effect_counter(repo.get_card(9065)) == -1,
 
 			"石肤：effect_counter 给出剩余次数（其它卡返回 -1）")
 
@@ -6348,7 +6453,7 @@ func _init() -> void:
 
 	ag_e.start_game(0)
 
-	ag_e.state.effects.append(repo.get_card(9002))
+	ag_e.state.effects.append(repo.get_card(9065))
 
 	ag_e.state.effects.append(repo.get_card(9058))
 
@@ -6422,7 +6527,7 @@ func _init() -> void:
 
 	check(dm_e.cost_of(repo.get_card(9068)) == 6, "水元素：效果区为空 → 原价 6 费")
 
-	dm_e.state.effects.append(repo.get_card(9002))
+	dm_e.state.effects.append(repo.get_card(9065))
 
 	dm_e.state.effects.append(repo.get_card(9058))
 
@@ -6478,7 +6583,7 @@ func _init() -> void:
 
 	dn_e.end_turn()
 
-	dn_e.state.hand = [repo.get_card(9002)]
+	dn_e.state.hand = [repo.get_card(9065)]
 
 	dn_e.state.energy = 9
 
@@ -6516,7 +6621,7 @@ func _init() -> void:
 
 	nest2.state.effects.append(repo.get_card(9069))
 
-	nest2.state.hand = [repo.get_card(9002)]
+	nest2.state.hand = [repo.get_card(9065)]
 
 	nest2.state.energy = 9
 
@@ -6526,7 +6631,7 @@ func _init() -> void:
 
 			"鸭窝：2 张 → 第 1 次使用就触发（手卡 +1 鸭蛋）")
 
-	nest2.state.hand.append(repo.get_card(9002))
+	nest2.state.hand.append(repo.get_card(9065))
 
 	nest2.state.energy = 9
 
@@ -6536,7 +6641,7 @@ func _init() -> void:
 
 			"鸭窝：2 张 → 第 2 次使用再触发一次（手上 2 张鸭蛋）")
 
-	nest2.state.hand.append(repo.get_card(9002))
+	nest2.state.hand.append(repo.get_card(9065))
 
 	nest2.state.energy = 9
 
@@ -6598,7 +6703,7 @@ func _init() -> void:
 
 			"飓风咆哮：2 张 → 技能卡不触发、也不占用本回合的次数（仍 20）")
 
-	roar2.state.hand = [repo.get_card(9002)]
+	roar2.state.hand = [repo.get_card(9065)]
 
 	roar2.state.energy = 9
 
@@ -6608,7 +6713,7 @@ func _init() -> void:
 
 			"飓风咆哮：2 张 → 第 1 次使用效果卡就触发（20 - 4 = 16）")
 
-	roar2.state.hand = [repo.get_card(9002)]
+	roar2.state.hand = [repo.get_card(9065)]
 
 	roar2.state.energy = 9
 
@@ -6618,7 +6723,7 @@ func _init() -> void:
 
 			"飓风咆哮：2 张 → 第 2 次使用再触发（16 - 4 = 12）")
 
-	roar2.state.hand = [repo.get_card(9002)]
+	roar2.state.hand = [repo.get_card(9065)]
 
 	roar2.state.energy = 9
 
@@ -6638,7 +6743,7 @@ func _init() -> void:
 
 	ev_e.state.hand = [CardData.from_dict(repo.get_card(9022).to_dict()),
 
-			repo.get_card(9002)]
+			repo.get_card(9065)]
 
 	ev_e.state.discard_hand()
 
@@ -6895,7 +7000,7 @@ func _init() -> void:
 
 	ow_e.start_game(0)
 
-	ow_e.state.deck = [CardData.from_dict(repo.get_card(9002).to_dict()),
+	ow_e.state.deck = [CardData.from_dict(repo.get_card(9065).to_dict()),
 
 			CardData.from_dict(repo.get_card(9016).to_dict())]
 
@@ -6905,7 +7010,7 @@ func _init() -> void:
 
 	ow_e.play_from_hand(0, Vector2i(4, 1))
 
-	check(ow_e.state.hand.size() == 1 and ow_e.state.hand[0].id == 9002
+	check(ow_e.state.hand.size() == 1 and ow_e.state.hand[0].id == 9065
 
 			and ow_e.state.deck.size() == 1,
 
@@ -6953,13 +7058,13 @@ func _init() -> void:
 
 	check(sp_e.state.self_next_effect_reduction == 2, "小精灵：上场后挂上 -2 的效果卡减费")
 
-	check(sp_e.cost_of(repo.get_card(9002)) == 0,
+	check(sp_e.cost_of(repo.get_card(9065)) == 0,
 
-			"小精灵：下一张效果卡费用 -2（迅捷 2 → 0）")
+			"小精灵：下一张效果卡费用 -2（自愈 2 → 0）")
 
 	check(sp_e.cost_of(repo.get_card(9016)) == 4, "小精灵：盟友不吃这个减费（犀牛仍 4 费）")
 
-	sp_e.state.hand = [repo.get_card(9002)]
+	sp_e.state.hand = [repo.get_card(9065)]
 
 	sp_e.state.energy = 9
 
@@ -6991,11 +7096,11 @@ func _init() -> void:
 
 			"小精灵：没用掉的减费跨回合保留（2026-10-01 起）")
 
-	check(sp_e2.cost_of(repo.get_card(9002)) == 0,
+	check(sp_e2.cost_of(repo.get_card(9065)) == 0,
 
-			"小精灵：跨过回合后第一张效果卡仍然 -2（迅捷 2 → 0）")
+			"小精灵：跨过回合后第一张效果卡仍然 -2（自愈 2 → 0）")
 
-	sp_e2.state.hand = [repo.get_card(9002)]
+	sp_e2.state.hand = [repo.get_card(9065)]
 
 	sp_e2.state.energy = 9
 
@@ -8091,7 +8196,7 @@ func _init() -> void:
 
 	# ---- 效果卡：迅捷（3 费，减伤 2 只护自己的 HP，至少 1） ----
 
-	var swift_t := _card(9002, "迅捷", "效果", 2, 0, 0)
+	var swift_t := _card(9002, "减伤测试卡", "效果", 2, 0, 0)
 
 	swift_t.traits = ["减伤"]
 
@@ -15960,7 +16065,7 @@ func _init() -> void:
 	# R509 记忆药水（6067）：战斗开始从抽牌库随机打出一张效果卡（不占手牌、不扣费）。
 	# 用真实效果卡（迅捷 9002）构造牌组，验证 apply_battle_start_relics 后它进了效果区。
 	var mp_repo := CardRepo.load_json()
-	var mp_fx := mp_repo.get_card(9002)   # 迅捷（2 费效果卡）
+	var mp_fx := mp_repo.get_card(9065)   # 迅捷（2 费效果卡）
 	var mp_deck: Array[CardData] = []
 	mp_deck.append(mp_fx)
 	mp_deck.append(_card(8003, "农民", "盟友", 3, 3, 8))
@@ -39867,7 +39972,8 @@ func _init() -> void:
 
 		and r222_card.target_mode == "none"
 
-		and r222_card.effect_text == "回合开始时，选一张手卡消失，随机将一张卡牌加入你的手卡。",
+		and r222_card.effect_text == "回合开始时，选 X 张手卡消失，随机将 X 张卡牌加入你的手卡。"
+				+ "X 为本卡在效果区的张数。",
 
 		"R222 新生：效果卡 / 2 费 / 史诗 / 森林精魄 / trait「新生」/ target none / 文案")
 
@@ -52477,9 +52583,9 @@ func _init() -> void:
 
 			% [r327_card.card_class, str(r327_card.traits)])
 
-	check(r327_card.effect_text == "场上每有一个单位被破坏，抽 1 张卡。",
+	check(r327_card.effect_text == "场上每有一个单位被破坏，抽 1 张卡。效果区多张本卡不可叠加。",
 
-			"R327 送葬文案：「场上每有一个单位被破坏，抽 1 张卡。」（实际「%s」）"
+			"R327 送葬文案：「场上每有一个单位被破坏，抽 1 张卡。」+「不可叠加」（实际「%s」）"
 
 			% r327_card.effect_text)
 

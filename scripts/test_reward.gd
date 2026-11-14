@@ -55,7 +55,8 @@ func _init() -> void:
 	check(int(rt.get("rarity", -1)) == 3 and CardData.from_dict(rt).rarity == 3,
 			"to_dict/from_dict 保留稀有度")
 	var sv := repo.get_card(9002).to_dict()
-	check(CardData.from_dict(sv).value == 2, "to_dict/from_dict 保留效果数值 value")
+	check(CardData.from_dict(sv).value == 6,
+			"to_dict/from_dict 保留效果数值 value（R688 幽深回响 value=6）")
 	var clamped := CardData.from_dict({"id": 1, "name": "x", "rarity": 9})
 	check(clamped.rarity == 6, "非法稀有度被钳制到 6（诅咒）")
 

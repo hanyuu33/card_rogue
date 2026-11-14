@@ -199,7 +199,7 @@
   },
   "8045": {
    "name": "Mejora Autónoma",
-   "effect_text": "**Al comienzo de tu turno**, un Aliado o una Estructura aleatoria **de la mano** recibe una mejora: +1 de Poder y +3 de Vida."
+   "effect_text": "**Al comienzo de tu turno**, un Aliado o una Estructura aleatoria **de la mano** recibe una mejora: +1 de Poder y +3 de Vida. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "8046": {
    "name": "Reciclador de Piezas",
@@ -295,7 +295,7 @@
   },
   "8070": {
    "name": "Ingenio",
-   "effect_text": "Al comienzo de tu turno, elige una carta de la mano y transfórmala en una carta aleatoria **que tenga un efecto adicional al ser mejorada**; luego otórgale una mejora: +2 de Vida."
+   "effect_text": "Al comienzo de tu turno, elige X cartas de la mano y transfórmalas en cartas aleatorias **que tengan un efecto adicional al ser mejoradas**; luego otórgales una mejora: +2 de Vida. X es el número de copias de esta carta en la zona de Efectos."
   },
   "8071": {
    "name": "Chatarra",
@@ -323,15 +323,15 @@
   },
   "8077": {
    "name": "Ignición",
-   "effect_text": "Cada vez que una de tus cartas recibe una mejora, inflige **3** de daño a **2** enemigos aleatorios. Se acumula."
+   "effect_text": "Cada vez que una de tus cartas recibe una mejora, inflige **3** de daño a **2** enemigos aleatorios, repetido X veces. X es el número de copias de esta carta en la zona de Efectos."
   },
   "8078": {
    "name": "Fuente de Energía Oculta",
-   "effect_text": "Cuando una unidad aliada entra al campo, recibe una mejora y obtiene «Muerte»: cuando sea destruida, inflige **8** de daño a un enemigo aleatorio a distancia 1."
+   "effect_text": "Cuando una unidad aliada entra al campo, recibe una mejora y obtiene «Muerte»: cuando sea destruida, inflige **8** de daño a un enemigo aleatorio a distancia 1. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "8079": {
    "name": "Albarán Sorpresa",
-   "effect_text": "Al comienzo de tu turno, elige una carta de la pila de robo, transfórmala en una carta aleatoria y añádela a la mano."
+   "effect_text": "Al comienzo de tu turno, elige X cartas de la pila de robo, transfórmalas en cartas aleatorias y añádelas a la mano. X es el número de copias de esta carta en la zona de Efectos."
   },
   "8080": {
    "name": "Robot Pintor",
@@ -362,8 +362,8 @@
    "effect_text": "+2 de Poder por cada enemigo que mata."
   },
   "9002": {
-   "name": "Rapidez",
-   "effect_text": "Reduce en 2 el daño que recibe, pero sigue recibiendo al menos 1 de daño."
+   "name": "Eco Profundo",
+   "effect_text": "Al usarse, añade una copia de «Eco Profundo» a la pila de robo. Al comienzo de tu turno, inflige 6 de daño a un enemigo aleatorio X veces. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9003": {
    "name": "Flecha de Fuego",
@@ -407,7 +407,7 @@
   },
   "9013": {
    "name": "Poder del Pato",
-   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +1 de Poder (hasta +4 por unidad)."
+   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +1 de Poder (hasta +4 por unidad). Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9014": {
    "name": "Dragón de Huesos Huecos Ancestral",
@@ -415,7 +415,7 @@
   },
   "9015": {
    "name": "Cuerno de Pato",
-   "effect_text": "Invoca un Caballero Pato cada 3 turnos."
+   "effect_text": "Invoca un Caballero Pato cada 3 turnos. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9016": {
    "name": "Rinoceronte",
@@ -452,7 +452,7 @@
   },
   "9024": {
    "name": "Bufido",
-   "effect_text": "Al comienzo de tus turnos 3.º, 5.º y 7.º, otorga de forma permanente «puede actuar dos veces por turno» a una unidad aliada con la Vida actual más alta que aún no pueda actuar dos veces por turno."
+   "effect_text": "Al comienzo de tus turnos 3.º, 5.º y 7.º, otorga de forma permanente «puede actuar dos veces por turno» a una unidad aliada con la Vida actual más alta que aún no pueda actuar dos veces por turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9025": {
    "name": "Horno de Patos",
@@ -496,7 +496,7 @@
   },
   "9036": {
    "name": "Corazón de Bestia",
-   "effect_text": "Todos tus Aliados infligen +1 de daño; cuando uses un Aliado desde la mano, ese Aliado obtiene +2 de Vida. Se acumula."
+   "effect_text": "Todos tus Aliados infligen +X de daño; cuando uses un Aliado desde la mano, ese Aliado obtiene +2X de Vida. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9037": {
    "name": "Guardián del Bosque",
@@ -532,7 +532,7 @@
   },
   "9045": {
    "name": "Fuerza del Vendaval",
-   "effect_text": "Cada vez que un Aliado aliado entra al campo de batalla, inflige 4 de daño a un enemigo aleatorio."
+   "effect_text": "Cada vez que un Aliado aliado entra al campo de batalla, inflige 4 de daño a un enemigo aleatorio. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9046": {
    "name": "Rata Gigante",
@@ -548,7 +548,7 @@
   },
   "9049": {
    "name": "Ascenso de Engranajes",
-   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +2 de Poder (permanente)."
+   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +2 de Poder (permanente). Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9050": {
    "name": "Ira de la Ballena",
@@ -576,7 +576,7 @@
   },
   "9056": {
    "name": "Imagen Especular",
-   "effect_text": "La primera vez que uses una carta de Efecto cada turno, añade una copia de esa carta a la pila de robo y roba una carta. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Por cada una de las primeras X cartas de Efecto que uses cada turno, añade una copia de esa carta a la pila de robo y roba una carta. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9057": {
    "name": "Disuasión",
@@ -584,11 +584,11 @@
   },
   "9058": {
    "name": "Dominio Arcano",
-   "effect_text": "Después de usar una carta de Efecto, recupera 1 de Coste."
+   "effect_text": "Después de usar una carta de Efecto, recupera X de Coste. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9059": {
    "name": "Torrente de Sabiduría",
-   "effect_text": "Al comienzo de tu turno, roba una carta; si es una carta de Efecto, el Coste de esta carta es -1."
+   "effect_text": "Al comienzo de tu turno, roba X cartas; las cartas de Efecto robadas así cuestan -1. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9060": {
    "name": "Barrera de Tormenta",
@@ -596,11 +596,11 @@
   },
   "9061": {
    "name": "Bendición Infinita",
-   "effect_text": "Al comienzo de tu turno, añade una carta de Efecto aleatoria a la mano."
+   "effect_text": "Al comienzo de tu turno, añade X cartas de Efecto aleatorias a la mano. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9062": {
    "name": "Noche de Familiares",
-   "effect_text": "Cada vez que uses una carta de Efecto, añade un Cuervo a la mano; cuesta 0 este turno."
+   "effect_text": "Cada vez que uses una carta de Efecto, añade X Cuervos a la mano; cuestan 0 este turno. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9063": {
    "name": "Rugido del Huracán",
@@ -616,7 +616,7 @@
   },
   "9066": {
    "name": "Piel de Piedra",
-   "effect_text": "Las próximas 2 veces que tus HP reciban daño, si el daño sería de 2 o más, se convierte en 1; el número de veces puede acumularse."
+   "effect_text": "Las próximas X veces que tus HP reciban daño, si el daño sería de 2 o más, se convierte en 1. X es el número de copias de esta carta en la zona de Efectos ×2."
   },
   "9067": {
    "name": "Guardián del Gran Árbol",
@@ -632,7 +632,7 @@
   },
   "9070": {
    "name": "Asalto Colectivo",
-   "effect_text": "Las unidades **vinculadas** ignoran la distancia al realizar sus propios ataques (pueden alcanzar todo el campo)."
+   "effect_text": "Las unidades **vinculadas** ignoran la distancia al realizar sus propios ataques (pueden alcanzar todo el campo). Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9071": {
    "name": "Cercado Resistente",
@@ -664,7 +664,7 @@
   },
   "9078": {
    "name": "Memoria Heredada",
-   "effect_text": "El primer Aliado aliado que muere cada turno vuelve a la mano con Coste -1. Las cartas que vuelven a la mano sin entrar en la pila de descarte, como las dimensionales, no activan este efecto. Por cada 1 Aliado aliado en el campo, el Coste de esta carta es -1 mientras esté en la mano."
+   "effect_text": "Cada turno, los primeros X Aliados aliados que mueran y vayan a la pila de descarte vuelven a la mano con Coste -1. Por cada 1 Aliado aliado en el campo, el Coste de esta carta es -1 mientras esté en la mano. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9079": {
    "name": "Golemancia",
@@ -712,11 +712,11 @@
   },
   "9091": {
    "name": "Vendaval",
-   "effect_text": "Cada vez que uses una carta, inflige 2 de daño a un enemigo aleatorio."
+   "effect_text": "Cada vez que uses una carta, inflige 2 de daño a un enemigo aleatorio. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9092": {
    "name": "Acecho",
-   "effect_text": "Roba 1 carta adicional al comienzo de tu turno; si esta carta cuesta 0, roba 1 más."
+   "effect_text": "Roba 1 carta adicional al comienzo de tu turno; si esta carta cuesta 0, roba 1 más. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9093": {
    "name": "Truco en Cadena",
@@ -744,7 +744,7 @@
   },
   "9099": {
    "name": "Resplandor Tenue",
-   "effect_text": "Al comienzo de tu turno, añade una Hierba Luminosa a la mano."
+   "effect_text": "Al comienzo de tu turno, añade una Hierba Luminosa a la mano. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9100": {
    "name": "Infiltración",
@@ -752,7 +752,7 @@
   },
   "9101": {
    "name": "Insomnio",
-   "effect_text": "Durante tu turno, cada vez que no tengas cartas en la mano, roba 1 carta; las cartas de Coste 0 robadas de este modo cuestan +1 este turno."
+   "effect_text": "Durante tu turno, cada vez que no tengas cartas en la mano, roba 1 carta; las cartas de Coste 0 robadas de este modo cuestan +1 este turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9102": {
    "name": "Eco",
@@ -788,7 +788,7 @@
   },
   "9115": {
    "name": "Poder Familiar",
-   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente)."
+   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente). Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9116": {
    "name": "Pato Demoníaco",
@@ -796,7 +796,7 @@
   },
   "9117": {
    "name": "Familiar Demoníaco",
-   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente); cada 2 turnos, invoca un Pato Familiar en una casilla vacía aleatoria (excepto en la última fila del jugador)."
+   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente); cada 2 turnos, invoca un Pato Familiar en una casilla vacía aleatoria (excepto en la última fila del jugador). Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9118": {
    "name": "Pato Demoníaco (Venganza)",
@@ -828,7 +828,7 @@
   },
   "9125": {
    "name": "Invocación de Sombras",
-   "effect_text": "Al **comienzo de la batalla** y **cada 3 turnos**, invoca un Pato Asesino."
+   "effect_text": "Al **comienzo de la batalla** y **cada 3 turnos**, invoca un Pato Asesino. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9127": {
    "name": "Reacondicionamiento",
@@ -872,7 +872,7 @@
   },
   "9139": {
    "name": "Cañón Cargado",
-   "effect_text": "Al comienzo de cada uno de tus turnos, destruye una unidad enemiga aleatoria."
+   "effect_text": "Al comienzo de cada uno de tus turnos, destruye una unidad enemiga aleatoria. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9140": {
    "name": "Hermes",
@@ -888,7 +888,7 @@
   },
   "9143": {
    "name": "Experto en Invención",
-   "effect_text": "Cada vez que **transformes** una carta, recupera **2** de Coste (no se acumula). Transformar: convertir una carta en otra durante la batalla."
+   "effect_text": "Cada vez que **transformes** una carta, recupera **2** de Coste. Transformar: convertir una carta en otra durante la batalla. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9144": {
    "name": "Ensamblaje Libre",
@@ -904,11 +904,11 @@
   },
   "9147": {
    "name": "Línea de Ensamblaje",
-   "effect_text": "Cada 3 turnos, invoca al azar un Onie de Producción en Serie o un Helios de Producción en Serie en tu mitad del campo."
+   "effect_text": "Cada 3 turnos, invoca al azar un Onie de Producción en Serie o un Helios de Producción en Serie en tu mitad del campo. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9148": {
    "name": "Renacimiento",
-   "effect_text": "Al comienzo de tu turno, elige una carta de la mano para desterrarla y luego añade una carta aleatoria a la mano."
+   "effect_text": "Al comienzo de tu turno, elige X cartas de la mano para desterrarlas y luego añade X cartas aleatorias a la mano. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9149": {
    "name": "Fatiga",
@@ -1004,7 +1004,7 @@
   },
   "9175": {
    "name": "Funeral",
-   "effect_text": "Cada vez que una unidad del campo es destruida, roba 1 carta."
+   "effect_text": "Cada vez que una unidad del campo es destruida, roba 1 carta. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9176": {
    "name": "Instinto",
@@ -1016,7 +1016,7 @@
   },
   "9178": {
    "name": "Noche Eterna",
-   "effect_text": "El Pato Nocturno ya no se debilita: deja de verse afectado por «fotofobia» (su alcance de ataque, velocidad de movimiento y Poder no disminuyen ni siquiera en los turnos impares)."
+   "effect_text": "El Pato Nocturno ya no se debilita: deja de verse afectado por «fotofobia» (su alcance de ataque, velocidad de movimiento y Poder no disminuyen ni siquiera en los turnos impares). Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9179": {
    "name": "Caja Sorpresa",
@@ -1024,11 +1024,11 @@
   },
   "9180": {
    "name": "Luna",
-   "effect_text": "Cuando termina esta batalla: se añade una recompensa adicional a la pantalla de recompensas, que permite eliminar una carta del mazo. Esta carta no puede eliminarse del mazo."
+   "effect_text": "Cuando termina esta batalla: se añade una recompensa adicional a la pantalla de recompensas, que permite eliminar una carta del mazo. Esta carta no puede eliminarse del mazo. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9181": {
    "name": "Moneda",
-   "effect_text": "Cuando termina esta batalla: obtén 40 de Oro adicional. Esta carta no puede eliminarse del mazo."
+   "effect_text": "Cuando termina esta batalla: obtén 40 de Oro adicional. Esta carta no puede eliminarse del mazo. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9182": {
    "name": "Canción de Cuna",
@@ -1084,15 +1084,15 @@
   },
   "9201": {
    "name": "Cañoneo",
-   "effect_text": "Cada turno, bombardea una columna aleatoria: todas las unidades enemigas de esa columna reciben 5 de daño; si no hay ninguna unidad en esa columna, golpea directamente los HP del jugador."
+   "effect_text": "Cada turno, bombardea una columna aleatoria: todas las unidades enemigas de esa columna reciben 5 de daño; si no hay ninguna unidad en esa columna, golpea directamente los HP del jugador. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9202": {
    "name": "Barrera Electromagnética",
-   "effect_text": "Las unidades que atacan a El Revelador reciben 5 de daño. Cada vez que El Revelador recibe daño de Habilidad, añade una «Parálisis» (Maldición de Coste 0 - no puede jugarse - se destierra si sigue en la mano al final del turno) a tu pila de descarte."
+   "effect_text": "Las unidades que atacan a El Revelador reciben 5 de daño. Cada vez que El Revelador recibe daño de Habilidad, añade una «Parálisis» (Maldición de Coste 0 - no puede jugarse - se destierra si sigue en la mano al final del turno) a tu pila de descarte. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9203": {
    "name": "Llamada de Emergencia",
-   "effect_text": "Al comienzo de cada turno del jugador, invoca un enemigo aleatorio de Producción en Serie con +10 de Poder."
+   "effect_text": "Al comienzo de cada turno del jugador, invoca un enemigo aleatorio de Producción en Serie con +10 de Poder. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9204": {
    "name": "Cazarrecompensas",
@@ -1116,19 +1116,19 @@
   },
   "9209": {
    "name": "Incursión Aérea",
-   "effect_text": "Al comienzo del turno del jugador, marca 5 casillas aleatorias. Antes de que actúe el enemigo, las unidades del jugador en las casillas marcadas reciben 5 de daño; este daño aumenta en 1 cada turno."
+   "effect_text": "Al comienzo del turno del jugador, marca 5 casillas aleatorias. Antes de que actúe el enemigo, las unidades del jugador en las casillas marcadas reciben 5 de daño; este daño aumenta en 1 cada turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9210": {
    "name": "Barrera de Escarcha",
-   "effect_text": "Al comienzo de cada 2.º turno, todas las unidades aliadas obtienen +1 de Poder, hasta +4 por unidad."
+   "effect_text": "Al comienzo de cada 2.º turno, todas las unidades aliadas obtienen +1 de Poder, hasta +4 por unidad. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9211": {
    "name": "Cañón de Refracción",
-   "effect_text": "Al jugarla: añade un «Bombardeo Cargado» a la mano. A partir de entonces, cada vez que uses un «Bombardeo Cargado», además del objetivo principal, inflige el mismo daño a otra unidad enemiga aleatoria."
+   "effect_text": "Al jugarla: añade un «Bombardeo Cargado» a la mano. A partir de entonces, cada vez que uses un «Bombardeo Cargado», además del objetivo principal, inflige el mismo daño a otra unidad enemiga aleatoria. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9212": {
    "name": "Ira del Oso Búho",
-   "effect_text": "Mientras la Vida del Oso Búho sea superior a la mitad, recibe -1 de daño; cuando su Vida baja a la mitad o menos, obtiene «Atropellar»: cuando el daño que inflige mata a una unidad, el daño excedente continúa por la misma columna; no se activa si no atacó a ninguna unidad."
+   "effect_text": "Mientras la Vida del Oso Búho sea superior a la mitad, recibe -1 de daño; cuando su Vida baja a la mitad o menos, obtiene «Atropellar»: cuando el daño que inflige mata a una unidad, el daño excedente continúa por la misma columna; no se activa si no atacó a ninguna unidad. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9213": {
    "name": "Oso Búho",
@@ -1180,7 +1180,7 @@
   },
   "9226": {
    "name": "Letal",
-   "effect_text": "Los enemigos marcados reciben un 50% más de daño de todas las fuentes (sustituye la bonificación de daño de la propia Marca). Si no hay ninguna Marca en el campo al jugarla, marca una casilla aleatoria."
+   "effect_text": "Los enemigos marcados reciben un 50% más de daño de todas las fuentes (sustituye la bonificación de daño de la propia Marca). Si no hay ninguna Marca en el campo al jugarla, marca una casilla aleatoria. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9227": {
    "name": "Llegada de la Parca",
@@ -1196,11 +1196,11 @@
   },
   "9230": {
    "name": "Terror Encarnado",
-   "effect_text": "Al infligir daño a un enemigo marcado, le otorga -1 de Poder este turno. Si no hay ninguna Marca en el campo, marca la posición de un enemigo aleatorio."
+   "effect_text": "Al infligir daño a un enemigo marcado, le otorga -X de Poder este turno. Si no hay ninguna Marca en el campo, marca la posición de un enemigo aleatorio. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9231": {
    "name": "Mal Augurio",
-   "effect_text": "Al final de tu turno, los enemigos en casillas marcadas reciben 4 de daño."
+   "effect_text": "Al final de tu turno, los enemigos en casillas marcadas reciben 4X de daño. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9232": {
    "name": "Heraldo de la Perdición",
@@ -1236,7 +1236,7 @@
   },
   "9240": {
    "name": "Orden de Busca",
-   "effect_text": "Todas las unidades del campo enemigo obtienen «dimensional». Al final de tu 12.º turno, destruye todas las unidades de tu propio campo."
+   "effect_text": "Todas las unidades del campo enemigo obtienen «dimensional». Al final de tu 12.º turno, destruye todas las unidades de tu propio campo. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9241": {
    "name": "Cañón Láser",
