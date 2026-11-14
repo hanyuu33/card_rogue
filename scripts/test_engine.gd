@@ -51635,7 +51635,7 @@ func _init() -> void:
 
 	var r660_scene_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
-	check(r660_scene_src.count("RunState.duck_revive_chance = engine.duck_revive_chance") >= 2,
+	check_src(r660_scene_src.count("RunState.duck_revive_chance = engine.duck_revive_chance") >= 2,
 
 			"R661 叠加态的鸭：结算面板与**逃跑**两条路都写回复活概率")
 
@@ -55188,7 +55188,7 @@ func _init() -> void:
 	# 用户报「关闭游戏窗口后重启没有继续游戏按钮」的根因：旧 _on_start 立刻 clear_save()，
 	# 而选人页 run_active=false、不写检查点 → 窗口期关窗就旧档已删、新档未写。
 	var r621_title := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
-	check(r621_title.find("clear_save(\"title.start_new\")") < 0,
+	check_src(r621_title.find("clear_save(\"title.start_new\")") < 0,
 			"R623 源码：开始新局不再提前删旧档（由新局第一个检查点自然覆盖）")
 	RunSave.clear_save()
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.default_id(), 0, "")
@@ -73251,7 +73251,7 @@ func _test_r592b() -> void:
 
 	var bfs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
-	check(not bfs.contains("func _draw_state_badge(")
+	check_src(not bfs.contains("func _draw_state_badge(")
 
 			and bfs.contains("func _state_slots(")
 
@@ -73269,10 +73269,10 @@ func _test_r592b() -> void:
 
 			glyph_ok = false
 
-	check(glyph_ok, "R656：五个状态 glyph 都有矢量符号（stun/frozen/sleep/fuse/activate）")
+	check_src(glyph_ok, "R656：五个状态 glyph 都有矢量符号（stun/frozen/sleep/fuse/activate）")
 	# R658（店长口径）：「可发动」不进右上角槽位 —— 槽位是「它身上有什么」（状态），
 	# 可发动是「你现在能按它」（邀请）。改走卡框上沿正中的动态图标。
-	check(not bfs.contains("\"glyph\": \"activate\"")
+	check_src(not bfs.contains("\"glyph\": \"activate\"")
 			and bfs.contains("func _draw_activate_callout(")
 			and bfs.contains("_draw_activate_callout(center, w, h, selected, cell)"),
 			"R658：可发动不进槽位，改由 _draw_activate_callout 画在卡框上沿正中")
@@ -73283,14 +73283,14 @@ func _test_r592b() -> void:
 	var r658_ci := bfs.find("func _draw_activate_callout(")
 	var r658_ce := bfs.find("\nfunc ", r658_ci + 10)
 	var r658_cb := bfs.substr(r658_ci, r658_ce - r658_ci)
-	check(r658_ci > 0 and not r658_cb.contains("_act_sel_cell = Vector2i(-1, -1)")
+	check_src(r658_ci > 0 and not r658_cb.contains("_act_sel_cell = Vector2i(-1, -1)")
 			and r658_cb.contains("if selected and _act_sel_cell != cell:"),
 			"R658：邀请图标的弹入归位不在绘制里（否则同帧别的单位会把进度清掉）")
-	check(bfs.contains("_act_sel_cell = Vector2i(-1, -1)   # R658"),
+	check_src(bfs.contains("_act_sel_cell = Vector2i(-1, -1)   # R658"),
 			"R658：选区归位口（_clear_selection / _select_board）负责重置弹入")
 
 	# 动效三件套必须在（店长点名「不要静态图标」）：呼吸、轻浮、选中放大
-	check(r658_cb.contains("var breathe := 1.0 + sin(t * speed)")
+	check_src(r658_cb.contains("var breathe := 1.0 + sin(t * speed)")
 			and r658_cb.contains("var bob := sin(t * 1.9)")
 			and r658_cb.contains("var r_sel := h * 0.30"),
 			"R658：邀请图标会呼吸 / 轻浮 / 选中放大到卡心（静态图标不算数）")
@@ -73909,7 +73909,7 @@ func _test_r670() -> void:
 	# 口径：素材由 codex 纯文生图出黑底发光图，_finish_fx.py 亮度转 alpha 落 assets/fx。
 	var r670_miss: Array[String] = []
 	for r670_nm in FxArt.all_names():
-		if not FileAccess.file_exists(FxArt.path_of(str(r670_nm))):
+		if not ResourceLoader.exists(FxArt.path_of(str(r670_nm))):
 			r670_miss.append(str(r670_nm))
 	check(r670_miss.is_empty(), "R670：%d 张战斗特效贴图全部落 assets/fx（缺：%s）"
 			% [FxArt.all_names().size(), ", ".join(r670_miss) if not r670_miss.is_empty() else "无"])
@@ -73934,22 +73934,22 @@ func _test_r670() -> void:
 			and FxArt.skill_name_for_color("黄") == FxArt.SKILL_NATURE,
 			"R670：绿 / 灰 / 棕 / 黄 → 自然物理通用施法图")
 	var r670_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
-	check(r670_bs.contains("\t\t\"vortex\":") and r670_bs.contains("\t\t\"poison\":")
+	check_src(r670_bs.contains("\t\t\"vortex\":") and r670_bs.contains("\t\t\"poison\":")
 			and r670_bs.contains("\t\t\"air_raid_hit\":"),
 			"R670：漩涡 / 中毒 / 空袭命中三个断链已接到界面")
-	check(r670_bs.contains("func _draw_battle_fx(") and r670_bs.contains("FxArt.draw(")
+	check_src(r670_bs.contains("func _draw_battle_fx(") and r670_bs.contains("FxArt.draw(")
 			and r670_bs.contains("\t_draw_battle_fx()"),
 			"R670：通用特效队列已接绘制口，且真的在 _draw 里被调用")
-	check(r670_bs.contains("_battle_fx.clear()")
+	check_src(r670_bs.contains("_battle_fx.clear()")
 			and r670_bs.contains("_battle_fx = _battle_fx.filter(")
 			and r670_bs.contains("if not _battle_fx.is_empty():"),
 			"R670：通用特效队列有清空 / 收尾 / busy 三件套（漏一样会把回合卡死）")
 	var r670_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check(r670_eng.contains("var _spell_card_ctx: CardData = null")
+	check_src(r670_eng.contains("var _spell_card_ctx: CardData = null")
 			and r670_eng.contains("var prev_ctx:= _spell_card_ctx")
 			and r670_eng.contains("_spell_card_ctx = prev_ctx"),
 			"R670：当前施法卡在作用域里成对设置 / 还原（嵌套时不串卡）")
-	check(r670_eng.contains("fi[\"card\"] = _spell_card_ctx")
+	check_src(r670_eng.contains("fi[\"card\"] = _spell_card_ctx")
 			and r670_eng.contains("\"source\": \"技能\", \"side\": p.owner, \"card\": _spell_card_ctx"),
 			"R670：群体与单目标两条受击口都带上了卡（界面才分得清用了哪张牌）")
 
@@ -73968,17 +73968,17 @@ func _test_r675() -> void:
 			r675_tbl_miss.append(r675_k)
 		if not r675_eng.contains("\"%s\"" % r675_k):
 			r675_eng_miss.append(r675_k)
-	check(r675_tbl_miss.is_empty(), "R675：六条机制类伤害来源都有专属图映射（缺：%s）"
+	check_src(r675_tbl_miss.is_empty(), "R675：六条机制类伤害来源都有专属图映射（缺：%s）"
 			% (", ".join(r675_tbl_miss) if not r675_tbl_miss.is_empty() else "无"))
-	check(r675_eng_miss.is_empty(), "R675：机制表的名字与引擎 source 字面量一致（缺：%s）"
+	check_src(r675_eng_miss.is_empty(), "R675：机制表的名字与引擎 source 字面量一致（缺：%s）"
 			% (", ".join(r675_eng_miss) if not r675_eng_miss.is_empty() else "无"))
-	check(r675_bs.contains("func _mech_fx_of(") and r675_bs.contains("_mech_fx_of(fi_src)")
+	check_src(r675_bs.contains("func _mech_fx_of(") and r675_bs.contains("_mech_fx_of(fi_src)")
 			and r675_bs.contains("elif fi_seg <= 0:"),
 			"R675：受击口真的按 source 查了机制表（删掉调用 = 退回紫爆点）")
-	check(r675_bs.contains("\"闪电\", \"噩兆\", \"疾风之力\", \"废弃机器人\", \"护甲爆发\", \"黑暗嵌合\"]"),
+	check_src(r675_bs.contains("\"闪电\", \"噩兆\", \"疾风之力\", \"废弃机器人\", \"护甲爆发\", \"黑暗嵌合\"]"),
 			"R675：这六条已进 FX_OWN_SOURCES，不再叠卡色通用图")
 	check(FxArt.path_of(FxArt.BOLT) == "res://assets/fx/bx_bolt.png"
-			and FileAccess.file_exists(FxArt.path_of(FxArt.BOLT))
+			and ResourceLoader.exists(FxArt.path_of(FxArt.BOLT))
 			and FxArt.tex(FxArt.BOLT) != null,
 			"R675：闪电有专属素材（bx_bolt.png，可解码）")
 	check(FxArt.all_names().has(FxArt.BOLT) and FxArt.all_names().size() == 11,
@@ -73989,7 +73989,7 @@ func _test_r675() -> void:
 	for r675_a in r675_arms:
 		if not r675_bs.contains("\t\t\"%s\":" % r675_a):
 			r675_arm_miss.append(r675_a)
-	check(r675_arm_miss.is_empty(),
+	check_src(r675_arm_miss.is_empty(),
 			"R675：恐惧投射 / 恐惧化身 / 恐惧收割 / 护甲积攒四个空事件已接界面（缺：%s）"
 			% (", ".join(r675_arm_miss) if not r675_arm_miss.is_empty() else "无"))
 
@@ -74055,11 +74055,11 @@ func _test_r676() -> void:
 
 	# ⑤ 源码守卫：三条判据都在唯一口上（删掉任一 = 退回老 bug）
 	var r676_eng := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-	check(r676_eng.contains("func _knockback_step(")
+	check_src(r676_eng.contains("func _knockback_step(")
 			and r676_eng.contains("var step:= _knockback_step(p, dir_override)")
 			and r676_eng.contains("func _goose_dir("),
 			"R676：击退方向 / 鹅的攻击方向都收敛到唯一口")
-	check(r676_eng.contains("if not unit_slot_allowed(nxt, attacker.owner):"),
+	check_src(r676_eng.contains("if not unit_slot_allowed(nxt, attacker.owner):"),
 			"R676：鹅的前进落点真的过了 unit_slot_allowed")
 
 func _test_r679() -> void:
@@ -74069,27 +74069,27 @@ func _test_r679() -> void:
 	var r679_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 	check(FxArt.POISON == "poison"
 			and FxArt.path_of(FxArt.POISON) == "res://assets/fx/trap_fx_7003.png"
-			and FileAccess.file_exists(FxArt.path_of(FxArt.POISON))
+			and ResourceLoader.exists(FxArt.path_of(FxArt.POISON))
 			and FxArt.tex(FxArt.POISON) != null,
 			"R679：中毒借用毒瓶那张毒绿（trap_fx_7003，可解码）")
 	check(not FxArt.all_names().has(FxArt.POISON) and FxArt.all_names().size() == 11,
 			"R679：POISON 不进 bx_ 清单（仍 11 张，别名混进来会撑爆 R670 断言）")
-	check(r679_bs.contains("\t\t\"中毒\":")
+	check_src(r679_bs.contains("\t\t\"中毒\":")
 			and FileAccess.get_file_as_string("res://scripts/game_engine.gd").contains("\"中毒\""),
 			"R679：中毒进机制表，且名字与引擎 source 字面量一致")
-	check(r679_bs.contains("if fi_src == \"中毒\":"),
+	check_src(r679_bs.contains("if fi_src == \"中毒\":"),
 			"R679：中毒的爆点色改毒绿（否则和别的伤害糊成一片紫）")
-	check(r679_bs.contains("var ftxt_col: Color = UiTheme.SIDE_FOE")
+	check_src(r679_bs.contains("var ftxt_col: Color = UiTheme.SIDE_FOE")
 			and r679_bs.contains("ftxt_col = FxArt.color_of(FxArt.POISON)"),
 			"R679：中毒的掉血数字也换毒绿（`fx_hit` 原本一律写死 SIDE_FOE，"
 			+ "只改 `fi_col` 是改不到数字的）")
-	check(r679_bs.contains("\t\t\"soul_harvest\":")
+	check_src(r679_bs.contains("\t\t\"soul_harvest\":")
 			and r679_bs.contains("↑ 回满 %d"),
 			"R679：灵魂收割者从「零臂」变成有演出（暗影图 + 回满飘字）")
-	check(r679_bs.contains("_fx_push_cell(FxArt.BLAST, rs_cell, rs_at, BATTLE_FX_MS, 124.0)"),
+	check_src(r679_bs.contains("_fx_push_cell(FxArt.BLAST, rs_cell, rs_at, BATTLE_FX_MS, 124.0)"),
 			"R679：折射炮流弹补了命中爆点")
-	check(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, hd_t, n, BATTLE_FX_MS, 132.0)"),
+	check_src(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, hd_t, n, BATTLE_FX_MS, 132.0)"),
 			"R679：隐藏能源补了爆点图形（原来只有飘字）")
-	check(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, db_cell, n, BATTLE_FX_MS, 140.0)")
+	check_src(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, db_cell, n, BATTLE_FX_MS, 140.0)")
 			and not r679_bs.contains("\"col\": Color(\"6a4aa0\"), \"big\": false}"),
 			"R679：暗影之刃从纯色紫圈换成素材图（且不留双层）")
