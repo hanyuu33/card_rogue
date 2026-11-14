@@ -671,7 +671,7 @@ static func note_reveal_bigchest() -> int:
 	##   * 未探索 = 不在 `cleared_ids` 里（走过的房间已经吃过内容，再改成宝箱是白送）；
 	##   * 排除当前所在格 / 起点 / 已经是 `bigchest` 的格（改了等于没改）；
 	##   * 排除第三层直道之外的空格（`is_void`，那一层也没有事件房，属于双保险）；
-	##   * 排除右上角的固定商店（「每层那间永远在」是地图设计约束，不能被一张笔记改动）。
+	##   * 排除**开局标记的那间商店**（R693）（「每层那间永远在」是地图设计约束，不能被一张笔记改动）。
 	## 随机源走 `run_rng` → 同种子必然改同一格（回放 / 测试可复现）。
 	var cands: Array = []
 	for c: Dictionary in map_cells:
@@ -679,7 +679,7 @@ static func note_reveal_bigchest() -> int:
 		if cid == current_node_id or RogueMap.is_void(c) or cleared_ids.has(cid):
 			continue
 		if RogueMap.is_fixed_shop(cid):
-			continue      # 右上角那间是「每层永远在」的固定商店，别改成宝箱
+			continue      # R693：开局标记的那间是「每层永远在」的商店，别改成宝箱
 		var ty := str(c.get("type", ""))
 		if ty == "start" or ty == "bigchest":
 			continue
@@ -704,7 +704,7 @@ static func flint_candidates() -> Array:
 	##     玩家得先走开再走回来，平白多花一块巧克力；
 	##   * 起点格（`type == "start"`）—— `start_cell()` 靠它认地图入口；
 	##   * 第三层的 Boss 格 —— 烧成篝火就永远打不到 Boss，直接卡死；
-	##   * 右上角固定商店 —— 「每层那间永远在」是地图设计约束；
+	##   * 开局标记的商店（R693）—— 「每层那间永远在」是地图设计约束；
 	##   * 已经是篝火的格 —— 再点一次纯属白烧；
 	##   * 第三层直道之外的空格（`is_void`）。
 	var out: Array = []
@@ -2928,16 +2928,50 @@ static func reveal_known() -> void:
 
 
 static func is_landmark_node(id: int) -> bool:
-	## 迷雾永远盖不住的地标格：起点 + 左上大宝箱 + 右上固定商店（R243）。
+	## 迷雾永远盖不住的地标格：起点 + 两个大宝箱 + **开局随机标记的那间商店**（R693）。
 	## 「找不到通往大宝箱的路」是 R145 要解决的问题 —— 通路可见 + 目标可见，
 	## 玩家才规划得了路线；剩下「路上会遇到什么」才是迷雾要藏的东西。
-	## R243：右上角改成**固定商店**之后，它和宝箱一样每层都在同一个位置 ——
-	## 藏起来只会让玩家以为这张图没有商店，所以一并当地标。
+	## R693：商店从「右上角固定」改成「随机标记一格」之后，它的**位置本身就是随机信息**，
+	## 藏进迷雾等于让玩家没法规划「这一趟顺路能不能买到」—— 所以照旧是地标。
 	if id < 0 or id >= map_cells.size():
 		return false
 	if RogueMap.is_bigchest(id) or RogueMap.is_fixed_shop(id):
 		return true
 	return str(map_cells[id].get("type", "")) == "start"
+
+
+static func ensure_shop_mark() -> int:
+	## R693：给 **R693 之前生成的存档**补上 `shop_mark` 字段。返回补标记的格 id（-1 = 没补）。
+	##
+	## 为什么必须有这一步：R243~R692 的地图把商店**钉死在右上角 (6,0)**，cell 里没有
+	## `shop_mark`；直接读到这种图，`is_fixed_shop()` 会全部返回 false → 那间老商店
+	## 当场从地标滑进迷雾（`is_landmark_node` 认不出它），还能被「笔记」改成宝箱。
+	## 口径：
+	##   1) 图里已经有任何 `shop_mark` → 一律不动（新档本来就对，重复调用也无害）；
+	##   2) 否则优先认右上角 (6,0)（那就是老口径的位置），那里不是商店就看第一间
+	##      `type == "shop"` 的格；
+	##   3) 两种情况都凑不出来 → **不凭空造商店**（旧图可能本来就没有，补一间等于改设计）。
+	## ⚠️ 必须在 `reveal_known()` **之前**调用：它会拿 `is_landmark_node()` 补视野，
+	##    标记晚一步，那间商店这一帧就已经被算成迷雾里了。
+	if map_cells.is_empty():
+		return -1
+	for c: Variant in map_cells:
+		if c is Dictionary and bool((c as Dictionary).get("shop_mark", false)):
+			return -1
+	var corner := RogueMap.idx(RogueMap.COLS - 1, 0)
+	if corner >= 0 and corner < map_cells.size():
+		var cc: Variant = map_cells[corner]
+		if cc is Dictionary and str((cc as Dictionary).get("type", "")) == "shop":
+			(cc as Dictionary)["shop_mark"] = true
+			return corner
+	for c2: Variant in map_cells:
+		if not (c2 is Dictionary):
+			continue
+		var d: Dictionary = c2
+		if str(d.get("type", "")) == "shop":
+			d["shop_mark"] = true
+			return int(d.get("id", -1))
+	return -1
 
 
 static func can_move_to(node_id: int) -> bool:

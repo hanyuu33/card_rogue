@@ -1974,14 +1974,19 @@ func _check_map_scene(scene: Variant) -> void:
 			_smoke_fail("地图场景：(%d,%d) 应是大宝箱房，实际 %s"
 					% [bp.x, bp.y, str(bc["type"])])
 			return
-	# R243：右上角固定为商店（原来也是大宝箱）
-	for sp: Vector2i in RogueMap.SHOP_POS:
-		var spc: Dictionary = RogueMap.cell_at(cells, sp.x, sp.y)
-		if str(spc["type"]) != "shop":
-			_smoke_fail("地图场景：(%d,%d) 应是固定商店，实际 %s"
-					% [sp.x, sp.y, str(spc["type"])])
-			return
-	# 几何：格子是正方形、彼此相接、整体落在窗口内
+	# R693：商店不再是右上角固定 —— 改成「开局随机标记一处」，图上必须恰好一间
+	var shop_marks: Array = []
+	for smc: Dictionary in cells:
+		if bool(smc.get("shop_mark", false)):
+			shop_marks.append(smc)
+	if shop_marks.size() != 1:
+		_smoke_fail("地图场景：应恰好标记 1 间商店，实际 %d 间" % shop_marks.size())
+		return
+	var spc: Dictionary = shop_marks[0]
+	if str(spc["type"]) != "shop":
+		_smoke_fail("地图场景：(%d,%d) 是标记商店却不是 shop 类型（%s）"
+				% [int(spc["col"]), int(spc["row"]), str(spc["type"])])
+		return
 	var c0: Rect2 = scene._cell_rect(cells[0])
 	var c_last: Rect2 = scene._cell_rect(cells[RogueMap.CELLS - 1])
 	var cell_sz: float = scene.CELL

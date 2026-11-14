@@ -543,6 +543,10 @@ static func apply(d: Dictionary) -> bool:
 				RunState.card_growth[str(cg_k)] = cg_out
 	RunState.gold = int(d.get("gold", 100))
 	RunState.map_cells = d.get("map_cells", []) if d.get("map_cells", []) is Array else []
+	# R693：老档（R243~R692）的商店是「右上角固定」的，cell 里没有 `shop_mark` ——
+	# 这里先按旧位置补上标记，**必须在 `reveal_known()` 之前**：
+	# 那一步靠 `is_landmark_node()` 恢复视野，晚一步商店就已经被算进迷雾了。
+	RunState.ensure_shop_mark()
 	RunState.current_layer = int(d.get("current_layer", GameLayers.LAYER_DEFAULT))
 	RunState.current_node_id = int(d.get("current_node_id", -1))
 	RunState.cleared_ids = _int_array(d.get("cleared_ids", []))

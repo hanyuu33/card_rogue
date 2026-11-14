@@ -19,7 +19,9 @@ extends RefCounted
 ## 房间类型：
 ##   start 起点 / battle 战斗 / elite 精英 / rest 休息 / event 事件 /
 ##   chest 普通宝箱 / bigchest 大宝箱 / unknown 「?」（走进才揭晓）
-## 固定格（R243）：起点 (3,4)；**左上 (0,0) 固定为大宝箱**、**右上 (6,0) 固定为商店**。
+## 固定格（R693）：起点 (3,4)；**左上 (0,0) 与右上 (6,0) 都是大宝箱**；
+## 商店改成**开局随机标记一格**（`shop_mark`）—— 每层仍保底一间可见的商店，
+## 但位置不再钉在右上角（R243 的「右上固定商店」就此结束）。
 ## 普通宝箱（chest）**不再出现在明格**：只有「?」房里有概率藏一个（见 `WEIGHTS_UNKNOWN`）。
 ## 「?」房的实际类型在**生成时**就定好（而非进入时抽）—— 这样休息点的
 ## 「不与起点相邻 / 不与另一个休息相邻」两条约束对隐藏房同样成立。
@@ -72,10 +74,15 @@ const LINE_TYPES := ["start", "elite", "shop", "rest", "boss"]
 const START_COL := 3
 const START_ROW := 4                                        # 最下一行
 const START_POS := Vector2i(START_COL, START_ROW)
-## R243：左上角固定大宝箱（原先是左上 + 右上两个）。
-const BIGCHEST_POS := [Vector2i(0, 0)]
-## R243：右上角固定商店 —— 每一层都保证有一间商店可去（原先是 1~2 间纯随机商店）。
-const SHOP_POS := [Vector2i(6, 0)]
+## R693（用户口径）：**左上、右上两个角都是大宝箱** —— R243 曾把右上角改成固定商店，
+## 现在改回来（R243 之前本来就是两个角各一个）。两条几何约束照旧成立：
+## 起点→上角 ≥ 7 步、两上角之间 ≥ 6 步 → 「12 步内不可能同时进两个大宝箱」。
+const BIGCHEST_POS := [Vector2i(0, 0), Vector2i(6, 0)]
+## R693（用户口径）：商店**不再固定在右上角**，改成「开局随机标记一处」。
+## 每层仍然**保底一间可见商店**（原 R243 保证的那间），只是位置随机 ——
+## 标记落在 cell 的 `shop_mark` 字段里，随 `map_cells` 一起进存档，
+## 所以读档后还是同一格（`RunState.ensure_shop_mark()` 给老档补标记）。
+## ⚠️ 不再有 `SHOP_POS` 常量：位置是每张图现摇的，写死一个坐标就等于又钉回去了。
 
 const TYPE_LABELS := {
 	"start": "起点", "battle": "战斗", "elite": "精英", "rest": "休息",
@@ -239,12 +246,22 @@ static func line_cells(layer := GameLayers.LAYER_THREE) -> Array:
 	return cells
 
 
-static func is_fixed_shop(i: int) -> bool:
-	## R243：右上角那间**固定商店**（每层都有，不参与随机摆位）。
-	for p in SHOP_POS:
-		if idx(p.x, p.y) == i:
-			return true
-	return false
+static func is_fixed_shop(i: int, cells: Array = []) -> bool:
+	## R693：「开局随机标记的那一间商店」—— 每层保底、可见、迷雾盖不住。
+	## 判据是 cell 上的 `shop_mark`（生成时写），**不是坐标**：
+	##   位置每张图都不一样，写死坐标就又退回 R243 的右上角了。
+	## `cells` 省略时读 `RunState.map_cells`（当前层）——
+	##   ⚠️ 生成过程中的 `_make_cells` **绝不能**调这个函数：那一刻
+	##   `RunState.map_cells` 还是上一层的旧图，它会拿错图来判。生成期用局部变量。
+	var src: Array = cells if not cells.is_empty() else RunState.map_cells
+	if i < 0 or i >= src.size():
+		return false
+	var c: Variant = src[i]
+	if not (c is Dictionary):
+		return false
+	if int((c as Dictionary).get("id", i)) != i:
+		return false
+	return bool((c as Dictionary).get("shop_mark", false))
 
 
 # ------------------------------------------------------------ 生成
@@ -296,9 +313,11 @@ static func generate(rng: RandomNumberGenerator,
 
 static func is_fixed_open(cell: Dictionary) -> bool:
 	## R311：这格是不是「水晶骰子**管不到**的固定房间」—— 用户口径明确只有四类：
-	## **起点 / 大宝箱 / 右上角的商店 / 篝火（休息处）**。
-	## 判据**按 cell 内容**（不是按坐标猜）：随机商店也带 `type == "shop"`，但它是随机刷的，
-	## 不在豁免名单里 —— 所以「固定商店」只能靠坐标认（`is_fixed_shop`）。
+	## **起点 / 大宝箱 / 标记的那间商店 / 篝火（休息处）**。
+	## R693：商店从「右上角固定」改成「开局随机标记」之后，判据从「按坐标猜」改成
+	## **按 cell 的 `shop_mark`** —— 位置是每张图现摇的，坐标再也代表不了它。
+	## 普通随机商店（`shop_set`）仍然带 `type == "shop"` 但**没有** `shop_mark`，
+	## 所以它照旧在可重摇名单里（用户口径没变：只有「保底那间」是固定的）。
 	if cell.is_empty():
 		return false
 	var i := int(cell.get("id", -1))
@@ -306,14 +325,16 @@ static func is_fixed_open(cell: Dictionary) -> bool:
 		return false
 	if i == idx(START_COL, START_ROW):
 		return true
-	if is_bigchest(i) or is_fixed_shop(i):
+	if is_bigchest(i):
+		return true
+	if bool(cell.get("shop_mark", false)):
 		return true
 	return str(cell.get("type", "")) == "rest"
 
 
 static func _unknown_table() -> Dictionary:
 	## 当前难度下「?」房该用的权重表。
-	## R380：难度 10 起去掉 `shop` —— 商店只剩「右上角固定 1 间 + `shop_set` 恒定 2 间」，
+	## R380：难度 10 起去掉 `shop` —— 商店只剩「开局标记 1 间 + `shop_set` 恒定 2 间」，
 	## 不再由「?」房额外贡献（用户口径「每层商店数量调整为固定 2 个，不算右上角」）。
 	## ⚠️ 生成期（`_make_cells`）与水晶骰子的重摇（`_unknown_weights`）都必须走这里，
 	##    否则两条路会给出不同的商店 / 精英分布。
@@ -345,7 +366,7 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 	##
 	## 口径：
 	##   * 已经**是**「?」的格子**不动**：它们本来就是按「?」权重摇出来的，重摇只会白折腾；
-	##   * **固定房间**（起点 / 大宝箱 / 右上角商店 / 篝火）不动 —— 见 `is_fixed_open()`；
+	##   * **固定房间**（起点 / 大宝箱 / 开局标记的商店 / 篝火）不动 —— 见 `is_fixed_open()`；
 	##   * 其余格子：按「?」权重重定 `type`，并把 `hidden` / `revealed` 一起翻成「未揭晓」；
 	##   * 事件子类型（`event_kind`）与「宝箱里是不是道具」跟着重摇，且**不与图上已有事件重名**；
 	##   * 精英仍按距离系数分布（`_weighted_far`，与生成期同一套）。
@@ -358,7 +379,7 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 	# ⚠️ `generate()` 里那句 `layer == LAYER_THREE → line_cells()` 只挡住了「换层生成」
 	#    这一条路；**拿到骰子的当刻**走的是 `RunState.reroll_map_as_unknown()` → 直接进本函数，
 	#    那时直道上的精英(16) / Boss(19) 都不是「固定房间」（豁免名单只有起点/大宝箱/
-	#    右上角商店/篝火），会被就地重摇成「?」—— 直道当场碎掉，用户实机撞到的就是这条。
+	#    标记商店/篝火），会被就地重摇成「?」—— 直道当场碎掉，用户实机撞到的就是这条。
 	#    守卫因此必须写在**这里**（重摇的唯一实现口），而不是只守在调用方。
 	if layer == GameLayers.LAYER_THREE:
 		return 0
@@ -519,10 +540,10 @@ static func _validate(adj: Array, start_i: int) -> Array:
 	if _reach_count(adj, start_i) != CELLS:
 		return []
 	var dist := _bfs(adj, start_i)
-	# R243：固定格（左上大宝箱 + 右上商店）都必须在 12 步巧克力内可达 ——
-	# 右上角改成商店之后，它和宝箱一样是「每层必去」的目标格，
-	# 走不到就等于这一层没商店（实测有些图会是 13 步，必须靠重摇挡掉）。
-	for p in (BIGCHEST_POS + SHOP_POS):
+	# R693：两个大宝箱都必须在 12 步巧克力内可达（否则这一层等于没有宝箱）。
+	# 标记商店的可达距离不在这里判 —— 它的位置是 `_make_cells` 里按「起点 BFS 距离
+	# ≤ MAX_STEPS」挑出来的，生成那一刻就已经保证了（候选过滤时就用了同一个上限）。
+	for p in BIGCHEST_POS:
 		if int(dist.get(idx(p.x, p.y), 9999)) > MAX_STEPS:
 			return []
 	return adj
@@ -601,12 +622,38 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 		used_events: Dictionary = {}) -> Array:
 	## 把邻接表定型成 35 个 cell 字典。
 	var start_i := idx(START_COL, START_ROW)
+	var start_nbs := {}          # R192：起点后第一格（起点的每一个邻居）类型约束用
+	for nb in adj[start_i]:
+		start_nbs[int(nb)] = true
 
-	# --- 休息点位置：全局先定（起点与两个大宝箱不参与）
+	# --- R693（用户口径）：**开局随机标记一处商店**
+	#   原来这一间钉死在右上角 (6,0)；现在两个上角都是大宝箱，商店改成每张图现摇一格。
+	#   约束（与下面的 `shop_set` 同口径，理由也一样）：
+	#     * 不压起点 / 两个大宝箱；
+	#     * 不与起点相邻 —— 第一层的起手第一格只能是战斗或事件，不能一出门就是商店；
+	#     * 必须**从起点走得到**（`_bfs`），否则这间「保底商店」玩家一辈子进不去。
+	#       上限与宝箱同口径（≤ MAX_STEPS）：走得到、但这一层根本走不完，等于没有。
+	#   ⚠️ 这一挑会消耗一次 rng：**每个种子生成出来的地图都会和 R692 之前不一样**，
+	#      这是「位置随机」的必然代价。同种子仍然完全确定 → 回放不受影响。
+	#   ⚠️ 生成期一律用局部 `mark_shop_i`，**不要调 `is_fixed_shop()`**：那一刻
+	#      `RunState.map_cells` 还是上一层的旧图。
+	var reach: Dictionary = _bfs(adj, start_i)
+	var mark_cands: Array = []
+	for i in CELLS:
+		if i == start_i or is_bigchest(i) or start_nbs.has(i):
+			continue
+		if int(reach.get(i, 9999)) > MAX_STEPS:
+			continue
+		mark_cands.append(i)
+	var mark_shop_i := -1
+	if not mark_cands.is_empty():
+		mark_shop_i = int(mark_cands[rng.randi_range(0, mark_cands.size() - 1)])
+
+	# --- 休息点位置：全局先定（起点 / 两个大宝箱 / 标记商店不参与）
 	var rest_set := {}
 	var cands: Array = []
 	for i in CELLS:
-		if i == start_i or is_bigchest(i) or is_fixed_shop(i):
+		if i == start_i or is_bigchest(i) or i == mark_shop_i:
 			continue
 		cands.append(i)
 	_shuffle(cands, rng)
@@ -628,7 +675,7 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 	var shop_set := {}
 	var shop_cands: Array = []
 	for i in CELLS:
-		if i == start_i or is_bigchest(i) or is_fixed_shop(i) or rest_set.has(i):
+		if i == start_i or is_bigchest(i) or i == mark_shop_i or rest_set.has(i):
 			continue
 		shop_cands.append(i)
 	_shuffle(shop_cands, rng)
@@ -638,7 +685,7 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 			break
 		var sok := true
 		for nb: int in adj[i]:
-			if nb == start_i or rest_set.has(nb) or shop_set.has(nb) or is_fixed_shop(nb):
+			if nb == start_i or rest_set.has(nb) or shop_set.has(nb) or nb == mark_shop_i:
 				sok = false
 				break
 		if sok:
@@ -656,7 +703,7 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 				continue
 			var sok2 := true
 			for nb2: int in adj[i2]:
-				if nb2 == start_i or shop_set.has(nb2) or is_fixed_shop(nb2):
+				if nb2 == start_i or shop_set.has(nb2) or nb2 == mark_shop_i:
 					sok2 = false
 					break
 			if sok2:
@@ -664,9 +711,6 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 
 	# --- 逐格定类型
 	var cells: Array = []
-	var start_nbs := {}          # R192：起点后第一格（起点的每一个邻居）类型约束用
-	for nb in adj[start_i]:
-		start_nbs[int(nb)] = true
 	# R304：**精英越远越多** —— 先算「真正参与权重抽取」的候选格平均距离系数。
 	# 起点 / 大宝箱 / 固定商店 / 休息 / 随机商店都是直接定类型的，不参与；
 	# 第一层起点后第一格固定「战斗或事件」，也不参与。
@@ -674,7 +718,7 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 	var far_sum := 0.0
 	var far_n := 0
 	for fi in CELLS:
-		if fi == start_i or is_bigchest(fi) or is_fixed_shop(fi) \
+		if fi == start_i or is_bigchest(fi) or fi == mark_shop_i \
 				or rest_set.has(fi) or shop_set.has(fi):
 			continue
 		if start_nbs.has(fi) and layer == GameLayers.LAYER_DEFAULT:
@@ -689,8 +733,8 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 			type = "start"
 		elif is_bigchest(i):
 			type = "bigchest"
-		elif is_fixed_shop(i):
-			type = "shop"          # R243：右上角固定商店（每层都有）
+		elif i == mark_shop_i:
+			type = "shop"          # R693：开局随机标记的那一间（每层保底、可见）
 		elif rest_set.has(i):
 			type = "rest"
 		elif shop_set.has(i):
@@ -722,6 +766,10 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 			"doors": (adj[i] as Array).duplicate(),
 			"layer": layer,
 			"event_kind": "",
+			# R693：本层「随机标记的商店」—— 唯一一间不会被道具改动、迷雾盖不住的商店。
+			# 写进 cell（而不是靠坐标算）才能随 `map_cells` 一起进存档：
+			# 读档后 `is_fixed_shop()` 还能认得出同一格。
+			"shop_mark": i == mark_shop_i,
 		}
 		if type == "event":
 			# R575（用户口径）：**事件格子在生成时只是事件格子** —— 不预定子类型、不记账本。

@@ -14242,11 +14242,11 @@ func _init() -> void:
 
 	check(RogueMap.START_POS == Vector2i(3, 4), "起点固定在最下一行中间 (3,4)")
 
-	check(RogueMap.BIGCHEST_POS.size() == 1 and RogueMap.BIGCHEST_POS[0] == Vector2i(0, 0)
+	check(RogueMap.BIGCHEST_POS.size() == 2 and RogueMap.BIGCHEST_POS[0] == Vector2i(0, 0)
 
-			and RogueMap.SHOP_POS.size() == 1 and RogueMap.SHOP_POS[0] == Vector2i(6, 0),
+			and RogueMap.BIGCHEST_POS[1] == Vector2i(6, 0),
 
-			"R243 固定格：左上 (0,0) = 大宝箱，右上 (6,0) = 商店")
+			"R693 固定格：左上 (0,0) 与右上 (6,0) 都是大宝箱（R243 的右上固定商店取消）")
 
 
 
@@ -14258,15 +14258,49 @@ func _init() -> void:
 
 	check(q_map1.size() == RogueMap.CELLS, "生成一张地图：35 个房间")
 
+	# R693（用户口径）：左上、右上两个角都是大宝箱；商店改成「开局随机标记一处」
+
+	check(str(q_map1[RogueMap.idx(0, 0)].get("type", "")) == "bigchest"
+
+			and str(q_map1[RogueMap.idx(6, 0)].get("type", "")) == "bigchest",
+
+			"R693 地图：左上 (0,0) 与右上 (6,0) 都是大宝箱")
+
+	var q_marks: Array = []
+
+	for q_mc: Dictionary in q_map1:
+
+		if bool(q_mc.get("shop_mark", false)):
+
+			q_marks.append(int(q_mc["id"]))
+
+	check(q_marks.size() == 1, "R693 每张图恰好标记一间商店（本张 %d 间）" % q_marks.size())
+
+	if q_marks.size() == 1:
+
+		var q_mi := int(q_marks[0])
+
+		check(str(q_map1[q_mi].get("type", "")) == "shop"
+
+				and not bool(q_map1[q_mi].get("hidden", false)),
+
+				"R693 标记的那间是可见商店（不藏在「?」里）")
+
+		check(q_mi != RogueMap.idx(0, 0) and q_mi != RogueMap.idx(6, 0)
+
+				and q_mi != RogueMap.idx(RogueMap.START_COL, RogueMap.START_ROW),
+
+				"R693 标记商店不落在起点 / 两个大宝箱上")
+
 	var q_scol: Dictionary = RogueMap.start_cell(q_map1)
 
 	check(not q_scol.is_empty() and str(q_scol["type"]) == "start", "起点房类型为 start")
 
 	check(str(RogueMap.cell_at(q_map1, 0, 0)["type"]) == "bigchest"
 
-			and str(RogueMap.cell_at(q_map1, 6, 0)["type"]) == "shop",
+			and str(RogueMap.cell_at(q_map1, 6, 0)["type"]) == "bigchest",
 
-			"R243 角格：左上大宝箱 / 右上商店（每张图都一样）")
+			"R693 角格：左上、右上都是大宝箱（每张图都一样）")
 
 	check(int(RogueMap.cell_at(q_map1, 3, 4)["id"]) == int(q_scol["id"]),
 
@@ -14444,7 +14478,7 @@ func _init() -> void:
 
 			if str(q_c["type"]) == "start" or str(q_c["type"]) == "bigchest" \
 
-					or RogueMap.is_fixed_shop(int(q_c["id"])):
+					or bool(q_c.get("shop_mark", false)):
 
 				q_hidden_ok = false
 
@@ -14596,13 +14630,13 @@ func _init() -> void:
 
 	check(q_bulk_ok, "地图：连生成 60 张都满足全部约束（%s）" % q_bulk_msg)
 
-	check(int(q_bulk_types.get("bigchest", 0)) == 60
+	check(int(q_bulk_types.get("bigchest", 0)) == 120
 
 			and int(q_bulk_types.get("start", 0)) == 60
 
 			and int(q_bulk_types.get("shop", 0)) >= 60,
 
-			"R243 地图 60 张统计：大宝箱 1×60 / 起点 60 / 商店 ≥ 1×60（右上角每张必有一间；另加随机 0~1 与「?」房，实测 %d 间）"
+			"R693 地图 60 张统计：大宝箱 2×60 / 起点 60 / 商店 ≥ 1×60（标记商店每张必有一间；另加随机 2 间与「?」房，实测 %d 间）"
 
 			% int(q_bulk_types.get("shop", 0)))
 
