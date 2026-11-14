@@ -3379,6 +3379,51 @@ func _check_hand_fan(scene: Variant) -> void:
 		msg += " / 倾角 左 %.1f° 右 %.1f° / 横向 %.0f~%.0f（不越界）" % [
 				left_deg, right_deg, el.x, er.y]
 		print(msg)
+	# R724：**画出来的**卡面必须整张都点得中 —— 选中放大（1.3）与悬停抬手（28）都会让卡顶
+	# 探进棋盘可视窗（最多几十像素），命中判定必须跟着放大、跟着抬；否则那段像素漏给棋盘，
+	# 玩家点自己的手牌却选中了背后滚下来的后排单位（用户报告）。
+	# 取**中间**那张：满手时两端的卡横向已经探出棋盘列（x > 776），够不到格子。
+	var keep_sel: Variant = scene.selection
+	var keep_hover: int = scene._hover_hand
+	var mid: int = n / 2
+	var checked := 0
+	var bad_paint := 0
+	var leak_pts := 0
+	for mode: Dictionary in [{"sel": true, "hover": true}, {"sel": true, "hover": false},
+			{"sel": false, "hover": true}]:
+		var want_sel: bool = bool(mode["sel"])
+		var want_hover: bool = bool(mode["hover"])
+		scene.selection = ["hand", mid] if want_sel else null
+		scene._hover_hand = mid if want_hover else -1
+		var pr: Rect2 = scene._hand_rect(mid)
+		pr.position.y -= scene.HAND_FAN_HOVER_LIFT if want_hover else 0.0
+		pr.position.y += scene._hand_turn_dy
+		var psc: float = scene.HAND_SELECT_SCALE if want_sel else 1.0
+		var pv := Vector2(pr.position.x + pr.size.x / 2.0, pr.position.y + pr.size.y)
+		for ku in 5:
+			for kv in 5:
+				var u := 0.08 + 0.21 * float(ku)   # 0.08 .. 0.92，避开边缘像素误差
+				var v := 0.08 + 0.21 * float(kv)
+				var base := Vector2(pr.position.x + pr.size.x * u,
+						pr.position.y + pr.size.y * v)
+				var q: Vector2 = pv + ((base - pv) * psc).rotated(scene._hand_angle(mid))
+				checked += 1
+				if not scene._hand_hit_painted(mid, q):
+					bad_paint += 1
+				# 同一个点在**旧几何**（不放大 / 不抬手；仍含选中的 28 抬起，那是 _hand_rect 自带的）
+				# 下算不出手牌，而它又压在棋盘格上 → 正是用户报告的那一下「点手牌选中后排」。
+				if not scene._hand_hit_geom(mid, q, 0.0, false) and scene._cell_at(q) != null:
+					leak_pts += 1
+	scene.selection = keep_sel
+	scene._hover_hand = keep_hover
+	if bad_paint > 0:
+		_smoke_fail("扇形手牌：绘制几何里有 %d/%d 个点算不出这张牌（放大 / 抬手没进命中判定）"
+				% [bad_paint, checked])
+	elif leak_pts <= 0:
+		_smoke_fail("扇形手牌：R724 用例没踩到旧的漏点（前提不成立，别当通过）")
+	else:
+		print("SMOKE OK 手牌命中几何：绘制几何 %d 点全部命中，其中 %d 点是旧逻辑会漏给棋盘的"
+				% [checked, leak_pts])
 
 func _dist_to_seg(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var ab: Vector2 = b - a

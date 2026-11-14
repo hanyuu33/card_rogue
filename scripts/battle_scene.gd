@@ -5026,7 +5026,9 @@ func _gui_input(event: InputEvent) -> void:
 			elif _drag_idx >= 0:
 				_finish_drag(event.position)
 			elif _press_idx >= 0:
-				_on_left_click(event.position)
+				# R724：把按下时命中的那张带过去 —— 松手前悬停若被清掉，重算会算不到
+				# （命中区随抬手缩回），这一下就又漏给棋盘了。
+				_on_left_click(event.position, _press_idx)
 			elif _grid_drag_arm and not _grid_dragging:
 				_on_left_click(event.position)   # 没拖动 → 还是原来那下点击
 			elif _info_drag_arm and not _info_dragging:
@@ -5131,8 +5133,9 @@ func _gui_input(event: InputEvent) -> void:
 
 func _hand_index_at(pos: Vector2) -> int:
 	## 手牌会互相重叠 → 从**最上层**（画得最晚的那张）往前找。
+	## R724：用**绘制几何**版 —— 点到的必须是眼睛看到的那张卡。
 	for i in range(engine.state.hand.size() - 1, -1, -1):
-		if _hand_hit(i, pos):
+		if _hand_hit_painted(i, pos):
 			return i
 	return -1
 
@@ -5273,12 +5276,37 @@ func _is_hand_selected(i: int) -> bool:
 
 
 func _hand_hit(i: int, pos: Vector2) -> bool:
-	## 精确命中：把鼠标点**反向旋转**回卡牌本地坐标再判矩形。
+	## **静态**命中（不含悬停抬手 / 选中放大）—— 只给悬停判定用（`_on_hover`）。
+	## 精确：把鼠标点**反向旋转**回卡牌本地坐标再判矩形。
 	## （卡是转着画的，直接拿轴对齐矩形判会在两端错位；这里用同一条 _hand_angle。）
 	## 注意：悬停抬手只影响绘制、不进 _hand_rect，所以不会出现「抬起→不再命中→闪」。
-	var pivot := _hand_pivot(i)
-	var local := pivot + (pos - pivot).rotated(-_hand_angle(i))
-	return Rect2(_hand_rect(i).position, Vector2(HAND_CARD_W, HAND_CARD_H)).has_point(local)
+	## ⚠️ R724：点击 / 拖拽**不要**走这条，用 `_hand_hit_painted`（按画出来的几何判）。
+	return _hand_hit_geom(i, pos, 0.0, false)
+
+
+func _hand_hit_painted(i: int, pos: Vector2) -> bool:
+	## R724：按**画出来的**那张卡判命中 —— 含悬停抬手（HAND_FAN_HOVER_LIFT）、选中放大
+	## （HAND_SELECT_SCALE）与回合归属位移（_hand_turn_dy），与 `_draw_hand_card` 同一套几何。
+	## 旧版只按未放大的轴对齐矩形判（R416 原话「不挪命中矩形」），于是「看到的卡面」比
+	## 「能点中的卡面」大一圈：选中 1.3 倍 + 悬停再抬 28 → 卡顶探进棋盘可视窗几十像素，
+	## 玩家点在自己手牌上，结算出来的却是**自己后排滚下来的单位**（用户报告）。
+	## 悬停仍走静态版 `_hand_hit`：那里若把抬手算进来，就成了
+	##   「抬起 → 点不在卡上 → 落下 → 又命中」的闪。
+	var lift := HAND_FAN_HOVER_LIFT if i == _hover_hand else 0.0
+	return _hand_hit_geom(i, pos, lift, _is_hand_selected(i))
+
+
+func _hand_hit_geom(i: int, pos: Vector2, lift: float, selected: bool) -> bool:
+	## 命中判定的**唯一几何口**：与 `_draw_hand_card` 的行序逐行对齐
+	## （_hand_rect → 减 lift → 加 _hand_turn_dy → 绕卡底中心旋转 + 缩放）。
+	## 那边以后再加偏移（除 `_shake_card` 那种纯视觉抖动），这里必须同改。
+	var r := _hand_rect(i)
+	r.position.y -= lift
+	r.position.y += _hand_turn_dy
+	var pivot := Vector2(r.position.x + HAND_CARD_W / 2.0, r.position.y + HAND_CARD_H)
+	var scl := HAND_SELECT_SCALE if selected else 1.0
+	var local := pivot + ((pos - pivot).rotated(-_hand_angle(i))) / scl
+	return r.has_point(local)
 
 
 ## ⚠️ R146：这两个是 **static** —— `intro_pose()` 要当纯函数被回归直接调用
@@ -5386,7 +5414,9 @@ func _cell_at(pos: Vector2) -> Variant:
 	return null
 
 
-func _on_left_click(pos: Vector2) -> void:
+func _on_left_click(pos: Vector2, hand_hint := -1) -> void:
+	## hand_hint：R724 —— 按下那一刻命中的手牌下标（没有则 -1）。只有 `_gui_input`
+	## 的松手分支会传；其余入口（没拖动的棋盘 / 左栏轻点）走默认值，行为不变。
 	# R288：玩家一动手就交还镜头（滚轮 / 拖棋盘已有，点击这条别漏 ——
 	# 否则演到一半点张牌，棋盘还停在敌方半场，自己出的牌在哪都看不见）。
 	_cam_cancel()
@@ -5498,9 +5528,13 @@ func _on_left_click(pos: Vector2) -> void:
 		_deck_visible = true
 		queue_redraw()
 		return
-	# 手牌：必须和悬停/拖拽用同一套判定（卡是转着画的、还会互相重叠），
-	# 否则会出现「悬停显示 A、点下去选中 B」。
+	# 手牌：必须和**画出来的**几何用同一套判定（卡是转着画的、还会互相重叠、选中还会放大），
+	# 否则会出现「悬停显示 A、点下去选中 B」，或者更糟：点在卡上却选中了背后棋盘上的单位。
 	var hi := _hand_index_at(pos)
+	if hi < 0 and hand_hint >= 0 and hand_hint < engine.state.hand.size():
+		# R724：按下时点在卡上，松手前悬停状态变了（抬手消失 → 命中区缩回去）——
+		# 仍按按下时那张结算，别把这一下漏给棋盘。
+		hi = hand_hint
 	if hi >= 0:
 		# R71：同样只允许我方回合出牌（与 _on_board_click 的门禁成对；否则玩家能在敌方
 		# 回合抢先出牌 → `_ai_step` 随后驱动的 AI 队列与实际战场状态对不上）。
@@ -7682,9 +7716,11 @@ func _on_hover(pos: Vector2) -> void:
 				tip += "　触发：%s" % fc.trigger
 			break
 	# ② 己方手牌（会重叠 → 从最上层往前找）
+	# R724：悬停跟「选中放大」走（整张放大后的卡都能查出说明），但**不含**悬停抬手 ——
+	# 抬手由悬停本身驱动，算进来就成了「抬起 → 点不在卡上 → 落下 → 又命中」的闪。
 	if _hover_card == null:
 		for i in range(engine.state.hand.size() - 1, -1, -1):
-			if _hand_hit(i, pos):
+			if _hand_hit_geom(i, pos, 0.0, _is_hand_selected(i)):
 				_hover_hand = i
 				_hover_card = engine.state.hand[i]
 				# 效果详情显示在左侧信息栏（自动换行），顶部状态栏只留简短提示
@@ -17307,8 +17343,9 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 		if st < 1.0:
 			r.position.x += sin(st * PI * 3.0) * 4.0 * (1.0 - st)
 	var pivot := Vector2(r.position.x + HAND_CARD_W / 2, r.position.y + HAND_CARD_H)
-	# R416：选中（点击 / 拖拽）的手牌整张放大 —— 绕卡底中心缩放，向上 / 两侧长出，
-	# 不挪命中矩形（命中仍按 _hand_rect 原尺寸，见 _hand_hit）。
+	# R416：选中（点击 / 拖拽）的手牌整张放大 —— 绕卡底中心缩放，向上 / 两侧长出。
+	# R724：命中判定**跟着放大 / 跟着抬手**（`_hand_hit_painted` → `_hand_hit_geom`）——
+	# 以前这里「不挪命中矩形」，玩家点放大后的卡面上缘就会漏给棋盘（= 选中背后后排单位）。
 	var scl := HAND_SELECT_SCALE if selected else 1.0
 	draw_set_transform(pivot, _hand_angle(i), Vector2(scl, scl))
 	# 「现在打出能吃到额外效果」→ 金色高亮框 + 顶部金星标（R65）。
