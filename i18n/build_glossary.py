@@ -106,10 +106,10 @@ g["key_relics"] = named([
 ])
 g["difficulties"] = named([
     ("轻松", "Relaxed", "気楽"), ("微恙", "Mild Ailment", "微恙"),
-    ("严酷", "Harsh", "厳酷"), ("顽强", "Tenacious", "頑強"),
+    ("严酷", "Harsh", "過酷"), ("顽强", "Tenacious", "頑強"),
     ("稀缺", "Scarcity", "欠乏"), ("疲惫", "Fatigue", "疲労"),
-    ("凶暴", "Ferocious", "凶暴"), ("贫瘠", "Barren", "贫瘠"),
-    ("匆忙", "Haste", "匆忙"), ("虚弱", "Weakened", "虚弱"),
+    ("凶暴", "Ferocious", "凶暴"), ("贫瘠", "Barren", "不毛"),
+    ("匆忙", "Haste", "急ぎ"), ("虚弱", "Weakened", "虚弱"),
     ("噩梦", "Nightmare", "悪夢"), ("上锁", "Locked", "施錠"),
 ])
 g["difficulty_notes"] = named([
