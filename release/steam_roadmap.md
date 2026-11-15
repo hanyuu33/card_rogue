@@ -38,6 +38,7 @@
 | A1 | 安装 GodotSteam（GDExtension，对齐 4.3） | 只引 GDExtension，不引 GDNative；`addons/godotsteam/`；**不进 Android 预设** | `SteamAchievements.status_text()` 返回「已连接 Steam」 → **R740 达成** |
 | A2 | AppID 与本地联调 | 用 Spacewar `480` 或放 `steam_appid.txt`（**发行包不带**）；`APP_ID` 常量保持 0 | 本地 status=0；发行包内无 `steam_appid.txt` → **R740 `--appid 480` 实测 status=0** |
 | A3 | 9 个成就逐个实机解锁 | 用测试 build 引信触发 `note_*`；核对后台 API 名大小写完全一致 | Steam 后台显示 9/9 可解锁、`storeStats` 生效 → **卡在「后台还没建这 9 个成就」** |
+| A3′ | 成就图标（铜/银/金三档） | 单色金属徽章一套：进度型铜、通关型银、高难型金；未达成统一灰石 | ✅ `release/achievement_icons/` 9×2 张 64px 已备好，直接上传 |
 | A4 | 成就长尾补 4~6 个 | 建议：首次组合 / 组合产物达 N 种 / 图鉴全收 / 每日挑战首胜 / 无伤过精英 / 单回合斩杀 100+ | 后台 + 代码 `API_*` 两处同名 |
 | A5 | 云存档（Steam Auto-Cloud 或 Remote Storage） | 只同步 `profile.json` + `run_records.json` + `run_save.sav`；**排除** `save_trace.log` / `*_test.*` | A 机打一半→B 机续档成功；冲突时取「本地 mtime 新」，且 `save_trace` 有记录 |
 | A6 | 单实例互斥 | 双开会抢同一个 `user://`（`run_save` 注释里已有警告） | 第二个进程弹「已在运行」并退出，不产生半截档 |
