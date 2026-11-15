@@ -25,6 +25,7 @@ const API_CLEAR_FOREST := "CLEAR_FOREST"   # 森林精魄通关
 const API_CLEAR_ROGUE := "CLEAR_ROGUE"     # 暗影刺客通关
 const API_CLEAR_MECH := "CLEAR_MECH"       # 机械之心通关
 const API_CLEAR_HARD := "CLEAR_HARD"       # 高难度通关：难度 ≥ HARD_DIFF
+const API_CLEAR_APEX := "CLEAR_APEX"       # 巅峰之上：难度 = APEX_DIFF（最高档，第三层需三信物）
 
 # ------------------------------------------------------------ AppID（留空 = 发行形态）
 
@@ -42,6 +43,11 @@ const INIT_NOT_INSTALLED := -2
 
 ## 达到该难度（含）的真通关算「高难度通关」。
 const HARD_DIFF := 5
+
+## 最高难度（R740 新增成就用）：RunState 的档位是 0~11 共 12 档（`DIFFICULTY_COUNT = 12`）。
+## 难度 11 是唯一「第三层要凑齐三样信物才开门」的档位（R543），打通它才算真正摸到顶。
+## ⚠️ 若以后再加档位，这里和 `DIFFICULTY_COUNT` 要一起改；test_engine 已钉住两者一致。
+const APEX_DIFF := 11
 
 ## 职业 → 通关成就 API 名。
 const CLEAR_API_BY_CLASS := {
@@ -225,3 +231,6 @@ static func note_game_clear(cid: String, difficulty: int) -> void:
 		unlock(api)
 	if difficulty >= HARD_DIFF:
 		unlock(API_CLEAR_HARD)
+	if difficulty >= APEX_DIFF:
+		# 难度 11 是 0~11 的最高档，这是「摸到顶」的独立成就，不与 CLEAR_HARD 合并。
+		unlock(API_CLEAR_APEX)

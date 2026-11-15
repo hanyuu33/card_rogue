@@ -1,7 +1,7 @@
 extends SceneTree
 ## Steam 成就自检工具（R740）
 ##
-## 目的：一条命令验完「插件装了没 / Steamworks 连上没 / 后台 8 个成就名对不对 /
+## 目的：一条命令验完「插件装了没 / Steamworks 连上没 / 后台成就名对不对 /
 ## 能不能真的解锁」，把 Steam 接入从「凭感觉」变成可回归的检查项。
 ##
 ## 用法（在项目根执行）：
@@ -11,7 +11,7 @@ extends SceneTree
 ##
 ##   --appid N  临时指定 AppID（本地调试用；不传则走 SteamAchievements 的三级回落）
 ##   --hooks    再走一遍生产钩子（6 个 note_*），打印「事件 → 成就」映射（需 Steamworks 已连上）
-##   --unlock   真的对这 8 个成就调 setAchievement + storeStats，并读回校验
+##   --unlock   真的对这 N 个成就调 setAchievement + storeStats，并读回校验
 ##              ⚠️ 会污染当前登录账号的成就状态，只在测试 App（如 480）或自有 App 的
 ##                 开发分支上用；Steamworks 后台可用 Reset All Stats 清。
 ##
@@ -20,6 +20,10 @@ extends SceneTree
 ## 注意：本文件在 `tools/` 下，已在 export_presets.cfg 的 exclude_filter 里，不会进发行包。
 
 const SA_PATH := "res://scripts/steam_achievements.gd"
+
+## 代码侧应有的成就条数（R740：8 → 9，新增 CLEAR_APEX）。
+## 只用来提醒「加了成就别忘了同步后台与文档」，不参与解锁逻辑。
+const EXPECTED_COUNT := 9
 
 var _fail := 0
 var _steam: Object = null
@@ -50,8 +54,9 @@ func _initialize() -> void:
 	print("[..] 代码侧成就 %d 个：" % expected.size())
 	for api in expected:
 		print("       - ", api)
-	if expected.size() != 8:
-		print("[WARN] 预期 8 个，实际 %d 个 —— 若这是有意增删，请同步 release/steam_achievements.md" % expected.size())
+	if expected.size() != EXPECTED_COUNT:
+		print("[WARN] 预期 %d 个，实际 %d 个 —— 若这是有意增删，请同步 release/steam_achievements.md"
+			% [EXPECTED_COUNT, expected.size()])
 
 	# ---- 3. 初始化 Steamworks（走生产同一条路：SteamAchievements.init）----
 	if override_appid > 0:
@@ -90,7 +95,7 @@ func _initialize() -> void:
 		print("[FAIL] 后台缺 %d 个成就：%s" % [missing.size(), ", ".join(missing)])
 		_quit(3)
 		return
-	print("[ok] 8 个成就名全部命中后台")
+	print("[ok] %d 个成就名全部命中后台" % expected.size())
 
 	# ---- 4.5 可选：走一遍生产钩子，确认「哪个事件解锁哪条」----
 	if args.has("--hooks"):
@@ -125,7 +130,7 @@ func _initialize() -> void:
 			print("[FAIL] 有 %d 个 setAchievement 调用失败（后台缺该成就 / Steamworks 未登录）" % bad)
 			_quit(4)
 			return
-		print("[ok] 8 个成就解锁调用全部成功")
+		print("[ok] %d 个成就解锁调用全部成功" % expected.size())
 
 	if _steam.has_method("steamShutdown"):
 		_steam.call("steamShutdown")

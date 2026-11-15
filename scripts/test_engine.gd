@@ -71813,6 +71813,8 @@ func _init() -> void:
 
 	SteamAchievements.note_game_clear("nonexistent_class", 99)
 
+	SteamAchievements.note_game_clear(PlayerClass.MECH, SteamAchievements.APEX_DIFF)
+
 	check(true, "R577 六个成就钩子在不就绪时静默跳过（无异常、不影响对局流程）")
 
 	# 成就定义本身的完整性（Steamworks 后台要照这些 API name 建）
@@ -71832,6 +71834,14 @@ func _init() -> void:
 	check(SteamAchievements.HARD_DIFF == 5,
 
 			"R577 高难度成就门槛 = 难度 5")
+
+	check(SteamAchievements.APEX_DIFF == 11,
+
+			"R740 巅峰成就门槛 = 难度 11（0~11 共 12 档的最高档）")
+
+	check(SteamAchievements.APEX_DIFF == RunState.DIFFICULTY_COUNT - 1,
+
+			"R740 巅峰门槛与 RunState.DIFFICULTY_COUNT 对齐（以后加档位不会漏同步）")
 
 	check_src(FileAccess.file_exists("res://steam_appid.txt.template"),
 

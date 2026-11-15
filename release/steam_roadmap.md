@@ -15,7 +15,7 @@
 |---|---|---|
 | 品牌 | `GameBrand`：中《嘎嘎乱杀》／英 `Quackill`／`risusumai`／`v1.0` | ✅ 已定稿 |
 | `GameBrand.FOOTER` | 仍是 `v{v}-rogue · 肉鸽开发版` | ⚠️ 发布前必改 |
-| Steam 成就桥 | `scripts/steam_achievements.gd` 完整：8 成就 + `Engine.get_singleton` 反射 + `storeStats` 落盘 + AppID 三级回落 | ✅ 代码就绪 |
+| Steam 成就桥 | `scripts/steam_achievements.gd` 完整：9 成就 + `Engine.get_singleton` 反射 + `storeStats` 落盘 + AppID 三级回落 | ✅ 代码就绪 |
 | GodotSteam 插件 | `addons/godotsteam/` **已装 4.15 GDExtension**（plugin 4.1–4.3，Steamworks SDK 1.62）；4.3 编辑器与导出包都实测加载成功（`has_singleton(Steam)=true`，815 个方法，导出目录自动带 `libgodotsteam.*.dll` + `steam_api64.dll`） | ✅ R740 已装（只剩「后台建成就」没做） |
 | 成就数量 / 层次 | 8 个，全是「进度型」（初见 / 通关 / 难度） | ⚠️ 偏少，缺长尾（组合、图鉴、每日） |
 | 导出预设 | Windows Desktop（debug+release）、Android（debug+release） | ✅ 在，但 `export_path` 仍是 `dist/DuckCardsRogue.apk` |
@@ -27,7 +27,7 @@
 | 组合系统 | 唯一入口 `_open_combo()`；候选池 24 张；`combo_trigger` 卡 **仅 2 张**（9246 / 9247）；机械之心可用候选仅 4 张；R588「产物继承 traits / id」**未修** | ⚠️ 保真 bug + 内容面窄 |
 | 联机 | `net.gd` 局域网 UDP 广播 + TCP 47812（Python 版移植） | ⚠️ 影响隐私政策 / 防火墙 / 商店页措辞，见决策 Q4 |
 | 分辨率 | 1280×720，`canvas_items` + `expand` | ✅ 天然适配 Deck / 各种 16:9 |
-| 包体 | 预估 281MB（PCK 236.2 + lib 130 + ogg 28.5 + 字体 15.2） | ⚠️ 桌面 lib 不需要 v7a/arm64 |
+| 包体 | 桌面单文件 exe 实测 **263.7MB**（R741 实测；此前 368.6MB）—— 差的 105MB 是 `release/` 里那批 HTML 总表被当成资源打进了 pck，R741 已把 `release/*` 加进 4 个预设的 exclude_filter | ✅ 已瘦身 |
 
 ---
 
@@ -37,7 +37,7 @@
 |---|---|---|---|
 | A1 | 安装 GodotSteam（GDExtension，对齐 4.3） | 只引 GDExtension，不引 GDNative；`addons/godotsteam/`；**不进 Android 预设** | `SteamAchievements.status_text()` 返回「已连接 Steam」 → **R740 达成** |
 | A2 | AppID 与本地联调 | 用 Spacewar `480` 或放 `steam_appid.txt`（**发行包不带**）；`APP_ID` 常量保持 0 | 本地 status=0；发行包内无 `steam_appid.txt` → **R740 `--appid 480` 实测 status=0** |
-| A3 | 8 个成就逐个实机解锁 | 用测试 build 引信触发 `note_*`；核对后台 API 名大小写完全一致 | Steam 后台显示 8/8 可解锁、`storeStats` 生效 → **卡在「后台还没建这 8 个成就」** |
+| A3 | 9 个成就逐个实机解锁 | 用测试 build 引信触发 `note_*`；核对后台 API 名大小写完全一致 | Steam 后台显示 9/9 可解锁、`storeStats` 生效 → **卡在「后台还没建这 9 个成就」** |
 | A4 | 成就长尾补 4~6 个 | 建议：首次组合 / 组合产物达 N 种 / 图鉴全收 / 每日挑战首胜 / 无伤过精英 / 单回合斩杀 100+ | 后台 + 代码 `API_*` 两处同名 |
 | A5 | 云存档（Steam Auto-Cloud 或 Remote Storage） | 只同步 `profile.json` + `run_records.json` + `run_save.sav`；**排除** `save_trace.log` / `*_test.*` | A 机打一半→B 机续档成功；冲突时取「本地 mtime 新」，且 `save_trace` 有记录 |
 | A6 | 单实例互斥 | 双开会抢同一个 `user://`（`run_save` 注释里已有警告） | 第二个进程弹「已在运行」并退出，不产生半截档 |
@@ -62,13 +62,13 @@
 **自检命令**（项目根，把 `GODOT` 换成本机 Godot 4.3）：
 
 ```bash
-# ① 只读体检：插件在不在 / Steamworks 连没连上 / 后台 8 个成就名对不对
+# ① 只读体检：插件在不在 / Steamworks 连没连上 / 后台成就名对不对
 $GODOT --headless --path . --script res://tools/steam_selftest.gd
 
 # ② 没登 Steam 客户端也能验链路：用 Valve 公开测试 App Spacewar
 $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --appid 480
 
-# ③ 真解锁 + 读回（后台建好 8 个成就、且拿得到自有 AppID 之后才跑）
+# ③ 真解锁 + 读回（后台建好 9 个成就、且拿得到自有 AppID 之后才跑）
 $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --hooks
 ```
 
@@ -82,12 +82,12 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 | `--export-release` 导出产物 | ✅ 自动带 `libgodotsteam.windows.template_release.x86_64.dll` **和** `steam_api64.dll`（都在 exe 同目录，不用手工拷） |
 | 导出包内跑 engine 全套 | ✅ 全通过；包内同样识别到插件（日志：本机已装 GodotSteam） |
 | AppID 480 实连 | ✅ `status=0`，账号 `みうバニー`，`getNumAchievements()=0`（Spacewar 本来就没成就） |
-| 8 个成就名比对后台 | ❌ 后台一个都没建 → 这正是 A3 的唯一阻塞 |
+| 9 个成就名比对后台 | ❌ 后台一个都没建 → 这正是 A3 的唯一阻塞 |
 | 不传 AppID 直接跑 | `status=1`（No appID found）—— 正常，发行版由 Steam 客户端注入 |
 
 **还剩两步**（都在 Steamworks 后台，不在代码里）：
-1. 后台按 `release/steam_achievements.md` 第一节建 8 个成就（API Name 一字不差）。
-2. 拿到 AppID 后跑命令 ③，看到 `8 个成就解锁调用全部成功` + 客户端弹出成就，A3 就算过。
+1. 后台按 `release/steam_achievements.md` 第一节建 9 个成就（API Name 一字不差）。
+2. 拿到 AppID 后跑命令 ③，看到 `9 个成就解锁调用全部成功` + 客户端弹出成就，A3 就算过。
 
 **给玩家/自己看的追踪开关**：设环境变量 `QUACKILL_STEAM_TRACE=1` 再启动游戏，
 每次成就触发会打 `[steam-trace] FIRST_STEP`（即使 Steam 没连上也记一行），
@@ -247,7 +247,7 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 | 轮次 | 内容 | 规模 |
 |---|---|---|
 | R608 | 线 B 全部（名实一致 + 桌面纹理/包体重测 + 预设核查） | M |
-| R609 | 线 A1–A3（GodotSteam + 8 成就实机） | M |
+| R609 | 线 A1–A3（GodotSteam + 9 成就实机） | M |
 | R610 | 线 A5/A6/A7（云存档 + 单实例 + 存档迁移） | M |
 | R611 | D1 组合补充（R588 修复 + 候选池 + 扩卡 + 图鉴） | M |
 | R612 | D3 每日挑战（含本地榜） | M |

@@ -16,6 +16,7 @@
 | `CLEAR_ROGUE` | 影中的圆满 | 用暗影刺客通关 |
 | `CLEAR_MECH` | 机械的觉醒 | 用机械之心通关 |
 | `CLEAR_HARD` | 越难越勇 | 在难度 5 及以上通关 |
+| `CLEAR_APEX` | 巅峰之上 | 在难度 **11**（0~11 的最高档，第三层要三信物才开门）通关 |
 
 > ⚠️ **API name 必须与代码完全一致**（`scripts/steam_achievements.gd` 里的 `API_*` 常量）。
 > Steamworks 后台的「API Name」字段区分大小写、全大写；显示名 / 描述可以随便改，不影响解锁。
@@ -36,7 +37,7 @@
   | `FIRST_STEP` | `run_state.start_run()` |
   | `FIRST_BOSS` | `unlock_system.note_boss_seen()`（仅第一层） |
   | `LAYER2_CLEAR` | `unlock_system.note_layer_two_cleared()` |
-  | `FULL_CLEAR` / 职业通关 / 高难度 | `battle_scene` 真通关块（`current_layer == LAYER_THREE`） |
+  | `FULL_CLEAR` / 职业通关 / 高难度 / 巅峰 | `battle_scene` 真通关块（`current_layer == LAYER_THREE`） |
 
 ## 三、AppID 怎么填（留空就是发行形态）
 
@@ -92,6 +93,9 @@ const APP_ID := 0
 | 格式 | JPG / PNG / TGA |
 | 张数 | 每个成就 2 张：`Achieved`（彩色）+ `Unachieved`（灰阶 / 剪影） |
 
+> **现成素材已备好**：`release/achievement_icons/`（9 条 ×「达成 / 未达成」两版，64×64 已压好，
+> 直接按 `<API>.png` / `<API>_locked.png` 上传；重出流程与画风口径见该目录 `README.md`）。
+>
 > 建议沿用游戏内卡图同一套画风做 64px 缩略，未达成版统一转灰阶 —— 玩家一眼能看出
 > 「还没拿到」，跟卡面观感也统一。最终以后台表单的实际提示为准（Valve 会小幅调整）。
 
