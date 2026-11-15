@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1df34-4f16-7443-aac9-cb7a7b3319d2"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one image with the complete porter and hopper load centered inside generous margins.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated one image of “The Load Incrementer,” with the full hopper load and feet inside generous margins."}}
+{"type":"turn.completed","usage":{"input_tokens":38482,"cached_input_tokens":32000,"cache_write_input_tokens":0,"output_tokens":672,"reasoning_output_tokens":0}}
