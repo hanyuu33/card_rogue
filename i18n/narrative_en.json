@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-11-13",
+  "updated": "2026-11-15",
   "source": "i18n/narrative_zh_canonical.json",
   "events": {
     "whisper": {
@@ -195,6 +195,14 @@
         "REST_SACRAMENT_RESULT_DESC": "[Sacrament] Restored %d Health (now %d / %d).",
         "REST_BANDAGE_RESULT_DESC": "[Styptic Bandage] Restored %d Health (now %d / %d).",
         "REST_PIPE_RESULT_DESC": "[Smoking Pipe] The fire flickers—the Smoking Pipe is lit again. On your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1)."
+      }
+    },
+    "statue": {
+      "name": "The Strange Statue",
+      "texts": {
+        "STATUE_DESC": "A colossal white stone statue stands in the clearing, washed grey by the rain.\nA lion's body, a goat's head rising from its back, a serpent coiled at the tip of its tail —\nyou have seen that pose in an old volume on chimeras, though it has no business being in this forest.\nMoss fills every crack; the words on the pedestal were worn away long ago.",
+        "STATUE_PRAY_DESC": "You lay your hand on its cold paw and say nothing.\nSomething answers from inside the stone — a faint, patient tremor.\nFor the next three battles, every victory will give up a tool from the wreckage.",
+        "STATUE_SMASH_DESC": "You pick up a stone and bring it down on the foreleg.\nA crack runs from the paw up to the goat's head, and the whole statue collapses into white rubble —\nthe pieces that still fit your hand are exactly enough to fill your tool bar."
       }
     }
   },

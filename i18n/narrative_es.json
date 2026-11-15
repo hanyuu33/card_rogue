@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-11-13",
+  "updated": "2026-11-15",
   "source": "i18n/narrative_zh_canonical.json",
   "events": {
     "whisper": {
@@ -195,6 +195,14 @@
         "REST_SACRAMENT_RESULT_DESC": "[Santa Comunión] Ha recuperado %d Vida (ahora %d / %d).",
         "REST_BANDAGE_RESULT_DESC": "[Venda hemostática] Ha recuperado %d Vida (ahora %d / %d).",
         "REST_PIPE_RESULT_DESC": "[Pipa de fumar] La llama parpadea: la Pipa de fumar vuelve a estar encendida. En tu primer turno del próximo combate: obtén 1 Coste, roba 1 carta adicional y pierde hasta 1 Vida (conserva al menos 1)."
+      }
+    },
+    "statue": {
+      "name": "La estatua extraña",
+      "texts": {
+        "STATUE_DESC": "En el claro se alza una colosal estatua de piedra blanca, lavada a gris por la lluvia.\nCuerpo de león, una cabeza de cabra que asoma del lomo, una serpiente enroscada en la punta de la cola:\nya habías visto esa pose en un viejo volumen sobre quimeras, aunque no debería estar en este bosque.\nEl musgo llena cada grieta; las palabras del pedestal se borraron hace mucho.",
+        "STATUE_PRAY_DESC": "Apoyas la mano en su pata fría y no dices nada.\nAlgo responde desde dentro de la piedra: un temblor leve, paciente.\nDurante las próximas 3 batallas, cada victoria entregará una herramienta entre los escombros.",
+        "STATUE_SMASH_DESC": "Recoges una piedra y la estrellas contra la pata delantera.\nUna grieta sube de la pata a la cabeza de cabra y la estatua entera se derrumba en cascotes blancos:\nlos trozos que aún caben en tu mano bastan para llenar la barra de herramientas."
       }
     }
   },

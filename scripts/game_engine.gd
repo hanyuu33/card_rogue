@@ -16948,6 +16948,50 @@ func trap_legal_cells() -> Array[Vector2i]:
 	return out
 
 
+func trap_drop_cells(id: int) -> Array[Vector2i]:
+	## R754：工具拖放的**落点候选唯一口**。两类工具要的落点根本不是一回事：
+	##   * 放置型 / 使用型 → 空着的合法格（`trap_legal_cells`，埋下去等敌人踩）；
+	##   * 直接伤害型（石头 7012）→ 敌方**存活单位**所在的格子，砸上去当场结算。
+	## 界面（拖拽高亮 + 松手判定）只认这一个口，别再各自判一遍 —— 判两处迟早漂移。
+	var t: TrapData = TrapRepo.load_json().get_trap(id)
+	if t != null and t.direct_damage > 0:
+		return trap_target_cells()
+	return trap_legal_cells()
+
+
+func trap_target_cells() -> Array[Vector2i]:
+	## 直接伤害型工具的可砸目标：场上**敌方存活单位**所在的格子。
+	## 固定顺序（`sort()`）—— 回放 / 同种子必须给出同一组候选。
+	var out: Array[Vector2i] = []
+	if state == null:
+		return out
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == SIDE_OPPONENT and u.health > 0:
+			out.append(cell)
+	out.sort()
+	return out
+
+
+func use_tool_on_unit(id: int, cell: Vector2i) -> bool:
+	## R754 石头（7012）：把工具伤害砸到**指定敌方单位**身上的唯一口。
+	## 伤害走 `_hit_unit`（自动吃减伤 / 护盾 / 接通 / 正义背刺），与陷阱触发同一口径；
+	## 打死之后必须自己收尾 —— `_hit_unit` **只扣血不删卡**（R733 铁律：新伤害路径
+	## 都要自己调 `_destroy_dead()`，否则单位会顶着负血留在场上占格挡路）。
+	var t: TrapData = TrapRepo.load_json().get_trap(id)
+	if t == null or state == null or t.direct_damage <= 0:
+		return false
+	if not trap_target_cells().has(cell):
+		return false
+	var p: Placement = state.unit_at(cell)
+	if p == null or p.owner != SIDE_OPPONENT or p.health <= 0:
+		return false
+	_log("工具「%s」砸向 %s：%d 点伤害" % [t.trap_name, cell, t.direct_damage])
+	_hit_unit(p, t.direct_damage, t.trap_name, true)
+	_destroy_dead()
+	return true
+
+
 func _trap_path_check(path: Array[Vector2i], side: String) -> void:
 	## 移动**结束后**统一结算（与火墙 _fire_wall_pass 同一时序，R466）。
 	## 只认敌方单位；path[0] 是起点（站着不算踩），path[1..] 进过的格子都算。

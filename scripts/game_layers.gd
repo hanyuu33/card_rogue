@@ -96,6 +96,10 @@ const LAYERS := {
 			# 事件格子生成时不预定内容，进房那一刻才按当下的巧克力决定
 			# （唯一口 `RunState.resolve_event_kind()`，判据见 FLYER_MIN_CHOCOLATE）。
 			"flyer": 16,
+			# R754 奇异雕像（第二层专属）：祭拜 → 接下来三场战斗必定掉落工具；
+			# 摧毁 → 工具栏用「石头」（7012，砸单个目标 15 伤）填满。
+			# 和熔炉 / 契约的核心同层：这一层本来就在「拿工具、投工具」的语境里。
+			"statue": 16,
 		},
 	},
 	3: {
@@ -143,6 +147,7 @@ const EVENT_NAMES := {
 	"adventurer": "冒险家的遗物",
 	"martial": "武术大师",
 	"flyer": "飞行器",
+	"statue": "奇异雕像",
 	"delivery": "运送委托",
 	"delivery_done": "委托完成",
 	"treasure": "卡牌宝箱",

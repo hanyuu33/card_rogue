@@ -48,9 +48,10 @@ func random_traps() -> Array[TrapData]:
 	## 「篝火专属」就成了「哪儿都能捡」，烤肉的稀缺感连同休息处的选择一起作废。
 	## ⚠️ R752：这条口径**只管「拿得到」**，不再代表货架。商店走 `shop_traps()` ——
 	##    万能牌 / 快送鸭 / 神秘牌没有售价，能掉落但不能买（用户口径「没有售价的则不计入商店」）。
+	## ⚠️ R754：`no_drop` 的（石头 7012）连「拿得到」都不算 —— 它只从事件「奇异雕像」拿。
 	var out: Array[TrapData] = []
 	for t: TrapData in all_traps():
-		if not t.rest_only:
+		if not t.rest_only and not t.no_drop:
 			out.append(t)
 	return out
 

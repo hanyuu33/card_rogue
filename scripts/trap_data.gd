@@ -39,11 +39,22 @@ var pick_kind := ""
 ## R752：快送鸭 7010 —— 使用后**用随机商店工具填满工具栏**（不选卡、当场结算）。
 ## 与 `pick_kind` 并列：一个工具只说明自己「怎么生效」，判据全在数据里。
 var fill_toolbar := false
+## R754：**直接伤害型**工具（石头 7012）—— 拖到**敌方单位身上**，当场砸出这么多伤害。
+## 与放置型（`damage`，埋进空格等敌人踩）是两回事：`damage` 归陷阱触发用，
+## 这个归「指着谁砸谁」，所以必须是独立字段，判据见 `GameEngine.trap_drop_cells()`。
+var direct_damage := 0
+## R754：「不受随机获得影响」—— 石头只从事件「奇异雕像」的摧毁选项拿，
+## 混进掉落 / 工具箱就会变成「打怪掉石头」，把事件的选择变成笑话。
+## 只影响 `TrapRepo.random_traps()`；商店本来就不收没有售价的（见 `in_shop()`）。
+var no_drop := false
 
 
 ## R690：「工具」分两类 —— 放置型（陷阱，拖到战场空格）与使用型（药水，轻点即用）。
 ## 判据只看数据：带 heal_pct / energy / ally_atk / pick_kind / fill_toolbar 的就是使用型，
 ## 界面与引擎共用这一个口。
+## ⚠️ R754：直接伤害型（石头 `direct_damage`）**不算使用型** —— 它要落点（敌方单位），
+##    走的是拖放那条路，所以这里故意不收 `direct_damage`；别「顺手」加进来，
+##    加了它会被当成「轻点即结算」直接砸空。
 func is_usable() -> bool:
 	return (heal_pct > 0 or energy > 0 or ally_atk > 0
 			or pick_kind != "" or fill_toolbar)
@@ -73,4 +84,6 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.ally_atk = int(d.get("ally_atk", 0))
 	t.pick_kind = str(d.get("pick_kind", ""))
 	t.fill_toolbar = bool(d.get("fill_toolbar", false))
+	t.direct_damage = int(d.get("direct_damage", 0))
+	t.no_drop = bool(d.get("no_drop", false))
 	return t

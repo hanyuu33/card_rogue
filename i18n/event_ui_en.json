@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-13",
+  "updated": "2026-11-15",
   "source": "i18n/event_ui_zh_canonical.json",
   "options": {
     "common": {
@@ -11,7 +11,7 @@
       "ADD_FIREWOOD": "Add firewood (Remove 1 card from your Deck)",
       "BBQ_AVAILABLE": "Barbecue (gain the \"Barbecue\" tool; it takes one tool slot)",
       "BBQ_OWNED_DISABLED": "Already have \"Barbecue\" (a tool: tap it in battle to eat)",
-"BBQ_NO_SLOT_DISABLED": "Tool bar is full—free up a slot before roasting meat",
+      "BBQ_NO_SLOT_DISABLED": "Tool bar is full—free up a slot before roasting meat",
       "LEAVE_WITHOUT_BBQ": "Leave (don't roast meat)"
     },
     "whisper": {
@@ -138,6 +138,11 @@
     "struggle": {
       "ACCEPT_STRUGGLE": "Accept the struggle (lose %d Health and gain \"Metal Dragon\")",
       "LEAVE_UNCHANGED": "Turn and leave (leave things as they are)"
+    },
+    "statue": {
+      "PRAY": "Worship (the next 3 battles are guaranteed to drop a tool)",
+      "SMASH": "Smash it (fill your tool bar with Stones)",
+      "LEAVE": "Walk past (do nothing)"
     }
   },
   "pickers": {
@@ -263,6 +268,11 @@
     "divination": {
       "DIVINATION_CARD_GAINED": "\"%s\" has been added to your Deck.",
       "DIVINATION_RELIC_GAINED": "\"%s\" has been added to your Relic inventory."
+    },
+    "statue": {
+      "STATUE_PRAY": "Worshipped: the next %d battles each guarantee one tool drop.",
+      "STATUE_SMASH": "The statue collapses: %d Stones stuffed into your tool bar (drag one onto an enemy for 15 damage).",
+      "STATUE_SMASH_FULL": "The statue collapses, but your tool bar is already full — the rubble stays where it fell."
     }
   },
   "rest_dynamic": {

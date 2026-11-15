@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-13",
+  "updated": "2026-11-15",
   "source": "i18n/event_ui_zh_canonical.json",
   "options": {
     "common": {
@@ -11,7 +11,7 @@
       "ADD_FIREWOOD": "Añadir leña (eliminar 1 carta del mazo)",
       "BBQ_AVAILABLE": "Asar carne (obtener la herramienta «Carne asada»; ocupa una ranura de herramienta)",
       "BBQ_OWNED_DISABLED": "Ya tienes «Carne asada» (herramienta: tócala en combate para usarla)",
-"BBQ_NO_SLOT_DISABLED": "La barra de herramientas está llena: libera una ranura antes de asar carne",
+      "BBQ_NO_SLOT_DISABLED": "La barra de herramientas está llena: libera una ranura antes de asar carne",
       "LEAVE_WITHOUT_BBQ": "Salir (sin asar carne)"
     },
     "whisper": {
@@ -138,6 +138,11 @@
     "struggle": {
       "ACCEPT_STRUGGLE": "Aceptar la lucha (perder %d Vida y obtener «Dragón Metálico»)",
       "LEAVE_UNCHANGED": "Darte la vuelta y marcharte (dejar todo como está)"
+    },
+    "statue": {
+      "PRAY": "Rendir culto (las próximas 3 batallas garantizan una herramienta)",
+      "SMASH": "Destruirla (llena la barra de herramientas con Piedras)",
+      "LEAVE": "Pasar de largo (no hacer nada)"
     }
   },
   "pickers": {
@@ -263,6 +268,11 @@
     "divination": {
       "DIVINATION_CARD_GAINED": "«%s» se ha añadido a tu mazo.",
       "DIVINATION_RELIC_GAINED": "«%s» se ha añadido a tu inventario de Reliquias."
+    },
+    "statue": {
+      "STATUE_PRAY": "Culto rendido: las próximas %d batallas garantizan una herramienta cada una.",
+      "STATUE_SMASH": "La estatua se derrumba: %d Piedras llenan la barra (arrastra una a un enemigo para 15 de daño).",
+      "STATUE_SMASH_FULL": "La estatua se derrumba, pero la barra ya está llena: los escombros se quedan donde cayeron."
     }
   },
   "rest_dynamic": {

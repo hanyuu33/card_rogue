@@ -167,6 +167,15 @@ const TOOL_DISCARD_MS := 2600
 ## 是同一条路径（罩层盖满整格，第二下必然落在里面），PC 上双击同理。
 ## 有效期与丢弃上膛同口径 2.6 秒：过时自动收起，不会一直挂着等误触。
 const TOOL_USE_ARM_MS := 2600
+## R754（用户口径「不管是哪种类型的道具，都要有单击后弹出丢弃按钮。使用型两个按钮用同一个栏」）：
+## 单击任意有货的槽 → 在槽**左侧**弹出一个小按钮栏。使用型 = 「使用」+「丢弃」两格；
+## 其余（放置型 / 直接伤害型）= 同一栏里一格更宽的「丢弃」。
+## 位置算法与命中判定共用 `_tool_bar_layout()` 一份几何 —— 画在一处、判在另一处迟早错位。
+const TOOL_BAR_BTN_W := 52.0
+const TOOL_BAR_BTN_H := 32.0
+const TOOL_BAR_GAP := 6.0
+const TOOL_BAR_PAD := 5.0
+const TOOL_BAR_OFFSET := 10.0     ## 按钮栏右缘与槽左缘的间距
 # ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
 # 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
 # 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
@@ -487,6 +496,8 @@ var _trap_discard_until := 0
 ## 与 `_trap_discard_arm` 是**两套独立状态**：一个是「要丢掉」，一个是「要用掉」，
 ## 混用一个变量的话，丢完工具上膛会顺手把使用上膛也点亮（下一击直接白用一件）。
 var _tool_use_arm := -1
+## R754：按钮栏的绘制层（独立 CanvasItem、z_index 高）。见 `_ready` 里的创建处。
+var _tool_bar_layer: Control = null
 var _tool_use_until := 0
 ## R752：选卡型工具（万能牌 / 神秘牌）是从哪个槽点出来的 ——
 ## 只有「确认」那一刻才该摘槽，所以要记着它（引擎不知道槽号，槽是界面的事）。
@@ -964,6 +975,24 @@ func _ready() -> void:
 	_ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_ic)
 	info_clip = _ic
+	# R754：工具按钮栏画在**独立的高层 CanvasItem** 上。它要盖住右侧那些面板
+	# （敌方生命 / 回合结束 / 消耗 / 弃牌），而它们是子节点、绘制顺序在 `self._draw()`
+	# **之后** —— 直接在本体里画会被整块盖掉（R754 实测：截图里只有槽、没有按钮）。
+	# mouse_filter = IGNORE：它只负责画，命中判定仍走 `_gui_input` 的矩形判断。
+	# ⚠️ 必须是 **CanvasLayer**，不能只是高 z_index 的 Control：右侧那排资源面板
+	#    属于同一棵子树的兄弟，z_index 在这种「一边是整棵子树」的场合判不过它
+	#    （R754 实测：DBG 显示每帧都在画，画面上却一点都看不到）。
+	var cl := CanvasLayer.new()
+	cl.name = "ToolBarLayer"
+	cl.layer = 20
+	add_child(cl)
+	var tbl := Control.new()
+	tbl.name = "ToolBarCanvas"
+	tbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tbl.draw.connect(func(): _paint_tool_bar(tbl))
+	cl.add_child(tbl)
+	_tool_bar_layer = tbl
 	# R388：演出时钟先从真实毫秒起步（`_now()` 唯一来源）；倍速读玩家上次的选择。
 	_clock_ms = float(Time.get_ticks_msec())
 	GameSettings.ensure_loaded()
@@ -1126,6 +1155,16 @@ func _ready() -> void:
 			else:
 				RunState.traps = [7001, 7005, 7006]
 			RunState.run_active = true   # 栏位绘制的前置：非 run 态整条工具栏不画
+		if args[i] == "--stonetool":
+			# R754 出图：石头（7012，直接伤害型）+ 小血瓶 + 炸弹，核验程序化石头图标与按钮栏。
+			# ⚠️ **不能挂在 `--tooldemo` 下面**：那个参数同时被 `reward_panel` 认领，
+			#    会顺手弹出「获得奖励」面板把工具栏整个盖住（R754 踩过一次）。
+			# 出图：`battle.tscn -- --screenshot --stonetool --toolarm --level 0 --shotframe 200`
+			RunState.traps = [7012, 7005, 7001]
+			RunState.run_active = true
+			# 出图直接上膛（`--toolarm` 在截图模式下要等第 60 帧，这里更稳）
+			_tool_use_arm = 0
+			_tool_use_until = Time.get_ticks_msec() + 600000
 		if args[i] == "--shotms" and i + 1 < args.size():
 			_shot_ms = maxi(int(args[i + 1]), 10)  # 截图时机（距演示动作的毫秒数）
 		if args[i] == "--gridscroll" and i + 1 < args.size():
@@ -4982,6 +5021,39 @@ func _gui_input(event: InputEvent) -> void:
 			# R663：陷阱槽优先于手牌/棋盘 —— 槽是自绘的，点它不该走进 _on_left_click
 			# （那会顺手把当前选中清掉）。记下按下槽，等松手 / 拖过阈值再分派。
 			var ts := _trap_slot_at(event.position)
+			# R754：按钮栏（单击任意有货的槽弹出）优先级最高 —— 它画在槽外侧、压着棋盘，
+			# 所以必须在「是不是点在槽里」之前判。
+			if _tool_use_arm >= 0 and RunState.trap_at(_tool_use_arm) > 0 \
+					and Time.get_ticks_msec() <= _tool_use_until:
+				var bs := _tool_use_arm
+				var lay := _tool_bar_layout(bs)
+				var use_r: Rect2 = lay["use"]
+				var drop_r: Rect2 = lay["drop"]
+				if use_r.size.x > 0.5 and use_r.has_point(event.position):
+					var tud: TrapData = TrapRepo.load_json().get_trap(RunState.trap_at(bs))
+					_tool_use_arm = -1
+					_tool_use_until = 0
+					_trap_press_slot = -1
+					_press_idx = -1
+					_grid_drag_arm = false
+					_grid_dragging = false
+					_info_drag_arm = false
+					_info_dragging = false
+					if tud != null and tud.is_usable():
+						_use_tool_slot(bs, tud)
+					queue_redraw()
+					return
+				if drop_r.has_point(event.position):
+					_trap_press_slot = -1
+					_press_idx = -1
+					_grid_drag_arm = false
+					_grid_dragging = false
+					_info_drag_arm = false
+					_info_dragging = false
+					_discard_tool_now(bs)
+					_tool_use_arm = -1
+					_tool_use_until = 0
+					return
 			# R695：槽角上的「×」优先 —— 它压在槽里，先判它才能点到丢弃。
 			if ts >= 0 and _trap_discard_rect(ts).has_point(event.position) \
 					and RunState.trap_at(ts) > 0:
@@ -5066,12 +5138,15 @@ func _gui_input(event: InputEvent) -> void:
 				# 直接吃掉太贵，而弹模态确认框要两次点击、还挡住战场，同格点两下最省事。
 				var tid := RunState.trap_at(_trap_press_slot)
 				var td: TrapData = TrapRepo.load_json().get_trap(tid)
-				if td != null and td.is_usable():
+				# R754：**所有**工具点一下都弹按钮栏（不只使用型）——
+				# 「丢弃」从此不需要去够右上角那个小 ×。
+				if td != null:
 					_tool_use_arm = _trap_press_slot
 					_tool_use_until = Time.get_ticks_msec() + TOOL_USE_ARM_MS
-					_say("「%s」：再点一下即使用 —— %s" % [td.trap_name, td.desc])
-				elif td != null:
-					_say("「%s」：%s" % [td.trap_name, td.desc])
+					if td.is_usable():
+						_say("「%s」：点「使用」或再点一下即使用 —— %s" % [td.trap_name, td.desc])
+					else:
+						_say("「%s」：%s" % [td.trap_name, td.desc])
 				_trap_press_slot = -1
 				_grid_drag_arm = false
 				_grid_dragging = false
@@ -10054,6 +10129,80 @@ func _try_discard_tool(slot: int) -> void:
 	queue_redraw()
 
 
+func _discard_tool_now(slot: int) -> void:
+	## R754：按钮栏上的「丢弃」——**点它就是确认**（栏本身已经是第二段动作，
+	## 再套一层「同一个 × 点两次」就要按三下）。右上角「×」那条两段式路径保留不动。
+	var id := RunState.trap_at(slot)
+	if id <= 0:
+		return
+	var td: TrapData = TrapRepo.load_json().get_trap(id)
+	var nm := td.trap_name if td != null else "工具"
+	RunState.discard_trap(slot)
+	_trap_discard_arm = -1
+	_trap_discard_until = 0
+	_say("已丢弃「%s」，栏位空出来了" % nm)
+	queue_redraw()
+
+
+func _tool_bar_layout(slot: int) -> Dictionary:
+	## R754：工具按钮栏的**唯一几何口**（绘制与命中都读它）。
+	## 返回 {bar, use, drop}：`use` 对非使用型是空 Rect2（不画、也不吃点击）。
+	## 栏宽固定两格 —— 非使用型让「丢弃」占满整条内宽，位置与眼睛的预期一致。
+	var sr := _trap_slot_rect(slot)
+	var w := TOOL_BAR_BTN_W * 2.0 + TOOL_BAR_GAP + TOOL_BAR_PAD * 2.0
+	var h := TOOL_BAR_BTN_H + TOOL_BAR_PAD * 2.0
+	var bar := Rect2(sr.position.x - TOOL_BAR_OFFSET - w,
+			sr.get_center().y - h * 0.5, w, h)
+	var inner := bar.grow(-TOOL_BAR_PAD)
+	var td: TrapData = TrapRepo.load_json().get_trap(RunState.trap_at(slot))
+	var use_r := Rect2()
+	var drop_r := inner
+	if td != null and td.is_usable():
+		use_r = Rect2(inner.position, Vector2(TOOL_BAR_BTN_W, inner.size.y))
+		drop_r = Rect2(inner.position + Vector2(TOOL_BAR_BTN_W + TOOL_BAR_GAP, 0.0),
+				Vector2(TOOL_BAR_BTN_W, inner.size.y))
+	return {"bar": bar, "use": use_r, "drop": drop_r}
+
+
+func _draw_tool_bar() -> void:
+	## R754：本体的 `_draw()` 每次重绘时，把按钮栏那一层也排一次重绘。
+	## 真正的笔画在 `_paint_tool_bar()` 里（画在独立高层上，见 `_ready`）。
+	if _tool_bar_layer != null:
+		_tool_bar_layer.queue_redraw()
+
+
+func _paint_tool_bar(ci: CanvasItem) -> void:
+	## R754：按钮栏本体。只在「栏开着 + 没过期 + 槽里有货」时画 —— 与命中判定同一条闸门。
+	## 用户口径「使用型两个按钮用同一个栏」：使用与丢弃并排在一栏里，不拆成两个浮层。
+	if _tool_use_arm < 0 or Time.get_ticks_msec() > _tool_use_until:
+		return
+	var slot := _tool_use_arm
+	if RunState.trap_at(slot) <= 0:
+		return
+	var lay := _tool_bar_layout(slot)
+	var bar: Rect2 = lay["bar"]
+	ci.draw_rect(bar, Color(0.06, 0.07, 0.10, 0.94), true)
+	ci.draw_rect(bar, Color("ffd76a"), false, 2.0)
+	var use_r: Rect2 = lay["use"]
+	if use_r.size.x > 0.5:
+		_tool_bar_btn(ci, "使用", use_r, Color("ffe6a2"), Color(0.26, 0.21, 0.09, 0.96))
+	var drop_r: Rect2 = lay["drop"]
+	_tool_bar_btn(ci, "丢弃", drop_r, Color("ffb9a0"), Color(0.28, 0.11, 0.10, 0.96))
+
+
+func _tool_bar_btn(ci: CanvasItem, txt: String, r: Rect2, fg: Color, bg: Color) -> void:
+	## 自绘按钮（不挂 Button 节点：那会在拖牌经过时抢走松手事件，R391 的老教训）。
+	var px := 14
+	ci.draw_rect(r, bg, true)
+	ci.draw_rect(r, Color(fg.r, fg.g, fg.b, 0.55), false, 1.5)
+	var fw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	var asc := _font_bold.get_ascent(px)
+	var dsc := _font_bold.get_descent(px)
+	var p := Vector2(r.get_center().x - fw * 0.5,
+			r.get_center().y + (asc - dsc) * 0.5)
+	ci.draw_string(_font_bold, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px, fg)
+
+
 func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	if engine == null or engine.current_side != GameEngine.SIDE_SELF:
 		_trap_press_slot = -1
@@ -10065,18 +10214,23 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	var t0: TrapData = TrapRepo.load_json().get_trap(RunState.trap_at(slot))
 	if t0 != null and t0.is_usable():
 		# R690：使用型工具（小血瓶 / 法力药剂）不需要落点 → 拒绝进入拖放。
-		# 松手那一下会把「拖」转成上膛提示（R752：点两下才结算，见 `_tool_use_arm`）。
+		# 松手那一下会把「拖」转成按钮栏（R752/R754：点「使用」才结算，见 `_tool_use_arm`）。
 		_trap_press_slot = -1
-		_say("「%s」点两下就能用，不用拖" % t0.trap_name)
+		_say("「%s」点「使用」就能用，不用拖" % t0.trap_name)
 		return
 	_clear_selection()          # 与拖手牌同口径：放下当前选中，别留两套高亮
 	_trap_drag_slot = slot
 	_trap_press_slot = -1
 	_trap_drag_pos = pos
 	_lp_active = false   # R667：进入拖放即作废长按计时（14 < 18 的窗口会误取消）
-	_trap_drag_cells = engine.trap_legal_cells()
+	# R754：落点候选的唯一口 —— 石头（直接伤害型）要的是**敌方单位格**，
+	# 放置型要的是**空格**，两种都在 `GameEngine.trap_drop_cells()` 里分。
+	_trap_drag_cells = engine.trap_drop_cells(RunState.trap_at(slot))
 	if _trap_drag_cells.is_empty():
-		_say("没有可以放置工具的空格")
+		if t0 != null and t0.direct_damage > 0:
+			_say("场上没有可以砸的敌人")
+		else:
+			_say("没有可以放置工具的空格")
 	queue_redraw()
 
 
@@ -10146,11 +10300,21 @@ func _finish_trap_drag(pos: Vector2) -> void:
 		_say("工具没有放置（松手要落在高亮空格里）")
 		return
 	var c2 := Vector2i(int(cell.x), int(cell.y))
+	var td: TrapData = TrapRepo.load_json().get_trap(id)
+	# R754 石头（7012）：落点是**敌方单位**，砸下去当场结算，不埋进格子。
+	# 伤害与致死收尾都在 `use_tool_on_unit()`（唯一口）；这里只负责摘槽与提示。
+	if td != null and td.direct_damage > 0:
+		if not engine.use_tool_on_unit(id, c2):
+			_say("这一下没砸到人（要有敌方单位才砸得下去）")
+			return
+		RunState.consume_trap(slot)
+		_say("「%s」砸中目标：%d 点伤害" % [td.trap_name, td.direct_damage])
+		queue_redraw()
+		return
 	if not engine.place_trap(id, c2):
 		_say("这格已经不能放置工具了")
 		return
 	RunState.consume_trap(slot)   # 放置那一刻才从栏位移除（R663 口径）
-	var td: TrapData = TrapRepo.load_json().get_trap(id)
 	var nm := td.trap_name if td != null else "工具"
 	_say("已布置「%s」，敌人踩到就会触发" % nm)
 	queue_redraw()
@@ -10179,12 +10343,10 @@ func _draw_trap_bar() -> void:
 		draw_rect(r, col, false, 3.0 if dragging else 2.0)
 		if id > 0 and not dragging:
 			TrapArt.draw(self, r.grow(-5.0), id, false)
-			# R752：使用型工具已上膛 → 整格盖一层「使用」罩层（这就是那个「使用按钮」）。
-			# 判定与命中共用同一个有效期：过时自动收起，不会挂着等人误触。
+			# R754：栏开着的那一格加一圈金边 —— 「你正在操作的是它」。
+			# 按钮本身不再盖在槽里（那会挡住图标），改成画在槽左侧的按钮栏里。
 			if _tool_use_arm == i and Time.get_ticks_msec() <= _tool_use_until:
-				draw_rect(r.grow(-2.0), Color(0.05, 0.06, 0.09, 0.80), true)
 				draw_rect(r.grow(-2.0), Color("ffd76a"), false, 2.5)
-				_draw_string_center(_font_bold, 15, "使用", r.get_center(), Color("ffe6a2"), -1)
 			# R695：右上角「×」= 丢弃这个工具（两段式确认，见 `_try_discard_tool`）。
 			# 只在工具栏里画（`_draw_trap_bar` 本来就只在局内走）—— 没拿到工具的槽不画。
 			var br := _trap_discard_rect(i)
@@ -10207,6 +10369,8 @@ func _draw_trap_bar() -> void:
 			Vector2(TRAP_BAR_X + TRAP_BAR_SIZE * 0.5,
 					TRAP_BAR_Y + 3.0 * (TRAP_BAR_SIZE + TRAP_BAR_GAP) + 10.0),
 			Color("e4bd62"), -1)
+	# R754：按钮栏画在最后 —— 必须压在槽之上（它探到槽左侧的棋盘上）。
+	_draw_tool_bar()
 
 
 func _draw_trap_drag() -> void:

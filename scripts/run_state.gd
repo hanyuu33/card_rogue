@@ -341,6 +341,9 @@ static var pending_fly := false              # R555 飞行器：待在地图上�
 ## ⚠️ 绝不写进 `relics` / `GameEngine.self_relics`：`relic_highlight()` 的闸门是
 ##    `self_relics.has(id)`，混进去会串高亮（独立 7001+ 段也是为了这个）。
 const TRAP_SLOTS := 3
+## R754 石头（事件「奇异雕像」的摧毁选项给的那种工具）。放在这里是因为
+## `fill_toolbar_with_stones()` 要用它，而 traps.json 的 7012 是同一件东西。
+const STONE_TOOL_ID := 7012
 static var traps: Array[int] = [-1, -1, -1]   # -1 = 空槽；其余 = traps.json 的 id
 ## R694（用户口径「任何战斗都有 10% 概率掉落工具」）：**任何**战斗胜利都摇一次这个概率。
 ## `tool_roll_seq` = 本局第几次战斗结算，只用来派生随机种子 —— 随存档一起走，
@@ -353,6 +356,10 @@ static var toolbox_tool_seq := 0
 ## R752 快送鸭 7010 的独立序号：一次要连抽 3 件，与上面两条都分开（同一条口径：
 ## 效果里的随机数不许推动地图 / 掉落 / 工具箱的随机流）。
 static var tool_deliver_seq := 0
+## R754 事件「奇异雕像」的祭拜祝福：**接下来这么多场战斗必定掉工具**（与 10% 概率
+## 各自独立 —— pledge > 0 时那一场不看概率、直接掉一件，然后 -1）。
+## 只在 `roll_battle_tool_drop()` 里消耗，别在别处改（唯一口）；随存档一起走。
+static var tool_drop_pledge := 0
 
 # ---- R119：待领奖励队列（奖励悬浮窗的数据源）----
 ## 「获得奖励」不再当场发放，而是**先入队** → 由 RewardPanel 悬浮窗逐项展示。
@@ -1135,6 +1142,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	tool_roll_seq = 0      # R694：新的一局 → 战斗掉落工具的重摇序号归零
 	toolbox_tool_seq = 0   # R745：工具箱发工具的序号同样归零
 	tool_deliver_seq = 0   # R752：快送鸭的序号同样归零
+	tool_drop_pledge = 0   # R754：新的一局没有「必掉」的祝福
 	bandage_pending = 0
 	skipped_relics = []
 	pending_relic = -1
@@ -1252,6 +1260,7 @@ static func end_run(clear_save: bool = true) -> void:
 	tool_roll_seq = 0      # R694：本局结束 → 掉落工具的序号也归零
 	toolbox_tool_seq = 0   # R745：工具箱的序号也归零
 	tool_deliver_seq = 0   # R752：快送鸭的序号也归零
+	tool_drop_pledge = 0   # R754：祝福不跨局
 	spent_relics.clear()       # R367：灰显标记随本局一起清掉
 	boss_kills.clear()         # R367：本局 Boss 战果不跨局
 	bandage_pending = 0
@@ -1476,7 +1485,12 @@ static func roll_battle_tool_drop() -> int:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_of("tool_drop", tool_roll_seq)
 	tool_roll_seq += 1
-	if rng.randf() >= TOOL_DROP_CHANCE:
+	# R754 祭拜祝福（事件「奇异雕像」）：pledge > 0 时这一场**不看概率、必掉一件**，
+	# 然后 -1。⚠️ 必须在 `randf()` 之前分流：祝福不是「提高概率」而是「保证掉落」，
+	# 先摇一次概率再覆盖会让同一个种子在「祝福 / 不祝福」之间产生不同的随机流。
+	if tool_drop_pledge > 0:
+		tool_drop_pledge -= 1
+	elif rng.randf() >= TOOL_DROP_CHANCE:
 		return -1
 	# R743：`random_traps()` —— 烤肉 7007 是 `rest_only`，只能从休息处烤出来，
 	# 不能靠打怪掉落刷出来（否则「篝火专属」的名头与实际不符）。
@@ -1530,6 +1544,32 @@ static func fill_toolbar_with_shop_tools() -> int:
 		rng.seed = seed_of("tool_deliver", tool_deliver_seq)
 		tool_deliver_seq += 1
 		traps[i] = int(pool[rng.randi() % pool.size()].id)
+		filled += 1
+	return filled
+
+
+static func bless_tool_drops(n: int) -> void:
+	## R754 事件「奇异雕像」· 祭拜：**接下来 n 场战斗必定掉落工具**。
+	## 口径是「倒计时」而不是「累加」：已经挂着 2 场、又祭拜一次 → 取 max(2, 3) = 3，
+	## 玩家看到的永远是「接下来三场」，不会因为多拜一次变成六场（那读起来像 bug）。
+	## 只由事件页调用；消耗在 `roll_battle_tool_drop()` 里（唯一口）。
+	var want := maxi(0, n)
+	if want <= 0:
+		return
+	tool_drop_pledge = maxi(tool_drop_pledge, want)
+
+
+static func fill_toolbar_with_stones() -> int:
+	## R754 事件「奇异雕像」· 摧毁：「用石头填满你的工具栏」。
+	## 与快送鸭（R752）同一条口径：**只在空槽里填，不覆盖已有工具** ——
+	## 「填满」不是「换一批」，玩家手里的东西不该被这个效果顶掉。
+	## 石头（7012）没有 `price`、带 `no_drop`：不会出现在商店与随机掉落里，
+	## 唯一的来路就是这里（以及事件本身）。返回真正填进去的块数。
+	var filled := 0
+	for i in traps.size():
+		if int(traps[i]) >= 0:
+			continue
+		traps[i] = STONE_TOOL_ID
 		filled += 1
 	return filled
 

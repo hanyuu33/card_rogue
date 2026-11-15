@@ -46,6 +46,10 @@
   "7011": {
    "name": "Carta Misteriosa",
    "desc": "Tócala dos veces para usarla, sin arrastrarla a una casilla del campo de batalla. Elige una de 3 cartas aleatorias para que se una a tu mano; su coste es 0 durante este turno. Después, la herramienta se consume."
+  },
+  "7012": {
+   "name": "Piedra",
+   "desc": "Arrástrala sobre una unidad enemiga. Inflige 15 de daño y la herramienta se consume."
   }
  }
 }

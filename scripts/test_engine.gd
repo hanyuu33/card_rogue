@@ -14485,7 +14485,7 @@ func _init() -> void:
 
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 
-	check(l2_ev_kinds.size() == 14 and l2_ev_kinds.has("smith") \
+	check(l2_ev_kinds.size() == 15 and l2_ev_kinds.has("smith") \
 
 			and l2_ev_kinds.has("martial") \
 
@@ -14495,9 +14495,9 @@ func _init() -> void:
 
 			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination")
 
-			and l2_ev_kinds.has("flyer"),
+			and l2_ev_kinds.has("flyer") and l2_ev_kinds.has("statue"),
 
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 14 种子类型（R573 删除蓝色大肥鱼）")
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 15 种子类型（R573 删除蓝色大肥鱼；R754 加奇异雕像）")
 
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 

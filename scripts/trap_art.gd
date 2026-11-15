@@ -23,6 +23,7 @@ static func color_of(id: int) -> Color:
 		7009: return Color(0.74, 0.53, 0.96)   # 万能牌 · 幻紫
 		7010: return Color(0.96, 0.72, 0.28)   # 快送鸭 · 快递黄
 		7011: return Color(0.42, 0.82, 0.78)   # 神秘牌 · 谜青
+		7012: return Color(0.68, 0.66, 0.62)   # 石头 · 石灰
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -88,6 +89,7 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7009: _wildcard(ci, c, s, ink)
 		7010: _deliver(ci, c, s, ink)
 		7011: _mystery(ci, c, s, ink)
+		7012: _stone(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
 
 
@@ -259,3 +261,39 @@ static func _potion(ci: CanvasItem, c: Vector2, s: float, col: Color, mana: bool
 	# 高光
 	ci.draw_line(Vector2(c.x - s * 0.10, c.y - s * 0.02),
 			Vector2(c.x - s * 0.10, c.y + s * 0.09), Color(1, 1, 1, 0.45), w * 0.9, true)
+
+static func _stone(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R754 石头（7012）：一块带棱角的碎石，右下角一小撮碎屑。
+	## 不画成圆球 —— 圆的是「炸弹」（7001），石头要有**折线边**才认得出。
+	var w := maxf(1.5, s * 0.032)
+	var pts := PackedVector2Array([
+		Vector2(c.x - s * 0.26, c.y + s * 0.10),
+		Vector2(c.x - s * 0.17, c.y - s * 0.16),
+		Vector2(c.x + s * 0.04, c.y - s * 0.25),
+		Vector2(c.x + s * 0.24, c.y - s * 0.08),
+		Vector2(c.x + s * 0.20, c.y + s * 0.16),
+		Vector2(c.x - s * 0.06, c.y + s * 0.24)])
+	ci.draw_colored_polygon(pts, Color(col.r, col.g, col.b, 0.28))
+	# 受光面（左上那一片）先铺一层更亮的底，折面才有厚度感
+	ci.draw_colored_polygon(PackedVector2Array([
+		Vector2(c.x - s * 0.26, c.y + s * 0.10),
+		Vector2(c.x - s * 0.17, c.y - s * 0.16),
+		Vector2(c.x + s * 0.04, c.y - s * 0.25),
+		Vector2(c.x - s * 0.02, c.y + s * 0.06)]),
+		Color(1, 1, 1, 0.10))
+	# 描边（首尾闭合，逐段画才吃得到线宽）
+	for i in pts.size():
+		ci.draw_line(pts[i], pts[(i + 1) % pts.size()], col, w, true)
+	# 内部折面：**Y 形**（一竖两撇），把平面切成三片。
+	# ⚠️ 别写成「左上角 → 右下角」一条直线 —— 那样整块石头读起来像「禁止」符号
+	#    （R754 实测：截图里第一眼就是禁行标志）。
+	ci.draw_line(Vector2(c.x + s * 0.04, c.y - s * 0.25),
+			Vector2(c.x - s * 0.02, c.y + s * 0.06), col, w * 0.8, true)
+	ci.draw_line(Vector2(c.x - s * 0.02, c.y + s * 0.06),
+			Vector2(c.x - s * 0.26, c.y + s * 0.10), col, w * 0.8, true)
+	ci.draw_line(Vector2(c.x - s * 0.02, c.y + s * 0.06),
+			Vector2(c.x + s * 0.20, c.y + s * 0.16), col, w * 0.8, true)
+	# 碎屑两粒
+	ci.draw_circle(Vector2(c.x + s * 0.26, c.y + s * 0.30), s * 0.038, col)
+	ci.draw_circle(Vector2(c.x + s * 0.13, c.y + s * 0.34), s * 0.026, col)
+

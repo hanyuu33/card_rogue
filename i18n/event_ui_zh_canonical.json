@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-13",
+  "updated": "2026-11-15",
   "purpose": "R665 事件选项、结果模板与运送选货页的英日翻译底本；event_scene.gd 权威中文不动。",
   "source": "scripts/event_scene.gd",
   "canonical_overrides": {
@@ -18,7 +18,7 @@
       "ADD_FIREWOOD": "添加柴火（从卡组删除一张卡）",
       "BBQ_AVAILABLE": "烤肉（获得工具「烤肉」，占一个工具栏位）",
       "BBQ_OWNED_DISABLED": "已持有「烤肉」（工具，战斗里点一下就能吃）",
-"BBQ_NO_SLOT_DISABLED": "工具栏已满 —— 先腾出一个栏位再来烤",
+      "BBQ_NO_SLOT_DISABLED": "工具栏已满 —— 先腾出一个栏位再来烤",
       "LEAVE_WITHOUT_BBQ": "离开（不烤肉）"
     },
     "whisper": {
@@ -145,6 +145,11 @@
     "struggle": {
       "ACCEPT_STRUGGLE": "接受挣扎（失去 %d 生命，获得「金属龙」）",
       "LEAVE_UNCHANGED": "转身离开（保持现状）"
+    },
+    "statue": {
+      "PRAY": "祭拜（接下来三场战斗必定掉落工具）",
+      "SMASH": "摧毁（工具栏用「石头」填满）",
+      "LEAVE": "绕过去（什么都不做）"
     }
   },
   "results": {
@@ -261,6 +266,11 @@
     "divination": {
       "DIVINATION_CARD_GAINED": "「%s」已加入卡组。",
       "DIVINATION_RELIC_GAINED": "「%s」已收进道具栏。"
+    },
+    "statue": {
+      "STATUE_PRAY": "已祭拜：接下来 %d 场战斗，每次胜利都必定掉落一件工具。",
+      "STATUE_SMASH": "雕像塌了：工具栏里塞进 %d 块「石头」（拖到敌人身上砸 15 点伤害）。",
+      "STATUE_SMASH_FULL": "雕像塌了，可你的工具栏已经满了 —— 碎块只能留在原地。"
     }
   },
   "pickers": {

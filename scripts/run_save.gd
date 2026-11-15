@@ -300,6 +300,10 @@ static func snapshot() -> Dictionary:
 		"traps": RunState.traps,   # R663：陷阱栏（老档缺键 → apply 兜 3 空槽）
 		"tool_roll_seq": RunState.tool_roll_seq,   # R694：战斗掉落工具的序号（续档接着数）
 		"toolbox_tool_seq": RunState.toolbox_tool_seq,   # R745：工具箱发工具的序号
+		# R752 的快送鸭序号此前**漏在存档外**（R754 补）：不存的话续档会把它归零，
+		# 同一条派生种子被重新摇一遍 → 两次快送鸭可能刷出完全一样的三件工具。
+		"tool_deliver_seq": RunState.tool_deliver_seq,
+		"tool_drop_pledge": RunState.tool_drop_pledge,   # R754：祭拜祝福还剩几场
 		"key_relics": RunState.key_relics,   # R543：信物（解锁第三层，与道具分开记账）
 		# R367：已耗尽的道具（灰显的那些）与每层 Boss 战果 —— 续档要接着画灰 / 接着记。
 		"spent_relics": RunState.spent_relics,
@@ -603,6 +607,8 @@ static func apply(d: Dictionary) -> bool:
 	# 不影响掉率本身）。
 	RunState.tool_roll_seq = int(d.get("tool_roll_seq", 0))
 	RunState.toolbox_tool_seq = int(d.get("toolbox_tool_seq", 0))
+	RunState.tool_deliver_seq = int(d.get("tool_deliver_seq", 0))
+	RunState.tool_drop_pledge = int(d.get("tool_drop_pledge", 0))   # 老档缺键 → 0，没祝福
 	RunState.key_relics = _int_array(d.get("key_relics", []))   # R543：信物（老存档无此字段 → 空）
 	# R367：灰显道具 / Boss 战果。**必须在 `relics` 之后、下面盆与火柴的复查之前**赋值 ——
 	# 那两处用 `has_relic()`（已排除 spent）决定要不要补满点数。
