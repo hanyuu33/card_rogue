@@ -34,8 +34,49 @@ FONT = "C:/Windows/Fonts/msyh.ttc"
 JOBS = [(9260, "常数测量员"), (9261, "精密计算者"), (9262, "负载增量员")]
 
 
-def cut(src, dst):
-    """1.51:1 居中横带 → 448x297 → 上下补边 → 448x404（RGBA）。"""
+SUBJ_GAP = 0.06   # head-safe：主体最高行在**可见带**内再往下留 6%
+# ⚠️ 卡面 CardFace 只显示带内约 5%..95%，头尾各有一段隐藏区 —— 不把隐藏区
+#    加进去，6% 的留白实际只剩 1%，头顶照样贴边（第一版就是这么错的）。
+VIS_H = int(round(H * 0.662))          # 卡面真实可见高度 267
+VIS_TOP = (H - VIS_H) // 2             # 可见带上边在 448x404 里的行号 68
+HIDDEN_TOP = (VIS_TOP - PAD) / float(BAND_H)   # ≈ 0.0505
+
+
+def subject_top(im):
+    """主体最高行：亮黄铜 / 亮青 / 亮灰钢。背景是暗蓝模糊，三个条件都不满足。
+
+    ⚠️ 不要按 alpha 判（图是不透明的）；也不要只按亮度判 —— 背景里有黄铜柜具和
+    琥珀灯，亮度够但饱和度低。三个色相条件一起用才稳。
+    """
+    w, h = im.size
+    px = im.load()
+
+    def subj(r, g, b):
+        if r > 150 and r > b + 55:
+            return True          # 黄铜
+        if b > 150 and b > r + 40:
+            return True          # 青色发光缝 / 透镜
+        if r > 120 and g > 120 and b > 120:
+            return True          # 亮灰钢
+        return False
+
+    for y in range(0, h, 2):
+        n = 0
+        for x in range(0, w, 2):
+            if subj(*px[x, y]):
+                n += 1
+                if n >= 6:       # 至少 6 个采样点，滤掉背景零散高光
+                    return y
+    return None
+
+
+def cut(src, dst, head_safe=False):
+    """1.51:1 横带 → 448x297 → 上下补边 → 448x404（RGBA）。
+
+    head_safe=True → 裁切线按**主体最高行**定位、上方留 SUBJ_GAP；
+    默认居中裁（老口径）。卡面只显示带内 5%..95%，所以居中裁会把
+    「顶天立地」的构图切掉一截头顶 —— 需要保头时用 head_safe。
+    """
     im = Image.open(src).convert("RGB")
     w, h = im.size
     bw = int(round(h * RATIO))
@@ -45,6 +86,12 @@ def cut(src, dst):
     else:
         bh = int(round(w / RATIO))
         top = (h - bh) // 2
+        if head_safe:
+            st = subject_top(im)
+            if st is not None:
+                top = max(0, min(h - bh, int(round(st - (HIDDEN_TOP + SUBJ_GAP) * bh))))
+                print("   head-safe: 主体最高行=%d → 裁切 top=%d（居中口径 %d，上移 %d 行）"
+                      % (st, top, (h - bh) // 2, (h - bh) // 2 - top))
         band = im.crop((0, top, w, top + bh))
     band = band.resize((W, BAND_H), Image.LANCZOS)
 
@@ -84,6 +131,9 @@ def sheet(items, out, cell_w=300):
 def main():
     args = sys.argv[1:]
     ver = "v2" if "--v2" in args else "v1"
+    head_safe = "--head-safe" in args
+    if head_safe:
+        ver = "v2"          # 定稿取 v2；head-safe 只重裁 v2，不回头动 v1
     want = [int(a) for a in args if a.startswith("9")]
     items = []
     for cid, name in JOBS:
@@ -93,7 +143,12 @@ def main():
         if not os.path.exists(raw):
             print("缺 raw:", os.path.basename(raw))
             continue
-        if ver == "v1":
+        if head_safe:
+            # R760b：用 v2 raw + 保头裁，这版才是要定稿的
+            dst = os.path.join(PEND, "%d.png" % cid)
+            print("cut %s(v2 head-safe) -> _pending/%d.png %s"
+                  % (name, cid, cut(raw, dst, head_safe=True)))
+        elif ver == "v1":
             # v1 才落 _pending（纪律 J：成品只落暂存区，等店长定版再 approve）
             dst = os.path.join(PEND, "%d.png" % cid)
             print("cut %s(v1) -> _pending/%d.png %s" % (name, cid, cut(raw, dst)))
@@ -103,7 +158,8 @@ def main():
             print("cut %s(v2) -> %s %s" % (name, os.path.basename(dst), cut(raw, dst)))
         items.append(("%d %s" % (cid, name), dst))
     if items:
-        sheet(items, "_R760_卡面验收%s.png" % ("" if ver == "v1" else "_v2"))
+        tag = "_定稿_保头" if head_safe else ("" if ver == "v1" else "_v2")
+        sheet(items, "_R760_卡面验收%s.png" % tag)
         for _, p in items:
             im = Image.open(p)
             assert im.size == (W, H), (p, im.size)
