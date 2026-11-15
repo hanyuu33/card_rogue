@@ -30,6 +30,10 @@
   "7007": {
    "name": "Carne asada",
    "desc": "Tócala para usarla, sin arrastrarla a una casilla del campo de batalla. Restaura al instante un 25% de tu Vida máxima (redondeando hacia arriba y sin superar el máximo); después la herramienta se consume. Solo puede asarse en un lugar de descanso."
+  },
+  "7008": {
+   "name": "Tótem Salvaje",
+   "desc": "Tócala para usarla, sin arrastrarla a una casilla del campo de batalla. Todas tus unidades aliadas ganan +2 de Poder durante el resto de este combate; después la herramienta se consume."
   }
  }
 }

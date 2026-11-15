@@ -9,7 +9,7 @@
     "rest": {
       "REST_HEAL": "Rest here (restore %d Health)",
       "ADD_FIREWOOD": "Add firewood (Remove 1 card from your Deck)",
-      "BBQ_AVAILABLE": "Roast meat (gain the \"Barbecue\" tool; it takes one tool slot)",
+      "BBQ_AVAILABLE": "Barbecue (gain the \"Barbecue\" tool; it takes one tool slot)",
       "BBQ_OWNED_DISABLED": "Already have \"Barbecue\" (a tool: tap it in battle to eat)",
 "BBQ_NO_SLOT_DISABLED": "Tool bar is full—free up a slot before roasting meat",
       "LEAVE_WITHOUT_BBQ": "Leave (don't roast meat)"

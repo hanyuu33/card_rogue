@@ -54,7 +54,8 @@ func _engine() -> GameEngine:
 func _init() -> void:
 	# ---- ① 数据表：四条定义与用户口径逐项对齐 ----
 	var repo := TrapRepo.load_json()
-	check(repo.size() == 7, "traps.json 恰好 7 件工具（4 放置型 + 3 使用型）")
+	# R745：新增野性图腾 7008（使用型）→ 8 件（4 放置型 + 4 使用型）
+	check(repo.size() == 8, "traps.json 恰好 8 件工具（4 放置型 + 4 使用型）")
 	var bomb: TrapData = repo.get_trap(7001)
 	var frost: TrapData = repo.get_trap(7002)
 	var poison: TrapData = repo.get_trap(7003)
@@ -83,8 +84,8 @@ func _init() -> void:
 	check(bbq != null and bbq.trap_name == "烤肉" and bbq.heal_pct == 25
 			and bbq.is_usable() and bbq.rest_only and bbq.price == 0,
 			"烤肉：回复 25% 最大生命 / 使用型 / rest_only（非卖品）")
-	check(repo.random_traps().size() == 6 and repo.get_trap(7007) != null,
-			"烤肉：`random_traps()` 把它排除（6 件可随机），全量仍是 7 件")
+	check(repo.random_traps().size() == 7 and repo.get_trap(7007) != null,
+			"烤肉：`random_traps()` 把它排除（7 件可随机），全量仍是 8 件")
 
 	# ---- ①b R690：描述必须写清「怎么发动」—— 放置型拖到格子、使用型轻点 ----
 	# 玩家唯一能读到操作方式的地方就是这条 desc（商店悬浮、战斗里轻点工具栏）。

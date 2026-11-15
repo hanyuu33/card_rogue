@@ -30,6 +30,10 @@
   "7007": {
    "name": "Barbecue",
    "desc": "Tap it to use it, no dragging needed. Instantly restores 25% of your Max Health (rounded up, capped at your Max Health); the tool is then used up. It can only be cooked at a Rest Stop."
+  },
+  "7008": {
+   "name": "Wild Totem",
+   "desc": "Tap it to use it, no dragging needed. All your allies gain +2 Power for the rest of this battle; the tool is then used up."
   }
  }
 }

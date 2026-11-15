@@ -205,6 +205,7 @@ var wish_pending:= false    # 许愿（9168）：等玩家从**卡组**选一张
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
 var _knight_sword_fired:= false  # R383 骑士剑：本场战斗的第一次击杀是否已发生（每场一次）
+var _wild_totem_atk:= 0   # R745 野性图腾：本场已用出的那份力量加成（0 = 还没用；引擎每场重建 → 自动复位）
 var _three_bots_destroyed:= 0  # R534 三个机器人：本场战斗已破坏的己方盟友数
 ## R393：本场战斗里，哪些**卡 id** 的「首次击杀」成长已经结算过。
 ## 每个新 GameEngine = 一场新战斗，`start_game()` 清空 → 「每场战斗首次」自然成立。
@@ -740,6 +741,10 @@ const FOREST_FRIENDS_DISCOUNT:= 2
 # R352 竖琴（6052，剧情解锁道具）：所有己方盟友 +2 力量。
 const HARP_RELIC_ID:= 6052
 const HARP_ATK:= 2
+# R745 野性图腾（工具 7008）：**使用后**本场所有己方盟友 +2 力量。
+# 与竖琴同一套持续 buff（`Placement.totem_atk` + `effective_power()`），
+# 但生效判据是「本场是否已经用过这个工具」，不是「是否持有道具」（用完就摘槽了）。
+const WILD_TOTEM_ATK:= 2
 # R383 骑士剑（6053，剧情解锁道具）：本场战斗**第一次击杀敌人**之后 ——
 #   己方所有盟友 +1 力量（与竖琴同一套持续 buff 写法），己方技能伤害 +1。
 # ⚠️ R634（店长口径「骑士剑从＋2改为＋1（全部）」）：数值**只住在这两个常量里**。
@@ -2398,6 +2403,7 @@ func _begin_turn(side: String) -> void :
 		_space_fires = 0
 		_sync_harp()   # R352 竖琴：战斗中拿到的道具 / 读档续战，此处补齐在场上盟友的 +2
 		_sync_knight_sword()   # R383 骑士剑：同一处补齐（含中途拿到道具的情况）
+		_sync_totem()   # R745 野性图腾：同一处补齐（用掉之后才上场的盟友 / 读档续战）
 		state.energy = FieldState.ENERGY_PER_TURN
 		if state.turn_limit >= 0 and turn_number > state.turn_limit:
 			turn_number = state.turn_limit
@@ -10308,6 +10314,26 @@ func _sync_harp() -> void:
 					% [p.card.card_name, HARP_ATK, p.effective_power()])
 
 
+func _sync_totem() -> void:
+	## 野性图腾（工具 7008，R745）：把场上每个己方盟友的 `totem_atk` 与「本场是否已经用过」
+	## 对齐（**赋值**，不累加 —— 与竖琴 R372 / 骑士剑 R383 完全同一套写法）。
+	## 需要它是因为：用掉那一刻场上的人要吃，**之后上场**的人靠
+	## `_relic_on_enter_buffs()` 补，两条路必须给出同一个值。幂等，随便多调。
+	var want := _wild_totem_atk
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.owner != SIDE_SELF or p.health <= 0 or p.card == null:
+			continue
+		if p.card.kind != "盟友":
+			continue
+		if p.totem_atk == want:
+			continue
+		p.totem_atk = want
+		if want > 0:
+			_log("野性图腾：%s 补吃 +%d 力量（%d）"
+					% [p.card.card_name, want, p.effective_power()])
+
+
 func _knight_sword_active() -> bool:
 	## 骑士剑（6053）此刻是否生效 = **本场已经触发过** 且 **现在仍持有道具**。
 	## 拆成一个口，是因为有三处要判（place / 同步 / 技能伤害），口径必须一致。
@@ -12720,6 +12746,12 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		p.sword_atk = KNIGHT_SWORD_ATK
 		_log("骑士剑：%s 获得 +%d 力量（%d）"
 				% [card.card_name, KNIGHT_SWORD_ATK, p.effective_power()])
+	# R745 野性图腾（工具 7008）：本场已经用过 → **之后登场**的己方盟友同样 +2 力量。
+	# 与竖琴逐字同构（只写 Placement 字段，不烤进共享 CardData）。
+	if _wild_totem_atk > 0 and p.owner == SIDE_SELF and card.kind == "盟友":
+		p.totem_atk = _wild_totem_atk
+		_log("野性图腾：%s 获得 +%d 力量（%d）"
+				% [card.card_name, _wild_totem_atk, p.effective_power()])
 	var beast_hp:= _beast_hp_bonus(card)
 	if beast_hp > 0:
 		p.health += beast_hp
@@ -16726,8 +16758,14 @@ func use_tool(id: int) -> bool:
 		healed = state.hp_self - before
 	if t.energy > 0:
 		state.energy += t.energy
-	_log("使用工具：「%s」（回血 %d / 回费 %d → HP %d/%d，费用 %d）" % [
-			t.trap_name, healed, t.energy, state.hp_self, state.max_hp_self, state.energy])
+	if t.ally_atk > 0:
+		# R745 野性图腾：**赋值**而不是累加（用两次还是 +2，与竖琴「不论如何都只 +2」同口径），
+		# 然后立刻同步场上的人；之后再登场的人由 `_relic_on_enter_buffs()` 补。
+		_wild_totem_atk = t.ally_atk
+		_sync_totem()
+	_log("使用工具：「%s」（回血 %d / 回费 %d / 盟友力量 +%d → HP %d/%d，费用 %d）" % [
+			t.trap_name, healed, t.energy, _wild_totem_atk, state.hp_self, state.max_hp_self,
+			state.energy])
 	## 纯结算事件：界面据此播数字与提示。不掷随机数，回放确定性不受影响。
 	action.emit("tool_used", {"id": id, "name": t.trap_name, "healed": healed,
 			"energy": t.energy, "hp": state.hp_self, "max_hp": state.max_hp_self})

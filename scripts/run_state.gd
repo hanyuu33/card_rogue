@@ -347,6 +347,9 @@ static var traps: Array[int] = [-1, -1, -1]   # -1 = 空槽；其余 = traps.jso
 ## 续档之后接着往下数，同一条种子不会被摇第二遍。
 const TOOL_DROP_CHANCE := 0.10
 static var tool_roll_seq := 0
+## R745 工具箱发工具的独立序号 —— 与 `tool_roll_seq` 分开，否则「多拿一个工具」
+## 会把战斗掉落的 10% 摇点整体推歪（同 R312 的分类种子口径）。随存档一起走。
+static var toolbox_tool_seq := 0
 
 # ---- R119：待领奖励队列（奖励悬浮窗的数据源）----
 ## 「获得奖励」不再当场发放，而是**先入队** → 由 RewardPanel 悬浮窗逐项展示。
@@ -453,6 +456,10 @@ static var pipe_ready := false
 const PACK_RELIC_ID := 6030
 const PACK_GOLD := 100
 const PACK_CARD_ID := 8001        # 木栅栏
+# R745 新道具：工具箱（6068，初始池）—— **立即**获得一个随机工具，之后每进入新的一层
+# 再获得一个。两个发放点都走 `grant_random_tool()`（池子 = `TrapRepo.random_traps()`，
+# 满栏转进待领奖励队列）。
+const TOOLBOX_RELIC_ID := 6068
 # R245 新道具：勇气徽章（6031，初始池）—— 战斗内生效，判定与数值都在引擎
 # （`GameEngine.COURAGE_RELIC_ID` / `COURAGE_TURNS`；R372 起精英 / Boss 都只给首回合）。
 const COURAGE_RELIC_ID := 6031
@@ -1123,6 +1130,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	key_relics = []   # R543：新的一局没有信物
 	traps = [-1, -1, -1]   # R663：新的一局陷阱栏 3 空槽
 	tool_roll_seq = 0      # R694：新的一局 → 战斗掉落工具的重摇序号归零
+	toolbox_tool_seq = 0   # R745：工具箱发工具的序号同样归零
 	bandage_pending = 0
 	skipped_relics = []
 	pending_relic = -1
@@ -1238,6 +1246,7 @@ static func end_run(clear_save: bool = true) -> void:
 	key_relics = []   # R543：本局结束 → 信物清空
 	traps = [-1, -1, -1]   # R663：本局结束 → 陷阱栏清空
 	tool_roll_seq = 0      # R694：本局结束 → 掉落工具的序号也归零
+	toolbox_tool_seq = 0   # R745：工具箱的序号也归零
 	spent_relics.clear()       # R367：灰显标记随本局一起清掉
 	boss_kills.clear()         # R367：本局 Boss 战果不跨局
 	bandage_pending = 0
@@ -1327,6 +1336,10 @@ static func advance_layer(layer: int) -> int:
 		if not sc2.is_empty():
 			current_node_id = int(sc2["id"])
 			cleared_ids.append(current_node_id)   # 起点同样算「初始点」
+	# R745 工具箱（6068）：每进入新的一层，再给一个随机工具。
+	# 位置放在换层清理之后 —— 此时 traps 栏才是本层的状态；满栏转待领奖励。
+	if relics.has(TOOLBOX_RELIC_ID):
+		grant_random_tool("layer")
 	reveal_known()                # R207：本层开局视野立刻记进 seen
 	return current_node_id
 
@@ -1468,6 +1481,28 @@ static func roll_battle_tool_drop() -> int:
 	return int(pool[rng.randi() % pool.size()].id)
 
 
+static func grant_random_tool(tag: String) -> int:
+	## R745：工具箱（6068）**唯一发工具口** —— 「获得即给一个」与「每进新层给一个」共用。
+	## 池子走 `TrapRepo.random_traps()`：烤肉 7007 是 `rest_only`，不进随机池。
+	## 随机流走 `seed_of("toolbox_tool", n)` 的**派生流** + 独立序号 `toolbox_tool_seq`
+	## （不碰 `run_rng`）：多拿一个工具不该把同一种子下的地图 / 掉落整体推歪（R312 口径）。
+	## 满栏（3/3）时不硬塞、也不让玩家白拿：转进「待领奖励」队列，由奖励页按 R695 的
+	## 「满栏时摊开旧工具换下一个」处理 —— 与战斗掉落工具同一条出路。
+	## 返回发放的工具 id（-1 = 池空，正常不会发生）。
+	var pool: Array[TrapData] = TrapRepo.load_json().random_traps()
+	if pool.is_empty():
+		return -1
+	var rng := RandomNumberGenerator.new()
+	## `tag` 参与派生流：「起点拿到的」与「换层发的」各自成流，日志里一眼看出是哪个口发的。
+	rng.seed = seed_of("toolbox_tool_" + tag, toolbox_tool_seq)
+	toolbox_tool_seq += 1
+	var id := int(pool[rng.randi() % pool.size()].id)
+	if gain_trap(id):
+		return id
+	queue_tool_reward(id)
+	return id
+
+
 static func queue_tool_reward(id: int) -> bool:
 	## R694：掉落的工具入队（与道具掉落**同一套**「先看后领」口径）——
 	## 奖励页里带它自己的图标与完整说明（商店里那份 desc），点「领取」才真进工具栏。
@@ -1526,6 +1561,8 @@ static func gain_relic(id: int) -> void:
 		PACK_RELIC_ID:   # 行囊（R244）：+100 金币 + 一张「木栅栏」进卡组
 			gold += PACK_GOLD
 			_grant_linked_card(relic, PACK_CARD_ID)   # 内部会 ensure_deck_mods()
+		TOOLBOX_RELIC_ID:   # 工具箱（R745）：立即给一个随机工具（换层再给，见 advance_layer）
+			grant_random_tool("gain")
 		POT_RELIC_ID:   # 陶罐（R245）：随机 2 件奖励道具 + 一张「罐子」诅咒进卡组
 			_apply_pot(relic)
 		BOX_RELIC_ID:   # 惊奇盒子（R341）：把一张「惊奇盒子」加进卡组

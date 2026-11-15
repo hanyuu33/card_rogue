@@ -25,12 +25,16 @@ var icon := ""
 ## R743：**只在休息处烤制**才能拿到（烤肉）。不进战斗掉落池、也不进商店货架 ——
 ## 这两处的池子走 `TrapRepo.random_traps()`，它按这个标记筛。
 var rest_only := false
+## R745：使用型工具给**本场战斗**所有己方盟友的力量加成（野性图腾 7008 = 2）。
+## >0 → 不放置，点一下直接用。与回血 / 回费不同，这个加成**不会因为工具被用掉而消失** ——
+## 它在本场战斗里持续生效（口径与竖琴 6052 的持续 buff 一致，见 `Placement.totem_atk`）。
+var ally_atk := 0
 
 
 ## R690：「工具」分两类 —— 放置型（陷阱，拖到战场空格）与使用型（药水，轻点即用）。
-## 判据只看数据：带 heal_pct / energy 的就是使用型，界面与引擎共用这一个口。
+## 判据只看数据：带 heal_pct / energy / ally_atk 的就是使用型，界面与引擎共用这一个口。
 func is_usable() -> bool:
-	return heal_pct > 0 or energy > 0
+	return heal_pct > 0 or energy > 0 or ally_atk > 0
 
 
 static func from_dict(d: Dictionary) -> TrapData:
@@ -47,4 +51,5 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.energy = int(d.get("energy", 0))
 	t.icon = str(d.get("icon", ""))
 	t.rest_only = bool(d.get("rest_only", false))
+	t.ally_atk = int(d.get("ally_atk", 0))
 	return t

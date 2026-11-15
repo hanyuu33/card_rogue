@@ -246,6 +246,10 @@
     "6067": {
       "name": "Poción de memoria",
       "desc": "Al comienzo de cada combate, juega una carta de Efecto aleatoria directamente desde tu pila de robo, sin pasar por tu mano y sin pagar su Coste. Si tu pila de robo no tiene cartas de Efecto, omite este efecto."
+    },
+    "6068": {
+      "name": "Caja de herramientas",
+      "desc": "Obtienes una herramienta aleatoria de inmediato. Al entrar en cada nuevo nivel, obtienes otra herramienta aleatoria."
     }
   },
   "classes": {

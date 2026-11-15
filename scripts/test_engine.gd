@@ -15885,11 +15885,11 @@ func _init() -> void:
 
 	var relic_repo := RelicRepo.load_json()
 
-	check(relic_repo.initial_ids().size() == 9 and relic_repo.get_relic(6001) != null
+	check(relic_repo.initial_ids().size() == 10 and relic_repo.get_relic(6001) != null
 
 			and relic_repo.get_relic(6004) != null and relic_repo.get_relic(6021) != null,
 
-			"道具库：9 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048）")
+			"道具库：10 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048 / R745 工具箱 6068）")
 
 	RunState.choose_start_relic(6001)
 
@@ -42671,9 +42671,9 @@ func _init() -> void:
 
 	var r244_pack := r244_repo.get_relic(6030)
 
-	check(r244_init.size() == 9 and r244_init.has(6030) and not r244_init.has(6003),
+	check(r244_init.size() == 10 and r244_init.has(6030) and not r244_init.has(6003),
 
-			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R341 后共 9 个）")
+			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R745 后共 10 个）")
 
 	check(r244_pack != null and r244_pack.source == "初始"
 
@@ -43541,7 +43541,7 @@ func _init() -> void:
 
 	# ==== R577b：道具小图标（无背景 PNG）+ 界面分发 + 源码锁 ====
 
-	# ① 数据层：61 件道具逐件都有图标（R743：烤肉 6011 已改成工具 7007，道具少一件）。
+	# ① 数据层：62 件道具逐件都有图标（R743 烤肉改成工具 → 61 件；R745 加回工具箱 6068）。
 	#    素材断言一律用 ResourceLoader.exists（导出包里 png 会被 .ctex 取代，
 	#    FileAccess.file_exists 会假红）。
 
@@ -43569,9 +43569,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 61,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 62,
 
-			"R577b 保真锁：61 件道具的 id 都能在 relics.json 源文本里找到")
+			"R577b 保真锁：62 件道具的 id 都能在 relics.json 源文本里找到")
 
 	# ② 取图口：首末两件 + 信物回退
 
@@ -43901,7 +43901,7 @@ func _init() -> void:
 
 	var r245_pot := r245_rrepo.get_relic(6032)
 
-	check(r245_init.size() == 9 and r245_init.has(6031) and r245_init.has(6032),
+	check(r245_init.size() == 10 and r245_init.has(6031) and r245_init.has(6032),
 
 			"R245 初始道具池：勇气徽章 6031 / 陶罐 6032 已在池内（%d 个）" % r245_init.size())
 
@@ -57259,9 +57259,159 @@ func _init() -> void:
 
 			% [harp_p.effective_power(), harp_p3.effective_power()])
 
+
+	# ---- ⑨ R745：工具箱（6068，初始池）+ 野性图腾（工具 7008）----
+
+	# ① 数据层：工具箱进起点三选一；野性图腾是使用型、可随机（不是休息处专属）。
+
+	var r744_repo := RelicRepo.load_json()
+
+	check(r744_repo.initial_ids().has(6068), "R745 初始池：工具箱 6068 进起点三选一")
+
+	var r744_box := r744_repo.get_relic(6068)
+
+	check(r744_box != null and r744_box.relic_name == "工具箱",
+
+			"R745 道具：工具箱 6068（初始池，跨层持续）")
+
+	var r744_trepo := TrapRepo.load_json()
+
+	var r744_totem: TrapData = r744_trepo.get_trap(7008)
+
+	check(r744_totem != null and r744_totem.trap_name == "野性图腾"
+
+			and r744_totem.ally_atk == 2,
+
+			"R745 工具：野性图腾 7008（ally_atk 2）")
+
+	check(r744_totem != null and r744_totem.is_usable() and not r744_totem.rest_only,
+
+			"R745 工具：野性图腾是使用型、且不是休息处专属（能掉落 / 能上架）")
+
+	check(r744_trepo.random_traps().size() == 7,
+
+			"R745 工具池：可随机 7 件（烤肉 7007 仍被 rest_only 排除）")
+
+	# ② 工具箱：获得即给一个工具；满栏不硬塞、转进待领奖励（不吞玩家的东西）。
+	#    ⚠️ 发工具会改全局 RunState，测完逐个还原，别把后面的用例带歪。
+
+	var r744_sv_traps := RunState.traps.duplicate()
+
+	var r744_sv_relics := RunState.relics.duplicate()
+
+	var r744_sv_seq := RunState.toolbox_tool_seq
+
+	var r744_sv_pending := RunState.pending_rewards.duplicate(true)
+
+	RunState.traps = [-1, -1, -1]
+
 	RunState.relics = []
 
+	RunState.toolbox_tool_seq = 0
 
+	RunState.gain_relic(6068)
+
+	check(RunState.traps[0] > 0,
+
+			"R745 工具箱：获得即给一个随机工具（填进槽 1 = %d）" % RunState.traps[0])
+
+	check(RunState.traps[0] != 7007,
+
+			"R745 工具箱：随机池不含烤肉 7007（rest_only 不进随机池）")
+
+	RunState.traps = [7001, 7002, 7003]
+
+	var r744_pending_before := RunState.pending_rewards.size()
+
+	RunState.grant_random_tool("probe")
+
+	check(RunState.pending_rewards.size() == r744_pending_before + 1,
+
+			"R745 工具箱：满栏（3/3）时不硬塞，转进待领奖励队列")
+
+	RunState.traps = r744_sv_traps
+
+	RunState.relics = r744_sv_relics
+
+	RunState.toolbox_tool_seq = r744_sv_seq
+
+	RunState.pending_rewards = r744_sv_pending
+
+	# ③ 换层发放：走源码锁 —— `advance_layer()` 会重置整层状态，测试里真跑会把本用例
+	#    之后的东西全部打乱；这里只钉住「换层那一段确实发了」。
+
+	var r744_rs_src := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+
+	check_src(r744_rs_src.find('grant_random_tool("layer")') >= 0
+
+			and r744_rs_src.find("if relics.has(TOOLBOX_RELIC_ID):") >= 0,
+
+			"R745 源码：换层（advance_layer）给持有工具箱的玩家再发一个工具")
+
+	# ④ 野性图腾：使用后**本场**所有己方盟友 +2 力量（持续 buff：不叠加 / 不写回卡面 /
+	#    用掉之后才上场的人也能吃到 / 敌方不吃）。
+
+	var r744_e := _new_engine([], 30, 30)
+
+	var r744_proto: CardData = CardData.from_dict(r352_repo.get_card(8003).to_dict())
+
+	var r744_base: int = r744_proto.power
+
+	var r744_p := r744_e.state.place(r744_proto, Vector2i(1, 4), GameEngine.SIDE_SELF)
+
+	check(r744_p.effective_power() == r744_base,
+
+			"R745 野性图腾：用之前不加力量（%d）" % r744_p.effective_power())
+
+	check(r744_e.use_tool(7008), "R745 野性图腾：轻点即用（use_tool 结算成功）")
+
+	check(r744_p.effective_power() == r744_base + GameEngine.WILD_TOTEM_ATK,
+
+			"R745 野性图腾：场上盟友 +%d 力量（%d → %d）"
+
+			% [GameEngine.WILD_TOTEM_ATK, r744_base, r744_p.effective_power()])
+
+	check(r744_p.card.power == r744_base,
+
+			"R745 野性图腾：卡面基础力量不被改写（仍是 %d）" % r744_p.card.power)
+
+	r744_e.use_tool(7008)
+
+	check(r744_p.effective_power() == r744_base + GameEngine.WILD_TOTEM_ATK,
+
+			"R745 野性图腾：用两次仍只 +%d（赋值不累加）" % GameEngine.WILD_TOTEM_ATK)
+
+	var r744_p2 := r744_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+
+			Vector2i(2, 4), GameEngine.SIDE_SELF)
+
+	r744_e._relic_on_enter_buffs(r744_p2)
+
+	check(r744_p2.effective_power() == r744_base + GameEngine.WILD_TOTEM_ATK,
+
+			"R745 野性图腾：用掉之后**才上场**的盟友同样 +%d（%d）"
+
+			% [GameEngine.WILD_TOTEM_ATK, r744_p2.effective_power()])
+
+	var r744_p3 := r744_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+
+			Vector2i(3, 4), GameEngine.SIDE_SELF)
+
+	r744_e._sync_totem()
+
+	check(r744_p3.effective_power() == r744_base + GameEngine.WILD_TOTEM_ATK,
+
+			"R745 野性图腾：回合开始的同步口也会补齐（%d）" % r744_p3.effective_power())
+
+	var r744_foe := r744_e.state.place(CardData.from_dict(r352_repo.get_card(8003).to_dict()),
+
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	r744_e._sync_totem()
+
+	check(r744_foe.effective_power() == r744_base,
+
+			"R745 野性图腾：只加己方盟友（敌方不变，%d）" % r744_foe.effective_power())
 
 	# ---- ⑧ 源码守卫：解锁动画 / 快照唯一口 ----
 

@@ -246,6 +246,10 @@
     "6067": {
       "name": "Memory Potion",
       "desc": "At the start of each battle, play a random Effect card directly from your Draw Pile, bypassing your Hand and paying no Cost. If your Draw Pile has no Effect cards, skip this effect."
+    },
+    "6068": {
+      "name": "Toolbox",
+      "desc": "Gain a random tool immediately. At the start of every new layer, gain another random tool."
     }
   },
   "classes": {

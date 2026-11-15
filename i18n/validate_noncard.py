@@ -36,7 +36,7 @@ def quoted(text):
 source_by_id = {str(r["id"]): r for r in SOURCE}
 expected_ids = set(source_by_id)
 instant_ids = {rid for rid, r in source_by_id.items() if r["kind"] == "即时"}
-check(len(SOURCE) == 61 and len(expected_ids) == 61, "真源为 61 件不重复道具")
+check(len(SOURCE) == 62 and len(expected_ids) == 62, "真源为 62 件不重复道具")
 check(len(instant_ids) == 12, "kind=即时 共 12 件")
 check(set(ZH["relics"]) == expected_ids, "canonical 道具 ID 完整覆盖")
 check(set(EN["relics"]) == expected_ids, "英文道具 ID 完整覆盖")
@@ -149,4 +149,4 @@ if errors:
     for error in errors:
         print("  -", error)
     sys.exit(1)
-print("\nNONCARD I18N OK: 61 relics + 3 classes | 12 instant markers | numeric/term locks passed")
+print("\nNONCARD I18N OK: 62 relics + 3 classes | 12 instant markers | numeric/term locks passed")

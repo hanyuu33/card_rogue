@@ -37,6 +37,10 @@ func _ready() -> void:
 		RunState.current_layer = GameLayers.LAYER_TWO
 		RunState.relic_choice = []
 		title_label.text = "选择你的%s起始道具（三选一）" % GameLayers.layer_name(RunState.current_layer)
+	# -- --toolbox：演示用 —— 候选里摆出「工具箱」6068（截图验证道具浮窗与图标）。
+	# 出图：`relic_pick.tscn -- --screenshot --toolbox`
+	if "--toolbox" in OS.get_cmdline_user_args():
+		RunState.relic_choice = [6068, 6030, 6047]
 	if RunState.relic_choice.is_empty():
 		# 直接打开（调试/截图）：临时给一组候选（本层起始道具池的前 3 个）
 		var pool: Array[int] = RelicRepo.load_json().start_ids_for_layer(RunState.current_layer)

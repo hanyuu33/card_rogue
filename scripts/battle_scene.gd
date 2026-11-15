@@ -1101,6 +1101,10 @@ func _ready() -> void:
 				# R743 出图：工具栏里放一份烤肉（核验程序化图标与「使用型」观感）。
 				# 出图：`battle.tscn -- --screenshot --bbqtool --level 0 --shotframe 200`
 				RunState.traps = [7007, 7005, 7006]
+			elif "--totemtool" in args:
+				# R745 出图：工具栏里放野性图腾（核验图标 + 用掉之后的力量来源条）。
+				# 出图：`battle.tscn -- --screenshot --totemtool --level 0 --shotframe 200`
+				RunState.traps = [7008, 7005, 7006]
 			else:
 				RunState.traps = [7001, 7005, 7006]
 			RunState.run_active = true   # 栏位绘制的前置：非 run 态整条工具栏不画

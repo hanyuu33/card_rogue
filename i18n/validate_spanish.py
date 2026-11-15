@@ -190,12 +190,12 @@ check(set(GLOSSARY_ES) == required_trait_terms,
 for trait in sorted(required_trait_terms):
     check_text("glossary_es." + trait, trait, GLOSSARY_ES.get(trait))
 
-# 道具与角色：61 件道具（R743：烤肉 6011 已改成工具 7007）、3 个角色；
+# 道具与角色：62 件道具（R743 烤肉改成工具 7007、R745 加回工具箱 6068）、3 个角色；
 # 即时效果只标获得时机，不译成消耗。
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
-check(len(NONCARD_ES["relics"]) == 61 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 61 件道具 + 3 个角色")
+check(len(NONCARD_ES["relics"]) == 62 and len(NONCARD_ES["classes"]) == 3,
+      "noncard 为 62 件道具 + 3 个角色")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})
@@ -370,5 +370,5 @@ if errors:
         print("  -", error)
     sys.exit(1)
 print("SPANISH I18N OK: %d checks" % checks)
-print("  cards=319 | relics=61 | classes=3 | traps=%d" % len(raw_traps))
+print("  cards=319 | relics=62 | classes=3 | traps=%d" % len(raw_traps))
 print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=156 | interface=794 | l10n=56")

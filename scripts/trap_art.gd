@@ -19,6 +19,7 @@ static func color_of(id: int) -> Color:
 		7005: return Color(0.92, 0.36, 0.44)   # 小血瓶 · 血红
 		7006: return Color(0.36, 0.62, 0.95)   # 法力药剂 · 费用蓝
 		7007: return Color(0.88, 0.53, 0.24)   # 烤肉 · 焦糖橙
+		7008: return Color(0.76, 0.55, 0.30)   # 野性图腾 · 木赭
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -80,6 +81,7 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7005: _potion(ci, c, s, ink, false)
 		7006: _potion(ci, c, s, ink, true)
 		7007: _meat(ci, c, s, ink)
+		7008: _totem(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
 
 
@@ -145,6 +147,31 @@ static func _meat(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 	ci.draw_circle(c + Vector2(-s * 0.07, -s * 0.06), s * 0.28, col)
 	# 高光（一点暖白，给出「烤出油光」的质感）
 	ci.draw_circle(c + Vector2(-s * 0.16, -s * 0.16), s * 0.075, col.lightened(0.38))
+
+
+static func _totem(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R745：野性图腾（使用型）—— 一根立着的图腾柱：柱身 + 顶部两片张开的羽毛 + 一对兽眼。
+	## 与药瓶 / 烤肉同一套语汇（画「是什么东西」）。小尺寸下靠「竖条 + 顶部张开的翼形」
+	## 读成图腾柱；柱身走**描边**、羽毛与基座走填充，才有层次，不然缩到 40px 是个黑方块。
+	var w := maxf(1.5, s * 0.032)
+	var dark := Color(0.10, 0.09, 0.11, 0.78)
+	# 顶部羽毛：左右各一片斜出去的三角
+	ci.draw_colored_polygon(PackedVector2Array([
+		c + Vector2(-s * 0.07, -s * 0.31), c + Vector2(-s * 0.37, -s * 0.15),
+		c + Vector2(-s * 0.09, -s * 0.13)]), col)
+	ci.draw_colored_polygon(PackedVector2Array([
+		c + Vector2(s * 0.07, -s * 0.31), c + Vector2(s * 0.37, -s * 0.15),
+		c + Vector2(s * 0.09, -s * 0.13)]), col)
+	# 柱身（描边，露出里面的「雕刻」）
+	ci.draw_rect(Rect2(c.x - s * 0.11, c.y - s * 0.30, s * 0.22, s * 0.57), col, false, w)
+	# 基座（略宽，填充满）
+	ci.draw_rect(Rect2(c.x - s * 0.17, c.y + s * 0.22, s * 0.34, s * 0.09), col, true)
+	# 兽眼
+	ci.draw_circle(c + Vector2(-s * 0.048, -s * 0.02), s * 0.030, col)
+	ci.draw_circle(c + Vector2(s * 0.048, -s * 0.02), s * 0.030, col)
+	# 刻线（柱身横向纹路）
+	ci.draw_line(c + Vector2(-s * 0.11, s * 0.10), c + Vector2(s * 0.11, s * 0.10),
+			dark, maxf(1.2, w * 0.8), true)
 
 
 static func _potion(ci: CanvasItem, c: Vector2, s: float, col: Color, mana: bool) -> void:
