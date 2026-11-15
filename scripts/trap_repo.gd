@@ -4,6 +4,15 @@ extends RefCounted
 
 var _traps := {}  # id -> TrapData
 
+## R746：同 `RelicRepo.shared()` —— 绘制路径不许反复读盘 + 解析 traps.json。
+static var _shared = null          # 无类型注解：写成自身 class_name 会触发解析器自引用错误
+
+
+static func shared() -> TrapRepo:
+	if _shared == null:
+		_shared = load_json()
+	return _shared
+
 
 static func load_json(path: String = "res://traps.json") -> TrapRepo:
 	var repo := TrapRepo.new()

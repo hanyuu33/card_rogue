@@ -4,6 +4,17 @@ extends RefCounted
 
 var _relics := {}  # id -> RelicData
 
+## R746：静态数据的**唯一共享实例**。`relics.json` 运行期不变，而地图每 90ms 重绘一次，
+## 每次重绘都拿这份数据 —— 每次 `load_json()` 都是一次读盘 + JSON 解析 + 61 个 RelicData
+## 构造（模拟器上实测占单帧绘制耗时的 25%）。绘制路径一律走这里。
+static var _shared = null          # 无类型注解：写成自身 class_name 会触发解析器自引用错误
+
+
+static func shared() -> RelicRepo:
+	if _shared == null:
+		_shared = load_json()
+	return _shared
+
 
 static func load_json(path: String = "res://relics.json") -> RelicRepo:
 	var repo := RelicRepo.new()

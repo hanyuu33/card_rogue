@@ -679,7 +679,7 @@ func _gui_input(event: InputEvent) -> void:
 				else:
 					_records_scroll = maxf(0.0, _records_scroll + d / 24.0)
 				_panel_dragged = true
-			queue_redraw()
+			queue_redraw()   # R746：只有真的滚动了才重绘 —— 原来鼠标每动一下都全量重绘
 			return
 		var c := _cell_at(event.position)
 		var nid := int(c.get("id", -1))
@@ -1941,7 +1941,7 @@ func _draw_relics() -> void:
 	if RunState.relics.size() > int((size.y - 34 - RELIC_BADGE_Y) / RELIC_STEP_Y) * 2:
 		# R630：同底注口径，-12 贴在窗口/纸面下边，收到 -36。
 		draw_string(_font, Vector2(size.x - 230, size.y - 36), GameI18n.ui("map", "MAP_RELIC_SCROLL_HINT", "滚轮浏览道具"), HORIZONTAL_ALIGNMENT_CENTER, 208, 12, UiTheme.PAGE_INK)
-	var repo := RelicRepo.load_json()
+	var repo := RelicRepo.shared()
 	var hovered := -1
 	for i in RunState.relics.size():
 		var rel := repo.get_relic(RunState.relics[i])
@@ -1997,7 +1997,7 @@ func _draw_relic_tip(repo: RelicRepo, rel: RelicData, note: String) -> void:
 
 
 func _relic_panel_rows() -> Array:
-	var repo := RelicRepo.load_json()
+	var repo := RelicRepo.shared()
 	var rows: Array = []
 	for id in RunState.relics:
 		var rel := repo.get_relic(int(id))
@@ -2069,6 +2069,7 @@ func _draw_trap_slots() -> void:
 	draw_rect(head, Color(0.03, 0.04, 0.06, 0.60), true)
 	draw_string(_font, head.position + Vector2(0, 14), "工具",
 			HORIZONTAL_ALIGNMENT_CENTER, head.size.x, 13, Color("e4bd62"))
+	var trap_repo := TrapRepo.shared()   # R746：循环外取一次，别每槽解析一遍
 	for i in RunState.TRAP_SLOTS:
 		var r := Rect2(TRAP_BADGE_X, TRAP_BADGE_Y + float(i) * (TRAP_BADGE_SIZE + TRAP_BADGE_GAP),
 				TRAP_BADGE_SIZE, TRAP_BADGE_SIZE)
@@ -2079,7 +2080,7 @@ func _draw_trap_slots() -> void:
 			var col := TrapArt.color_of(id)
 			draw_rect(r, col, false, 2.0)
 			TrapArt.draw(self, r.grow(-5.0), id, false)
-			var td: TrapData = TrapRepo.load_json().get_trap(id)
+			var td: TrapData = trap_repo.get_trap(id)
 			var nm := td.trap_name if td != null else ""
 			var tx := r.end.x + 6.0
 			draw_rect(Rect2(tx, r.position.y + 4.0, 120.0, TRAP_BADGE_SIZE - 8.0),
