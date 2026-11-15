@@ -482,7 +482,9 @@ func _setup_shop() -> void:
 	for i in 3:
 		_row2.append({"kind": "enchant", "ench": pool[i],
 				"id": str(pool[i]["id"]), "sold": false})
-	var tpool: Array = TrapRepo.load_json().all_traps()
+	# R743：`random_traps()` —— 烤肉 7007 是 `rest_only`（只能休息处烤），
+	# 用 `all_traps()` 会把它摆上货架，price 0 = 白送一份。
+	var tpool: Array = TrapRepo.load_json().random_traps()
 	RunState.shuffle_rng(tpool)
 	for j in mini(TRAP_SHOP_COUNT, tpool.size()):
 		var t: TrapData = tpool[j]

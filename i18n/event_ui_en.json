@@ -9,8 +9,9 @@
     "rest": {
       "REST_HEAL": "Rest here (restore %d Health)",
       "ADD_FIREWOOD": "Add firewood (Remove 1 card from your Deck)",
-      "BBQ_AVAILABLE": "Roast meat (gain \"Barbecue\" and save it for the Boss battle)",
-      "BBQ_OWNED_DISABLED": "Already have \"Barbecue\" (automatically consumed when entering a Boss battle)",
+      "BBQ_AVAILABLE": "Roast meat (gain the \"Barbecue\" tool; it takes one tool slot)",
+      "BBQ_OWNED_DISABLED": "Already have \"Barbecue\" (a tool: tap it in battle to eat)",
+"BBQ_NO_SLOT_DISABLED": "Tool bar is full—free up a slot before roasting meat",
       "LEAVE_WITHOUT_BBQ": "Leave (don't roast meat)"
     },
     "whisper": {
@@ -232,7 +233,7 @@
       "REST_BANDAGE_HEAL_RESULT": "Styptic Bandage: restore %d Health",
       "REST_HEAL_RESULT": "The campfire's warmth fills your heart... restore %d Health (current %d / %d)%s",
       "REST_ENCHANT_MASTER_SUFFIX": "; the Enchantment Master has enchanted \"%s\" with \"%s\"",
-      "REST_BBQ_RESULT": "\"Barbecue\" has been added to your Relic inventory—it is automatically consumed when you enter a Boss battle, restoring 25% of your Max Health."
+      "REST_BBQ_RESULT": "\"Barbecue\" has been added to your tool slots—tap it in battle to restore 25% of your Max Health."
     },
     "arcane": {
       "ARCANE_CHARM_GAINED": "\"Arcane Charm\" has been added to your Relic inventory: %s (this spring grants only one reward)",

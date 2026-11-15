@@ -9,8 +9,9 @@
     "rest": {
       "REST_HEAL": "Descansar aquí (recuperar %d Vida)",
       "ADD_FIREWOOD": "Añadir leña (eliminar 1 carta del mazo)",
-      "BBQ_AVAILABLE": "Asar carne (obtener «Carne asada» y guardarla para el combate contra el Jefe)",
-      "BBQ_OWNED_DISABLED": "Ya tienes «Carne asada» (se consume automáticamente al entrar en un combate contra el Jefe)",
+      "BBQ_AVAILABLE": "Asar carne (obtener la herramienta «Carne asada»; ocupa una ranura de herramienta)",
+      "BBQ_OWNED_DISABLED": "Ya tienes «Carne asada» (herramienta: tócala en combate para usarla)",
+"BBQ_NO_SLOT_DISABLED": "La barra de herramientas está llena: libera una ranura antes de asar carne",
       "LEAVE_WITHOUT_BBQ": "Salir (sin asar carne)"
     },
     "whisper": {
@@ -232,7 +233,7 @@
       "REST_BANDAGE_HEAL_RESULT": "Venda hemostática: recupera %d Vida",
       "REST_HEAL_RESULT": "La calidez de la hoguera te llena el corazón... recuperas %d Vida (actual: %d / %d)%s",
       "REST_ENCHANT_MASTER_SUFFIX": "; el Maestro de encantamientos ha encantado «%s» con «%s»",
-      "REST_BBQ_RESULT": "«Carne asada» se ha añadido a tu inventario de Reliquias; se consume automáticamente al entrar en un combate contra el Jefe y recupera 25% de tu Vida máxima."
+      "REST_BBQ_RESULT": "«Carne asada» se ha añadido a tus ranuras de herramienta; tócala en combate para recuperar 25% de tu Vida máxima."
     },
     "arcane": {
       "ARCANE_CHARM_GAINED": "«Amuleto arcano» se ha añadido a tu inventario de Reliquias: %s (este manantial solo concede una recompensa)",

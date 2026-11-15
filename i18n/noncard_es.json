@@ -39,10 +39,6 @@
       "name": "Susurro del pato",
       "desc": "Mientras la tengas, no puedes elegir manualmente una ruta en el mapa y avanzas aleatoriamente hasta entrar en una sala sin explorar. Al comienzo de cada uno de tus turnos, obtén aleatoriamente una de estas mejoras para el turno: +1 de Coste / los ataques de las unidades aliadas y tus Habilidades infligen +1 de daño / roba 1 carta adicional."
     },
-    "6011": {
-      "name": "Carne asada",
-      "desc": "Carne asada en una zona de descanso. Se consume automáticamente al entrar en un combate contra un Jefe: recupera el 25% de tu Vida máxima, redondeando hacia arriba y sin superar tu Vida máxima. Mientras la tengas, no puedes asar otra en una zona de descanso."
-    },
     "6012": {
       "name": "Un saco de dolor",
       "desc": "Después de que tu Vida reciba daño por primera vez cada turno, roba 1 carta y tus Habilidades infligen +1 de daño durante el resto del turno."

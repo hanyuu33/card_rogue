@@ -26,6 +26,10 @@
   "7006": {
    "name": "Mana Potion",
    "desc": "Tap it to use it, no dragging needed. Instantly restores 2 Cost; the tool is then used up."
+  },
+  "7007": {
+   "name": "Barbecue",
+   "desc": "Tap it to use it, no dragging needed. Instantly restores 25% of your Max Health (rounded up, capped at your Max Health); the tool is then used up. It can only be cooked at a Rest Stop."
   }
  }
 }

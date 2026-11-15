@@ -906,7 +906,7 @@ var _lose_elapsed := 0         # R551：败北那一刻的用时（finish 会删
 ## 为什么：`_load_entry_level()` → `start_game()` 会跑第 1 个我方回合，
 ## 而 lucky 7 的跨战斗计数就在那一步 +1。检查点若在这之后写盘，
 ## 「继续游戏」重打这一场就等于从「已 +1」的计数起步 → 每续一次多算一格（用户报的计数错乱）。
-## 顺带把开场就改动的其它局状态（烤肉消耗 / 回血 / 随机源步进）一起回滚成开打前的样子。
+## 顺带把开场就改动的其它局状态（回血 / 随机源步进）一起回滚成开打前的样子。
 var _pre_battle_snap: Dictionary = {}
 var _reward_panel: RewardPanel = null   # R119：奖励悬浮窗（掉落道具 / 卡牌奖励都在这里处理）
 
@@ -1093,6 +1093,10 @@ func _ready() -> void:
 			#    Array，赋值会直接报「Invalid assignment」。
 			if "--toolfull" in args:
 				RunState.traps = [7001, 7002, 7004]
+			elif "--bbqtool" in args:
+				# R743 出图：工具栏里放一份烤肉（核验程序化图标与「使用型」观感）。
+				# 出图：`battle.tscn -- --screenshot --bbqtool --level 0 --shotframe 200`
+				RunState.traps = [7007, 7005, 7006]
 			else:
 				RunState.traps = [7001, 7005, 7006]
 			RunState.run_active = true   # 栏位绘制的前置：非 run 态整条工具栏不画
@@ -4633,14 +4637,6 @@ func load_level(lvl: Dictionary) -> void:
 			else GameLevels.deck_for(str(lvl["deck_key"]), repo)
 	# 玩家生命来自肉鸽 run 状态（最大/当前，跨战斗保留）；关卡里的 player_hp 仅作兜底
 	var p_hp: int = RunState.hp if RunState.hp > 0 else int(lvl["player_hp"])
-	# 道具「烤肉」（6011）：进入 Boss 战时自动消耗 → 回复 25% 最大生命。
-	# 必须在创建战斗状态之前结算，这样开局血量就是回复后的值。
-	# -1 = 本次未消耗（非 Boss 战 / 没带烤肉）；>= 0 = 已消耗，值为实际回复量。
-	var bbq_heal := -1
-	if int(lvl.get("tier", -1)) == GameLevels.TIER_BOSS:
-		bbq_heal = RunState.consume_barbecue()
-		if bbq_heal >= 0:
-			p_hp = RunState.hp
 	# 战斗种子 = 本局随机链（run_rng）的下一环 —— 战斗内全部随机（含 AI）由它复现。
 	var battle_seed: int = RunState.run_rng.randi() if RunState.run_active else 0
 	var brng := RandomNumberGenerator.new()
@@ -4727,12 +4723,6 @@ func load_level(lvl: Dictionary) -> void:
 	# 它的飘字/状态必须在 clear 之前进入 —— 否则会被下面这批 clear 抹掉）
 	_whisper_txt = ""
 	_floaters.clear()
-	# 烤肉已消耗：开场飘字（血量在创建战斗状态之前就已回复完毕）
-	if bbq_heal >= 0:
-		sfx.play("heal")
-		_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H - 14),
-				"text": "烤肉 +%d HP" % bbq_heal, "col": Color("e08a2e"),
-				"start": _now(), "dur": 2400})
 	# 第二层起始道具的开场结算（冰淇淋与汽水 -3 生命 / 生蛋鸭放鸭蛋）：
 	# 必须在 start_game 之前 —— 这样开局血量与场上单位的初始状态就是结算后的。
 	engine.apply_battle_start_relics(repo)
@@ -4788,9 +4778,6 @@ func load_level(lvl: Dictionary) -> void:
 		if lvl.has("tier"):
 			tier_prefix = "【%s】" % GameLevels.tier_name(int(lvl["tier"]))
 		status_text = GameI18n.ui("battle", "BATTLE_BATTLE_START", "%s%s 开始！") % [tier_prefix, shown_level]
-	if bbq_heal >= 0:
-		# 状态栏很窄（310px），只放简短标记；详细提示见开场飘字。
-		status_text += "　｜　烤肉 +%d HP" % bbq_heal
 	var intro := str(lvl.get("intro", ""))
 	if intro != "":
 		# 关卡开场台词（如「哈气骑士团」的「我要闹了」）：盖过回合横幅，停留更久
@@ -9957,7 +9944,8 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 
 
 func _use_tool_slot(slot: int, td: TrapData) -> void:
-	## R690：使用型工具（小血瓶 / 法力药剂）的界面唯一口。结算在 engine.use_tool，
+	## R690：使用型工具（小血瓶 / 法力药剂 / R743 烤肉 7007）的界面唯一口。
+	## 结算在 engine.use_tool，
 	## 这里只管「能不能点」「点完摘槽」「说什么」。
 	## 回血满了也允许使用（会把栏位浪费掉，但那是玩家的选择，不替他拦）；
 	## 敌方回合不允许 —— 与放置型工具同一条闸门。

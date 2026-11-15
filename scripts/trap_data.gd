@@ -22,6 +22,9 @@ var heal_pct := 0
 ## R690：使用型工具回复的费用点数。>0 → 不放置，点一下直接用。
 var energy := 0
 var icon := ""
+## R743：**只在休息处烤制**才能拿到（烤肉）。不进战斗掉落池、也不进商店货架 ——
+## 这两处的池子走 `TrapRepo.random_traps()`，它按这个标记筛。
+var rest_only := false
 
 
 ## R690：「工具」分两类 —— 放置型（陷阱，拖到战场空格）与使用型（药水，轻点即用）。
@@ -43,4 +46,5 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.heal_pct = int(d.get("heal_pct", 0))
 	t.energy = int(d.get("energy", 0))
 	t.icon = str(d.get("icon", ""))
+	t.rest_only = bool(d.get("rest_only", false))
 	return t

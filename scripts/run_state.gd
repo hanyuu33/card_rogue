@@ -380,7 +380,11 @@ const WHISPER_RELIC_ID := 6010   # 鸭之低语（事件节点获得）
 ## 鹰哨（R128 奖励道具）：地图上**所有房间的门全部可见**（含没走过的房间）。
 ## 消费方只有 map_scene（决定是否画未访问房间的门），引擎侧不参与。
 const EAGLE_WHISTLE_RELIC_ID := 6026
-const BARBECUE_RELIC_ID := 6011  # 烤肉（休息处获得，进入 Boss 战时消耗）
+## R743（用户口径「烤肉从自动使用的道具，改成主动使用的工具（需要有栏位才能获取）」）：
+## 烤肉现在是 **traps.json 的 7007**（使用型工具，heal_pct 25），不再是道具 6011。
+## 获取口只有一个：休息处烤制（`take_barbecue()`）—— 工具栏是**定长 3 槽**，
+## 所以「带一份烤肉在身上」= 占掉一个栏位；满栏就烤不了，得先用掉 / 丢掉别的工具。
+const BARBECUE_TOOL_ID := 7007
 const RICE_RELIC_ID := 6012      # 一袋米抗几楼（鸭之凝视事件获得）
 const STACK_DUCK_RELIC_ID := 6013  # 叠加态的鸭（复活道具，奖励池）
 const PEAR_RELIC_ID := 6019      # 鸭梨（鸭梨山大事件获得；战斗内每次 HP 受伤 → 最大生命 +1）
@@ -433,7 +437,8 @@ const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大�
 # R224 新道具：苹果（6027，奖励池）—— 获得时**立即 +7 最大生命并回复满生命值**。
 # R445（用户口径）：14 → 7，占卜室 / 苹果与医生两条来源共用这一个常量。
 # 全局 HP 规则「除到达新的一层外不能回复 HP」下，它是主动道具口径的回血手段
-# （与烤肉 / 黄桃罐头 / 自愈同属「道具·卡牌主动回血」，被动自动回血已全部移除）。
+# （R743：烤肉已改成工具，剩下的主动回血手段是黄桃罐头 / 自愈这类道具与卡牌；
+#  被动自动回血已全部移除）。
 const APPLE_RELIC_ID := 6027
 const APPLE_MAX_HP := 7
 # R446 烟斗（6055，事件「雪豹出现」选项 1）—— **一次只给一场战斗**的首回合加成。
@@ -1455,7 +1460,9 @@ static func roll_battle_tool_drop() -> int:
 	tool_roll_seq += 1
 	if rng.randf() >= TOOL_DROP_CHANCE:
 		return -1
-	var pool: Array[TrapData] = TrapRepo.load_json().all_traps()
+	# R743：`random_traps()` —— 烤肉 7007 是 `rest_only`，只能从休息处烤出来，
+	# 不能靠打怪掉落刷出来（否则「篝火专属」的名头与实际不符）。
+	var pool: Array[TrapData] = TrapRepo.load_json().random_traps()
 	if pool.is_empty():
 		return -1
 	return int(pool[rng.randi() % pool.size()].id)
@@ -1699,7 +1706,8 @@ static func spend_relic(id: int) -> bool:
 	##   * 不锈钢盆（6041）计数归零 / 商店抵账 → 灰；
 	##   * 洞窟绳（6048）逃跑用掉 → 灰。
 	## 与 `lose_relic()` 的区别：**不移出道具栏**，只在 `spent_relics` 里记一笔。
-	## 烤肉（6011）**不走这里** —— 一次性食物，用掉就该从栏里消失（用户口径）。
+	## R743：烤肉已改成**工具**（7007），根本不在这套「道具」体系里 —— 工具的消耗走
+	## `RunState.consume_trap(slot)`，用掉即摘槽，与「灰在栏里」互不相干。
 	if not relics.has(id) or spent_relics.has(id):
 		return false
 	if id == BASIN_RELIC_ID:
@@ -1736,7 +1744,7 @@ static func can_use_cave_rope(battle_kind: String) -> bool:
 
 
 static func lose_relic(id: int) -> bool:
-	## 失去道具（R311）：烤肉 6011 / 不锈钢盆 6041 这类「用完就走」的统一出口。
+	## 失去道具（R311）：不锈钢盆 6041 / 洞窟绳 6048 这类「用完就走」的统一出口。
 	## 返回是否真的失去了（本来就没有 → false）。
 	## ⚠️ 不锈钢盆归零要顺手清 `basin_charge`：否则以后再拿到同 id 时，
 	##    `gain_relic` 里那条「已持有就 return」会带着旧计数进来（看似给了 0 点）。
@@ -1744,7 +1752,7 @@ static func lose_relic(id: int) -> bool:
 		return false
 	if id == BASIN_RELIC_ID:
 		basin_charge = 0
-	# R367：真正「从栏里消失」的路径（烤肉这类一次性道具）也要把灰显标记清掉，
+	# R367：真正「从栏里消失」的路径也要把灰显标记清掉，
 	# 免得以后再拿到同 id 时带着「已耗尽」进来。
 	spent_relics.erase(id)
 	relics.erase(id)
@@ -2438,14 +2446,24 @@ static func relic_state_note(id: int) -> String:
 	return ""
 
 
-static func consume_barbecue() -> int:
-	## 道具「烤肉」（6011）：进入 Boss 战时自动消耗 → 回复 25% 最大生命
-	## （向上取整，不超过上限）。返回实际回复量；未持有返回 -1。
-	## 消耗后道具离开道具栏，因此休息处可以再次烤制。
-	if not relics.has(BARBECUE_RELIC_ID):
-		return -1
-	relics.erase(BARBECUE_RELIC_ID)
-	return heal(ceili(max_hp * 0.25))
+static func has_barbecue_tool() -> bool:
+	## R743：工具栏里有没有烤肉 —— 休息处判「已持有」的唯一口（界面别自己数槽位）。
+	return traps.has(BARBECUE_TOOL_ID)
+
+
+static func can_take_barbecue() -> bool:
+	## R743（用户口径「需要有栏位才能获取」）：休息处现在能不能烤：
+	##   ① 已经有一份烤肉 → 不能烤第二份（原口径「持有时无法再次烤制」保留）；
+	##   ② 工具栏 3/3 满 → 不能烤（判空位只走 `trap_free_slots()`，别在这里另数一遍）。
+	return not has_barbecue_tool() and trap_free_slots() > 0
+
+
+static func take_barbecue() -> bool:
+	## R743：休息处烤肉的**唯一获取口** —— 填进第一个空槽。满栏 / 已持有 → false。
+	## ⚠️ 不写 `relics`：工具与道具是两套账（见 `traps` 上方的注释），混进去会串高亮。
+	if not can_take_barbecue():
+		return false
+	return gain_trap(BARBECUE_TOOL_ID)
 
 
 static func remove_block_reason(index: int) -> String:

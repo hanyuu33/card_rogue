@@ -9915,63 +9915,71 @@ func _init() -> void:
 
 
 
-	# ---- 道具「烤肉」（6011）：休息处事件道具，进入 Boss 战时消耗回血 ----
+	# ---- 工具「烤肉」（7007）：R743 从「自动使用的道具」改成「主动使用的工具」 ----
 
-	check(srepo.get_relic(6011) != null and srepo.get_relic(6011).relic_name == "烤肉"
+	var bbq_tool: TrapData = TrapRepo.load_json().get_trap(RunState.BARBECUE_TOOL_ID)
 
-			and srepo.get_relic(6011).source == RelicData.SRC_EVENT,
+	check(bbq_tool != null and bbq_tool.trap_name == "烤肉"
 
-			"烤肉：事件道具已登记到 relics.json（来源=事件/紫）")
+			and bbq_tool.heal_pct == 25 and bbq_tool.is_usable(),
 
-	check(srepo.event_ids().has(6011) and not srepo.initial_ids().has(6011)
+			"烤肉：已是使用型工具（轻点即用，回复 25% 最大生命）")
 
-			and not srepo.reward_ids().has(6011),
+	check(bbq_tool != null and bbq_tool.rest_only,
 
-			"烤肉：只在事件池（起点三选一与奖励掉落都拿不到）")
+			"烤肉：rest_only —— 只能从休息处烤出来，不进掉落 / 商店池")
 
-	var saved_r3: Array[int] = RunState.relics.duplicate()
+	check(srepo.get_relic(6011) == null and not srepo.event_ids().has(6011),
 
-	RunState.relics.clear()
+			"烤肉：道具 6011 已下架（relics.json 与事件道具池都不再有它）")
 
-	RunState.reset(40)
+	var saved_bbq_traps: Array[int] = RunState.traps.duplicate()
 
-	RunState.take_damage(20)                      # 40 → 20
+	RunState.traps = [-1, -1, -1]
 
-	check(RunState.consume_barbecue() == -1, "烤肉：未持有时无法消耗（返回 -1）")
+	check(RunState.can_take_barbecue() and RunState.take_barbecue(),
 
-	RunState.gain_relic(6011)
+			"烤肉：工具栏有空位 → 烤好并进栏")
 
-	RunState.gain_relic(6011)                     # 持有时重复获得
+	check(RunState.has_barbecue_tool() and not RunState.can_take_barbecue(),
 
-	check(RunState.relics.count(6011) == 1, "烤肉：持有时重复获得不会叠加（只登记一次）")
+			"烤肉：已持有一份时不能再烤第二份（不叠加）")
 
-	check(RunState.has_relic(6011), "烤肉：已收进道具栏")
+	check(not RunState.take_barbecue(), "烤肉：重复烤制被拒（返回 false）")
 
-	var bbq_healed := RunState.consume_barbecue()
+	RunState.traps = [7001, 7002, 7003]
 
-	check(bbq_healed == 10 and RunState.hp == 30,
+	check(not RunState.can_take_barbecue() and not RunState.take_barbecue(),
 
-			"烤肉：Boss 战消耗回复 25%% 最大生命（40 的 25%% = 10，20 → 30，实际 +%d）" % bbq_healed)
+			"烤肉：工具栏 3/3 满时拿不到（用户口径「需要有栏位才能获取」）")
 
-	check(not RunState.has_relic(6011), "烤肉：消耗后离开道具栏（休息处可再次烤制）")
+	var bbq_pool_ok := true
 
-	RunState.gain_relic(6011)
+	for bbq_t: TrapData in TrapRepo.load_json().random_traps():
 
-	check(RunState.has_relic(6011), "烤肉：消耗后可再次获得")
+		if bbq_t.id == RunState.BARBECUE_TOOL_ID:
 
-	RunState.relics.clear()
+			bbq_pool_ok = false
 
-	RunState.relics.append(6011)
+	check(bbq_pool_ok, "烤肉：不在 random_traps()（战斗 10% 掉落与商店货架都刷不出它）")
 
-	RunState.reset(40)                            # 满血 40/40
+	var bbq_st := FieldState.new([], 40, 40, -1, "烤肉测试", false)
 
-	check(RunState.consume_barbecue() == 0 and not RunState.has_relic(6011)
+	bbq_st.max_hp_self = 40
 
-			and RunState.hp == 40,
+	bbq_st.hp_self = 20
 
-			"烤肉：满血进 Boss 战同样被消耗（回复 0，HP 不变）")
+	var bbq_eng := GameEngine.new(bbq_st)
 
-	RunState.relics = saved_r3
+	bbq_eng.ai_enabled = false
+
+	var bbq_used := bbq_eng.use_tool(RunState.BARBECUE_TOOL_ID)
+
+	check(bbq_used and bbq_st.hp_self == 30,
+
+			"烤肉：战斗里主动使用回复 25%% 最大生命（40 的 25%% = 10，20 → 30，实际 %d）" % bbq_st.hp_self)
+
+	RunState.traps = saved_bbq_traps
 
 	RunState.reset()
 
@@ -16419,15 +16427,17 @@ func _init() -> void:
 
 				"R147 喝泉水这条路：先过 `_arcane_taken()` 闸门、发完奖励再 `_claim_reward(bbq_btn)`")
 
-		# R224：休息处只剩「烤肉」一个选项（篝火回血移除）→ 不再有「先休息过」闸门；
+		# R224：休息处只剩「烤肉」一个选项（篝火回血移除）→ 不再有「先休息过」闸门。
 
-		# 改成守卫新口径：`_on_bbq` 仍带「已持有烤肉」闸门，且 `_rested` 旗标已彻底删除。
+		# R743：烤肉改成工具 → 闸门换成 `take_barbecue()`（「已持有 / 满栏」都在它里面判），
 
-		check(r147_bbq_body.find("if RunState.has_relic(RunState.BARBECUE_RELIC_ID):") >= 0
+		# `_rested` 旗标同样彻底删除。
+
+		check(r147_bbq_body.find("if not RunState.take_barbecue():") >= 0
 
 				and r147_src.find("var _rested") < 0,
 
-				"R224 休息处：只保留「已持有烤肉」闸门，_rested 旗标已移除")
+				"R224/R743 休息处：获取闸门只剩 `take_barbecue()`，_rested 旗标已移除")
 
 	# ==== R148/R155：Esc 主菜单 + 战场顶栏「记录偏左 / 卡组·地图右侧 / 回合结束 / 齿轮」 ====
 
@@ -40280,7 +40290,7 @@ func _init() -> void:
 
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.ROGUE, 8888)
 
-	RunState.relics = [6011, 6029]
+	RunState.relics = [6021, 6029]
 
 	RunState.deck_mods[0] = RunState.enchant_mod("damage")
 
@@ -43531,9 +43541,9 @@ func _init() -> void:
 
 	# ==== R577b：道具小图标（无背景 PNG）+ 界面分发 + 源码锁 ====
 
-	# ① 数据层：62 件道具逐件都有图标（素材断言一律用 ResourceLoader.exists，
-
-	#    导出包里 png 会被 .ctex 取代，FileAccess.file_exists 会假红）。
+	# ① 数据层：61 件道具逐件都有图标（R743：烤肉 6011 已改成工具 7007，道具少一件）。
+	#    素材断言一律用 ResourceLoader.exists（导出包里 png 会被 .ctex 取代，
+	#    FileAccess.file_exists 会假红）。
 
 	var icon577_repo := RelicRepo.load_json()
 
@@ -43559,9 +43569,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 62,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 61,
 
-			"R577b 保真锁：62 件道具的 id 都能在 relics.json 源文本里找到")
+			"R577b 保真锁：61 件道具的 id 都能在 relics.json 源文本里找到")
 
 	# ② 取图口：首末两件 + 信物回退
 
@@ -58426,7 +58436,7 @@ func _init() -> void:
 
 	# ================================================================
 
-	# R367（用户口径）：① 消耗型道具**灰在道具栏里**（不移出，烤肉除外）；
+	# R367（用户口径）：① 消耗型道具**灰在道具栏里**（不移出；R743 起烤肉已不是道具）；
 
 	#                    ② 每层打过的 Boss 也记录；③ 失败不许没记录。
 
@@ -58492,27 +58502,31 @@ func _init() -> void:
 
 
 
-	# ---- 烤肉「保持原样」：用掉就从栏里消失，不进 spent ----
+	# ---- R743：烤肉改成工具 → 与「道具」体系彻底分开（两套账不混） ----
 
-	RunState.relics = [RunState.BARBECUE_RELIC_ID]
+	RunState.relics = []
 
 	RunState.spent_relics.clear()
 
-	RunState.max_hp = 40
+	RunState.traps = [RunState.BARBECUE_TOOL_ID, -1, -1]
 
-	RunState.hp = 10
+	check(not RunState.relics.has(6011) and not RunState.has_relic(6011),
 
-	check(RunState.consume_barbecue() > 0,
+		"R743 工具：烤肉不在道具栏（`relics` 里没有 6011 这条）")
 
-		"R367 道具：烤肉照旧可以吃（回复 25% 最大生命）")
+	check(RunState.trap_at(0) == 7007 and RunState.has_barbecue_tool(),
 
-	check(not RunState.relics.has(RunState.BARBECUE_RELIC_ID),
+		"R743 工具：烤肉在工具栏第 1 槽")
 
-		"R367 道具：烤肉用掉后**从道具栏消失**（保持原样，不灰）")
+	check(RunState.consume_trap(0) == 7007 and not RunState.has_barbecue_tool(),
+
+		"R743 工具：吃掉 = 从栏位移除（不灰、不进 spent_relics）")
 
 	check(RunState.spent_relics.is_empty(),
 
-		"R367 道具：烤肉不进「已耗尽」名单")
+		"R743 工具：烤肉不进「已耗尽」名单")
+
+	RunState.traps = [-1, -1, -1]
 
 
 

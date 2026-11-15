@@ -26,6 +26,10 @@
   "7006": {
    "name": "Poción de Maná",
    "desc": "Tócala para usarla, sin arrastrarla. Recupera al instante 2 puntos de coste; después, la herramienta se consume."
+  },
+  "7007": {
+   "name": "Carne asada",
+   "desc": "Tócala para usarla, sin arrastrarla a una casilla del campo de batalla. Restaura al instante un 25% de tu Vida máxima (redondeando hacia arriba y sin superar el máximo); después la herramienta se consume. Solo puede asarse en un lugar de descanso."
   }
  }
 }

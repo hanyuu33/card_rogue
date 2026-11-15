@@ -593,6 +593,11 @@ static func apply(d: Dictionary) -> bool:
 	RunState.revenge_pending = bool(d.get("revenge_pending", false))
 	RunState.relics = _drop_unknown_relics(_int_array(d.get("relics", [])))
 	RunState.traps = _trap_slots(d.get("traps", []))   # R663：老档缺键 → 3 空槽
+	# R743：烤肉从道具（6011）改成工具（7007）。老档里还挂着 6011 的（上一行
+	# `_drop_unknown_relics` 已经把它剔掉，因为 relics.json 里不再有这条）→ 转成工具塞进空槽。
+	# 满栏就不硬塞：工具栏是定长的，替玩家挤掉别的工具等于替他做不可逆的决定。
+	if _int_array(d.get("relics", [])).has(6011):
+		RunState.gain_trap(RunState.BARBECUE_TOOL_ID)
 	# R694：战斗掉落工具的派生序号（老档缺键 → 0，只是可能把头部几条种子再摇一遍，
 	# 不影响掉率本身）。
 	RunState.tool_roll_seq = int(d.get("tool_roll_seq", 0))

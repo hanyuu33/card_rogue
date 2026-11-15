@@ -9,8 +9,9 @@
     "rest": {
       "REST_HEAL": "ここで休息する（HPを%d回復）",
       "ADD_FIREWOOD": "薪を追加する（デッキからカードを1枚削除）",
-      "BBQ_AVAILABLE": "肉を焼く（「バーベキュー」を獲得し、ボス戦用に保持）",
-      "BBQ_OWNED_DISABLED": "「バーベキュー」所持済み（ボス戦に入る時に自動消費）",
+      "BBQ_AVAILABLE": "肉を焼く（ツール「バーベキュー」を獲得、ツール枠を1つ使う）",
+      "BBQ_OWNED_DISABLED": "「バーベキュー」所持済み（ツール：戦闘中にタップで使用）",
+"BBQ_NO_SLOT_DISABLED": "ツールバーが満杯——枠を1つ空けてから焼く",
       "LEAVE_WITHOUT_BBQ": "離れる（肉を焼かない）"
     },
     "whisper": {
@@ -232,7 +233,7 @@
       "REST_BANDAGE_HEAL_RESULT": "止血包帯：HPを%d回復",
       "REST_HEAL_RESULT": "キャンプファイアの温もりが胸に広がる……HPを%d回復（現在 %d / %d）%s",
       "REST_ENCHANT_MASTER_SUFFIX": "；付呪の達人が「%s」に「%s」を付与した",
-      "REST_BBQ_RESULT": "「バーベキュー」をレリック欄に収めた——ボス戦に入る時に自動で消費し、最大HPの25%を回復する。"
+      "REST_BBQ_RESULT": "「バーベキュー」をツール枠に収めた——戦闘中にタップすると最大HPの25%を回復する。"
     },
     "arcane": {
       "ARCANE_CHARM_GAINED": "「秘術の護符」をレリック欄に追加：%s（この泉で得られる報酬は1つのみ）",

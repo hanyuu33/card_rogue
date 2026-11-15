@@ -54,7 +54,7 @@ func _engine() -> GameEngine:
 func _init() -> void:
 	# ---- ① 数据表：四条定义与用户口径逐项对齐 ----
 	var repo := TrapRepo.load_json()
-	check(repo.size() == 6, "traps.json 恰好 6 件工具（4 放置型 + 2 使用型）")
+	check(repo.size() == 7, "traps.json 恰好 7 件工具（4 放置型 + 3 使用型）")
 	var bomb: TrapData = repo.get_trap(7001)
 	var frost: TrapData = repo.get_trap(7002)
 	var poison: TrapData = repo.get_trap(7003)
@@ -78,6 +78,13 @@ func _init() -> void:
 			"法力药剂：回复 2 点费用 / 35 金 / 使用型")
 	check(not bomb.is_usable() and not frost.is_usable() and not poison.is_usable()
 			and not spike.is_usable(), "四个放置型工具都不走使用型分支")
+	# R743：烤肉（7007）—— 休息处专属的使用型工具（原道具 6011 改造而来）
+	var bbq: TrapData = repo.get_trap(7007)
+	check(bbq != null and bbq.trap_name == "烤肉" and bbq.heal_pct == 25
+			and bbq.is_usable() and bbq.rest_only and bbq.price == 0,
+			"烤肉：回复 25% 最大生命 / 使用型 / rest_only（非卖品）")
+	check(repo.random_traps().size() == 6 and repo.get_trap(7007) != null,
+			"烤肉：`random_traps()` 把它排除（6 件可随机），全量仍是 7 件")
 
 	# ---- ①b R690：描述必须写清「怎么发动」—— 放置型拖到格子、使用型轻点 ----
 	# 玩家唯一能读到操作方式的地方就是这条 desc（商店悬浮、战斗里轻点工具栏）。

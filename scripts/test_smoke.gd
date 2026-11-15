@@ -2502,7 +2502,7 @@ func _check_relic_bar(scene: Variant) -> void:
 	# 无限堆叠，并且**绕开固定 UI**（卡组按钮 / 巧克力 / 本层 Boss / 标题 / 图例条 / 标记按钮）。
 	# 这里一屏塞 20 件，逐条钉：全部有槽位、互不重叠、都不压住保留矩形。
 	var saved: Array = RunState.relics.duplicate()
-	var many: Array[int] = [6001, 6024, 6005, 6006, 6007, 6008, 6009, 6010, 6011, 6012,
+	var many: Array[int] = [6001, 6024, 6005, 6006, 6007, 6008, 6009, 6010, 6022, 6012,
 			6013, 6014, 6015, 6016, 6017, 6018, 6019, 6020, 6021, 6026]
 	RunState.relics = many.duplicate()
 	var rects: Array = []

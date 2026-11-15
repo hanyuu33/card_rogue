@@ -16,8 +16,9 @@
     "rest": {
       "REST_HEAL": "在这里休息（回复 %d 生命）",
       "ADD_FIREWOOD": "添加柴火（从卡组删除一张卡）",
-      "BBQ_AVAILABLE": "烤肉（获得「烤肉」，留到 Boss 战）",
-      "BBQ_OWNED_DISABLED": "已持有「烤肉」（Boss 战时自动消耗）",
+      "BBQ_AVAILABLE": "烤肉（获得工具「烤肉」，占一个工具栏位）",
+      "BBQ_OWNED_DISABLED": "已持有「烤肉」（工具，战斗里点一下就能吃）",
+"BBQ_NO_SLOT_DISABLED": "工具栏已满 —— 先腾出一个栏位再来烤",
       "LEAVE_WITHOUT_BBQ": "离开（不烤肉）"
     },
     "whisper": {
@@ -230,7 +231,7 @@
       "REST_BANDAGE_HEAL_RESULT": "止血绷带：回复 %d 点生命",
       "REST_HEAL_RESULT": "篝火的温暖涌上心头……回复 %d 点生命（当前 %d / %d）%s",
       "REST_ENCHANT_MASTER_SUFFIX": "；附魔大师给「%s」附上了「%s」",
-      "REST_BBQ_RESULT": "「烤肉」已收进道具栏——进入 Boss 战时自动享用，回复 25% 最大生命。"
+      "REST_BBQ_RESULT": "「烤肉」已收进工具栏——战斗里轻点它就能吃，回复 25% 最大生命。"
     },
     "arcane": {
       "ARCANE_CHARM_GAINED": "「奥秘护符」已加入道具栏：%s（本次泉水只给一份奖励）",

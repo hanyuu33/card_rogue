@@ -118,9 +118,12 @@ func _filter_by_tier(ids: Array[int], tier: String) -> Array[int]:
 
 
 func event_ids() -> Array[int]:
-	## 事件道具池（事件节点给予，如鸭鸭低语、一袋米抗几楼、休息处烤肉、鸭梨；
+	## 事件道具池（事件节点给予，如鸭鸭低语、一袋米抗几楼、鸭梨；
 	## 不进初始/奖励池）。R244：苹果 6027 从奖励池挪进来（「苹果与医生」专属）。
-	return [6010, 6011, 6012, 6019, 6027]
+	## R743：烤肉 6011 已从道具改成**工具**（7007，见 traps.json / RunState.BARBECUE_TOOL_ID）——
+	## 它不再属于道具池的任何一类，这里必须拿掉，否则火焰熔炉 / 投入道具这类
+	## 「按道具池取货」的地方会拿一个 relics.json 里根本不存在的 id。
+	return [6010, 6012, 6019, 6027]
 
 
 func layer2_ids() -> Array[int]:

@@ -33,5 +33,16 @@ func all_traps() -> Array[TrapData]:
 	return out
 
 
+func random_traps() -> Array[TrapData]:
+	## R743：**可随机获得**的工具（战斗 10% 掉落 / 商店货架）。
+	## `rest_only` 的那些（烤肉 7007）只能从休息处烤出来 —— 混进随机池，
+	## 「篝火专属」就成了「哪儿都能捡」，烤肉的稀缺感连同休息处的选择一起作废。
+	var out: Array[TrapData] = []
+	for t: TrapData in all_traps():
+		if not t.rest_only:
+			out.append(t)
+	return out
+
+
 func size() -> int:
 	return _traps.size()

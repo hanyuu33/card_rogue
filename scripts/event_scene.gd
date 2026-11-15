@@ -1,8 +1,9 @@
 extends Control
 ## 事件界面（肉鸽版）—— 由地图节点类型 / 事件子类型决定：
 ##   * rest  休息处：恢复 25% 最大生命（向上取整，不超过上限）；
-##            另有「烤肉」选项：获得事件道具「烤肉」（进入 Boss 战时自动消耗
-##            并回复 25% 最大生命）。持有烤肉时不能再选，消耗后可再次烤制。
+##            另有「烤肉」选项：R743 起拿到的是**工具**「烤肉」（7007，使用型，
+##            战斗里轻点即用、回复 25% 最大生命）。工具栏要有空栏位才给（满栏 / 已持有
+##            都不能烤），用掉之后才能再来烤一份。
 ##   * event + treasure 小宝箱（R372）：**免费**打开 —— 直接给一组卡牌奖励（选 1 张入卡组）。
 ##     原来「支付 5 生命开箱 / 一半概率是道具」的口径已作废：不扣生命、内容恒为卡牌；
 ##   * event + whisper  鸭鸭低语：获得事件道具「鸭之低语」，或放弃；
@@ -307,12 +308,12 @@ func _rest_desc() -> String:
 		# R473（用户口径）：圣餐改成「到达篝火处回复 50% 最大生命」，进房就结算掉了。
 		return """篝火旁摆着一份还没凉透的圣餐。
 你在坐下之前就把它分掉了——到达篝火处回复 50% 最大生命（已结算）；
-也可以烤一块肉带在身上，留到 Boss 战前享用；
+也可以烤一块肉带在身上，战斗里点一下就能吃（占一个工具栏位）；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
 （剩下两样只能挑一样——选完这一处就到头了。）"""
 	return """前路的战斗还在等着你。
 在篝火旁休息，恢复 %d%% 最大生命；
-也可以烤一块肉带在身上，留到 Boss 战前享用；
+也可以烤一块肉带在身上，战斗里点一下就能吃（占一个工具栏位）；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
 （三样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
 
@@ -343,7 +344,7 @@ var _chest_relic := -1        # 宝箱层：开出的道具 id（-1 = 未开 / �
 var _struggled := false       # 挣扎：是否已接受（失去生命换金属龙）
 var _hero_traded := false     # 绝赞五换一：是否已交易（删 5 张换英雄）
 var _hero_removed: Array = [] # 绝赞五换一：本次被换走的卡（[{id,name}]）
-var _bbq_taken := false       # 烤肉：本次是否已在休息处烤好（获得道具）
+var _bbq_taken := false       # 烤肉：本次是否已在休息处烤好（R743：拿到的是**工具** 7007）
 var _sacrament_note := -1    # R473 圣餐：本次进休息处回了多少（-1 = 还没试过）
 var _arcane_charm_taken := false  # 奥秘之泉：**本次访问**是否取走了道具「奥秘护符」
                               #   （≠「本来就戴着」—— 后者只是不重复给，不影响喝泉水，见 R71 / R147）
@@ -1487,8 +1488,13 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "chest"}
 		if args[i] == "--bbq":  # 演示：已在休息处烤好肉（截图验证取走后的状态）
-			RunState.gain_relic(RunState.BARBECUE_RELIC_ID)
+			RunState.take_barbecue()
 			_bbq_taken = true
+		if args[i] == "--bbqfull":  # R743 出图：工具栏 3/3 → 休息处「烤肉」灰掉
+			# 口径「需要有栏位才能获取」的实机验收：塞满三个工具，按钮应变成
+			# 「工具栏已满 —— 先腾出一个栏位再来烤」并且点不动。
+			# 出图：`event.tscn -- --screenshot --rest --bbqfull`
+			RunState.traps = [7001, 7002, 7003]
 		if args[i] == "--corecontract":  # 演示：契约的核心（R458 第二层专属）
 			RunState.run_active = true
 			RunState.current_layer = GameLayers.LAYER_TWO
@@ -2796,7 +2802,7 @@ func _refresh() -> void:
 		leave_btn.text = "离开"
 		leave_btn.disabled = false
 		_reward_claimed = true
-		result_label.text = "「烤肉」已收进道具栏——进入 Boss 战时自动享用，回复 25% 最大生命。"
+		result_label.text = "「烤肉」已收进工具栏——战斗里轻点它就能吃，回复 25% 最大生命。"
 		result_label.add_theme_color_override("font_color", Color("d89a2e"))
 		_redraw()
 		return
@@ -2805,12 +2811,19 @@ func _refresh() -> void:
 
 
 func _refresh_bbq() -> void:
-	## 烤肉选项状态：持有「烤肉」时不可再选；被 Boss 战消耗掉后即可再次烤制。
-	if RunState.has_relic(RunState.BARBECUE_RELIC_ID):
-		bbq_btn.text = "已持有「烤肉」（Boss 战时自动消耗）"
+	## R743：烤肉改成**工具**后的三种状态 —— 已持有 / 工具栏满 / 可以烤。
+	## 判据全部走 RunState 的两个口（`has_barbecue_tool()` / `can_take_barbecue()`），
+	## 界面不自己数槽位 —— 数错就会出现「按钮亮着、点了却拿不到」。
+	if RunState.has_barbecue_tool():
+		bbq_btn.text = "已持有「烤肉」（工具，战斗里点一下就能吃）"
+		bbq_btn.disabled = true
+	elif not RunState.can_take_barbecue():
+		# ⚠️ 不带 %d：这串要走 `_localize_text()` 的精确串映射（event_ui 域），
+		#    带格式化的只有 `_source_templates` 那种模板键能翻，普通选项按钮翻不了。
+		bbq_btn.text = "工具栏已满 —— 先腾出一个栏位再来烤"
 		bbq_btn.disabled = true
 	else:
-		bbq_btn.text = "烤肉（获得「烤肉」，留到 Boss 战）"
+		bbq_btn.text = "烤肉（获得工具「烤肉」，占一个工具栏位）"
 		bbq_btn.disabled = false
 
 
@@ -2985,7 +2998,8 @@ func _on_alt() -> void:
 
 
 func _on_bbq() -> void:
-	## 休息处「烤肉」：获得事件道具「烤肉」（进入 Boss 战时自动消耗 → 回复 25% 生命）。
+	## 休息处「烤肉」：获得**工具**「烤肉」（7007，使用型）—— 战斗里轻点即用，回复 25% 最大生命。
+	## R743：满栏 / 已持有都拿不到（`RunState.take_barbecue()` 是唯一口）。
 	## 奥秘之泉：这一路是「选择2 · 喝下泉水」→ 去卡牌奖励界面（限定效果 / 技能）。
 	sfx.play("click")
 	if _is_martial():
@@ -3058,9 +3072,17 @@ func _on_bbq() -> void:
 		_redraw()
 		return
 	# R224：休息处只剩这一个选项（篝火回血已移除），不再有「先休息过就不能再烤肉」的闸门。
-	if RunState.has_relic(RunState.BARBECUE_RELIC_ID):
+	# R743（用户口径「需要有栏位才能获取」）：拿到的是**工具**，`take_barbecue()` 是唯一口 ——
+	# 已持有 / 满栏都返回 false，这里只负责把原因说清楚（按钮本来就已经灰了）。
+	if not RunState.take_barbecue():
+		if RunState.has_barbecue_tool():
+			result_label.text = "已经带着一份「烤肉」了——先吃掉再烤。"
+		else:
+			result_label.text = "工具栏满了，没有栏位放「烤肉」——先腾出一个再来。"
+		result_label.add_theme_color_override("font_color", Color("d05a3c"))
+		_refresh_bbq()
+		_redraw()
 		return
-	RunState.gain_relic(RunState.BARBECUE_RELIC_ID)
 	_bbq_taken = true
 	_claim_reward(bbq_btn)
 	_refresh()

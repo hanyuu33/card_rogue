@@ -18,6 +18,7 @@ static func color_of(id: int) -> Color:
 		7004: return Color(0.74, 0.59, 0.94)   # 穿刺陷阱 · 钢紫
 		7005: return Color(0.92, 0.36, 0.44)   # 小血瓶 · 血红
 		7006: return Color(0.36, 0.62, 0.95)   # 法力药剂 · 费用蓝
+		7007: return Color(0.88, 0.53, 0.24)   # 烤肉 · 焦糖橙
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -78,6 +79,7 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7004: _spike(ci, c, s, ink)
 		7005: _potion(ci, c, s, ink, false)
 		7006: _potion(ci, c, s, ink, true)
+		7007: _meat(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
 
 
@@ -126,6 +128,23 @@ static func _spike(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 		ci.draw_colored_polygon(tri, col)
 	ci.draw_line(Vector2(c.x - s * 0.32, c.y + s * 0.29),
 			Vector2(c.x + s * 0.32, c.y + s * 0.29), col, w, true)
+
+
+static func _meat(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R743：烤肉（使用型）—— 一只**带骨的肉腿**：圆肉球 + 斜伸出去的米白骨头。
+	## 前两版是「梯形肉块 + 横骨头」，缩到 40px 的槽位里分别读成「托盘」和「箱子」——
+	## 方块形状在这么小的尺寸上撑不住。肉腿的轮廓（圆 + 一根斜骨）是这个尺寸下
+	## 最稳的「肉」符号，也和小血瓶 / 法力药剂的瓶子语汇同属「画实物」那一类。
+	var w := maxf(1.5, s * 0.032)
+	var bone_col := col.lightened(0.58)
+	# 骨头：从肉球右下角斜伸出去，末端一个骨节
+	var b1 := c + Vector2(s * 0.36, s * 0.32)
+	ci.draw_line(c + Vector2(s * 0.10, s * 0.08), b1, bone_col, w * 2.8, true)
+	ci.draw_circle(b1, s * 0.078, bone_col)
+	# 肉：圆球（略偏左上），下沿盖住骨头根部
+	ci.draw_circle(c + Vector2(-s * 0.07, -s * 0.06), s * 0.28, col)
+	# 高光（一点暖白，给出「烤出油光」的质感）
+	ci.draw_circle(c + Vector2(-s * 0.16, -s * 0.16), s * 0.075, col.lightened(0.38))
 
 
 static func _potion(ci: CanvasItem, c: Vector2, s: float, col: Color, mana: bool) -> void:

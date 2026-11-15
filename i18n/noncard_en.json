@@ -39,10 +39,6 @@
       "name": "Whisper of the Duck",
       "desc": "While held, you cannot manually choose a path on the map and instead keep advancing randomly until you enter an unexplored room. At the start of each of your turns, randomly gain 1 of these bonuses for the turn: +1 Cost / friendly units' attacks and your Skills deal +1 damage / draw 1 additional card."
     },
-    "6011": {
-      "name": "Barbecue",
-      "desc": "Meat roasted at a Rest Stop. Automatically consumed when you enter a Boss battle: restore 25% of your Max Health, rounded up and capped at your Max Health. While held, you cannot roast another at a Rest Stop."
-    },
     "6012": {
       "name": "One Bag of Pain",
       "desc": "After the first time your Health takes damage each turn, draw 1 card, and your Skills deal +1 damage for the rest of the turn."
