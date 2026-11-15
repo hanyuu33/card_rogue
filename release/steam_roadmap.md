@@ -23,7 +23,7 @@
 | 存档 | `run_save.sav`（局内）/ `profile.json`（玩家）/ `run_records.json` / `run_pending.json` / `save_trace.log`（取证，带时间戳、会涨） | ⚠️ 云存档需白名单，`save_trace.log` 不能同步 |
 | 本地化 | **零**：无 `.translation`、无 `TranslationServer`，文案硬编码在 `cards.json` / `stories.json` / 各 `_scene.gd` | ⚠️ 英/日版已定要做（Q1），见第 5 章 |
 | 新手引导 | 教程机制代码在（`battle_scene._tutorial` + 7350+ 行引导条），但 **42 个关卡 `tutorial` 全为 `[]`**；且引导条只剩 36..52 共 16px 高度（源码注释明说必须先改版式） | ❌ 休眠态，恢复成本高于「新做一套」 |
-| 每日挑战 | 零代码。但 `seed_override` / `seed_code` / `RunRecord` / `record_list_scene` / 难度档位全齐 | ✅ 地基好，单项成本最低 |
+| 每日挑战 | R762 已接模式选择、UTC 日期种子、固定职业/难度/标准初始卡组、每日一次、续档、本地成绩与 Steam 榜桥 | ⚠️ 本地闭环已完成；自有 AppID 的真实建榜/上传/下载待验 |
 | 组合系统 | 唯一入口 `_open_combo()`；候选池 24 张；`combo_trigger` 卡 **仅 2 张**（9246 / 9247）；机械之心可用候选仅 4 张；R588「产物继承 traits / id」**未修** | ⚠️ 保真 bug + 内容面窄 |
 | 联机 | `net.gd` 局域网 UDP 广播 + TCP 47812（Python 版移植） | ⚠️ 影响隐私政策 / 防火墙 / 商店页措辞，见决策 Q4 |
 | 分辨率 | 1280×720，`canvas_items` + `expand` | ✅ 天然适配 Deck / 各种 16:9 |
@@ -40,7 +40,7 @@
 | A3 | 9 个成就逐个实机解锁 | 用测试 build 引信触发 `note_*`；核对后台 API 名大小写完全一致 | Steam 后台显示 9/9 可解锁、`storeStats` 生效 → **卡在「后台还没建这 9 个成就」** |
 | A3′ | 成就图标（铜/银/金三档） | 单色金属徽章一套：进度型铜、通关型银、高难型金；未达成统一灰石 | ✅ `release/achievement_icons/` 9×2 张 64px 已备好，直接上传 |
 | A4 | 成就长尾补 4~6 个 | 建议：首次组合 / 组合产物达 N 种 / 图鉴全收 / 每日挑战首胜 / 无伤过精英 / 单回合斩杀 100+ | 后台 + 代码 `API_*` 两处同名 |
-| A5 | 云存档（Steam Auto-Cloud 或 Remote Storage） | 只同步 `profile.json` + `run_records.json` + `run_save.sav`；**排除** `save_trace.log` / `*_test.*` | A 机打一半→B 机续档成功；冲突时取「本地 mtime 新」，且 `save_trace` 有记录 |
+| A5 | 云存档（Steam Auto-Cloud 或 Remote Storage） | 只同步 `profile.json` + `run_records.json` + `run_save.sav` + `daily_challenge.json`（每日次数跨机一致）；**排除** `save_trace.log` / `run_pending.json` / `*_test.*` | A 机打一半→B 机续档成功；冲突时取「本地 mtime 新」，且 `save_trace` 有记录 |
 | A6 | 单实例互斥 | 双开会抢同一个 `user://`（`run_save` 注释里已有警告） | 第二个进程弹「已在运行」并退出，不产生半截档 |
 | A7 | 存档格式版本迁移框架 | 现在 `RunRecord.FORMAT=1`，加字段可空；`run_save` 无版本号 | 用旧档启动不崩、不丢；有 `save_version` 字段 |
 | A8 | 桌面端日志与反馈出口 | `--log-file` 落到 `user://`；设置页加「导出诊断包」 | 崩溃后能拿到日志；玩家能一键打包 |
@@ -154,16 +154,16 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 - 推荐：**B 为主 + C 兜底**；不做全程强制教程（roguelike 玩家反感）。
 - 判据：新玩家 5 分钟内能独立完成「出牌 → 结束回合 → 地图选路 → 打完第一战」。
 
-### D3 每日挑战（选做，成本最低的一项）
+### D3 每日挑战（R762 已落地本地闭环）
 
-| # | 事项 | 要点 |
+| # | 事项 | R762 状态与判据 |
 |---|---|---|
-| D3-1 | 日期派生种子 | `seed_of("daily", yyyymmdd)` → 固定角色 / 难度 / 地图；不动 `run_rng` |
-| D3-2 | 一天一次 | 存档记 `daily_date`；时间回拨只做宽松校验（不外连校时） |
-| D3-3 | 固定配置 | 角色、难度、卡组锁定，排除随机开局变量 |
-| D3-4 | 成绩记录 | 复用 `RunRecord`（加 `daily: true` 标记）+ `record_list_scene` 分页签 |
-| D3-5 | Steam 排行榜（可选） | 需额外 Leaderboard API 桥接；不做则「本地榜」 |
-| D3-6 | 入口 | 标题页一个「每日挑战」按钮，不与「开始对战」抢视觉（R579/R607 明确不加副标题/不堆字号） |
+| D3-1 | 日期派生种子 | ✅ `DailyChallenge.seed_for_date()` 独立派生 UTC 日期 + 规则版本；不消耗 `run_rng` |
+| D3-2 | 一天一次 | ✅ 开局即写入 `daily_challenge.json`；同日拒绝重开，续档不重复计次；写盘失败回滚，不外连校时 |
+| D3-3 | 固定配置 | ✅ 可见三职业轮换、固定难度 2、该职业标准 13 张初始卡组；战斗奖励仍沿用标准账号规则 |
+| D3-4 | 成绩记录 | 🟡 `RunRecord` 已带 `daily_date` / `daily_rules`，每日页有本地高分；战绩页每日/普通分页签未做 |
+| D3-5 | Steam 排行榜 | 🟡 每天 + 规则版本独立榜，降序 Numeric、keep-best 上传、读取前十及离线降级已接；自有 AppID 实机验收待做 |
+| D3-6 | 入口 | ✅ 「开始游戏」→ 模式选择页；标准模式仍进原选人页，不在标题页堆按钮 |
 
 ---
 
@@ -235,7 +235,7 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 |---|---|---|
 | ~~Q1~~ | ~~英文版做不做~~ | ✅ **已定**：英必做、日次之，本体排 R614+；地基 E0 立即生效 |
 | Q2 | Steam Deck 目标 | Verified 需手柄映射 / 可读性（M 级）；Playable 成本低但降权 |
-| Q3 | 每日挑战配不配 Steam 排行榜 | 配 → 多一次 Leaderboard 桥接 + 后台配置 |
+| ~~Q3~~ | ~~每日挑战配不配 Steam 排行榜~~ | ✅ **已定要配**：R762 桥接已落地；待自有 AppID 实测建榜、keep-best 上传与前十读取 |
 | Q4 | LAN 联机在 Steam 版：保留 / 隐藏 / 升级 Steam P2P | 影响隐私政策、防火墙弹窗、商店页标签 |
 | Q5 | 首发带不带 Demo / 走不走 Next Fest | 带 → 额外 depot + 存档隔离 |
 | Q6 | 组合补充范围 | 只修 bug + 扩卡（小） vs 加图鉴 / 预览 / 成就（中） |
@@ -263,7 +263,7 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 
 ## 8. 发布前总验收（DoD）
 
-- [ ] 六套回归全绿：assemble 0 / engine 5765+ 0✗ / reward 26 / bgm 39 / smoke 68-0 / mana PASS
+- [ ] 八套回归全绿：assemble 0 / mana PASS / engine 0✗ / reward 0✗ / bgm 0✗ / traps 0✗ / trapinput 0✗ / smoke 0 失败
 - [ ] `SteamAchievements.status_text()` = 已连接；8（或 12）成就后台可解锁
 - [ ] 干净 Windows 机（无 Godot、无 VC 运行库、路径含中文、非管理员）双击可跑
 - [ ] 1080p / 1440p / 4K + 系统缩放 150% 下 UI 不溢出不重叠（`tools/probe_ui_text.gd` 0 溢出）

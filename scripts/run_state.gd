@@ -18,6 +18,9 @@ static var hp: int = 50          # 玩家当前生命（跨战斗保留）
 
 # ---- run 进度 ----
 static var run_active := false               # 是否在肉鸽 run 中（false = 单关/演示模式）
+## R762：空 = 标准局；非空 = 每日挑战的 UTC 日历日。rules 入榜名，改计分口径不混旧榜。
+static var daily_date := ""
+static var daily_rules := 0
 static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复）
 ## R181 商店附魔：与 deck_ids **等长**的修饰列表。每个元素是 {}（无附魔）或
 ## {"cost":-1} / {"power":+10} / {"affix":"次元","power":+2,"health":+10} / {"affix":"保存"}。
@@ -1070,12 +1073,17 @@ static func _tele_src() -> String:
 
 
 static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
-		cid: String = "", seed_override := 0, seed_code := "") -> void:
+		cid: String = "", seed_override := 0, seed_code := "", daily: Dictionary = {}) -> void:
 	## 新 run：满血、初始卡组、载入地图、定位起点（第 0 列唯一节点）。
 	## layer = 本局地图所属的层（地图上所有战斗/事件都从这一层的内容池里取）。
 	## map 传空数组时用本局种子现生成（真实流程 = 角色选择场景这样进来）。
 	## R241 种子：`seed_override != 0` 时**用它**（同一种子必然同一张图、同一串掉落/摇卡）；
 	## 0 = 现摇一个。整局只有这一行碰全局随机源，之后所有随机都由 `run_seed` 派生。
+	# R762：每日身份与固定难度必须在**生命计算 / 种子选择 / 解锁钳制**之前落定。
+	daily_date = str(daily.get("date", ""))
+	daily_rules = int(daily.get("rules", 0)) if daily_date != "" else 0
+	if daily_date != "":
+		set_difficulty(int(daily.get("difficulty", difficulty)))
 	# 初始生命按职业不同（R182）：基础 50 + 职业加成（森林精魄+20/暗影刺客+10/机械之心+16）。
 	# R223 难度 9「虚弱」：初始最大生命 ×80%（截断取整）—— 在 reset 之前算好基数。
 	var base_hp: int = PlayerClass.base_hp_of(cid if cid != "" else PlayerClass.default_id())
@@ -1086,6 +1094,9 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# 全部从它派生；同一种子重开、以及「继续游戏」读档（seed + rng.state）都走这条链。
 	# R261：优先吃玩家输入的 10 位种子码；其次旧的 int 覆盖（测试与旧调用点）；
 	# 都没有 → 现摇一个 10 位码（整局唯一碰全局随机源的地方，见 random_seed_text）。
+	# R762：每日配置本身拥有根种子。调用方不必再重复传一次，否则漏传会静默退成随机局。
+	if daily_date != "" and seed_code == "" and seed_override == 0:
+		seed_override = int(daily.get("seed", 0))
 	var code_v := seed_value_of(seed_code) if seed_code != "" else -1
 	if code_v > 0:
 		run_seed = code_v
@@ -1099,7 +1110,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	player_class = cid if cid != "" else PlayerClass.default_id()
 	# R550（发布版解锁）：防御性钳制 —— 难度不得超过当前职业已解锁的上限。
 	# UI（class_pick_scene）里已经拦，这里是纵深防御：任何路径带着超限难度进来都会被压回。
-	if GameBuild.is_release():
+	# R762：每日挑战例外。固定配置对所有人相同，不能被各账号的解锁进度压成不同难度。
+	if GameBuild.is_release() and daily_date == "":
 		difficulty = clampi(difficulty, 0, UnlockSystem.difficulty_cap(player_class))
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
 	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。
@@ -1254,6 +1266,8 @@ static func end_run(clear_save: bool = true) -> void:
 				{"cls": player_class, "diff": difficulty})
 		_tele_outcome = ""
 	run_active = false
+	daily_date = ""               # R762：续档里另有副本；内存复位不删每日成绩
+	daily_rules = 0
 	pipe_ready = false          # R446：一局结束 → 烟斗状态位复位
 	core_lost = 0               # R458：核心的累计与触发位同样复位
 	core_armed = false

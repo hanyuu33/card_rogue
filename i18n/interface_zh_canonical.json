@@ -2840,6 +2840,30 @@
         "source": "scripts/class_pick_scene.gd:638",
         "zh": "尚未解锁"
       },
+      "MODE_BACK": {"source": "scripts/mode_select_scene.gd", "zh": "返回标题"},
+      "MODE_STANDARD_START": {"source": "scripts/mode_select_scene.gd", "zh": "标准模式 · 选择角色"},
+      "DAILY_USED": {"source": "scripts/mode_select_scene.gd", "zh": "今日已挑战"},
+      "DAILY_START": {"source": "scripts/mode_select_scene.gd", "zh": "开始今日挑战"},
+      "DAILY_STEAM_REFRESH": {"source": "scripts/mode_select_scene.gd", "zh": "刷新"},
+      "DAILY_STEAM_IDLE": {"source": "scripts/mode_select_scene.gd", "zh": "连接后读取今日前十"},
+      "DAILY_STEAM_LOADING": {"source": "scripts/mode_select_scene.gd", "zh": "正在读取……"},
+      "DAILY_STEAM_OFFLINE": {"source": "scripts/mode_select_scene.gd", "zh": "Steam 未连接 · 本地成绩仍保留"},
+      "DAILY_STEAM_FAILED": {"source": "scripts/mode_select_scene.gd", "zh": "读取失败 · 不影响本地成绩"},
+      "MODE_TITLE": {"source": "scripts/mode_select_scene.gd", "zh": "选择游戏模式"},
+      "MODE_SUBTITLE": {"source": "scripts/mode_select_scene.gd", "zh": "自由构筑，或挑战今天所有人相同的一局"},
+      "MODE_STANDARD": {"source": "scripts/mode_select_scene.gd", "zh": "标准模式"},
+      "MODE_DAILY": {"source": "scripts/mode_select_scene.gd", "zh": "每日挑战"},
+      "MODE_STANDARD_DESC": {"source": "scripts/mode_select_scene.gd", "zh": "自选角色与难度，也可输入种子。\n卡组、道具和剧情进度按标准规则累积。"},
+      "DAILY_CLASS": {"source": "scripts/mode_select_scene.gd", "zh": "固定角色"},
+      "DAILY_DIFFICULTY": {"source": "scripts/mode_select_scene.gd", "zh": "固定难度"},
+      "DAILY_DIFFICULTY_NAME_2": {"source": "scripts/mode_select_scene.gd", "zh": "严酷"},
+      "DAILY_SEED": {"source": "scripts/mode_select_scene.gd", "zh": "今日种子"},
+      "DAILY_ONCE": {"source": "scripts/mode_select_scene.gd", "zh": "每天一次 · 开局即计次 · 可续档"},
+      "DAILY_PLAYING": {"source": "scripts/mode_select_scene.gd", "zh": "今日挑战进行中"},
+      "DAILY_RESULT": {"source": "scripts/mode_select_scene.gd", "zh": "今日成绩"},
+      "DAILY_LOCAL_BOARD": {"source": "scripts/mode_select_scene.gd", "zh": "本地成绩 · 高分优先"},
+      "DAILY_NO_SCORE": {"source": "scripts/mode_select_scene.gd", "zh": "还没有已结算的每日挑战"},
+      "DAILY_STEAM_BOARD": {"source": "scripts/mode_select_scene.gd", "zh": "Steam 今日榜"},
       "TITLE_START": {
         "source": "scripts/l10n.gd:27",
         "zh": "开始对战"
@@ -3482,10 +3506,10 @@
   },
   "expected_counts": {
     "shop": 72,
-    "reward": 123,
+    "reward": 125,
     "map": 245,
-    "battle": 72,
-    "shell": 193,
+    "battle": 75,
+    "shell": 218,
     "shared": 92
   }
 }

@@ -51,7 +51,10 @@ def quoted(text):
 
 def source_line_match(entry, text, source_text):
     """多段拼接/动态占位模板：限定源码行，逐段核对中文碎片，不整句跳过。"""
-    ref = entry["source"].split(":", 1)[1]
+    source = entry.get("source", "")
+    if ":" not in source:
+        return False
+    ref = source.split(":", 1)[1]
     match = re.fullmatch(r"(\d+)(?:-(\d+))?", ref)
     if not match:
         return False

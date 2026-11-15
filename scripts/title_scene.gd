@@ -322,7 +322,8 @@ func _on_start() -> void:
 	## 一个检查点都没写 —— 玩家这时关窗 / 崩溃，旧档已删、新档未写，重启后 `has_save()`
 	## 变假、「继续游戏」按钮消失，**上一局的进度就这么没了**。留着旧档：窗口期关窗 =
 	## 回上一局；一旦新局真正落盘 = 旧局被新局替换（这才是「开新局」的预期）。
-	SceneFx.goto("res://scenes/class_pick.tscn")
+	# R762：先选标准 / 每日；标准模式仍由原选人页开局，不在标题页再堆一个按钮。
+	SceneFx.goto("res://scenes/mode_select.tscn")
 
 
 func _on_continue() -> void:

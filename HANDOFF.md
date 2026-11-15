@@ -2028,3 +2028,34 @@ manifest 的 9018 条目已更新 ref / prompt / note。
   `assets/ui/avatar_bard_magenta_v1.png` / `bard_poem_generated_v1.png` /
   `bg_curtain_class_select_v1.png` / `bg_bard_class_select_v2.png` 是另一条线出的图、**无代码引用**，
   本轮没删没换，等店长定夺。
+
+## 2026-11-16 R762 模式选择 + 每日挑战本地闭环 + Steam 榜桥
+- **口径（店长）**：点击「开始游戏」后先选标准 / 每日；实装 roadmap D3-2「一天一次」和
+  D3-5「Steam 排行榜」。标准模式仍进原选人页，不在标题页堆第二个开局按钮。
+- **固定配置**：`DailyChallenge.config_for_date()` 以 **UTC 日期 + RULES_VERSION** 独立派生根种子，
+  不消耗 `run_rng`；可见三职业轮换、难度固定 2、该职业标准 13 张初始卡组。发布版的账号难度上限
+  不会把每日难度钳回 0；后续战斗奖励仍沿用标准账号的解锁 / 禁卡规则，文档未把它说成独立全卡池。
+- **一天一次**：`begin_attempt()` 在开局前写 `user://daily_challenge.json`；同日拒绝重开，
+  写盘失败会回滚内存、不白扣次数。`RunSave.snapshot/apply` 与 `RunRecord.pending` 都带
+  `daily_date / daily_rules`，标题「继续游戏」恢复原局，不再次消耗次数；老档缺字段 = 标准局。
+- **成绩**：复用 `RunRecord.finish()` 收尾，本地分 = 层数×1000 + 普通战×100 + 精英×250
+  + 剩余 HP×5 + 金币，胜利另 +10000。每日页本地榜按高分排序；战绩页普通 / 每日分页签**未做**。
+- **Steam**：`DailyLeaderboard` 通过 GodotSteam 反射调用 `findOrCreateLeaderboard`（降序 / Numeric）、
+  `uploadLeaderboardScore(..., true, ...)`（keep-best）与 `downloadLeaderboardEntries(1, 10, ...)`。
+  榜名 `DAILY_YYYYMMDD_V规则`；读取前十、卡片当前展示前三。Steam 未连接时拒绝上传，本地成绩和游玩不受影响。
+  **自有 AppID 的真实建榜 / 上传 / 下载仍未验收，源码锁与离线断言不等于联机成功。**
+- **测试隔离修复**：收尾发现 R762 初版测试会直接 `RunRecord.clear_all()` 真实路径；现新增
+  `RunRecord.set_test_mode()`，engine / smoke 入口统一改走 `run_records_test.json` 与
+  `run_pending_test.json`。核查时真实 `run_records.json` 已为 `[]`、pending 不存在，缺之前副本，
+  无法判断是否由初版测试造成；最终回归后真实文件保持 `[]`，未再改写。
+- **最终回归**：`_verify.py` 八套全绿 —— assemble 0 / mana PASS / engine **6203✓ 0✗**（R762 +15）/
+  reward 26 / bgm 39 / traps 176 / trapinput 70 / smoke **75**（新增模式页真实实例化与按钮几何断言）。
+- **截图**：`screenshot_mode_select_zh.png` / `_en.png` 重拍通过；Steam「刷新 / Refresh」缩到标题右侧，
+  不再压标题；英文难度使用 `Harsh`，状态文本可折两行。`mode_select.tscn` 已进 smoke。
+- **i18n**：四份 interface 各 +24 键，canonical 数量锁 827；英 / 日 key 覆盖与 JSON 解析通过。
+  中文校验器已能处理无行号 source，剩余 5 个旧失效锚点；西语校验从 25 降至 23（本轮 mazo 与数量锁已修），
+  其余为既有卡牌 / 隐私页等红项，未借本轮夹带清理。
+- **文档**：`release/steam_roadmap.md` 已按实际完成度更新 D3 / Q3 / 八套 DoD / 云存档白名单；
+  `release/玩法说明.txt` 已写新模式入口、UTC 换日、每日一次、续档和本地 / Steam 成绩。
+- **并行边界**：`关卡与敌人配置总览.md`、Bard 散图、宣传视频工具与既有补丁脚本均不属于本轮提交；
+  不使用无选择的批量暂存。

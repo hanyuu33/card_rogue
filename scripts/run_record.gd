@@ -32,13 +32,26 @@ extends RefCounted
 ##   * **同一进程内**回标题（续档还能接着打）→ pending 的 id 与当前一致，`recover()` 不动它；
 ##   * **上次启动**留下的 pending → id 对不上，判定为真中断。
 
-const PATH := "user://run_records.json"
-const PENDING_PATH := "user://run_pending.json"
+const REAL_PATH := "user://run_records.json"
+const REAL_PENDING_PATH := "user://run_pending.json"
+const TEST_PATH := "user://run_records_test.json"
+const TEST_PENDING_PATH := "user://run_pending_test.json"
+static var PATH := REAL_PATH
+static var PENDING_PATH := REAL_PENDING_PATH
 const FORMAT := 1
 const KEEP := 100                 # 最多保留多少条（超出删最旧）
 
 ## 本次启动的随机标识（惰性生成；同进程内所有 pending 共用一个）。
 static var _session := ""
+
+
+static func set_test_mode() -> void:
+	## R762：与 RunSave 同纪律。回归会反复 begin / finish / clear，绝不能碰玩家战绩。
+	PATH = TEST_PATH
+	PENDING_PATH = TEST_PENDING_PATH
+	for p: String in [TEST_PATH, TEST_PENDING_PATH]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 
 
 # ------------------------------------------------------------ 会话
@@ -99,7 +112,8 @@ static func finish(result: String, allow_fallback := false) -> void:
 		p = {"time": Time.get_datetime_string_from_system(),
 				"start_unix": Time.get_unix_time_from_system(), "elapsed": 0,
 				"class": RunState.player_class, "difficulty": RunState.difficulty,
-				"seed": RunState.run_seed}
+				"seed": RunState.run_seed, "daily_date": RunState.daily_date,
+				"daily_rules": RunState.daily_rules}
 	var now := Time.get_unix_time_from_system()
 	var start := float(p.get("start_unix", now))
 	if start <= 0.0:
@@ -115,6 +129,9 @@ static func finish(result: String, allow_fallback := false) -> void:
 		"result": result,
 		"secs": spent,
 		"seed": int(p.get("seed", 0)),
+		# R762：可选字段，老记录 / 标准局都是空串，不提升 FORMAT。
+		"daily_date": str(p.get("daily_date", "")),
+		"daily_rules": int(p.get("daily_rules", 0)),
 	}
 	# 快照来源：本局还活着 → 现取；否则（启动时补记「中断」）→ 用 pending 里存的
 	# 最后一份检查点快照（`update_pending()` 写的）。
@@ -130,6 +147,8 @@ static func finish(result: String, allow_fallback := false) -> void:
 	# 不能直接抄）；中断 / 放弃则保留当时的真实血量。
 	if result == "lose":
 		entry["hp"] = 0
+	# R762：与通用记录共用同一个收尾点；每日本地成绩与 Steam 上传不会漏掉负局。
+	DailyChallenge.record_result(entry)
 	var all := list_records()
 	all.append(entry)
 	while all.size() > KEEP:
@@ -246,6 +265,8 @@ static func _revive_interrupted() -> Dictionary:
 		"elapsed": maxi(0, int(last.get("secs", 0))),
 		"class": str(last.get("class", "")),
 		"difficulty": int(last.get("difficulty", RunState.difficulty)),
+		"daily_date": str(last.get("daily_date", RunState.daily_date)),
+		"daily_rules": int(last.get("daily_rules", RunState.daily_rules)),
 	}
 
 
@@ -345,6 +366,8 @@ static func _write_pending(cls: String, base: Dictionary = {}) -> void:
 		"class": cls,
 		"difficulty": int(base.get("difficulty", RunState.difficulty)),
 		"seed": RunState.run_seed,
+		"daily_date": str(base.get("daily_date", RunState.daily_date)),
+		"daily_rules": int(base.get("daily_rules", RunState.daily_rules)),
 		"snap": snapshot() if RunState.run_active else {},
 	}
 	_write_pending_dict(p)

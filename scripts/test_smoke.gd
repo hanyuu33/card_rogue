@@ -37,10 +37,15 @@ func _initialize() -> void:
 	ProfileData.set_test_mode()
 	# R378：存档也换独立文件 —— 否则跑一次测试就把玩家正在打的那一局删了
 	RunSave.set_test_mode()
+	# R762：战绩与每日次数都只走测试文件，新场景也纳入下面的真实实例化。
+	RunRecord.set_test_mode()
+	DailyChallenge.set_test_mode()
 	# R672：显示模式的源码守卫（headless 没有真窗口，只能锁文本）
 	_check_r672_display_guard()
 	_plan = [
 		["res://scenes/title.tscn", func(): _reset()],
+		# R762：开始游戏后的模式选择；真实 _ready/_draw + 按钮几何都走一遍。
+		["res://scenes/mode_select.tscn", func(): _reset(), _check_r762_mode_select],
 		# R660：正式版首次语言选择 —— 列表必须是注册表驱动，3 种语言现在刚好排满；
 		# 以后加语言只改 L10n，本页自动多一行 / 多滚动条。
 		["res://scenes/language_pick.tscn", func(): _reset(), _check_language_pick],
@@ -1247,6 +1252,22 @@ func _check_r672_display_guard() -> void:
 		return
 	_ok += 1
 	print("SMOKE OK R672：回主界面不许降级显示（FULLSCREEN / MAXIMIZED 都保留）")
+
+
+func _check_r762_mode_select(scene: Variant) -> void:
+	## R762：右卡标题与刷新按钮分栏；回归不只实例化，还锁住这块真实几何。
+	if scene._daily_btn == null or scene._steam_btn == null:
+		_smoke_fail("R762 模式选择：每日 / Steam 按钮未创建")
+		return
+	var board := Rect2(700, 562, 460, 140)
+	var refresh := Rect2(scene._steam_btn.position, scene._steam_btn.size)
+	var title := Rect2(720, 568, 260, 28)
+	if not board.encloses(refresh) or refresh.intersects(title):
+		_smoke_fail("R762 模式选择：Steam 刷新按钮越界或压住榜单标题")
+	elif scene._daily_btn.disabled:
+		_smoke_fail("R762 模式选择：干净测试档案应允许今日挑战")
+	else:
+		print("SMOKE OK R762 模式选择：真实场景 · 每日可开 · Steam 按钮不压标题")
 
 
 func _reset() -> void:

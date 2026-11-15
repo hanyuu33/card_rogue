@@ -285,6 +285,8 @@ static func snapshot() -> Dictionary:
 		"fatigue_granted_layer": RunState.fatigue_granted_layer,   # R358：疲惫每层只发一次
 		"boss_pending": RunState.boss_pending,
 		"player_class": RunState.player_class,
+		"daily_date": RunState.daily_date,       # R762：续档恢复原每日局，不算第二次
+		"daily_rules": RunState.daily_rules,
 		"battle_wins": RunState.battle_wins,
 		"elite_wins": RunState.elite_wins,
 		# R630：**整局累计**三项（结算页 / 记录页读的就是它们）。原先只存了「本层」两个数 →
@@ -586,6 +588,8 @@ static func apply(d: Dictionary) -> bool:
 	RunState.fatigue_granted_layer = int(d.get("fatigue_granted_layer", -1))
 	RunState.boss_pending = bool(d.get("boss_pending", false))
 	RunState.player_class = str(d.get("player_class", PlayerClass.default_id()))
+	RunState.daily_date = str(d.get("daily_date", ""))       # R762：老档缺字段 = 标准局
+	RunState.daily_rules = int(d.get("daily_rules", 0)) if RunState.daily_date != "" else 0
 	RunState.battle_wins = int(d.get("battle_wins", 0))
 	RunState.elite_wins = int(d.get("elite_wins", 0))
 	# R630：整局累计跟着一起回填。**老档没有这三个键**（R630 之前的档）→ 用「本层」两个数

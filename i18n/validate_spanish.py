@@ -273,11 +273,11 @@ for dynamic_key, narrative_key in dynamic_map.items():
     check(EVENT_ES["rest_dynamic"][dynamic_key] == expected,
           dynamic_key + " 与 narrative 共用同一西语译文")
 
-# 788 条 canonical 界面文案（含实机截图补出的图鉴 / 事件 / 战斗 / 关卡出口）。
+# canonical 界面文案（含实机截图补出的图鉴 / 事件 / 战斗 / 关卡出口 / 每日挑战）。
 interface_zh_rows, interface_entries = flatten_interface(INTERFACE_ZH)
 interface_es_rows, _ = flatten_interface(INTERFACE_ES, translated=True)
 check(set(interface_es_rows) == set(interface_zh_rows), "interface 全部 scope.key 覆盖一致")
-check(len(interface_zh_rows) == 794, "interface 共 794 条")
+check(len(interface_zh_rows) == 827, "interface 共 827 条")
 reuse_locked = set(INTERFACE_ZH.get("l10n_reuse", {})) | set(INTERFACE_ZH.get("glossary_reuse", {}))
 for path, zh_text in interface_zh_rows.items():
     entry = interface_entries[path]
