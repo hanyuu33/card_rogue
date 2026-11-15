@@ -2522,12 +2522,17 @@ static func delete_deck_card(index: int) -> bool:
 	## 原来只有卡组编辑页的**界面层**挡了它（`deck_edit_scene._has_no_remove_card()`），
 	## 商店的「删除一张卡」是直接调本函数的 —— 于是月亮 / 硬币 / 罐子能绕过界面锁被删掉，
 	## 同一件事出现了两条路、两套规则。现在判据只留这一处。
+	## R750（用户口径「严格删除展示的卡，包括所有的成长和附魔」）：删掉这张卡之后，
+	## 若卡组里**一张该 id 都不剩**，`card_growth` 的那笔账也一并擦掉 —— 否则以后
+	## 再抽到同名卡会继承旧成长，等于「卡没了、成长还留着」。
 	if index < 0 or index >= deck_ids.size():
 		return false
 	if remove_block_reason(index) != "":
 		return false
+	var cid := int(deck_ids[index])   # R750：删完后面的下标全部前移，先记住这是哪一张
 	deck_ids.remove_at(index)
 	_sync_mods_remove(index)     # R181：附魔下标同步前移
+	_reap_card_growth(cid)       # R750（用户口径）：卡走了，它的本局成长账也一并收走
 	pending_relic = -1
 	return true
 
@@ -2549,6 +2554,7 @@ static func transform_deck_card(repo: CardRepo, index: int, same_class := false)
 	deck_ids[index] = new_id
 	if index < deck_mods.size():
 		deck_mods[index] = {}       # R181：变形后附魔失效
+	_reap_card_growth(old_id)       # R750：旧 id 若已彻底离开卡组，成长账一起走
 	pending_relic = -1
 	return {"ok": true, "old_id": old_id, "new_id": new_id}
 
@@ -2586,6 +2592,21 @@ static func deck_indices_not_curse() -> Array[int]:
 	for i in deck_ids.size():
 		var c := repo.get_card(int(deck_ids[i]))
 		if c != null and c.rarity != CURSE_RARITY:
+			out.append(i)
+	return out
+
+
+static func deck_indices_removable() -> Array[int]:
+	## R750：**真能删掉**的卡组下标 —— 非诅咒，且不带 `no_remove` 锁
+	## （月亮 9180 / 硬币 9181 / 罐子 9157）。
+	##
+	## 为什么必须有这个口：只按稀有度过滤诅咒的话，会摇到带锁的卡 —— 按钮上写着
+	## 「谎言：失去『月亮』」，点下去 `delete_deck_card()` 被 `remove_block_reason()`
+	## 一票否决、卡还在，奖励却照样发出去。**「展示的卡」必须就是「真会被删的卡」**，
+	## 否则展示本身就是假的。判据不在各处重写，唯一口 = `remove_block_reason()`。
+	var out: Array[int] = []
+	for i in deck_indices_not_curse():
+		if remove_block_reason(i) == "":
 			out.append(i)
 	return out
 
@@ -2689,14 +2710,15 @@ static func vendor_deck_card(repo: CardRepo, index: int) -> Dictionary:
 static func vendor_discard_random() -> Dictionary:
 	## 卡片商人 · 随机折价：随机失去一张**非诅咒**卡，获得 100 金币。
 	## 返回 {ok, lost_id, lost_name, gold}。
-	var pool := deck_indices_not_curse()
+	var pool := deck_indices_removable()   # R750：删不掉的卡不进候选
 	var idx := random_deck_index(pool)
 	if idx < 0:
 		return {"ok": false}
 	var lost_id := int(deck_ids[idx])
 	var c := CardRepo.load_json().get_card(lost_id)
 	var nm := c.card_name if c != null else str(lost_id)
-	delete_deck_card(idx)
+	if not delete_deck_card(idx):    # R750：没真删掉就不给钱
+		return {"ok": false}
 	gain_gold(VENDOR_GOLD)
 	return {"ok": true, "lost_id": lost_id, "lost_name": nm, "gold": VENDOR_GOLD}
 
@@ -2704,10 +2726,12 @@ static func vendor_discard_random() -> Dictionary:
 static func lake_lady_peek() -> Dictionary:
 	## 湖中仙女 · 谎言（R488）：**进门就摇定**要失去的那一张，按钮上才能写死卡名。
 	## 候选 = 卡组里所有**非诅咒卡**（用户口径：别让「谎言」顺手帮玩家清掉诅咒）。
+	## R750（用户口径「严格删除展示的卡」）：再叠一层 `deck_indices_removable()` ——
+	## 带锁的卡（月亮 9180 / 硬币 9181）不许被「展示」，展示了却删不掉就是骗玩家。
 	## 幂等：已摇定且下标仍在候选池里 → 直接复用，**别每帧重摇**（否则按钮卡名会跳）。
 	## 返回 {ok, index, card_id, name, enchanted}；池空 → ok = false（按钮该禁用）。
 	var repo := CardRepo.load_json()
-	var pool := deck_indices_not_curse()
+	var pool := deck_indices_removable()   # R750：展示的卡必须真删得掉
 	if pool.is_empty():
 		lake_victim = -1
 		return {"ok": false}
@@ -2730,7 +2754,13 @@ static func lake_lady_lie() -> Dictionary:
 		return {"ok": false}
 	var lost_id := int(deck_ids[idx])
 	var nm := str(peek.get("name", str(lost_id)))
-	delete_deck_card(idx)     # ⚠️ 删完后面的下标全部前移 → 摇定立刻作废（别留着骗下一次 peek）
+	# ⚠️ 删完后面的下标全部前移 → 摇定立刻作废（别留着骗下一次 peek）
+	# R750（用户口径）：**展示哪张就严格删哪张**，成长与附魔都随卡一起消失，不留账。
+	# 删不掉（被 `no_remove` 挡住 / peek 之后卡组被改短）→ 整件事**没有发生**：
+	# 返回 ok = false，事件不置完成、奖励也不发，玩家可以再点一次。
+	if not delete_deck_card(idx):
+		lake_victim = -1
+		return {"ok": false}
 	lake_victim = -1
 	return {"ok": true, "index": idx, "lost_id": lost_id, "lost_name": nm}
 
@@ -2760,6 +2790,7 @@ static func smith_deck_card(index: int) -> Dictionary:
 	deck_ids[index] = FENCE_CARD_ID
 	if index < deck_mods.size():
 		deck_mods[index] = {}       # R181：变铁栅栏后附魔失效
+	_reap_card_growth(old_id)       # R750：原卡被锻成铁栅栏 → 旧 id 的成长账一起走
 	pending_deck_edit = ""
 	var fc := CardRepo.load_json().get_card(FENCE_CARD_ID)
 	return {"ok": true, "old_id": old_id, "new_id": FENCE_CARD_ID,
@@ -3496,6 +3527,7 @@ static func remove_card(id: int) -> bool:
 			deck_ids.remove_at(i)
 			if i < deck_mods.size():
 				deck_mods.remove_at(i)
+			_reap_card_growth(id)    # R750：最后一张也用掉了 → 成长账收走
 			return true
 	return false
 
@@ -3517,6 +3549,8 @@ static func remove_all_cards(id: int) -> int:
 		if i < deck_mods.size():
 			deck_mods.remove_at(i)
 		removed += 1
+	if removed > 0:
+		_reap_card_growth(id)    # R750：整批删光 → 这个 id 的成长账不再有任何归属
 	return removed
 
 
@@ -3609,6 +3643,21 @@ static func grow_card(card_id: int, power := 0, health := 0, damage := 0) -> Dic
 	d["damage"] = maxi(0, int(d.get("damage", 0)) + maxi(0, damage))
 	card_growth[key] = d
 	return d.duplicate()
+
+
+static func _reap_card_growth(card_id: int) -> void:
+	## R750（用户口径「严格删除展示的卡，包括所有的成长和附魔」）：
+	## 卡**离开卡组**时，把这个 id 的本局成长账一并收走。
+	##
+	## 为什么必须做：`card_growth` 按 **id** 记账、不按实例 —— 卡组里一张都不剩之后，
+	## 这条账就是孤儿：以后再抽到 / 买到同名卡，`card_with_mod()` 会把旧成长重新烤
+	## 进去，玩家看到的就是「卡被谎言抹掉了，成长却还留着」。
+	##
+	## ⚠️ 同 id 还有别的卡时**必须保留**：那是几张同名卡共用的一份账，
+	##    擦掉等于连累没被删的那一张 —— 它不是玩家选择要失去的。
+	if deck_ids.has(card_id):
+		return
+	card_growth.erase(str(card_id))
 
 
 static func _apply_card_growth(c: CardData, growth: Dictionary) -> void:

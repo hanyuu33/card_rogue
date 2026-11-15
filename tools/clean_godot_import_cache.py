@@ -86,7 +86,7 @@ def cache_files():
     return [p for p in CACHE.iterdir() if p.is_file()]
 
 
-def do_clean(apply, full):
+def do_clean(apply, full, limit=0):
     if not CACHE.is_dir():
         print("[cache] .godot/imported not present, nothing to clean")
         return 0
@@ -100,9 +100,18 @@ def do_clean(apply, full):
     else:
         doomed = [p for p in files if not is_live(p.name, live, keys)]
         kept = [p for p in files if is_live(p.name, live, keys)]
+    # R750：`--limit N` 一次最多删 N 个 —— 宿主的「批量删除」安全闸对单轮删除数有阈值，
+    # 超过就不再问、直接拒绝（`SAFE_DELETE_BULK_CONFIRM_REQUIRED`）。分批删既守规矩，
+    # 又不需要为一次常规清理去要人工确认。默认 0 = 不限（老行为不变）。
+    total_doomed = len(doomed)
+    if limit and limit > 0:
+        doomed = doomed[:limit]
     bytes_freed = sum(p.stat().st_size for p in doomed)
     print("[cache] live refs=%d  cache files=%d  keep=%d  orphan=%d (%.1f MiB)"
-          % (len(live), len(files), len(kept), len(doomed), bytes_freed / 1048576.0))
+          % (len(live), len(files), len(kept), total_doomed, bytes_freed / 1048576.0))
+    if limit and limit > 0 and total_doomed > limit:
+        print("[cache] --limit %d：本轮只删 %d 个，还剩 %d 个待清"
+              % (limit, limit, total_doomed - limit))
     if not apply:
         print("[cache] dry-run only, pass --apply to delete")
         for p in doomed[:5]:
@@ -144,11 +153,13 @@ def main():
     ap = argparse.ArgumentParser(description="clean stale Godot import cache")
     ap.add_argument("--apply", action="store_true", help="actually delete (default: dry-run)")
     ap.add_argument("--full", action="store_true", help="wipe ALL imported blobs, not just orphans")
+    ap.add_argument("--limit", type=int, default=0, metavar="N",
+                    help="delete at most N orphans per run (default: all)")
     ap.add_argument("--audit-apk", metavar="APK", help="check an APK for orphan .ctex; exit 1 if any")
     args = ap.parse_args()
     if args.audit_apk:
         return do_audit_apk(args.audit_apk)
-    return do_clean(args.apply, args.full)
+    return do_clean(args.apply, args.full, args.limit)
 
 
 if __name__ == "__main__":

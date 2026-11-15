@@ -39708,6 +39708,110 @@ func _init() -> void:
 
 			"R488 湖中仙女：lake_victim 越界时重摇到合法下标")
 
+	# ⑤ R750（用户口径）：谎言 = 严格删掉**展示的那一张**，附魔与成长都随卡一起消失
+
+	RunState.deck_ids = [8001, 8002, 9018]
+
+	RunState.ensure_deck_mods()
+
+	RunState.deck_mods[0] = RunState.enchant_mod("costdown")
+
+	RunState.deck_mods[1] = RunState.enchant_mod("opening")
+
+	RunState.card_growth = {}
+
+	RunState.lake_victim = 0
+
+	var r750_l := RunState.lake_lady_lie()
+
+	check(bool(r750_l.get("ok", false)) and RunState.deck_ids.size() == 2
+			and int(RunState.deck_ids[0]) == 8002 and int(RunState.deck_ids[1]) == 9018
+			and RunState.deck_mods.size() == 2
+			and not RunState.deck_mods[0].is_empty()
+			and RunState.deck_mods[1].is_empty(),
+
+			"R750 湖中仙女：删掉带附魔的那张后，附魔跟着实例走、剩余卡不串位")
+
+	RunState.deck_ids = [8001, 9018]
+
+	RunState.ensure_deck_mods()
+
+	RunState.card_growth = {}
+
+	RunState.grow_card(9018, 2, 0, 3)
+
+	RunState.lake_victim = 1
+
+	var r750_g := RunState.lake_lady_lie()
+
+	check(bool(r750_g.get("ok", false)) and not RunState.deck_ids.has(9018)
+			and RunState.card_growth_of(9018).is_empty(),
+
+			"R750 湖中仙女：删掉最后一张同名卡 → 它的本局成长账一并抹掉（不再残留）")
+
+	RunState.deck_ids = [9018, 9018]
+
+	RunState.ensure_deck_mods()
+
+	RunState.card_growth = {}
+
+	RunState.grow_card(9018, 2, 0, 0)
+
+	RunState.lake_victim = 0
+
+	var r750_k := RunState.lake_lady_lie()
+
+	check(bool(r750_k.get("ok", false)) and RunState.deck_ids.size() == 1
+			and int(RunState.card_growth_of(9018).get("power", 0)) == 2,
+
+			"R750 湖中仙女：同 id 还有一张 → 成长账保留（不连累没被删的那张）")
+
+	RunState.deck_ids = [9180, 8001, 9154]
+
+	RunState.ensure_deck_mods()
+
+	var r750_pool := RunState.deck_indices_removable()
+
+	check(r750_pool.size() == 1 and int(r750_pool[0]) == 1,
+
+			"R750 谎言候选池：带锁的月亮 9180 与非可删卡不进池（只剩第 1 张可选）")
+
+	RunState.deck_ids = [9180, 9154]
+
+	RunState.ensure_deck_mods()
+
+	RunState.lake_victim = -1
+
+	check(not bool(RunState.lake_lady_peek().get("ok", true))
+			and not bool(RunState.lake_lady_lie().get("ok", true)),
+
+			"R750 湖中仙女：只剩带锁卡 + 诅咒卡时谎言不可用（不许展示删不掉的卡）")
+
+	RunState.deck_ids = [9180]
+
+	RunState.ensure_deck_mods()
+
+	var r750_gold := RunState.gold
+
+	check(not bool(RunState.vendor_discard_random().get("ok", true))
+			and RunState.gold == r750_gold and RunState.deck_ids.size() == 1
+			and int(RunState.deck_ids[0]) == 9180,
+
+			"R750 卡片商人：只剩带锁卡时随机折价不可用（不白给 %d 金）" % RunState.VENDOR_GOLD)
+
+	RunState.deck_ids = [9018, 9018]
+
+	RunState.ensure_deck_mods()
+
+	RunState.card_growth = {}
+
+	RunState.grow_card(9018, 1, 0, 0)
+
+	check(RunState.remove_all_cards(9018) == 2
+			and RunState.card_growth_of(9018).is_empty(),
+
+			"R750 删卡唯一口：批量删光某个 id 后，成长账也一并收走")
+
 	RunState.deck_ids = [8001, 8002]
 
 	RunState.ensure_deck_mods()
@@ -75573,7 +75677,10 @@ func _test_r679() -> void:
 	for cue2: String in r744_cues:
 		if not (r744_map.contains("\"%s\"" % cue2) or r744_bat.contains("\"%s\"" % cue2)):
 			r744_miss += 1
-	check(r744_miss == 0, "R744 钩子：每个高亮名都有场景认领（缺 %d 个）" % r744_miss)
+	# ⚠️ R750：这条读的是**源文本**，必须走 `check_src()` —— 导出包里 `.gd` 是 binary
+	# tokens，`get_file_as_string()` 读不出内容，用 `check()` 会在包里假红（缺 10 个认领），
+	# 而源码环境全绿。与它上下两条同属源码守卫，口径统一。
+	check_src(r744_miss == 0, "R744 钩子：每个高亮名都有场景认领（缺 %d 个）" % r744_miss)
 	check_src(r744_map.contains("TutorialDirector.play_chain")
 			and r744_bat.contains("_tutorial_poll()"),
 			"R744 钩子：地图与战斗都在自己的时机调调度器（不靠关卡数据）")
