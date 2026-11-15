@@ -1083,6 +1083,10 @@ func _ready() -> void:
 			load_level(GameLevels.cave_level())
 		if args[i] == "--shotframe" and i + 1 < args.size():
 			_shot_frame = maxi(int(args[i + 1]), 10)  # 截图时机（帧），捕弹体/爆点用
+		if args[i] == "--tutpage" and i + 1 < args.size():
+			_tutshot_page = maxi(int(str(args[i + 1])), 0)
+		if args[i] == "--tutid" and i + 1 < args.size():
+			_tutshot_id = str(args[i + 1])
 		if args[i] == "--r363col" and i + 1 < args.size():
 			_r363_col = clampi(int(args[i + 1]), 0, FieldState.BOARD_COLS - 1)
 		if args[i] == "--tooldemo":
@@ -18722,6 +18726,7 @@ func _process(delta: float) -> void:
 		_hover_pl = null
 	if engine == null:
 		return
+	_tutorial_poll()          # R744：新手教程（绑初次体验，不绑关卡）
 	_tick_bubbles()          # R386：对话气泡推进（演完回收 / 接队列）
 	if "--bubbles" in _demo_args and _bubbles.is_empty():
 		_demo_bubbles(false)  # 演示循环播：任何 --shotframe 都截得到
@@ -19001,3 +19006,121 @@ func _draw_primal_seg(f: Dictionary, n: int) -> void:
 		var t := clampf(float(n - int(f.land)) / seg_ms, 0.0, 1.0)
 		var size := Vector2(125, 140) * (0.65 + 0.35 * minf(t * 5.0, 1.0))
 		draw_texture_rect(tex, Rect2(dst + Vector2(-size.x / 2.0, -size.y * 0.72), size), false, Color(1, 1, 1, 1.0 - t))
+# ------------------------------------------------------------ R744：新手教程（绑初次体验）
+#
+# 与上面 `_tut_*` 那一套（按关卡挂、当前全休眠）**互不相干**：那套的判据写在
+# `game_levels` 的 `tutorial` 数组里；这套的判据是玩家档案里的「看过没」，
+# 所以同一段教程在任何关卡、任何职业下都只讲一次。
+# 文案在 `tutorial_script.gd`，绘制在 `tutorial_overlay.gd`，这里只负责
+# 「什么时候弹」和「高亮哪儿」。
+
+var _tut_poll_t := 0.0                  # 工具类教程的轮询节流（要读 traps.json，别每帧读）
+var _tut_trap_cache: TrapRepo = null
+var _tutshot_page := 0                      # 出图验收用：直接停在第 N 页
+var _tutshot_id := ""                       # 出图验收用：强制弹某一条教程
+
+
+func tutorial_cue_rects(cue: String) -> Array:
+	## 语义名 → **屏幕坐标**矩形。教程弹层是 CanvasLayer，坐标是屏幕坐标；
+	## 这里的棋盘 / 手牌矩形都是 1280 舞台内的本地坐标，所以统一加 `position`。
+	## HP 条例外：它挂在上层 HUD 的 CanvasLayer 里，`get_global_rect()` 已是屏幕坐标。
+	var out: Array = []
+	if engine == null:
+		return out
+	var off := position
+	match cue:
+		"hand":
+			for i in mini(engine.state.hand.size(), 8):
+				out.append(_tut_screen(_hand_rect(i), off))
+		"hand_ally":
+			for i in engine.state.hand.size():
+				if out.size() >= 8:
+					break
+				var k: String = str(engine.state.hand[i].kind)
+				if k == "盟友" or k == "工事":
+					out.append(_tut_screen(_hand_rect(i), off))
+		"cost":
+			out.append(_tut_screen(Rect2(COST_X, COST_Y, TAP_W + 12.0, ENERGY_H), off))
+		"hp":
+			if hp_strip != null:
+				out.append(hp_strip.get_global_rect().grow(4.0))
+		"enemies":
+			out.append(_tut_screen(Rect2(GRID_X, GRID_Y, GRID_W, 3.0 * CELL), off))
+		"board_own":
+			var h := minf(3.0 * CELL, GRID_H - 3.0 * CELL)
+			out.append(_tut_screen(Rect2(GRID_X, GRID_Y + 3.0 * CELL, GRID_W, h), off))
+		"tool_bar":
+			var r := _trap_slot_rect(0)
+			if RunState.TRAP_SLOTS > 1:
+				r = r.merge(_trap_slot_rect(RunState.TRAP_SLOTS - 1))
+			out.append(_tut_screen(r.grow(6.0), off))
+	return out
+
+
+static func _tut_screen(r: Rect2, off: Vector2) -> Rect2:
+	return Rect2(r.position + off, r.size)
+
+
+func _tutorial_poll() -> void:
+	## 每帧调一次，很便宜：基础教程只在「第一回合 + 玩家回合 + 手里有牌」时讲
+	##（否则会抢在发牌动画之前弹，对话框压在还没出现的手牌上）。
+	## 工具类每 0.4 秒才查一次 —— 它要读 traps.json。
+	if (_shot_pending and not ("--tutdemo" in _demo_args)) \
+			or TutorialDirector.busy(self):
+		return
+	# 出图验收（--tutdemo）：**不暂停整棵树** —— 战斗页的截图按「第 N 帧」触发，
+	# 树一停帧号就不走了，截不到。
+	var still := _shot_pending
+	if still and _tutshot_id != "":
+		var fp := TutorialScript.pages(_tutshot_id)
+		if not fp.is_empty():
+			TutorialOverlay.play(self, fp, Callable(), false)
+			return
+	if engine.turn_number <= 1 and engine.current_side == GameEngine.SIDE_SELF \
+			and not engine.state.hand.is_empty():
+		var pages := TutorialScript.pages(TutorialScript.ID_BATTLE_BASIC)
+		if _tutshot_page > 0:
+			TutorialOverlay.play(self, pages.slice(_tutshot_page - 1), Callable(), not still)
+			return
+		if still:
+			TutorialOverlay.play(self, pages, Callable(), false)
+			return
+		if TutorialDirector.play(self, TutorialScript.ID_BATTLE_BASIC) != null:
+			return
+	if TutorialScript.unseen(TutorialScript.ID_BATTLE_ALLY) and _tut_hand_has_ally():
+		TutorialDirector.play(self, TutorialScript.ID_BATTLE_ALLY)
+		return
+	_tut_poll_t += get_process_delta_time()
+	if _tut_poll_t < 0.4:
+		return
+	_tut_poll_t = 0.0
+	if TutorialScript.unseen(TutorialScript.ID_TOOL_PLACE) and _tut_has_tool(false):
+		TutorialDirector.play(self, TutorialScript.ID_TOOL_PLACE)
+		return
+	if TutorialScript.unseen(TutorialScript.ID_TOOL_USE) and _tut_has_tool(true):
+		TutorialDirector.play(self, TutorialScript.ID_TOOL_USE)
+		return
+
+
+func _tut_hand_has_ally() -> bool:
+	## 「第一次抽到盟友 / 工事」的判据：只看卡牌数据的 `kind`，不看具体哪张卡 ——
+	## 以后新增盟友 / 工事卡不用回来改这里。
+	for c: CardData in engine.state.hand:
+		if c.kind == "盟友" or c.kind == "工事":
+			return true
+	return false
+
+
+func _tut_has_tool(usable: bool) -> bool:
+	## 「第一次拿到某一类工具」的判据：只看 `is_usable()`（放置型 false / 使用型 true）——
+	## 以后往 traps.json 加新工具，自动落进对应那一类，不用改代码。
+	if _tut_trap_cache == null:
+		_tut_trap_cache = TrapRepo.load_json()
+	for slot in RunState.TRAP_SLOTS:
+		var id := RunState.trap_at(slot)
+		if id <= 0:
+			continue
+		var td: TrapData = _tut_trap_cache.get_trap(id)
+		if td != null and td.is_usable() == usable:
+			return true
+	return false

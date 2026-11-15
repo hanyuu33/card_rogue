@@ -485,12 +485,60 @@ func _ready() -> void:
 		var t := Timer.new()
 		t.wait_time = wait
 		t.one_shot = true
+		t.process_mode = Node.PROCESS_MODE_ALWAYS   # R744：教程会暂停整棵树
+
 		t.timeout.connect(func():
 			var img := get_viewport().get_texture().get_image()
 			img.save_png(ProjectSettings.globalize_path("res://screenshot.png"))
 			get_tree().quit())
 		add_child(t)
 		t.start()
+	# R744：新手教程（绑「初次体验」，不绑关卡）——延迟一帧，等舞台与地图都排好版，
+	# 否则高亮框会按还没定位的坐标算。
+	_tutorial_maybe.call_deferred()
+
+
+func _tutorial_maybe() -> void:
+	## 走格子 + 巧克力两条一起排：第一次进地图的新档会连着看两段，老档一条都不弹。
+	## 出图（--screenshot）不弹 —— 截图里不该飘着对话框；
+	## 只有 `-- --tutdemo` 才允许在出图模式里弹（验收排版用）。
+	if _shot and not ("--tutdemo" in OS.get_cmdline_user_args()):
+		return
+	# 验收用：`-- --tutpage N` 直接停在第 N 页（配合 --shotwait 截那一页的排版）
+	var args := OS.get_cmdline_user_args()
+	var pi := args.find("--tutpage")
+	if pi >= 0 and pi + 1 < args.size():
+		var pg := TutorialScript.pages(TutorialScript.ID_MAP_WALK)
+		var i0 := clampi(int(str(args[pi + 1])) - 1, 0, pg.size() - 1)
+		TutorialOverlay.play(self, pg.slice(i0), Callable())
+		return
+	TutorialDirector.play_chain(self, [TutorialScript.ID_MAP_WALK, TutorialScript.ID_MAP_CHOCO])
+
+
+func tutorial_cue_rects(cue: String) -> Array:
+	## 语义名 → **屏幕坐标**矩形（教程弹层是 CanvasLayer，坐标 = 屏幕坐标）。
+	## 地图形状每局都不一样，所以这里一律**现算**：当前格来自 `RunState.current_node_id`，
+	## 可走的格子来自 `_is_available()`（与点击同一个判据），不写死任何坐标。
+	var out: Array = []
+	var off := position
+	match cue:
+		"map_player":
+			var cur := _cur_cell()
+			if not cur.is_empty():
+				out.append(_tut_screen(_cell_rect(cur).grow(2.0), off))
+		"map_reachable":
+			for cell: Dictionary in RunState.map_cells:
+				if out.size() >= 8:
+					break
+				if _is_available(cell) and not _visited(cell):
+					out.append(_tut_screen(_cell_rect(cell), off))
+		"map_choco":
+			out.append(_tut_screen(_choco_panel_rect().grow(4.0), off))
+	return out
+
+
+static func _tut_screen(r: Rect2, off: Vector2) -> Rect2:
+	return Rect2(r.position + off, r.size)
 
 
 func _rng() -> RandomNumberGenerator:

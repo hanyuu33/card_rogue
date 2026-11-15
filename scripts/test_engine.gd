@@ -75396,3 +75396,46 @@ func _test_r679() -> void:
 			and r739_ts.contains("STORY_UNLOCK_TOAST_MANY")
 			and r739_ts.contains("STORY_UNLOCK_TOAST_HINT"),
 			"R739 源码：三句文案全走 GameI18n（三语缺一键就退回中文）")
+	# ---------------------------------------------------------------- R744
+	# 新手教程：绑「初次体验」不绑关卡（关卡里那套 `tutorial` 数组仍是休眠代码）。
+	ProfileData.set_test_mode()
+	var r744_ids := ["map_walk", "map_choco", "battle_basic", "battle_ally",
+			"tool_place", "tool_use"]
+	var r744_bad := 0
+	var r744_cues: Array = []
+	for tid: String in r744_ids:
+		var pg: Array = TutorialScript.pages(tid)
+		if pg.is_empty():
+			r744_bad += 1
+			continue
+		for pgd: Dictionary in pg:
+			if str(pgd.get("text", "")) == "":
+				r744_bad += 1
+			var cue := str(pgd.get("cue", ""))
+			if cue != "" and not r744_cues.has(cue):
+				r744_cues.append(cue)
+	check(r744_bad == 0, "R744 文案：六条教程都有页、页页有正文（坏页 %d）" % r744_bad)
+	check(r744_cues.size() >= 6, "R744 文案：高亮语义名覆盖地图 / 战斗 / 工具三类（%d 个）"
+			% r744_cues.size())
+	var r744_map := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	var r744_bat := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r744_miss := 0
+	for cue2: String in r744_cues:
+		if not (r744_map.contains("\"%s\"" % cue2) or r744_bat.contains("\"%s\"" % cue2)):
+			r744_miss += 1
+	check(r744_miss == 0, "R744 钩子：每个高亮名都有场景认领（缺 %d 个）" % r744_miss)
+	check_src(r744_map.contains("TutorialDirector.play_chain")
+			and r744_bat.contains("_tutorial_poll()"),
+			"R744 钩子：地图与战斗都在自己的时机调调度器（不靠关卡数据）")
+	ProfileData.tutorial_seen = []
+	check(ProfileData.mark_tutorial_seen("map_walk"), "R744 档案：第一次标记成立")
+	check(not ProfileData.mark_tutorial_seen("map_walk"), "R744 档案：重复标记幂等（返回 false）")
+	check(ProfileData.is_tutorial_seen("map_walk") and not ProfileData.is_tutorial_seen("map_choco"),
+			"R744 档案：只认标记过的 id")
+	check(TutorialScript.unseen("map_choco") and not TutorialScript.unseen("map_walk"),
+			"R744 调度：看过的不再弹、没看过的照弹")
+	var r744_ov := FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
+	check_src(r744_ov.contains("_draw_dim") and r744_ov.contains("PORTRAIT_SIZE")
+			and r744_ov.contains("tutorial_cue_rects"),
+			"R744 弹层：压暗挖洞 / 小头像 / 由宿主解析高亮 三件事都在")
+	ProfileData.tutorial_seen = []

@@ -80,6 +80,11 @@ static var class_diff: Dictionary = {}
 ## 「每获得一张卡新增一个 ban 位（公用卡则是每个职业一个 ban 位）」，
 ## 公用卡会在三个职业的奖励池里都出现，所以要 ban 三次，各职业各一个名额。
 static var banned_by_class: Dictionary = {}
+## R744：新手教程的「已看过」标记。
+## 教程**绑初次体验、不绑关卡**（关卡数据里那套 `tutorial` 数组是休眠的），
+## 所以判据只能存在玩家档案里：同一个 id 只弹一次，之后永久跳过。
+## 换新档 / 清空进度才会重新看到 —— 这正是「初次玩」的字面意思。
+static var tutorial_seen: Array[String] = []
 
 static var _loaded := false
 static var _dirty := false
@@ -111,6 +116,7 @@ static func clear_memory() -> void:
 	unlocked_classes = []     # R550
 	class_diff = {}           # R550
 	banned_by_class = {}
+	tutorial_seen = []         # R744
 	_dirty = false
 
 
@@ -155,6 +161,7 @@ static func ensure_loaded() -> void:
 	for sid: int in seen_cards:
 		_seen_set[sid] = true
 	unlocked_classes = _str_array(d.get("unlocked_classes", []))   # R550
+	tutorial_seen = _str_array(d.get("tutorial_seen", []))         # R744
 	# R550：class_diff 是 {职业: int} —— JSON 数字读回来是 float，逐个 int()。
 	var cd: Variant = d.get("class_diff", {})
 	if cd is Dictionary:
@@ -186,6 +193,7 @@ static func save() -> bool:
 		"unlocked_classes": unlocked_classes,   # R550
 		"class_diff": class_diff,               # R550
 		"banned_by_class": banned_by_class,
+		"tutorial_seen": tutorial_seen,         # R744
 	}
 	var f := FileAccess.open(_path, FileAccess.WRITE)
 	if f == null:
@@ -291,6 +299,30 @@ static func mark_story_read(id: String) -> bool:
 static func is_story_read(id: String) -> bool:
 	ensure_loaded()
 	return read_stories.has(id)
+
+
+# ------------------------------------------------------------ 新手教程标记（R744）
+#
+# 教程绑「初次体验」而不是「某一关」：关卡数据里那套 `tutorial` 数组（含
+# `GameLevels.CUE_*` 与战斗页的引导条）是 R5x 时代按关卡挂的休眠代码，一条都没启用。
+# 这里的判据只有一句：这个 id 在档案里出现过没有。
+
+static func mark_tutorial_seen(id: String) -> bool:
+	## 记「这个教程已经讲过」。已存在 → 返回 false（幂等）。
+	if id == "":
+		return false
+	ensure_loaded()
+	if tutorial_seen.has(id):
+		return false
+	tutorial_seen.append(id)
+	_dirty = true
+	return true
+
+
+static func is_tutorial_seen(id: String) -> bool:
+	## 测试版也**照常**判：教程只看「看过没」，跟解锁体系无关。
+	ensure_loaded()
+	return tutorial_seen.has(id)
 
 
 # ------------------------------------------------------------ 卡牌 / 道具解锁
