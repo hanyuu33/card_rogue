@@ -75829,6 +75829,11 @@ func _test_r679() -> void:
 	check_src(r757_tel.contains("FileAccess.open(_path, FileAccess.READ_WRITE)")
 			and not r757_tel.contains("FileAccess.open(_path, FileAccess.WRITE_READ)"),
 			"R757 源码锁：事件流用 READ_WRITE 追加（WRITE_READ 会从头覆盖）")
+	# ⑦-2 战斗层号必须取调用方参数。早先写事件时用了 `ctx_layer()` —— 一个永远
+	#      `return 0` 的占位函数，结果所有 battle 的 layer 恒为 0，`run_end._deepest`
+	#      跟着变 0，「死在第几层」这个最关键的漏斗指标整个失效。
+	check_src(r757_tel.contains("\"layer\": int(layer)") and not r757_tel.contains("ctx_layer"),
+			"R757 源码锁：battle 层号取调用方参数（占位 ctx_layer 恒 0，已删）")
 	# ⑦ 「本局实际打出过哪些卡」走 card_play 差集 —— 不必在出牌热路径埋点。
 	check_src(r757_tel.contains("ProfileData.K_CARD_PLAY") and r757_tel.contains("\"played\""),
 			"R757 分析口径：本局打出的卡由 card_play 差集算出")

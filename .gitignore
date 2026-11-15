@@ -176,3 +176,12 @@ tools/ai_play/.runs.jsonl
 #   与 R439 的 art_src/_ref/ 同一条口径：只作内部参考，**绝不入库**。
 #   需要复现时按同目录 README / _yugi_url.txt 重新抓。
 /art_src/**/refs/
+
+# R757 Phase C：机器人跑局的临时产物（跑一次生成一堆，绝不入库）
+/tools/ai_play/_roam_*.log
+/tools/ai_play/_roam_last.log
+/tools/ai_play/.aicli_calls
+/.ai_bridge.log
+/.ai_bridge.pid
+/_cur_full.patch
+/_bk_*.patch

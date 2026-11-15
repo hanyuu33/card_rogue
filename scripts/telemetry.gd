@@ -245,7 +245,7 @@ static func note_battle_start(lvl: Dictionary, hp: int, max_hp: int, deck: int,
 		"tier": int(lvl.get("tier", -1)),
 		"units": units,
 		"hp0": hp, "mhp": max_hp, "deck": deck,
-		"layer": int(ctx_layer()),
+		"layer": int(layer),
 		"t": Time.get_ticks_msec(),
 	}
 
@@ -403,12 +403,6 @@ static func _rotate() -> void:
 
 
 # ============================================================ 上下文小工具
-
-static func ctx_layer() -> int:
-	## 当前层。**不 import RunState 反过来问**（那会形成双向依赖），由调用方给；
-	## 这里只作为 battle_start 的兜底默认值。
-	return 0
-
 
 static func _diff_ids(prefix: String) -> Array:
 	## 「自开局以来这个前缀下涨过的 id」。卡牌与道具都用它算本局实际获得/打出。
