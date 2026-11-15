@@ -12084,9 +12084,15 @@ func _reject_fx(idx: int, reason := "", target = null) -> void:
 func _on_engine_action(kind: String, data: Dictionary) -> void:
 	## 引擎动作 → 动画 + 音效。
 	var n := _now()
-	if kind == "fx_impact" and _primal_landing and str(data.get("source", "")) in ["土元素", "火元素"]:
+	if kind == "fx_impact" and _primal_landing and str(data.get("source", "")) in [
+			"土元素", "火元素", GameEngine.SURVEYOR_NAME]:
 		var cell: Vector2i = data.cell
-		var col := Color("ff742a") if str(data.source) == "火元素" else Color("dba14b")
+		var pi_src := str(data.source)
+		var col := Color("dba14b")
+		if pi_src == "火元素":
+			col = Color("ff742a")
+		elif pi_src == GameEngine.SURVEYOR_NAME:
+			col = Color("f0c860")   # 计量金：比土元素的土黄更亮一档，一眼分得开
 		_floaters.append({"pos": _cell_center(cell) + Vector2(0, -32), "sc": _grid_scroll,
 			"text": "-%d" % int(data.amount), "col": col, "start": n, "dur": _primal_hit_ms})
 		var target := engine.state.unit_at(cell)
@@ -14655,6 +14661,55 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			status_text = "激光巨炮：本轮瞄准第 %s 列" % la_join
 			_say("🎯 激光巨炮：锁定第 %s 列（这一回合还来得及挪人）" % la_join)
 			sfx.play("spell")
+			queue_redraw()
+		"survey_beam":
+			# R758 常数测量员（9260）：一发「分配 16 点」的计量。
+			# 伤害本体的逐段投射由上面那套 `_primal_fx` 演（与土元素同一个队列、同一条时序），
+			# 这里只播报 + 音效 + 轻微震屏 —— 不再另画一根光柱，否则会和分段投射叠成两层。
+			var sb_total := int(data.get("total", 0))
+			var sb_hits := int(data.get("hits", 0))
+			var sb_spill := int(data.get("spilled", 0))
+			var sb_stun := bool(data.get("stun", false))
+			sfx.play("spell")
+			_shake(1.6, 140)
+			var sb_msg := "📏 常数测量员：分配 %d 点伤害" % sb_total
+			if sb_hits > 0:
+				sb_msg += "（%d 个目标）" % sb_hits
+			if sb_spill > 0:
+				sb_msg += "，溢出 %d 点打到 HP" % sb_spill
+			else:
+				sb_msg += "，全部被场上单位吃下"
+			if sb_stun:
+				sb_msg += " → 没打到 HP，自己眩晕一回合"
+			_say(sb_msg)
+			queue_redraw()
+		"compute_cap":
+			# R758 精密计算者（9261）：把刚入场的那个单位压到 15 血。
+			# 飘字写「30 → 15」而不是「-15」，因为这不是一次伤害（不减护盾、不触发受击反应）。
+			var cc_cell: Vector2i = data.get("cell", Vector2i(0, 0))
+			var cc_from := int(data.get("from", 0))
+			var cc_to := int(data.get("to", 0))
+			var cc_name := "一个单位"
+			if data.get("card") is CardData:
+				cc_name = (data["card"] as CardData).card_name
+			_floaters.append({"pos": _cell_center(cc_cell) + Vector2(0, -32),
+				"sc": _grid_scroll, "text": "%d → %d" % [cc_from, cc_to],
+				"col": Color("7fd3ff"), "start": n, "dur": 1500})
+			_say("🧮 精密计算者：%s 入场生命 %d → %d" % [cc_name, cc_from, cc_to])
+			queue_redraw()
+		"deck_gift":
+			# R758 负载增量员（9262）：往**抽牌库**塞真卡（不是诅咒）。
+			# 与 `curse_added` 的区别：那边有整屏卡面展示队列（诅咒值得看清楚），
+			# 这里只写一句播报 + 牌库张数自己跳 —— 每回合两张，排队展示会把节奏拖烂。
+			var dg_name := "一张卡"
+			if data.get("card") is CardData:
+				dg_name = (data["card"] as CardData).card_name
+			var dg_deck := int(data.get("deck", -1))
+			if dg_deck >= 0:
+				_say("📦 负载增量员：一张「%s」塞进你的抽牌库（牌库 %d 张）" % [dg_name, dg_deck])
+			else:
+				_say("📦 负载增量员：往对方抽牌库塞了一张「%s」" % dg_name)
+			sfx.play("place")
 			queue_redraw()
 		"cannon_fire":
 			# R449：充能巨炮（9139，双机炮阵）原来只有一行日志 + 目标卡直接消失，用户报
@@ -19277,6 +19332,8 @@ var _primal_seq := 0                # 段序号：`_delayed` 靠它认领自己�
 var _primal_next_at := 0            # 下一段最早可发射的时刻（70ms 节流）
 var _primal_tex_earth: Texture2D = preload("res://assets/fx/fx_primal_earth.png")
 var _primal_tex_fire: Texture2D = preload("res://assets/fx/fx_primal_fire.png")
+## R758：常数测量员（9260）的「计量」贴图 —— 金色刻度环，与土 / 火同尺寸同用法。
+var _primal_tex_survey: Texture2D = preload("res://assets/fx/fx_survey_beam.png")
 
 func _primal_seg(id: int) -> Dictionary:
 	## 按序号找还在播的那一段（`primal_land` / `primal_end` 到点时用）。
@@ -19324,13 +19381,29 @@ func _draw_primal_seg(f: Dictionary, n: int) -> void:
 	var dst := _cell_center(f.cell)
 	var src: Vector2i = f.src
 	var origin := _cell_center(src) if src.x >= 0 else dst + Vector2(0, -120)
-	var fire := str(f.source) == "火元素"
-	var tex := _primal_tex_fire if fire else _primal_tex_earth
+	var src_name := str(f.source)
+	var fire := src_name == "火元素"
+	# R758：常数测量员走第三张图（金色刻度环）—— 与土 / 火共用同一条分段投射通道，
+	# 只在「画哪张图 / 落地圈怎么转」上分开，不另起一套动画（否则三段时序要各写一遍）。
+	var survey := src_name == GameEngine.SURVEYOR_NAME
+	var tex := _primal_tex_earth
+	if fire:
+		tex = _primal_tex_fire
+	elif survey:
+		tex = _primal_tex_survey
 	if n < int(f.land):
 		var t := clampf(float(n - int(f.start)) / float(int(f.land) - int(f.start)), 0.0, 1.0)
 		var pos := origin.lerp(dst, t)
 		pos.y -= sin(t * PI) * (45.0 if fire else 12.0)
-		draw_arc(dst, 28.0, 0, TAU, 32, Color(1, 0.7, 0.3, 0.6), 2.0)
+		if survey:
+			# 「计量」的读法：一圈扫过去的表盘 —— 起始角随时间转，玩家看得出它在「读」。
+			var spin := float(n - int(f.start)) * 0.008
+			draw_arc(dst, 30.0, spin, spin + TAU * 0.72, 28,
+					Color(1.0, 0.85, 0.45, 0.65), 2.0)
+			draw_arc(dst, 20.0, - spin * 1.6, - spin * 1.6 + TAU * 0.5, 20,
+					Color(1.0, 0.92, 0.62, 0.45), 1.5)
+		else:
+			draw_arc(dst, 28.0, 0, TAU, 32, Color(1, 0.7, 0.3, 0.6), 2.0)
 		draw_texture_rect(tex, Rect2(pos - Vector2(30, 38), Vector2(60, 60)), false)
 	else:
 		var seg_ms := maxf(float(int(f.end) - int(f.land)), 1.0)

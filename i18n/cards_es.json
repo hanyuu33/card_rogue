@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 320,
+ "count": 323,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1285,6 +1285,18 @@
   "9252": {
    "name": "Compensación",
    "effect_text": "Mientras esta carta esté en tu mano, tus otras cartas en la mano cuestan +1."
+  },
+  "9260": {
+   "name": "Topógrafo Constante",
+   "effect_text": "En lugar de actuar: reparte 16 de daño entre todas las unidades enemigas (de la más cercana a la más lejana; al derribar una, el resto pasa a la siguiente; las unidades con Sobrecarga solo reciben lo justo para llegar a 0). El daño sobrante se aplica a la HP del oponente. Si no se inflige daño a la HP del oponente, queda Aturdida durante un turno."
+  },
+  "9261": {
+   "name": "Calculador de Precisión",
+   "effect_text": "Cuando entra un Aliado o Estructura del oponente, si su Salud es mayor que 15, pasa a ser 15. Se resuelve después de todos los bonificadores de entrada."
+  },
+  "9262": {
+   "name": "Incrementador de Carga",
+   "effect_text": "Al comienzo de cada turno, añade un «Ataque» y una «Valla de Madera» a la pila de robo del oponente."
   }
  }
 }

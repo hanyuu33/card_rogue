@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-14",
+  "updated": "2026-11-15",
   "purpose": "R667 界面与共享组件翻译专用规范中文底本。权威 GDScript 中文不改；仅明确审计的规则漂移在 canonical 修正。",
   "rules": [
     "卡组是跨战斗完整构筑，抽牌堆是本场待抽区；删除是跨战斗 Remove，消失是本场 Banish。",
@@ -2296,6 +2296,10 @@
       "LEVEL_TWIN_CANNON": {
         "source": "scripts/game_levels.gd:1391",
         "zh": "双机炮阵"
+      },
+      "LEVEL_METROLOGY_WORKS": {
+        "source": "scripts/game_levels.gd:1424",
+        "zh": "计量工坊"
       },
       "LEVEL_LASER_LINE": {
         "source": "scripts/game_levels.gd:1441",

@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 320,
+ "count": 323,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1285,6 +1285,18 @@
   "9252": {
    "name": "Compensation",
    "effect_text": "While this card is in your Hand, your other cards in Hand cost +1."
+  },
+  "9260": {
+   "name": "Constant Surveyor",
+   "effect_text": "Instead of acting: distribute 16 damage among all enemy units (nearest first; when one is reduced to 0, the rest spills to the next one; Overloaded units only receive exactly enough to hit 0). Any damage left over is dealt to the opponent's HP. If this deals no damage to the opponent's HP, it is Stunned for one turn."
+  },
+  "9261": {
+   "name": "Precision Calculator",
+   "effect_text": "After an opponent's Ally or Structure enters, if its Health is greater than 15, it becomes 15. This resolves after all entry buffs."
+  },
+  "9262": {
+   "name": "Load Incrementer",
+   "effect_text": "At the start of each turn, add one 「Attack」 and one 「Wooden Fence」 to the opponent's draw pile."
   }
  }
 }

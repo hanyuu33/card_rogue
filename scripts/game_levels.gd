@@ -83,12 +83,14 @@ static func level_names() -> Array[String]:
 
 
 static func builtin_levels() -> Array:
-	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×9（第一层 4 + 第二层 5）→
+	## 按分级从低到高：普通简单×8（第一层 4 + 第二层 4）→ 普通困难×10（第一层 4 + 第二层 6；
+	##   R758 计量工坊进二层）→
 	## 精英简单×8（第一层 3 + 第二层 5；R449 哈气骑士团下调一层；R502 执法者的审判进二层；
 	##   R506 阿斯克勒庇厄斯的试炼由精英困难下调到精英简单；R541 普罗诺亚之影进二层）→
 	## 精英困难×7（第一层 3 + 第二层 4；R506 母舰空袭由精英简单上调到精英困难；
 	##   R722 巨炮防线由普通困难上调到精英困难）→
-	## Boss×7（第一层 3 + 第二层 3 + 第三层 1）。合计 39 关（R541 普罗诺亚之影进二层精英简单；
+	## Boss×7（第一层 3 + 第二层 3 + 第三层 1）。合计 40 关（R758 计量工坊进二层普通困难；
+	##   R541 普罗诺亚之影进二层精英简单；
 	## R539 巨炮防线进二层；R722 档位由普通困难上调到**精英困难**；
 	## R525 叛逃机械进第二层 Boss；
 	## R174 百眼动员进第二层普通简单；
@@ -99,6 +101,7 @@ static func builtin_levels() -> Array:
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
 		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
+			_metrology_works(),
 			_laser_line(),
 		_captain(), _duck_kiln(), _breath_charge(), _hermes(), _dragon_nest(),
 			_enforcer_judgement(), _asclepius(), _pronoia_shadow(),
@@ -1414,6 +1417,40 @@ static func _twin_cannon() -> Dictionary:
 			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 2)],
 		],
 		"enemy_effects": [9139],
+		"tutorial": [],
+	}
+
+
+static func _metrology_works() -> Dictionary:
+	## 第二层·普通敌人-困难「计量工坊」（R758）：三个「文职」单位排成一列。
+	##   后排 常数测量员 9260（0/60 程1 速1）—— **作为行动的代替**分配 16 点伤害
+	##     （`GameEngine._surveyor_act`）：由近及远、打倒一个把剩下的给下一个，
+	##     分不完的打到玩家 HP；**这一次没打到 HP 就自己眩晕一回合**。
+	##     题面由此成立：「拿一个够厚的单位堵住它」= 它每两回合才动一次；
+	##     场上空着 = 每回合 16 点直接糊脸，两回合就送走 20 血的玩家。
+	##   中排 精密计算者 9261（6/60 程1 速2）—— 我方**盟友或工事**入场后生命 > 15 就被压到
+	##     15（`_compute_cap_tick`，在所有入场增益之后）。高血单位铺场不再是无脑解。
+	##   前排 负载增量员 9262（4/60 程1 速1）—— 每回合往我方抽牌库塞一张「攻击」+ 一张
+	##     「木栅栏」（`_loader_tick`）：牌库被稀释，木栅栏还会占场。
+	## 三只都是 60 血：这关不拼「一口气拆掉后排」，而是拼「谁去堵、堵多久」。
+	return {
+		"name": "计量工坊",
+		"key": "metrology_works",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_TWO,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"enemy_growth": LAYER2_GROWTH,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9260, "常数测量员", 0, 60, 1, 1, Vector2i(0, 1)],
+			[9261, "精密计算者", 6, 60, 1, 2, Vector2i(1, 1)],
+			[9262, "负载增量员", 4, 60, 1, 1, Vector2i(2, 1)],
+		],
 		"tutorial": [],
 	}
 
