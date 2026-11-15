@@ -79,9 +79,14 @@ const PANEL_H := 584.0
 ## 上下花纹带上。54 = 角花 34 + 留白 20。
 const PAD := 54.0
 ## R695：道具详情页在「工具栏 3/3」时让出的一条换工具栏位（正文 / 底部说明都会让开它）。
-const TOOL_SWAP_H := 100.0
-const TOOL_SWAP_W := 120.0
-const TOOL_SWAP_GAP := 16.0
+const TOOL_SWAP_H := 116.0
+const TOOL_SWAP_W := 148.0
+const TOOL_SWAP_GAP := 12.0
+## R755：换装条内部三段 —— 标题行（图标 + 文案 + 取消键）/ 工具卡行 / 底部留白。
+const TOOL_SWAP_HEAD_H := 40.0
+const TOOL_SWAP_CARD_H := 66.0
+const TOOL_SWAP_CANCEL_W := 88.0
+const TOOL_SWAP_CANCEL_H := 26.0
 const ROW_H := 84.0
 const ROW_GAP := 10.0
 ## R531：追加奖励区块的**分隔带**高度 —— 画在 bonus 行**上方**（金线 + 题签 + 暖光）。
@@ -833,13 +838,14 @@ func _tex_sb(tex: Texture2D, margin: float) -> StyleBoxTexture:
 
 
 func _round_box(r: Rect2, radius: float, bg: Color, line: Color,
-		shadow := true) -> void:
+		shadow := true, bw := 1) -> void:
 	## 圆角卡片底。StyleBoxFlat 走引擎自己的九宫格，圆角与投影都比手画多边形干净。
+	## `bw`：描边宽度（R755 加，换装卡悬停时要 2px 才看得出来）。
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.set_corner_radius_all(int(radius))
 	if line.a > 0.0:
-		sb.set_border_width_all(1)
+		sb.set_border_width_all(bw)
 		sb.border_color = line
 	if shadow:
 		sb.shadow_color = Color(0.18, 0.13, 0.05, 0.18)
@@ -1292,8 +1298,7 @@ func _draw_relic() -> void:
 	var e: Dictionary = RunState.pending_rewards[_sel]
 	var settled := _settled(e)
 	# R695：工具栏 3/3 时这一条领不进去 → 正文要让出底部 TOOL_SWAP_H 给「换一个」栏位。
-	var tool_full := (not settled) and str(e.get("kind", "")) == "tool" \
-			and RunState.trap_free_slots() <= 0
+	var tool_full := _tool_swap_active(e)
 	_draw_btn(_btn_back_rect(), GameI18n.ui("reward", "REWARD_BACK_TO_LIST", "← 返回列表"), false, false)
 	# R680：标题（含 R577b 那枚道具图）**整组居中** —— 与二选一视图同一个口径。
 	# 原来标题 `x+180` 左起正好压住「← 返回列表」右沿（184），图标再挂在标题右端，
@@ -1352,6 +1357,8 @@ func _draw_relic() -> void:
 	_mention_hits = res["hits"]
 	# 底部动作
 	var claim := _btn_claim_rect()
+	## R755：满栏时右下那个「工具栏已满」的灰按钮与换装条标题重复，而且看着像可以点
+	## —— 干脆不画（点击也一并屏蔽，见 `_on_click`）。
 	# R695（用户口径「我希望满栏掉落」配套）：工具栏 3/3 时**道具领不进去** ——
 	# 旧版 `claim_pending_reward` 会返回 false，界面上却什么都不说（点了没反应）。
 	# 现在把三个旧槽摊在正文下方：点一个 = 丢掉它，新工具立刻进那个槽。
@@ -1368,63 +1375,103 @@ func _draw_relic() -> void:
 				GameI18n.ui("reward", "REWARD_RETURN_KEEPS_REWARD", "「返回列表」不会丢掉它 —— 可以随时再点进来看、再领取。"))
 	# R695：原来这里是「放弃这件」。用户口径「不需要专门点放弃，允许不拿直接过」→
 	# 整个按钮撤掉：想走就走左上角「← 返回列表」，条目留在待领队列里。
-	_draw_btn(claim, (GameI18n.ui("reward", "REWARD_TOOL_FULL_BTN", "工具栏已满") if tool_full
-			else GameI18n.ui("reward", "REWARD_CLAIM", "领取")) if not settled
-			else GameI18n.ui("reward", "REWARD_SETTLED_BUTTON", "已处理"),
-			true, settled or tool_full)
+	if not tool_full:
+		_draw_btn(claim, (GameI18n.ui("reward", "REWARD_CLAIM", "领取")) if not settled
+				else GameI18n.ui("reward", "REWARD_SETTLED_BUTTON", "已处理"),
+				true, settled)
+
+
+func _tool_swap_active(e: Dictionary) -> bool:
+	## R755：这条是「待领的工具」且工具栏已满 → 详情页走换装条（点旧槽换下 / 取消）。
+	## 绘制、绘制闸门、命中三处都读它，别各写一份判据。
+	return str(e.get("kind", "")) == "tool" and not _settled(e) \
+			and RunState.trap_free_slots() <= 0
+
+
+func _tool_swap_block_rect() -> Rect2:
+	## R755：换装条整块（羊皮纸子面板）。只在「工具栏满 + 这条是工具」时存在。
+	## 高度由 TOOL_SWAP_H 决定，正文 / 底部说明都按同一个值让位（见 `_draw_relic`）。
+	var r := _panel_rect()
+	return Rect2(r.position.x + PAD, r.position.y + PANEL_H - FOOT_H - 8.0 - TOOL_SWAP_H,
+			PANEL_W - PAD * 2.0, TOOL_SWAP_H)
 
 
 func _tool_swap_rect(i: int) -> Rect2:
-	## R695：换工具栏位（只在「工具栏满 + 这条是工具」时存在）。绘制与命中共用。
-	var r := _panel_rect()
+	## R755：换装卡位。绘制与命中共用（点它 = 丢掉这件旧工具）。
+	var b := _tool_swap_block_rect()
 	var total := float(RunState.TRAP_SLOTS) * TOOL_SWAP_W \
 			+ float(RunState.TRAP_SLOTS - 1) * TOOL_SWAP_GAP
-	var x0 := r.position.x + (PANEL_W - total) * 0.5
-	var y := r.position.y + PANEL_H - FOOT_H - 8.0 - TOOL_SWAP_H + 24.0
+	var x0 := b.position.x + (b.size.x - total) * 0.5
+	var y := b.position.y + TOOL_SWAP_HEAD_H
 	return Rect2(x0 + float(i) * (TOOL_SWAP_W + TOOL_SWAP_GAP), y,
-			TOOL_SWAP_W, TOOL_SWAP_H - 30.0)
+			TOOL_SWAP_W, TOOL_SWAP_CARD_H)
+
+
+func _tool_swap_cancel_rect() -> Rect2:
+	## R755（店长口径「也可以取消」）：取消 = 回列表，条目**留在待领队列**，不丢东西。
+	var b := _tool_swap_block_rect()
+	return Rect2(b.end.x - 14.0 - TOOL_SWAP_CANCEL_W, b.position.y + 8.0,
+			TOOL_SWAP_CANCEL_W, TOOL_SWAP_CANCEL_H)
 
 
 func _draw_tool_swap_strip(r: Rect2) -> void:
-	## R695（用户口径「我希望满栏掉落」）：3/3 满栏时，新工具**照样掉**、
-	## 照样能领 —— 只是要先腾个位置。这里把三个旧槽摊在正文下方，点一个 = 丢掉它、
-	## 新工具立刻补进那个槽（`_swap_tool()`）。
+	## R695（用户口径「我希望满栏掉落」）：3/3 满栏时，新工具**照样掉**、照样能领 ——
+	## 只是要先腾个位置。点一张旧工具卡 = 丢掉它、新工具立刻补进那个槽（`_swap_tool()`）。
 	## 为什么不做成「满栏就不掉」：旧版就是那样，10% 的掉率对满栏玩家悄悄变成 0%。
-	var top := r.position.y + PANEL_H - FOOT_H - 8.0 - TOOL_SWAP_H
-	_root.draw_string(_font_bold, Vector2(r.position.x, top + 16.0),
-			GameI18n.ui("reward", "REWARD_TOOL_FULL_SWAP", "工具栏已满：点一个旧工具，把它换下来"),
-			HORIZONTAL_ALIGNMENT_CENTER, PANEL_W, UiTheme.FS_CAPTION, Color("8c1a10"))
+	## R755：从「三块素色方块 + 一行红字」重做成一块正式子面板 —— 金色交换图标做标题、
+	## 右上角给「取消」，卡片带图标 + 名字 + 动作词，悬停才转红（红线只标记「你正要丢的是它」）。
+	var b := _tool_swap_block_rect()
+	_round_box(b, 12.0, Color(0.99, 0.97, 0.90, 0.90), Color("c9a558"), true)
+	var icon := UiAssets.small_icon("ui_tool_swap", 26)
+	var tx := b.position.x + 16.0
+	if icon != null:
+		_root.draw_texture_rect(icon, Rect2(tx, b.position.y + 9.0, 26.0, 26.0), false)
+		tx += 34.0
+	_root.draw_string(_font_bold, Vector2(tx, b.position.y + 27.0),
+			GameI18n.ui("reward", "REWARD_TOOL_SWAP_HEAD", "工具栏已满 · 选一件换下"),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_BODY, Color("8c1a10"))
+	# 取消键：与面板其它胶囊按钮同一套画法，只是更小
+	var cr := _tool_swap_cancel_rect()
+	_capsule_btn(cr, GameI18n.ui("reward", "REWARD_TOOL_SWAP_CANCEL", "取消"), false, false)
 	for i in RunState.TRAP_SLOTS:
 		var sr := _tool_swap_rect(i)
 		var old := RunState.trap_at(i)
 		if old <= 0:
 			continue
 		var hot := _mouse_over(sr)
-		_root.draw_rect(sr, Color(1.0, 0.98, 0.92, 0.72) if hot else Color(0.99, 0.97, 0.90, 0.55), true)
-		_root.draw_rect(sr, Color("b03a2e") if hot else Color(0.42, 0.36, 0.26, 0.40), false, 2.0)
+		_round_box(sr, 10.0, Color(1.0, 0.99, 0.95, 1.0) if hot else Color(0.97, 0.95, 0.88, 0.92),
+				Color("b03a2e") if hot else Color("d0bf9c"), hot, 2 if hot else 1)
+		var icon_box := 44.0
 		var tex: Texture2D = UiAssets.trap_icon(old)
 		if tex != null:
-			_root.draw_texture_rect(tex, Rect2(sr.position + Vector2(6.0, 6.0),
-					Vector2(sr.size.y - 12.0, sr.size.y - 12.0)), false)
+			_root.draw_texture_rect(tex, Rect2(sr.position + Vector2(8.0,
+					(sr.size.y - icon_box) * 0.5), Vector2(icon_box, icon_box)), false)
+		else:
+			icon_box = 0.0
 		var td: TrapData = TrapRepo.load_json().get_trap(old)
 		var nm := td.trap_name if td != null else "工具"
-		_root.draw_string(_font, Vector2(sr.position.x + sr.size.y - 2.0, sr.position.y + 22.0),
-				nm, HORIZONTAL_ALIGNMENT_LEFT, sr.size.x - sr.size.y - 2.0,
-				UiTheme.FS_CAPTION, Color("6a5a40"))
-		_root.draw_string(_font, Vector2(sr.position.x + sr.size.y - 2.0, sr.position.y + 38.0),
-				GameI18n.ui("reward", "REWARD_TOOL_SWAP_TAG", "丢掉它"), HORIZONTAL_ALIGNMENT_LEFT,
-				sr.size.x - sr.size.y - 2.0, UiTheme.FS_CAPTION,
-				Color("b03a2e") if hot else Color(0.55, 0.42, 0.30, 0.75))
+		var nx := sr.position.x + icon_box + 14.0
+		var nw := sr.end.x - nx - 8.0
+		_root.draw_string(_font_bold, Vector2(nx, sr.position.y + 30.0), nm,
+				HORIZONTAL_ALIGNMENT_LEFT, nw, UiTheme.FS_CAPTION, Color("4a3f2e"))
+		_root.draw_string(_font, Vector2(nx, sr.position.y + 50.0),
+				GameI18n.ui("reward", "REWARD_TOOL_SWAP_TAG", "丢掉它"),
+				HORIZONTAL_ALIGNMENT_LEFT, nw, UiTheme.FS_CAPTION,
+				Color("b03a2e") if hot else Color(0.55, 0.42, 0.30, 0.85))
 
 
 func _swap_tool(slot: int) -> void:
 	## R695：丢掉旧槽 → 立刻把这条工具领进来（`claim_pending_reward` 会填第一个空槽）。
 	## ⚠️ 顺序不能反：先领后丢的话，满栏时 `gain_trap()` 直接失败，玩家白丢一个工具。
+	## R755：**失败要回滚** —— 队列可能在中途被别处改过（读档 / 剧情奖励），
+	## 领不进来时把旧工具放回原槽，不能让人白丢一件。
 	var old := RunState.discard_trap(slot)
 	if old <= 0:
 		return
 	if RunState.claim_pending_reward(_sel):
 		_back_to_list()
+		return
+	RunState.traps[slot] = old
 
 
 func _draw_key_choice() -> void:
@@ -2354,14 +2401,22 @@ func _on_click(pos: Vector2) -> void:
 			if _btn_back_rect().has_point(pos):
 				_back_to_list()
 				return
-			if _btn_claim_rect().has_point(pos):
+			# R755：满栏时右下角没有「领取」按钮（换了换装条），这一点不做事。
+			if _sel < RunState.pending_rewards.size() \
+					and _tool_swap_active(RunState.pending_rewards[_sel]):
+				pass
+			elif _btn_claim_rect().has_point(pos):
 				_claim_entry(_sel)
 				return
 			# R695：工具栏满 → 点旧槽 = 丢掉它并把这条工具领进来（其余情况没有这排栏位）。
 			if _sel < RunState.pending_rewards.size():
 				var et: Dictionary = RunState.pending_rewards[_sel]
-				if str(et.get("kind", "")) == "tool" and not _settled(et) \
-						and RunState.trap_free_slots() <= 0:
+				if _tool_swap_active(et):
+					# R755（店长口径「也可以取消」）：取消 = 回列表，条目**留在待领队列**、
+					# 什么都不丢；下次再点进来换也行。
+					if _tool_swap_cancel_rect().has_point(pos):
+						_back_to_list()
+						return
 					for ti in RunState.TRAP_SLOTS:
 						if _tool_swap_rect(ti).has_point(pos):
 							_swap_tool(ti)
@@ -2633,8 +2688,12 @@ func _demo_start() -> void:
 		tmt.wait_time = 0.25
 		tmt.one_shot = true
 		tmt.timeout.connect(func():
+			# R755：`--toolclaim` = 空栏详情页。延后清表，压过 battle_scene 的 `--tooldemo`
+			# （那边会把工具栏塞满，同步清会被它覆盖）。
+			if "--toolclaim" in args:
+				RunState.traps = [-1, -1, -1]
 			open()
-			if "--tooldetail" in args:
+			if "--tooldetail" in args or "--toolclaim" in args:
 				_open_entry(0)
 			elif "--toolfull" in args:
 				_open_entry(0))

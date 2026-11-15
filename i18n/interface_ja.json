@@ -197,6 +197,8 @@
       "REWARD_TOOL_DESC_MISSING": "（このツールの説明が見つかりません）",
       "REWARD_TOOL_FULL_SWAP": "ツールバーが満杯：古いツールをタップして入れ替え",
       "REWARD_TOOL_SWAP_TAG": "捨てる",
+      "REWARD_TOOL_SWAP_HEAD": "ツールバー満杯・1つ選んで入れ替え",
+      "REWARD_TOOL_SWAP_CANCEL": "キャンセル",
       "REWARD_TOOL_SWAP_NOTE": "上の古いツールをタップすると捨てられ、新しいツールがその枠にすぐ入る。",
       "REWARD_TOOL_FULL_BTN": "ツールバー満杯"
     },

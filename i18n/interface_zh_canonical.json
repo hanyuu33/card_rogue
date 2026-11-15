@@ -1021,6 +1021,14 @@
         "source": "scripts/reward_panel.gd",
         "zh": "丢掉它"
       },
+      "REWARD_TOOL_SWAP_HEAD": {
+        "source": "scripts/reward_panel.gd",
+        "zh": "工具栏已满 · 选一件换下"
+      },
+      "REWARD_TOOL_SWAP_CANCEL": {
+        "source": "scripts/reward_panel.gd",
+        "zh": "取消"
+      },
       "REWARD_TOOL_SWAP_NOTE": {
         "source": "scripts/reward_panel.gd",
         "zh": "点上面的旧工具 = 丢掉它，新工具立刻补进那个栏位。"

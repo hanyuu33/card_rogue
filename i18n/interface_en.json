@@ -197,6 +197,8 @@
       "REWARD_TOOL_DESC_MISSING": "(This tool's description is missing)",
       "REWARD_TOOL_FULL_SWAP": "Tool bar is full: tap an old tool to swap it out",
       "REWARD_TOOL_SWAP_TAG": "Discard",
+      "REWARD_TOOL_SWAP_HEAD": "Tool bar is full · pick one to replace",
+      "REWARD_TOOL_SWAP_CANCEL": "Cancel",
       "REWARD_TOOL_SWAP_NOTE": "Tapping an old tool above discards it, and the new tool fills that slot right away.",
       "REWARD_TOOL_FULL_BTN": "Tool bar full"
     },

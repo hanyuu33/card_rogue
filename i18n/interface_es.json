@@ -197,6 +197,8 @@
       "REWARD_TOOL_DESC_MISSING": "(Falta la descripción de esta herramienta)",
       "REWARD_TOOL_FULL_SWAP": "Barra de herramientas llena: toca una herramienta vieja para sustituirla",
       "REWARD_TOOL_SWAP_TAG": "Descartar",
+      "REWARD_TOOL_SWAP_HEAD": "Barra llena · elige una para sustituir",
+      "REWARD_TOOL_SWAP_CANCEL": "Cancelar",
       "REWARD_TOOL_SWAP_NOTE": "Toca una herramienta vieja arriba para descartarla: la nueva ocupa ese espacio al instante.",
       "REWARD_TOOL_FULL_BTN": "Barra llena"
     },
