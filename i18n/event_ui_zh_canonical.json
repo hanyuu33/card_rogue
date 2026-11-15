@@ -71,7 +71,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "离开（两个都不要）"
     },
     "divination": {
-      "START_DIVINATION": "进行占卜",
+      "START_DIVINATION": "进行占卜（失去 5 点最大生命）",
       "LEAVE_WITHOUT_DIVINATION": "离开（不占卜）",
       "LEAVE_WITHOUT_INTERPRETING": "离开（不去解读）",
       "WHALE_FIGHT": "我会为它而战（获得「鲸鱼之怒」）",

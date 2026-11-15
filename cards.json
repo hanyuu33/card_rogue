@@ -6648,6 +6648,27 @@
       "target_mode": "none",
       "color": "自然",
       "image": ""
+    },
+    {
+      "id": 9252,
+      "name": "代偿",
+      "kind": "诅咒",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 6,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "代偿"
+      ],
+      "affixes": ["次元"],
+      "effect_text": "这张卡在手卡时，你的其他手卡费用 +1。",
+      "target_mode": "none",
+      "color": "暗影",
+      "image": ""
     }
   ]
 }

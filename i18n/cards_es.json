@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 319,
+ "count": 320,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1281,6 +1281,10 @@
   "9251": {
    "name": "Patito",
    "effect_text": "Al entrar, reduce en 1 el Coste de una carta de Efecto aleatoria de tu mano."
+  },
+  "9252": {
+   "name": "Compensación",
+   "effect_text": "Mientras esta carta esté en tu mano, tus otras cartas en la mano cuestan +1."
   }
  }
 }

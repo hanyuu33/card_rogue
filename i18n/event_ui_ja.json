@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "離れる（どちらも取らない）"
     },
     "divination": {
-      "START_DIVINATION": "占いを行う",
+      "START_DIVINATION": "占いを行う（最大HPを5失う）",
       "LEAVE_WITHOUT_DIVINATION": "離れる（占わない）",
       "LEAVE_WITHOUT_INTERPRETING": "離れる（解釈しない）",
       "WHALE_FIGHT": "それのために戦う（「鯨の怒り」を獲得）",

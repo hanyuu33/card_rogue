@@ -101,7 +101,7 @@
     },
     "6027": {
       "name": "Apple",
-      "desc": "On pickup: Gain +7 Max Health and restore your Health to maximum."
+      "desc": "On pickup: Gain +7 Max Health and restore 20% of your Max Health."
     },
     "6028": {
       "name": "Milk",
@@ -225,7 +225,7 @@
     },
     "6058": {
       "name": "Cursebind",
-      "desc": "The first non-X-Cost card you play each battle has Cost -3 (minimum 0; the unused discount carries over between turns). That card then has Cost +1 for the rest of the battle."
+      "desc": "The first non-X-Cost card you play each battle has Cost -3 (minimum 0; the unused discount carries over between turns)."
     },
     "6059": {
       "name": "Core",

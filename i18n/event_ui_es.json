@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "Salir (sin tomar ninguna)"
     },
     "divination": {
-      "START_DIVINATION": "Realizar una adivinación",
+      "START_DIVINATION": "Realizar una adivinación (pierdes 5 de Vida máxima)",
       "LEAVE_WITHOUT_DIVINATION": "Salir (sin adivinación)",
       "LEAVE_WITHOUT_INTERPRETING": "Salir (sin interpretarla)",
       "WHALE_FIGHT": "Lucharé por ella (obtener «Ira de la Ballena»)",

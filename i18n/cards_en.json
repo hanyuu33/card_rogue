@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 319,
+ "count": 320,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1281,6 +1281,10 @@
   "9251": {
    "name": "Duckling",
    "effect_text": "When it enters, reduce the Cost of a random Effect card in your Hand by 1."
+  },
+  "9252": {
+   "name": "Compensation",
+   "effect_text": "While this card is in your Hand, your other cards in Hand cost +1."
   }
  }
 }

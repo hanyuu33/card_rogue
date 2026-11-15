@@ -27,7 +27,7 @@
     "apple_doctor": {
       "name": "La manzana y el médico",
       "texts": {
-        "APPLE_DESC": "Un médico está sentado al borde del camino con un historial clínico abierto sobre las rodillas. Levanta la vista hacia ti:\n«Llévate una manzana. Cómetela y no vuelvas a venir a verme.»\nObtienes «Manzana»: obtén +7 de Vida máxima y recupera Vida hasta alcanzar el máximo.\nTambién puedes no aceptar nada y marcharte; solo procura no mirar atrás por el camino.",
+        "APPLE_DESC": "Un médico está sentado al borde del camino con un historial clínico abierto sobre las rodillas. Levanta la vista hacia ti:\n«Llévate una manzana. Cómetela y no vuelvas a venir a verme.»\nObtienes «Manzana»: obtén +7 de Vida máxima y recupera un 20% de tu Vida máxima.\nTambién puedes no aceptar nada y marcharte; solo procura no mirar atrás por el camino.",
         "APPLE_TAKEN_DESC": "El médico ya no está, y hasta la silla ha desaparecido.\nLa manzana en tu mano pesa y aún conserva un poco de calor corporal."
       }
     },
@@ -150,7 +150,7 @@
     "divination": {
       "name": "Sala de adivinación",
       "texts": {
-        "DIVINATION_DESC": "Solo arde una vela en la habitación. Una capa de niebla flota en la bola de cristal y se niega a disiparse.\n\n«Lo que veas dependerá de lo que creas.»\n\nLa adivina cogió el dinero y desapareció, dejando solo la bola y un rastro de incienso de sándalo.",
+        "DIVINATION_DESC": "Solo arde una vela en la habitación. Una capa de niebla flota en la bola de cristal y se niega a disiparse.\n\n«Lo que veas dependerá de lo que creas.»\n\nLa adivina cogió el dinero y desapareció, dejando solo la bola y un rastro de incienso de sándalo.\n(El precio de la adivinación: pierdes 5 de Vida máxima.)",
         "DIVINATION_DONE_DESC": "La niebla vuelve a velar la bola de cristal, como si nada hubiera ocurrido.",
         "DIV_WHALE_DESC": "Un rincón de la niebla se despeja. Una ballena gira lentamente entre la luz de las estrellas y su aleta caudal barre todo el mar.\n\nPiensas—",
         "DIV_LIQUID_DESC": "La bola contiene una copa de líquido. Una fina escarcha cubre el borde y su color cambia lentamente bajo la luz de la lámpara.\n\nPiensas—",

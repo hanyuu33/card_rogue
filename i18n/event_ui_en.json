@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "Leave (take neither)"
     },
     "divination": {
-      "START_DIVINATION": "Perform a divination",
+      "START_DIVINATION": "Perform a divination (lose 5 Max Health)",
       "LEAVE_WITHOUT_DIVINATION": "Leave (no divination)",
       "LEAVE_WITHOUT_INTERPRETING": "Leave (skip interpretation)",
       "WHALE_FIGHT": "I will fight for it (gain \"Whale's Wrath\")",

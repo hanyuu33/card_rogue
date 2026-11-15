@@ -27,7 +27,7 @@
     "apple_doctor": {
       "name": "An Apple and the Doctor",
       "texts": {
-        "APPLE_DESC": "A doctor sits by the roadside, a medical chart open on their lap. They glance up at you:\n\"Take an apple with you. Eat it, and don't come back to see me.\"\nGain \"Apple\": Gain +7 Max Health and restore your Health to maximum.\nYou can also refuse it and walk away—just don't look back along the road.",
+        "APPLE_DESC": "A doctor sits by the roadside, a medical chart open on their lap. They glance up at you:\n\"Take an apple with you. Eat it, and don't come back to see me.\"\nGain \"Apple\": Gain +7 Max Health and restore 20% of your Max Health.\nYou can also refuse it and walk away—just don't look back along the road.",
         "APPLE_TAKEN_DESC": "The doctor is gone, and even the chair has been cleared away.\nThe apple in your hand is heavy, still holding a trace of body heat."
       }
     },
@@ -150,7 +150,7 @@
     "divination": {
       "name": "Divination Room",
       "texts": {
-        "DIVINATION_DESC": "Only a single candle burns in the room. A layer of mist hangs in the crystal ball, refusing to disperse.\n\n“What you see depends on what you believe.”\n\nThe diviner took the money and vanished, leaving only the ball and a trace of sandalwood incense.",
+        "DIVINATION_DESC": "Only a single candle burns in the room. A layer of mist hangs in the crystal ball, refusing to disperse.\n\n“What you see depends on what you believe.”\n\nThe diviner took the money and vanished, leaving only the ball and a trace of sandalwood incense.\n(The price of a reading: lose 5 Max Health.)",
         "DIVINATION_DONE_DESC": "Mist veils the crystal ball once more, as if nothing ever happened.",
         "DIV_WHALE_DESC": "A corner of the mist clears. A whale slowly turns amid the starlight, its tail fin sweeping across the entire sea.\n\nYou think—",
         "DIV_LIQUID_DESC": "The ball holds a cup of liquid. A thin frost coats its rim, and its color slowly shifts in the lamplight.\n\nYou think—",

@@ -82,7 +82,7 @@ const PEAR_TAKEN_DESC := """肩上那座鸭梨山，你已经背起来了。
 
 const APPLE_DESC := """路边坐着一位医生，膝上摊着一本病历，抬头看了你一眼：
 「拿个苹果走吧。吃了它，就别再来找我。」
-获得「苹果」：最大生命 +7，并回复满生命值。
+获得「苹果」：最大生命 +7，并回复 20% 最大生命值。
 也可以什么也不接，转身离开——只是路上别再回头。"""
 
 const APPLE_TAKEN_DESC := """医生已经不在那儿了，连椅子都收走了。
@@ -267,7 +267,8 @@ const DIVINATION_DESC := """屋里只点着一支蜡烛，水晶球里浮着一�
 
 「看得到什么，全看你相信什么。」
 
-占卜师收完钱就不见了，只留下这颗球，和一阵檀香。"""
+占卜师收完钱就不见了，只留下这颗球，和一阵檀香。
+（占卜的代价：失去 5 点最大生命。）"""
 
 const DIVINATION_DONE_DESC := """水晶球重新蒙上雾，好像什么都没发生过。"""
 
@@ -288,6 +289,9 @@ const DIV_FEAST_DESC := """球里摆开一桌佳肴，热气还在往上飘，�
 你觉得——"""
 
 const DIVINATION_KINDS := 4
+## R756（店长口径）：占卜**要付代价** —— 失去 5 点最大生命（与「源数之力」同一条
+## `RunState.lose_max_hp` 口径：只削上限，不额外扣当前生命）。
+const DIVINATION_HP_COST := 5
 
 const LAKE_DESC := """雾从水面浮起来，两张卡牌悬在雾的上方——
 一张泛着银光，一张泛着金光，慢慢转过来。这是你丢的吗？
@@ -305,7 +309,8 @@ const FURNACE_DESC := """炉膛里的火没有颜色，只有形状——东西�
 const FURNACE_DONE_DESC := """炉火暗下去一瞬，又慢慢亮起来。石台边缘还留着一点余温——这次交易已经做完了。"""
 
 ## R458「契约的核心」（第二层专属）：两个选项各给一件**事件道具**，都不当场兑现 ——
-##   选项 1 订立契约 → 道具「咒缚」（每场战斗第一张卡 -3 费 / 那张卡本场 +1 费）
+##   选项 1 订立契约 → 道具「咒缚」（每场战斗第一张卡 -3 费）+ 一张「代偿」进卡组
+##                        （R756：代价从「那张卡之后 +1 费」改成这张诅咒）
 ##   选项 2 获取核心 → 道具「核心」（战斗中累计失去 15 点生命后成形，
 ##                          这一场结束的**奖励页**里可以兑换一次：献祭一张伤害技能牌，
 ##                          把它的第一段伤害变成另一张的附魔；用掉即失效）
@@ -314,6 +319,9 @@ const FURNACE_DONE_DESC := """炉火暗下去一瞬，又慢慢亮起来。石�
 ## 描述同样压到 2 行：它铺满「选项 1 / 选项 2 / 离开」三个按钮，一长就把最后一个
 ## 挤出屏幕（与熔炉同一条教训，见 `_fit_center()`）。
 const CORE_CURSE_ID := 6058       # 咒缚（选项 1 的事件道具）
+## R756（店长口径）：签契约**不再**让首张卡在之后涨价 —— 代价改成
+## 「当场往卡组里塞一张代偿 9252（2 费诅咒 · 次元 · 在手卡里期间其余手卡 +1 费）」。
+const CORE_COMP_CARD_ID := 9252
 const CORE_DESC := """石台正中嵌着一枚还在轻轻跳动的核心，四周绕着几根细链。
 左侧摊着一份没落款的契约，纸面干净，笔就压在边上。"""
 const CORE_CONTRACT_DESC := """链子松开了一圈。纸面上多了一行字，是你的名字。"""
@@ -1674,8 +1682,14 @@ func _ready() -> void:
 			_apply_divination_text()
 		else:
 			desc.text = DIVINATION_DESC
-			rest_btn.text = "进行占卜"
-			rest_btn.disabled = false
+			# R756：占卜要付代价 —— 失去 DIVINATION_HP_COST 点最大生命。
+			# 付不起就不让点：`lose_max_hp` 会「至少留 1 点」，不拦等于白占一次。
+			if RunState.max_hp <= DIVINATION_HP_COST:
+				rest_btn.text = "最大生命不足（占卜需失去 %d 点）" % DIVINATION_HP_COST
+				rest_btn.disabled = true
+			else:
+				rest_btn.text = "进行占卜（失去 %d 点最大生命）" % DIVINATION_HP_COST
+				rest_btn.disabled = false
 			bbq_btn.visible = false
 			leave_btn.text = "离开（不占卜）"
 			result_label.text = ""
@@ -2195,10 +2209,17 @@ func _on_main() -> void:
 	sfx.play("click")
 	if _is_divination():
 		if _div_stage == 0:
+			# R756：先付代价（失去 5 点最大生命）再占卜；付不起就不让占（按钮同判据）。
+			if RunState.max_hp <= DIVINATION_HP_COST:
+				return
+			var div_paid := RunState.lose_max_hp(DIVINATION_HP_COST)
 			# 进行占卜：1~4 随机（**走本局 run_rng**，同种子一致）
 			_div_rolled = RunState.run_rng.randi_range(1, DIVINATION_KINDS)
 			_div_stage = 1
 			_apply_divination_text()
+			if div_paid > 0:
+				result_label.text = "（占卜的代价：失去 %d 点最大生命 → %d / %d）" % [
+						div_paid, RunState.hp, RunState.max_hp]
 			_update_orb_vision()
 			sfx.play("click")
 			_redraw()
@@ -2752,7 +2773,7 @@ func _core_pair_available(repo: CardRepo) -> bool:
 
 func _setup_core_contract() -> void:
 	## R458「契约的核心」（第二层专属）的选项铺排。
-	##   · 选项 1 订立契约 → 道具「咒缚」；
+	##   · 选项 1 订立契约 → 道具「咒缚」+ 往卡组塞一张「代偿」（R756）；
 	##   · 选项 2 获取核心 → **两段选卡**（先挑祭品、再挑接收者）；
 	##   · 离开（什么都不做）。
 	## ⚠️ 两段都在本场景用 `PickOverlay` 完成（不跳卡组编辑场景）：第一段只**记下**祭品
@@ -2784,7 +2805,7 @@ func _setup_core_contract() -> void:
 		rest_btn.text = "契约已经签过了"
 		rest_btn.disabled = true
 	else:
-		rest_btn.text = "订立契约（获得道具「咒缚」）"
+		rest_btn.text = "订立契约（「咒缚」+ 一张「代偿」）"
 		rest_btn.disabled = false
 	# R458 修正：选项 2 只**收下道具**，兑现挪到「战斗中累计失去 15 点生命 →
 	# 战斗结束的奖励页」。所以这里没有「当场选卡」，只按三态给文案：
@@ -2812,11 +2833,16 @@ func _core_take_contract() -> void:
 		_on_leave()
 		return
 	RunState.gain_relic(CORE_CURSE_ID)
+	# R756：契约的代价写在**签的这一刻** —— 当场塞一张「代偿」进卡组（不是「那张卡涨价」）。
+	RunState.add_card(CORE_COMP_CARD_ID)
 	var rel := RelicRepo.load_json().get_relic(CORE_CURSE_ID)
+	var comp := CardRepo.load_json().get_card(CORE_COMP_CARD_ID)
 	_core_pick = "contract"
 	_claim_reward(rest_btn)
 	desc.text = CORE_CONTRACT_DESC
-	_core_result = "「咒缚」已收进道具栏：%s" % (rel.desc if rel != null else "")
+	_core_result = "获得道具「咒缚」，一张「%s」已加入你的卡组。（咒缚：%s）" % [
+			comp.card_name if comp != null else "代偿",
+			rel.desc if rel != null else ""]
 	_collapse_to_leave()
 	result_label.text = _core_result
 	result_label.add_theme_color_override("font_color", Color("b06be0"))

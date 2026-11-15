@@ -101,7 +101,7 @@
     },
     "6027": {
       "name": "Manzana",
-      "desc": "Al recoger: obtén +7 de Vida máxima y recupera Vida hasta alcanzar el máximo."
+      "desc": "Al recoger: obtén +7 de Vida máxima y recupera un 20% de tu Vida máxima."
     },
     "6028": {
       "name": "Leche",
@@ -225,7 +225,7 @@
     },
     "6058": {
       "name": "Atadura maldita",
-      "desc": "La primera carta sin Coste X que juegues en cada combate tiene Coste -3 (mínimo 0; el descuento no utilizado se conserva entre turnos). Después, esa carta tiene Coste +1 durante el resto del combate."
+      "desc": "La primera carta sin Coste X que juegues en cada combate tiene Coste -3 (mínimo 0; el descuento no utilizado se conserva entre turnos)."
     },
     "6059": {
       "name": "Núcleo",

@@ -8658,16 +8658,6 @@ func _show_over(win: bool) -> void:
 			# **各自独立**的三选一 —— 玩家可以各选一张，也可以只选一组。
 			if _run_boss_win:
 				RunState.queue_card_reward("epic")
-			# R472（用户口径「打完 3 层 boss 游戏都胜利了，不需要结算奖励了，直接提示胜利」）：
-			# 最后一层 Boss 打完 = 整局结束，卡组 / 道具 / 金币都不会再被下一局用到 ——
-			# 还弹一个「共 N 件，待领 N 件」的奖励页纯属多此一举。这里把这一批直接清掉，
-			# 结算面板接上「胜利」提示（奖励窗的打开判据是 `pending_reward_count() > 0`，
-			# 清空之后它自己就不会弹了）。
-			# ⚠️ 金币 / boss 记账 / 击杀统计都在上面已经结算完，别一起清。
-			if _run_boss_win and GameLayers.next_layer(RunState.current_layer) <= 0:
-				RunState.pending_rewards = []
-				RunState.pending_relic_drop = -1
-				RunState.relic_choice = []
 			if _run_boss_win:
 				# R339：Boss 已击破 → 记账（`boss_beaten` + 清 `boss_pending`）。
 				# ⚠️ 放在算 `_run_next_layer` **之前**：advance_layer 会清这个标记，
@@ -8683,6 +8673,20 @@ func _show_over(win: bool) -> void:
 				if _run_next_layer == GameLayers.LAYER_THREE \
 						and not RunState.can_enter_third_layer():
 					_run_next_layer = 0
+			# R472（用户口径「打完 3 层 boss 游戏都胜利了，不需要结算奖励了，直接提示胜利」）：
+			# **这一局到此为止**时，卡组 / 道具 / 金币都不会再被用到 —— 留一批「待领 N 件」
+			# 纯属多此一举（奖励窗的打开判据就是 `pending_reward_count() > 0`）。
+			# R756：判据从「没有下一层」改成「这次真的结束」—— 原来只认最后一层，
+			# 「打通二层但信物不齐 = 胜利？」那条路会把整批奖励（含雕像祝福必掉的工具）
+			# 一起带进结算页，玩家还能从胜利面板点「查看奖励」进去领一堆带不走的东西。
+			# ⚠️ 必须放在 `_run_next_layer` 算完之后（它可能被上面那段清成 0）。
+			# ⚠️ 金币 / boss 记账 / 击杀统计都在上面已经结算完，别一起清。
+			# ⚠️ 必须带 `_run_boss_win`：普通战斗胜利时 `_run_next_layer` 恒为 0，
+			#    少了这半句就会把**每一场**普通胜利的奖励全清掉。
+			if _run_boss_win and _run_next_layer <= 0:
+				RunState.pending_rewards = []
+				RunState.pending_relic_drop = -1
+				RunState.relic_choice = []
 			# R179：按钮文案只留几个字（用户报「字太多」）——掉落道具、回血 / 恢复生命
 			# 这些细节都在奖励悬浮窗与结算提示行里，不必塞进按钮。
 			if _run_boss_win:

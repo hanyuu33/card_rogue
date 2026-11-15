@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated": "2026-11-14",
+ "updated": "2026-11-15",
  "purpose": "翻译专用规范中文源。cards.json 权威原文不动（R106/R344/R600），本文件是唯一翻译底本。",
  "rules_applied": [
   "弃牌库 -> 弃牌区",
@@ -1614,6 +1614,11 @@
    "name": "小鸭",
    "effect_text": "入场时，随机使手卡里的一张效果卡费用 -1。",
    "changed": true
+  },
+  "9252": {
+   "name": "代偿",
+   "effect_text": "这张卡在手卡时，你的其他手卡费用 +1。",
+   "changed": false
   }
  }
 }

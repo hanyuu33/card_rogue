@@ -588,11 +588,15 @@ const PIPE_ENERGY := 1
 const PIPE_DRAW := 1
 const PIPE_HP_COST := 1
 # R458 咒缚（6058，「契约的核心」选项 1）：每场战斗**打出的第一张卡费用 -CURSE_DISCOUNT**，
-# 且**只减这一次**；那张卡之后在本场战斗里费用 +CURSE_RAISE（按原价 +1，不叠那 -3）。
-# R497：由「第一张卡免费（费用归 0）」改为「-3 费」—— 高费卡不再白打。
+# 且**只减这一次**（R497：由「第一张卡免费（费用归 0）」改为「-3 费」—— 高费卡不再白打）。
+# R756（店长口径）：**取消「那张卡之后 +1 费」那一半** —— 代价改成「签契约时往卡组里塞
+# 一张代偿 9252」。所以这里只剩减费那一半，涨价那一半由代偿自己承担。
 const CURSE_BIND_RELIC_ID := 6058
 const CURSE_DISCOUNT := 3
-const CURSE_RAISE := 1
+# R756 代偿（9252）：**在手卡里期间**，其余手卡费用 +COMP_COST_RAISE。
+# 判据按**卡面 trait** 判（与「疲惫」同一写法），将来换皮只要留着 trait 就照样生效。
+const COMP_COST_TRAIT := "代偿"
+const COMP_COST_RAISE := 1
 # R446 雪豹（8081，事件「雪豹出现」选项 2）—— 攻击时随机一张手牌本回合 -1 费。
 const SNOW_LEOPARD_ID := 8081
 const SNOW_LEOPARD_DISCOUNT := 1
@@ -2512,8 +2516,7 @@ func _begin_turn(side: String) -> void :
 		# ⚠️ 与烟斗 6055 别混：烟斗是「首回合限定的 +1 费」，咒缚是「首张牌 -3 费 + 那卡涨价」。
 		if self_relics.has(CURSE_BIND_RELIC_ID) and turn_number == 1:
 			state.curse_free = true
-			_log("咒缚：本场战斗的第一张卡费用 -%d（那张卡之后费用 +%d）"
-					% [CURSE_DISCOUNT, CURSE_RAISE])
+			_log("咒缚：本场战斗的第一张卡费用 -%d" % CURSE_DISCOUNT)
 
 		# 勇气徽章（6031，R245 / R372）：精英战与 Boss 战**都只在首回合**额外 +1 费用。
 		# 「哪一场算精英 / Boss」由 battle_scene 写入 `battle_kind`，引擎只看这个字段。
@@ -3765,7 +3768,6 @@ func _migrate_card_state(old_card: CardData, new_card: CardData) -> void:
 	_move_key(state.hand_cost_delta, old_card, new_card)
 	_move_key(state.hand_cost_turn, old_card, new_card)
 	_move_key(state.turn_card_discount, old_card, new_card)
-	_move_key(state.curse_raise, old_card, new_card)
 	var tk: int = state.turn_keep.find(old_card)
 	if tk >= 0:
 		state.turn_keep[tk] = new_card
@@ -4633,11 +4635,12 @@ func cost_of(card: CardData, side:= SIDE_SELF) -> int:
 	if side == SIDE_SELF and state.turn_cannon_free and card != null \
 			and card.id == ENERGY_CANNON_ID and state.hand.has(card):
 		c = 0
-	# R458 咒缚（6058）的另一半：被 -N 费打出的那张卡，**本场战斗**费用 +CURSE_RAISE。
-	# 它是「涨价」，所以排在所有减费之后（与契约签订者 8024 同一个位置口径）；
-	# 而咒缚自己的 -N 又排在它之后 —— 所以「第一张卡 -3、之后原价 +1」两者不会互相吃掉。
-	if side == SIDE_SELF and card != null:
-		c += int(state.curse_raise.get(card, 0))
+	# R756 代偿（9252）：「这张卡在手卡时，**其他**手卡费用 +1」——
+	# 与「疲惫」同一条路（只在手牌里生效、离手即恢复原价），排在所有减费之后。
+	# ⚠️ `_hand_has_compensation(card)` 把「正在算费用的这一张」排除在外：
+	#    代偿自己不吃自己那 +1。
+	if side == SIDE_SELF and card != null and _hand_has_compensation(card):
+		c += COMP_COST_RAISE
 	# R458 咒缚（6058）：**本场战斗的第一张卡 -CURSE_DISCOUNT 费**（R497 由「归 0」改来）——
 	# 放在最后一步：减的是「含上面所有涨价之后」的账面费用，不会被随后的涨价抵掉。
 	# 判据带 `state.hand.has(card)`：只对**此刻还在手里**的卡生效（打出 / 弃掉后自动恢复原价，
@@ -4654,10 +4657,25 @@ const FATIGUE_COST_RAISE := 1   ## R223：手牌里有诅咒「疲惫」时，�
 ## 将来要是给「疲惫」换皮，只要留着这个 trait 就照样生效。
 const FATIGUE_TRAIT := "疲惫"
 
+func _hand_has_trait(t: String) -> bool:
+	## 手牌里是否有一张带 `t` 这个**卡面 trait** 的卡（涨价类判据的唯一口）。
+	for c: CardData in state.hand:
+		if c != null and c.traits.has(t):
+			return true
+	return false
+
+
 func _hand_has_curse() -> bool:
 	## 当前手牌里是否有「疲惫」（9149）—— R223 难度 5 的涨价判据。
+	return _hand_has_trait(FATIGUE_TRAIT)
+
+
+func _hand_has_compensation(self_card: CardData = null) -> bool:
+	## R756 代偿（9252）：「这张卡在手卡时，**其他**手卡费用 +1」的判据。
+	## `self_card` = 正在算费用的那一张（代偿自己不吃自己那 +1）。
+	## ⚠️ 只看手牌，不看场上 / 弃牌区 —— 卡面写的就是「在手卡时」。
 	for c: CardData in state.hand:
-		if c != null and c.traits.has(FATIGUE_TRAIT):
+		if c != null and c != self_card and c.traits.has(COMP_COST_TRAIT):
 			return true
 	return false
 
@@ -8940,17 +8958,15 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	if side == SIDE_SELF and played != null and played.enchant == ENCHANT_DRAW:
 		var ed_n := _draw_many(1)
 		_log("附魔「抽牌 +1」：打出 %s 后抽 %d 张" % [played.card_name, ed_n])
-	# R458 咒缚（6058）：「第一张卡 -3 费」在这里**兑现成账** —— 额度用掉，并给这一张
-	# 记一笔本场战斗 +CURSE_RAISE 费（再次上手时按原价 +1 结算，不叠那 -3）。
+	# R458 咒缚（6058）：「第一张卡 -3 费」在这里**兑现成账** —— 额度用掉就完事。
+	# R756：那张卡**不再涨价**（代价已改成签契约时塞进卡组的一张「代偿」），这里不记账。
 	# ⚠️ 只看 `state.curse_free`，**不判** `turn_number == 1`：额度跨回合有效，
 	#    这正是与烟斗（首回合限定）的区别。
 	# ⚠️ X 费卡（流星雨 9083）不消耗减费额度：`cost_of` 对它提前 return 剩余费用，
 	#    根本走不到减 3 那一段 → 额度原样留给下一张普通卡，两边口径一致。
 	if side == SIDE_SELF and played != null and state.curse_free and not played.x_cost:
 		state.curse_free = false
-		state.curse_raise[played] = int(state.curse_raise.get(played, 0)) + CURSE_RAISE
-		_log("咒缚：第一张卡「%s」费用 -%d —— 它在本场战斗的费用 +%d"
-				% [played.card_name, CURSE_DISCOUNT, CURSE_RAISE])
+		_log("咒缚：第一张卡「%s」费用 -%d" % [played.card_name, CURSE_DISCOUNT])
 
 
 	var assembly_plays: int = state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
