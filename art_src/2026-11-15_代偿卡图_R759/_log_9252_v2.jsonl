@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1df18-36f2-7f01-b622-ee623c2cb558"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll generate one image using your exact composition and flat pictogram style.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one image using the built-in image_gen tool."}}
+{"type":"turn.completed","usage":{"input_tokens":38007,"cached_input_tokens":31616,"cache_write_input_tokens":0,"output_tokens":578,"reasoning_output_tokens":0}}

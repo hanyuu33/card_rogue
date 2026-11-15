@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1df17-5c0c-78e0-84ec-e36fca899653"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’m generating one image with the flat pictogram style and wide empty margins you specified.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one compensation / surcharge pictogram image."}}
+{"type":"turn.completed","usage":{"input_tokens":37956,"cached_input_tokens":31616,"cache_write_input_tokens":0,"output_tokens":555,"reasoning_output_tokens":0}}
