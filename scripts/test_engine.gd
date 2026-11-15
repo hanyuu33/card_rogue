@@ -61694,9 +61694,9 @@ func _init() -> void:
 
 	check_src(r389_bs.find("unlock_notice(story_new)") >= 0
 
-			and r389_bs.find("UiToast.toast(story_note, 3200)") >= 0,
+			and r389_bs.find("_over_hint.text = story_note") >= 0,
 
-			"R389 源码：结算时取新解锁剧情 → 副标题 + 轻提示各报一句")
+			"R389 源码：结算时取新解锁剧情 → 副标题报一句（R739：底中胶囊改由 StoryUnlockToast 统一弹）")
 
 	var r389_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
 
@@ -75331,3 +75331,44 @@ func _test_r679() -> void:
 	check_src(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, db_cell, n, BATTLE_FX_MS, 140.0)")
 			and not r679_bs.contains("\"col\": Color(\"6a4aa0\"), \"big\": false}"),
 			"R679：暗影之刃从纯色紫圈换成素材图（且不留双层）")
+
+	# ================= R739：解锁新故事的右下角提示（无论在哪个界面） =================
+	# 用户口径：「发布版追加一个功能：解锁新故事时右下角会弹出提示（无论在哪个界面）」。
+	# 落地口径：提示挂在**唯一批量解锁出口** `ProfileData.check_achievements()` 上，
+	# 四个界面（战斗结算 / 地图 / 故事页 / 百科页）只是从它拿数据 ——
+	# 「无论在哪个界面」由结构保证，不靠每个界面各记一行（那早晚漏一个）。
+	var r739_pd := FileAccess.get_file_as_string("res://scripts/profile_data.gd")
+	check_src(r739_pd.contains("StoryUnlockToast.notify(body, shown.size())")
+			and r739_pd.contains("var shown := repo.unlocked_ids_with_content(out)"),
+			"R739 源码：解锁提示挂在 check_achievements 的唯一出口")
+	var r739_sites := 0
+	var r739_leak := 0
+	for r739_path in ["res://scripts/battle_scene.gd", "res://scripts/map_scene.gd",
+			"res://scripts/story_scene.gd", "res://scripts/codex_scene.gd"]:
+		var r739_t := FileAccess.get_file_as_string(str(r739_path))
+		if r739_t.contains("ProfileData.check_achievements("):
+			r739_sites += 1
+		if r739_t.contains("StoryUnlockToast.notify("):
+			r739_leak += 1
+	check_src(r739_sites == 4 and r739_leak == 0,
+			"R739 源码：四个界面都只经 check_achievements、没人自己埋一行（%d/4，越权 %d）"
+			% [r739_sites, r739_leak])
+	var r739_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r739_bs.contains("_over_hint.text = story_note")
+			and not r739_bs.contains("UiToast.toast(story_note"),
+			"R739 源码：结算只留静止副标题，不再叠一条底中胶囊（同一件事报两遍）")
+	# 空正文段不报 —— 过滤口收敛到 `unlocked_ids_with_content()`，`unlock_notice()` 也走它
+	# （以前两处各写一遍 `has_content` 循环，加一处展示就会飘一处）。
+	var r739_repo := StoryRepo.load_json()
+	var r739_keep := r739_repo.unlocked_ids_with_content(["episode1", "__no_such_story__"])
+	check(r739_keep.size() == 1 and r739_keep[0] == "episode1",
+			"R739 过滤：空正文段被剔除，只剩有正文的那一段")
+	var r739_ts := FileAccess.get_file_as_string("res://scripts/story_unlock_toast.gd")
+	check_src(r739_ts.contains("DisplayServer.get_name() == \"headless\"")
+			and r739_ts.contains("layer = 98")
+			and r739_ts.contains("UiTheme.stage_origin(vp)"),
+			"R739 源码：headless 早退、层 98、贴舞台右下角（宽屏也跟着居中）")
+	check_src(r739_ts.contains("STORY_UNLOCK_TOAST_TITLE")
+			and r739_ts.contains("STORY_UNLOCK_TOAST_MANY")
+			and r739_ts.contains("STORY_UNLOCK_TOAST_HINT"),
+			"R739 源码：三句文案全走 GameI18n（三语缺一键就退回中文）")

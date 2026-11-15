@@ -8578,7 +8578,7 @@ func _show_over(win: bool) -> void:
 	ProfileData.flush()
 	# R389：真的解锁了**有正文**的剧情 → 结算面板副标题报一句。
 	# 任意没写正文的段落都不提示 —— `unlock_notice()` 里已经挡掉。
-	# R738：右下角那张跨界面的卡片由 `ProfileData.check_achievements()` 统一弹，本处不重复。
+	# R739：右下角那张跨界面的卡片由 `ProfileData.check_achievements()` 统一弹，本处不重复。
 	var story_note := story_repo.unlock_notice(story_new)
 	if story_note == "" and _demo_story_notice != "":
 		story_note = _demo_story_notice   # 出图用（真实路径永远是上面那一行）
@@ -8586,7 +8586,7 @@ func _show_over(win: bool) -> void:
 		_over_hint.text = story_note
 		# 结算面板是米色羊皮卷底：亮金（ACCENT_LIT）在上面发灰，用深一档的金
 		_over_hint.add_theme_color_override("font_color", UiTheme.ACCENT_GOLD)
-		# R738：这里不再补一句 `UiToast` —— 解锁那一刻 `ProfileData.check_achievements()`
+		# R739：这里不再补一句 `UiToast` —— 解锁那一刻 `ProfileData.check_achievements()`
 		# 已经统一弹了右下角的 StoryUnlockToast（跨界面、4.8s）。这里只留静止的副标题：
 		# 同一件事报两遍（底中胶囊 + 右下卡）纯噪声，且底中那条 1.6s 就散了。
 	# R530（用户口径「打通第三层后不要弹出通关提示，而是进入结算界面」）：

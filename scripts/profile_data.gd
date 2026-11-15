@@ -410,7 +410,12 @@ static func set_class_difficulty(cid: String, d: int) -> bool:
 
 static func check_achievements(repo: StoryRepo) -> Array[String]:
 	## 遍历全部成就定义：条件达成且还没解锁 → 解锁它挂的剧情。
-	## 返回**本次新解锁**的剧情 id（界面据此弹提示）。幂等，随便多调。
+	## 返回**本次新解锁**的剧情 id。幂等，随便多调。
+	##
+	## R739：右下角那张「新故事解锁」卡就挂在这一个函数里 —— 它是**全游戏唯一**的
+	## 批量解锁出口（战斗结算 / 地图 / 故事页 / 百科页四个调用点都从它拿数据），
+	## 所以「无论在哪个界面都能弹」是结构保证的，不用在每个界面各写一行。
+	## ⚠️ 别把 `notify()` 挪到各调用点去：以后新增界面会漏，而且会漏得无声无息。
 	var out: Array[String] = []
 	if repo == null:
 		return out
@@ -422,6 +427,12 @@ static func check_achievements(repo: StoryRepo) -> Array[String]:
 			var eid := str(ep)
 			if unlock_story(eid):
 				out.append(eid)
+	if not out.is_empty():
+		# 空正文段不报（见 `unlocked_ids_with_content`）；单段报章节名，多段报数量。
+		var shown := repo.unlocked_ids_with_content(out)
+		if not shown.is_empty():
+			var body := repo.episode_label(repo.episode(shown[0])) if shown.size() == 1 else ""
+			StoryUnlockToast.notify(body, shown.size())
 	return out
 
 

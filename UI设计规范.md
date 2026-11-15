@@ -1539,6 +1539,7 @@ R138 先补了一层「自动暗描边」兜底；**实机再看仍然不够清�
 | 按钮按下反馈 | `UiPressFx.bind(btn)` | **不要在各场景手写 pressed 缩放**——`UiTheme.apply_button / apply_chip` 已统一挂接，新按钮自动获得；自绘按压框走 `_press_stamp` |
 | 覆盖层入场 | `UiPop.pop(ctrl)` | 结算 / Esc 菜单 / 奖励悬浮窗 / 卡组查看统一 scale 0.92→1.0 + 淡入 160ms；弹层 `visible = true` 后必须补一句 `UiPop.pop`，否则瞬间出现 |
 | 通用 Toast | `UiToast.toast(txt)` | 层 99、屏幕底部居中、硬边胶囊（`INK_900` 底 + 亮描边）；1.6s 自动退场；**同文本连发只刷新计时** |
+| 故事解锁提示 | `StoryUnlockToast.notify(body, n)` | 层 98、**舞台右下角**（走 `stage_origin` 贴边，宽屏跟着居中）、金边卡（左侧 3px 金条）+ 程序画星标 + 三行「标题 / 章节名 / 去哪看」；入场 0.24s 右滑淡入、停 4.2s、淡出 0.34s；**入口只有 `ProfileData.check_achievements()` 一处**（战斗结算 / 地图 / 故事 / 百科都从它拿数据，界面里不许自己埋行）；headless 下整条丢弃 |
 
 **战斗内特效管道（battle_scene 自绘，全部 `_now()` 时钟 + `dur` 控制 + `queue_redraw` 门）：**
 

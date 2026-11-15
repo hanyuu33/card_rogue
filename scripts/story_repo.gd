@@ -196,18 +196,28 @@ func grant_count(ep_id: String) -> int:
 	return (g.get("cards", []) as Array).size() + (g.get("relics", []) as Array).size()
 
 
-func unlock_notice(ids: Array) -> String:
-	## R389：把「刚解锁的剧情 id」变成一句提示（空串 = 不用提示）。
+func unlocked_ids_with_content(ids: Array) -> Array[String]:
+	## R739：把「刚解锁的 id」过滤成**真的有正文**的那些 —— **唯一过滤口**。
 	##
-	## ⚠️ 只算**有正文**的段落：空正文段即使条件达成、进了 `unlocked_stories`，
+	## ⚠️ 只留有正文的原因：空正文段即使条件达成、进了 `unlocked_stories`，
 	##    界面上仍是 `locked` 的「？？？」——
-	##    弹一句「解锁了剧情」再点进去只看得到占位，比不提示更糟。
-	## 多段只报数量，一段报章节名（结算面板的副标题行只有 280px 宽）。
-	var ready: Array[String] = []
+	##    报一句「解锁了剧情」再点进去只看到占位，比不提示更糟。
+	## `unlock_notice()`（结算面板副标题）与 `StoryUnlockToast`（右下角卡）都从这里取，
+	## 别各写一份 `has_content` 循环（口径会飘，以前散过两处）。
+	var out: Array[String] = []
 	for v: Variant in ids:
 		var eid := str(v)
 		if has_content(eid):
-			ready.append(eid)
+			out.append(eid)
+	return out
+
+
+func unlock_notice(ids: Array) -> String:
+	## R389：把「刚解锁的剧情 id」变成一句提示（空串 = 不用提示）。
+	##
+	## 多段只报数量，一段报章节名（结算面板的副标题行只有 280px 宽）。
+	## 正文过滤见 `unlocked_ids_with_content()`。
+	var ready := unlocked_ids_with_content(ids)
 	if ready.is_empty():
 		return ""
 	if ready.size() == 1:

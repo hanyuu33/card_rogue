@@ -3218,6 +3218,18 @@
         "source": "scripts/story_repo.gd:209",
         "zh": "✦ 新剧情解锁 %d 段（主界面查看）"
       },
+      "STORY_UNLOCK_TOAST_HINT": {
+        "source": "scripts/story_unlock_toast.gd:148",
+        "zh": "在「故事」里查看"
+      },
+      "STORY_UNLOCK_TOAST_MANY": {
+        "source": "scripts/story_unlock_toast.gd:145",
+        "zh": "共 %d 段"
+      },
+      "STORY_UNLOCK_TOAST_TITLE": {
+        "source": "scripts/story_unlock_toast.gd:143",
+        "zh": "新故事解锁"
+      },
       "LAYER_ONE_NAME": {
         "source": "scripts/game_layers.gd:37",
         "zh": "第一层"
@@ -3462,6 +3474,6 @@
     "map": 245,
     "battle": 72,
     "shell": 193,
-    "shared": 89
+    "shared": 92
   }
 }
