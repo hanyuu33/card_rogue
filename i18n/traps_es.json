@@ -21,19 +21,31 @@
   },
   "7005": {
    "name": "Frasco de Vida Pequeño",
-   "desc": "Tócala para usarla, sin arrastrarla. Recupera al instante un 20% de la vida (hasta el máximo); después, la herramienta se consume."
+   "desc": "Tócala dos veces para usarla, sin arrastrarla. Recupera al instante un 20% de la vida (hasta el máximo); después, la herramienta se consume."
   },
   "7006": {
    "name": "Poción de Maná",
-   "desc": "Tócala para usarla, sin arrastrarla. Recupera al instante 2 puntos de coste; después, la herramienta se consume."
+   "desc": "Tócala dos veces para usarla, sin arrastrarla. Recupera al instante 2 puntos de coste; después, la herramienta se consume."
   },
   "7007": {
    "name": "Carne asada",
-   "desc": "Tócala para usarla, sin arrastrarla a una casilla del campo de batalla. Restaura al instante un 25% de tu Vida máxima (redondeando hacia arriba y sin superar el máximo); después la herramienta se consume. Solo puede asarse en un lugar de descanso."
+   "desc": "Tócala dos veces para usarla, sin arrastrarla a una casilla del campo de batalla. Restaura al instante un 25% de tu Vida máxima (redondeando hacia arriba y sin superar el máximo); después la herramienta se consume. Solo puede asarse en un lugar de descanso."
   },
   "7008": {
    "name": "Tótem Salvaje",
-   "desc": "Tócala para usarla, sin arrastrarla a una casilla del campo de batalla. Todas tus unidades aliadas ganan +2 de Poder durante el resto de este combate; después la herramienta se consume."
+   "desc": "Tócala dos veces para usarla, sin arrastrarla a una casilla del campo de batalla. Todas tus unidades aliadas ganan +2 de Poder durante el resto de este combate; después la herramienta se consume."
+  },
+  "7009": {
+   "name": "Comodín",
+   "desc": "Tócala dos veces para usarla, sin arrastrarla a una casilla del campo de batalla. Elige una carta de tu pila de robo: una copia efímera suya se une a tu mano con su coste reducido a 0 (la copia desaparece al final del turno). Después, la herramienta se consume."
+  },
+  "7010": {
+   "name": "Pato Exprés",
+   "desc": "Tócala dos veces para usarla, sin arrastrarla a una casilla del campo de batalla. Llena tu barra de herramientas con herramientas aleatorias de tienda. Después, la herramienta se consume."
+  },
+  "7011": {
+   "name": "Carta Misteriosa",
+   "desc": "Tócala dos veces para usarla, sin arrastrarla a una casilla del campo de batalla. Elige una de 3 cartas aleatorias para que se una a tu mano; su coste es 0 durante este turno. Después, la herramienta se consume."
   }
  }
 }

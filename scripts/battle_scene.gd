@@ -161,6 +161,12 @@ const TRAP_BAR_GAP := 8.0
 const TRAP_BAR_X := DECK_X + (ZONE_W - TRAP_BAR_SIZE) * 0.5
 ## R695：丢工具「上膛」的有效期（ms）—— 超过这个时间再点 × 只算重新上膛。
 const TOOL_DISCARD_MS := 2600
+## R752（用户口径「使用型工具需要可以双击使用，或者单击后弹出使用按钮使用」）：
+## 用同一个机制同时满足两种说法 —— 第一下点**只上膛**（槽上浮出「使用」罩层），
+## 第二下点**同一槽的任何位置**才真正结算。手机上「连点两下」和「点一下再点按钮」
+## 是同一条路径（罩层盖满整格，第二下必然落在里面），PC 上双击同理。
+## 有效期与丢弃上膛同口径 2.6 秒：过时自动收起，不会一直挂着等误触。
+const TOOL_USE_ARM_MS := 2600
 # ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
 # 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
 # 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
@@ -477,6 +483,14 @@ var _trap_drag_cells: Array[Vector2i] = []   # 本次拖放的合法格
 ## `_trap_discard_until` 是上膛失效时刻（ms）。第一次点 × 只上膛，2.6 秒内再点同一个才真丢。
 var _trap_discard_arm := -1
 var _trap_discard_until := 0
+## R752：使用型工具「点两下」的上膛槽（-1 = 没有），以及失效时刻（ms）。
+## 与 `_trap_discard_arm` 是**两套独立状态**：一个是「要丢掉」，一个是「要用掉」，
+## 混用一个变量的话，丢完工具上膛会顺手把使用上膛也点亮（下一击直接白用一件）。
+var _tool_use_arm := -1
+var _tool_use_until := 0
+## R752：选卡型工具（万能牌 / 神秘牌）是从哪个槽点出来的 ——
+## 只有「确认」那一刻才该摘槽，所以要记着它（引擎不知道槽号，槽是界面的事）。
+var _tool_pick_slot := -1
 
 
 func _say(text: String) -> void:
@@ -1105,6 +1119,10 @@ func _ready() -> void:
 				# R745 出图：工具栏里放野性图腾（核验图标 + 用掉之后的力量来源条）。
 				# 出图：`battle.tscn -- --screenshot --totemtool --level 0 --shotframe 200`
 				RunState.traps = [7008, 7005, 7006]
+			elif "--newtools" in args:
+				# R752 出图：三件新工具（万能牌 / 快送鸭 / 神秘牌）核验图标与槽内观感。
+				# 出图：`battle.tscn -- --screenshot --tooldemo --newtools --level 0 --shotframe 200`
+				RunState.traps = [7009, 7010, 7011]
 			else:
 				RunState.traps = [7001, 7005, 7006]
 			RunState.run_active = true   # 栏位绘制的前置：非 run 态整条工具栏不画
@@ -3708,6 +3726,25 @@ func _demo_tick() -> void:
 		_shot_pending = df_keep
 		_clear_hover_state()
 		selection = null
+	if _shot_pending and "--toolarm" in _demo_args and _demo_frame == 60:
+		# R752 出图：「使用」上膛罩层的实况（双击的第一下之后长什么样）。
+		# 出图：`battle.tscn -- --screenshot --tooldemo --newtools --toolarm --level 0 --shotframe 200`
+		# 有效期给足（10 分钟），否则跑到截图那一帧时罩层已经自己收起来了。
+		_tool_use_arm = 0
+		_tool_use_until = Time.get_ticks_msec() + 600000
+		queue_redraw()
+	if _shot_pending and "--toolpick" in _demo_args and _demo_frame == 60 and engine != null:
+		# R752 出图：选卡型工具的选卡页（万能牌 7009 / 神秘牌 7011）—— 核验标题与说明排版。
+		# 出图：`battle.tscn -- --screenshot --toolpick 7011 --level 0 --shotframe 220`
+		var tp_demo := 7009
+		for tp_i in _demo_args.size():
+			if _demo_args[tp_i] == "--toolpick" and tp_i + 1 < _demo_args.size():
+				tp_demo = int(str(_demo_args[tp_i + 1]))
+		if engine.begin_tool_pick(tp_demo):
+			RunState.traps = [tp_demo, 7005, 7006]
+			RunState.run_active = true
+			_tool_pick_slot = 0        # 出图用：让摘槽路径与真实流程一致
+			queue_redraw()
 	if _shot_pending and "--r331hidden" in _demo_args \
 			and _demo_frame == _shot_frame - 40 and engine != null:
 		# R331 出图：截图前 40 帧打掉那个带「死亡」的单位 —— 躲过开局横幅，
@@ -4949,6 +4986,7 @@ func _gui_input(event: InputEvent) -> void:
 			if ts >= 0 and _trap_discard_rect(ts).has_point(event.position) \
 					and RunState.trap_at(ts) > 0:
 				_try_discard_tool(ts)
+				_tool_use_arm = -1          # R752：「要丢掉」与「要用掉」不能同时上膛
 				_trap_press_slot = -1
 				_press_idx = -1
 				_grid_drag_arm = false
@@ -4956,6 +4994,26 @@ func _gui_input(event: InputEvent) -> void:
 				_info_drag_arm = false
 				_info_dragging = false
 				return
+			# R752：使用型工具已上膛 → 这一下就是「确认使用」（双击的第二下 / 点「使用」）。
+			# ⚠️ 必须排在「按在槽上」之前：否则第二下又只是重新上膛，永远用不出去。
+			if ts >= 0 and _tool_use_arm == ts and RunState.trap_at(ts) > 0 \
+					and Time.get_ticks_msec() <= _tool_use_until:
+				var utd: TrapData = TrapRepo.load_json().get_trap(RunState.trap_at(ts))
+				_tool_use_arm = -1
+				_tool_use_until = 0
+				_trap_press_slot = -1
+				_trap_discard_arm = -1
+				if utd != null and utd.is_usable():
+					_use_tool_slot(ts, utd)
+				_press_idx = -1
+				_grid_drag_arm = false
+				_grid_dragging = false
+				_info_drag_arm = false
+				_info_dragging = false
+				queue_redraw()
+				return
+			_tool_use_arm = -1     # 点在别处 → 收起「使用」罩层
+			_tool_use_until = 0
 			if ts >= 0 and RunState.trap_at(ts) > 0:
 				_trap_press_slot = ts
 				_trap_press_pos = event.position
@@ -5003,11 +5061,15 @@ func _gui_input(event: InputEvent) -> void:
 				return
 			elif _trap_press_slot >= 0:
 				# 轻点 = 只读看说明（不消耗）；「用了就没」只发生在成功放置那一刻。
-				# R690：使用型工具（小血瓶 / 法力药剂）没有落点 → 轻点即结算，用完从栏位移除。
+				# R690：使用型工具没有落点 → 轻点结算。R752 改成**两段式**：这一下只上膛
+				# （槽上浮出「使用」罩层），再点一下同一格才真的结算 —— 消耗品被误触
+				# 直接吃掉太贵，而弹模态确认框要两次点击、还挡住战场，同格点两下最省事。
 				var tid := RunState.trap_at(_trap_press_slot)
 				var td: TrapData = TrapRepo.load_json().get_trap(tid)
 				if td != null and td.is_usable():
-					_use_tool_slot(_trap_press_slot, td)
+					_tool_use_arm = _trap_press_slot
+					_tool_use_until = Time.get_ticks_msec() + TOOL_USE_ARM_MS
+					_say("「%s」：再点一下即使用 —— %s" % [td.trap_name, td.desc])
 				elif td != null:
 					_say("「%s」：%s" % [td.trap_name, td.desc])
 				_trap_press_slot = -1
@@ -6283,6 +6345,10 @@ func _recall_discard_index(idx: int) -> bool:
 
 func _pick_active_kind() -> String:
 	## 当前活跃的选卡场景（"" = 无）。优先级同原小面板的拦截顺序。
+	# R752：选卡型工具（万能牌 7009 / 神秘牌 7011）—— 玩家刚在工具栏上点出来的，
+	# 排最前：面板一旦打开就不该被别的待选场景抢走（同一时刻不可能有两个）。
+	if engine.tool_pick_kind != "":
+		return "toolpick"
 	if _hero_pick_idx >= 0:
 		return "hero"
 	# R205：「填充」（9146）也用全屏选卡页 —— 用户口径「使用后应该弹出选择卡界面，
@@ -6412,6 +6478,28 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"cards": hopts.map(func(i: int) -> CardData: return engine.state.hand[i]),
 					"max_sel": GameEngine.HERO_DISCARD,
 					"confirm_label": "确认丢弃", "cancel_label": "取消上场"}
+		"toolpick":
+			# R752：选卡型工具（万能牌 = 抽牌库复制 / 神秘牌 = 3 张随机本职业奖励卡）。
+			# 候选在 `begin_tool_pick()` 那一刻就摇定并缓存了（`engine.tool_pick_cards()`），
+			# 这里只负责画；opts[i] = 候选下标，确认时原样交回引擎。
+			var tp_cards: Array = engine.tool_pick_cards()
+			var tp_opts: Array = []
+			for tp_i in tp_cards.size():
+				tp_opts.append(tp_i)
+			var tp_data: TrapData = TrapRepo.load_json().get_trap(engine.tool_pick_id)
+			var tp_name := tp_data.trap_name if tp_data != null else "工具"
+			if engine.tool_pick_kind == "deck_copy":
+				return {"kind": k, "short": tp_name, "opts": tp_opts,
+						"title": "%s：从抽牌库选择一张卡复制进手卡（牌库 %d 张）"
+								% [tp_name, engine.state.deck.size()],
+						"note": "点卡选中，再点确认 —— 复制品费用 0、回合结束消失",
+						"cards": tp_cards, "max_sel": 1, "confirm_label": "确认复制",
+						"cancel_label": "不使用"}
+			return {"kind": k, "short": tp_name, "opts": tp_opts,
+					"title": "%s：从这 3 张里选一张加入手卡" % tp_name,
+					"note": "点卡选中，再点确认 —— 本回合它的费用为 0",
+					"cards": tp_cards, "max_sel": 1, "confirm_label": "确认",
+					"cancel_label": "不使用"}
 		"wish":
 			# R306 许愿（9168）：从**卡组**选一张卡加入手卡。
 			var wopts: Array = engine.wish_options()
@@ -6677,6 +6765,9 @@ func _abort_empty_pick(kind: String) -> void:
 	## 只收**本场景自己的**那几个下标（引擎侧的 pending 各有自己的「不选了」出口，
 	## 不在这里替它们做决定）。
 	match kind:
+		"toolpick":
+			engine.tool_pick_cancel()
+			_tool_pick_slot = -1
 		"hero":
 			_hero_pick_idx = -1
 			_hero_pick_cell = Vector2i(-1, -1)
@@ -6713,6 +6804,25 @@ func _on_pick_confirmed(sel: Array) -> void:
 				_net_send({"type": "action", "act": "play", "card": card.to_dict(),
 						"cell": [cell.x, cell.y]})
 				status_text = "%s 上场：付出代价（丢弃 %d 张手牌）" % [card.card_name, drop.size()]
+		"toolpick":
+			# R752：确认 → 引擎结算（复制 / 入手 + 费用 0），**成功才摘槽**。
+			# 失败（手牌在面板打开后被别的东西塞满之类）→ 工具留在工具栏里。
+			var tp_all: Array = engine.tool_pick_cards()
+			var tp_pick := int(opts[sel[0]])
+			var tp_nm := ""
+			if tp_pick >= 0 and tp_pick < tp_all.size():
+				tp_nm = (tp_all[tp_pick] as CardData).card_name
+			var tp_slot := _tool_pick_slot
+			_tool_pick_slot = -1
+			if engine.tool_pick_confirm(tp_pick):
+				if tp_slot >= 0:
+					RunState.consume_trap(tp_slot)
+				status_text = "工具：%s 加入手卡（本回合费用 0）" % tp_nm
+				_say("「%s」加入手牌" % tp_nm)
+			else:
+				status_text = "工具没有生效 —— 栏位保留"
+				_say("卡没能进入手牌，工具留在工具栏里")
+			_clear_selection()
 		"wish":
 			# R306 许愿：确认 → 卡组那张进手牌。
 			var wi := int(opts[sel[0]])
@@ -6917,6 +7027,12 @@ func _on_pick_cancelled() -> void:
 		queue_redraw()
 		return
 	match _pick.kind():
+		"toolpick":
+			# R752：取消 = 什么也没发生 —— 工具还在工具栏里（面板里从没摘过槽）。
+			engine.tool_pick_cancel()
+			_tool_pick_slot = -1
+			status_text = "已取消：工具仍在工具栏里（没有消耗）"
+			_clear_selection()
 		"whale":
 			var left := engine.whale_remaining
 			engine.whale_skip()
@@ -7490,6 +7606,13 @@ func _on_right_click() -> void:
 	# R663：拖陷阱途中右键 / 触屏长按 = 取消（不消耗，槽里的东西还在）。
 	if _trap_drag_slot >= 0 or _trap_press_slot >= 0:
 		_cancel_trap_drag()
+		queue_redraw()
+		return
+	# R752：使用型工具已上膛（槽上盖着「使用」）→ 右键 = 收起那层罩层，什么都不用。
+	if _tool_use_arm >= 0:
+		_tool_use_arm = -1
+		_tool_use_until = 0
+		_say("已收起「使用」—— 工具还在工具栏里")
 		queue_redraw()
 		return
 	_cam_cancel()                  # R288：右键取消 = 玩家要自己看，演出让位
@@ -9942,9 +10065,9 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	var t0: TrapData = TrapRepo.load_json().get_trap(RunState.trap_at(slot))
 	if t0 != null and t0.is_usable():
 		# R690：使用型工具（小血瓶 / 法力药剂）不需要落点 → 拒绝进入拖放。
-		# 松手那一下会走 _use_tool_slot，所以这里只把「拖」转成“点一下就能用”的提示。
+		# 松手那一下会把「拖」转成上膛提示（R752：点两下才结算，见 `_tool_use_arm`）。
 		_trap_press_slot = -1
-		_say("「%s」点一下就能用，不用拖" % t0.trap_name)
+		_say("「%s」点两下就能用，不用拖" % t0.trap_name)
 		return
 	_clear_selection()          # 与拖手牌同口径：放下当前选中，别留两套高亮
 	_trap_drag_slot = slot
@@ -9958,11 +10081,18 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 
 
 func _use_tool_slot(slot: int, td: TrapData) -> void:
-	## R690：使用型工具（小血瓶 / 法力药剂 / R743 烤肉 7007）的界面唯一口。
-	## 结算在 engine.use_tool，
-	## 这里只管「能不能点」「点完摘槽」「说什么」。
+	## R690：使用型工具（小血瓶 / 法力药剂 / R743 烤肉 / R745 野性图腾 / R752 快送鸭 /
+	## 万能牌 / 神秘牌）的界面唯一口。
+	## 结算在 engine，这里只管「能不能点」「点完摘槽」「说什么」。
 	## 回血满了也允许使用（会把栏位浪费掉，但那是玩家的选择，不替他拦）；
 	## 敌方回合不允许 —— 与放置型工具同一条闸门。
+	## R752：本函数只在**第二下**（上膛之后再点）被调用，见 `_gui_input` 的 `_tool_use_arm`。
+	## 摘槽分三种，别一刀切：
+	##   ① 选卡型（`pick_kind`）→ 现在还不能摘：面板取消时工具必须还在，确认后由
+	##      `_on_pick_confirmed` 摘；
+	##   ② 快送鸭（`fill_toolbar`）→ 引擎先腾空本格再填满，界面**不能再摘一次**
+	##      （再摘一次会把刚填进来的最后一件工具抹掉）；
+	##   ③ 其余 → 这里摘。
 	if engine == null or td == null or not td.is_usable():
 		return
 	if engine.current_side != GameEngine.SIDE_SELF:
@@ -9971,11 +10101,25 @@ func _use_tool_slot(slot: int, td: TrapData) -> void:
 	var id := RunState.trap_at(slot)
 	if id <= 0:
 		return
-	if not engine.use_tool(id):
+	if td.pick_kind != "":
+		if not engine.begin_tool_pick(id):
+			_say("「%s」现在用不了（手牌已满，或抽牌库里没有可复制的卡）" % td.trap_name)
+			return
+		_tool_pick_slot = slot
+		_say("「%s」：选一张卡，确认后才会从工具栏移除" % td.trap_name)
+		queue_redraw()      # 下一帧 `_sync_pick` 把选卡页弹出来
 		return
-	RunState.consume_trap(slot)   # 用了就没：从栏位移除（放置型在放下去那一刻移除）
-	if td.heal_pct > 0:
+	if not engine.use_tool(id, slot):
+		return
+	if not td.fill_toolbar:
+		RunState.consume_trap(slot)   # 用了就没：从栏位移除（放置型在放下去那一刻移除）
+	if td.fill_toolbar:
+		_say("已使用「%s」，工具栏用商店工具补满了（%d/%d）" % [td.trap_name,
+				RunState.TRAP_SLOTS - RunState.trap_free_slots(), RunState.TRAP_SLOTS])
+	elif td.heal_pct > 0:
 		_say("已使用「%s」，回复 %d%% 生命" % [td.trap_name, td.heal_pct])
+	elif td.ally_atk > 0:
+		_say("已使用「%s」，本场所有盟友 +%d 力量" % [td.trap_name, td.ally_atk])
 	else:
 		_say("已使用「%s」，回复 %d 点费用" % [td.trap_name, td.energy])
 	queue_redraw()
@@ -10035,6 +10179,12 @@ func _draw_trap_bar() -> void:
 		draw_rect(r, col, false, 3.0 if dragging else 2.0)
 		if id > 0 and not dragging:
 			TrapArt.draw(self, r.grow(-5.0), id, false)
+			# R752：使用型工具已上膛 → 整格盖一层「使用」罩层（这就是那个「使用按钮」）。
+			# 判定与命中共用同一个有效期：过时自动收起，不会挂着等人误触。
+			if _tool_use_arm == i and Time.get_ticks_msec() <= _tool_use_until:
+				draw_rect(r.grow(-2.0), Color(0.05, 0.06, 0.09, 0.80), true)
+				draw_rect(r.grow(-2.0), Color("ffd76a"), false, 2.5)
+				_draw_string_center(_font_bold, 15, "使用", r.get_center(), Color("ffe6a2"), -1)
 			# R695：右上角「×」= 丢弃这个工具（两段式确认，见 `_try_discard_tool`）。
 			# 只在工具栏里画（`_draw_trap_bar` 本来就只在局内走）—— 没拿到工具的槽不画。
 			var br := _trap_discard_rect(i)
@@ -18746,6 +18896,9 @@ func _process(delta: float) -> void:
 	# R695：丢弃工具的「上膛」过期就熄掉（2.6 秒内不再点同一个 × 就不丢）。
 	if _trap_discard_arm >= 0 and Time.get_ticks_msec() > _trap_discard_until:
 		_trap_discard_arm = -1
+		queue_redraw()
+	if _tool_use_arm >= 0 and Time.get_ticks_msec() > _tool_use_until:
+		_tool_use_arm = -1      # R752：使用上膛同样会过期
 		queue_redraw()
 	# 演示：选卡页一展开就补一次预选（一次性；出图能看到「选中金框 + 描述条」）。
 	if _demo_pick_sel >= 0 and _pick != null and _pick.visible and _pick.is_picking():

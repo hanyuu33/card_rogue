@@ -43,12 +43,24 @@ func all_traps() -> Array[TrapData]:
 
 
 func random_traps() -> Array[TrapData]:
-	## R743：**可随机获得**的工具（战斗 10% 掉落 / 商店货架）。
+	## R743：**可随机获得**的工具（战斗 10% 掉落 / 工具箱 6068）。
 	## `rest_only` 的那些（烤肉 7007）只能从休息处烤出来 —— 混进随机池，
 	## 「篝火专属」就成了「哪儿都能捡」，烤肉的稀缺感连同休息处的选择一起作废。
+	## ⚠️ R752：这条口径**只管「拿得到」**，不再代表货架。商店走 `shop_traps()` ——
+	##    万能牌 / 快送鸭 / 神秘牌没有售价，能掉落但不能买（用户口径「没有售价的则不计入商店」）。
 	var out: Array[TrapData] = []
 	for t: TrapData in all_traps():
 		if not t.rest_only:
+			out.append(t)
+	return out
+
+
+func shop_traps() -> Array[TrapData]:
+	## R752：**商店货架**的唯一取池口（`shop_scene` 与快送鸭 7010 共用）。
+	## 判据收在 `TrapData.in_shop()` 里（`price > 0`），这里只做筛选 —— 别再各写一份。
+	var out: Array[TrapData] = []
+	for t: TrapData in all_traps():
+		if t.in_shop():
 			out.append(t)
 	return out
 

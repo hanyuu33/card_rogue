@@ -65,6 +65,19 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
+	_build()
+
+
+func _build() -> void:
+	## R752：建节点从 `_ready()` 里拆出来 —— `open()` 有可能跑在 `_ready` **之前**。
+	## 现场：`test_trap_input.gd` 在 `_initialize()` 里往「还没进树」的战斗场景补挂本页
+	## （headless 下 `_ready` 推迟到第一帧），旧写法把 `_clip` / `_grid` 全建在 `_ready` 里
+	## → `open()` → `_layout()` 撞 `_grid == null`，连打两条 SCRIPT ERROR，顶到
+	## `_verify.py` 的 `broken` 判据上、把整轮八套判成「有失败」（用例本身 55✓0✗）。
+	## `_ensure_size()` 早就为「headless 探针直调 open」留了兜底，只差这一步补齐。
+	## 幂等：`_ready()` 与 `open()` 谁先来都只建一次。
+	if _grid != null:
+		return
 	_clip = Control.new()
 	_clip.clip_contents = true    # Godot 画布无裁剪 → 用 clip_contents 容器裁子节点
 	_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -95,6 +108,8 @@ func open(cfg: Dictionary) -> void:
 	_selected = []
 	_scroll = 0.0
 	_hover_idx = -1   # R294：新一轮选卡 → 悬停下标清零（否则描述条停在上局的卡上）
+	if _grid == null:
+		_build()      # R752：还没进树就 open（无 `_ready`）→ 这里补建，别裸奔到 `_layout()`
 	visible = true
 	if _detail != null:
 		_detail.close()
@@ -196,7 +211,10 @@ func _ensure_size() -> void:
 	#    两处各写一遍兜底迟早漂移（一处改了另一处没改 → 卡按旧尺寸算、网格按新尺寸裁）。
 	if size.x < 10.0 or size.y < 10.0:
 		# 首帧 anchors 还没结算（或 headless 探针直调 open）→ 按视口尺寸兜底
-		size = get_viewport_rect().size
+		# R752：不在树里时 `get_viewport_rect()` 会先打一条引擎 ERROR 再返回 Rect2()，
+		#       结果一样是零尺寸、照样落进下面那条 1280×720 —— 干脆别问，省一条假红噪声。
+		if is_inside_tree():
+			size = get_viewport_rect().size
 	if size.x < 10.0 or size.y < 10.0:
 		size = Vector2(1280, 720)      # 视口也拿不到（极早期）→ 退回设计分辨率
 

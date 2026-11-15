@@ -21,19 +21,31 @@
   },
   "7005": {
    "name": "Minor Health Flask",
-   "desc": "Tap it to use it, no dragging needed. Instantly restores 20% Health (up to max Health); the tool is then used up."
+   "desc": "Tap it twice to use it, no dragging needed. Instantly restores 20% Health (up to max Health); the tool is then used up."
   },
   "7006": {
    "name": "Mana Potion",
-   "desc": "Tap it to use it, no dragging needed. Instantly restores 2 Cost; the tool is then used up."
+   "desc": "Tap it twice to use it, no dragging needed. Instantly restores 2 Cost; the tool is then used up."
   },
   "7007": {
    "name": "Barbecue",
-   "desc": "Tap it to use it, no dragging needed. Instantly restores 25% of your Max Health (rounded up, capped at your Max Health); the tool is then used up. It can only be cooked at a Rest Stop."
+   "desc": "Tap it twice to use it, no dragging needed. Instantly restores 25% of your Max Health (rounded up, capped at your Max Health); the tool is then used up. It can only be cooked at a Rest Stop."
   },
   "7008": {
    "name": "Wild Totem",
-   "desc": "Tap it to use it, no dragging needed. All your allies gain +2 Power for the rest of this battle; the tool is then used up."
+   "desc": "Tap it twice to use it, no dragging needed. All your allies gain +2 Power for the rest of this battle; the tool is then used up."
+  },
+  "7009": {
+   "name": "Wildcard",
+   "desc": "Tap it twice to use it, no dragging needed. Choose a card from your draw pile; an ephemeral copy of it joins your hand with its cost reduced to 0 (the copy vanishes at the end of the turn). The tool is then used up."
+  },
+  "7010": {
+   "name": "Express Duck",
+   "desc": "Tap it twice to use it, no dragging needed. Fills your tool bar with random shop tools. The tool is then used up."
+  },
+  "7011": {
+   "name": "Mystery Card",
+   "desc": "Tap it twice to use it, no dragging needed. Choose one of 3 random cards to join your hand; its cost is 0 for this turn. The tool is then used up."
   }
  }
 }

@@ -57392,7 +57392,7 @@ func _init() -> void:
 
 			"R745 工具：野性图腾是使用型、且不是休息处专属（能掉落 / 能上架）")
 
-	check(r744_trepo.random_traps().size() == 7,
+	check(r744_trepo.random_traps().size() == 10,
 
 			"R745 工具池：可随机 7 件（烤肉 7007 仍被 rest_only 排除）")
 

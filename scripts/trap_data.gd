@@ -29,12 +29,31 @@ var rest_only := false
 ## >0 → 不放置，点一下直接用。与回血 / 回费不同，这个加成**不会因为工具被用掉而消失** ——
 ## 它在本场战斗里持续生效（口径与竖琴 6052 的持续 buff 一致，见 `Placement.totem_atk`）。
 var ally_atk := 0
+## R752：使用型工具里**需要先选卡**的那一类（万能牌 7009 / 神秘牌 7011）。
+##   * `"deck_copy"` —— 从抽牌库选一张，幻影复制入手（费用 0，离手即恢复原费用）；
+##   * `"random3"`   —— 从随机 3 张本职业奖励卡里选一张入手，本回合费用 0。
+## 空串 = 选中即结算（回血 / 回费 / 力量这一类）。
+## ⚠️ 它把「使用」拆成两段（点工具 → 选卡页 → 确认才摘槽），
+##    所以界面**不许**在 `use_tool` 之后无条件 consume，见 `battle_scene._use_tool_slot`。
+var pick_kind := ""
+## R752：快送鸭 7010 —— 使用后**用随机商店工具填满工具栏**（不选卡、当场结算）。
+## 与 `pick_kind` 并列：一个工具只说明自己「怎么生效」，判据全在数据里。
+var fill_toolbar := false
 
 
 ## R690：「工具」分两类 —— 放置型（陷阱，拖到战场空格）与使用型（药水，轻点即用）。
-## 判据只看数据：带 heal_pct / energy / ally_atk 的就是使用型，界面与引擎共用这一个口。
+## 判据只看数据：带 heal_pct / energy / ally_atk / pick_kind / fill_toolbar 的就是使用型，
+## 界面与引擎共用这一个口。
 func is_usable() -> bool:
-	return heal_pct > 0 or energy > 0 or ally_atk > 0
+	return (heal_pct > 0 or energy > 0 or ally_atk > 0
+			or pick_kind != "" or fill_toolbar)
+
+
+## R752（用户口径「以后没有售价的则不计入商店」）：**能不能上商店货架**只看售价。
+## `price <= 0` = 没有售价 = 非卖品（烤肉 7007 只能休息处烤，万能牌 / 快送鸭 / 神秘牌
+## 只能靠掉落或工具箱拿到）。⚠️ 判据只写这一处 —— 商店取货、快送鸭的池子都走它。
+func in_shop() -> bool:
+	return price > 0
 
 
 static func from_dict(d: Dictionary) -> TrapData:
@@ -52,4 +71,6 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.icon = str(d.get("icon", ""))
 	t.rest_only = bool(d.get("rest_only", false))
 	t.ally_atk = int(d.get("ally_atk", 0))
+	t.pick_kind = str(d.get("pick_kind", ""))
+	t.fill_toolbar = bool(d.get("fill_toolbar", false))
 	return t

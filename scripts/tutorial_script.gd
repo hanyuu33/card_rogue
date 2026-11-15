@@ -63,7 +63,8 @@ static func pages(id: String) -> Array:
 			]
 		ID_TOOL_USE:
 			return [
-				{"cue": "tool_bar", "text": "你也拿到了「使用型」工具——这种不用放，点一下就直接结算。"},
+				{"cue": "tool_bar",
+					"text": "你也拿到了「使用型」工具——这种不用放，点两下就结算：第一下弹出「使用」，第二下才真的用掉。"},
 				{"cue": "tool_bar", "text": "小血瓶回血、法力药剂回费用。留着救命，比省着划算。"},
 			]
 	return []
