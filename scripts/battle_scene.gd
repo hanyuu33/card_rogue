@@ -7354,6 +7354,12 @@ func _on_board_click(cell: Vector2i) -> void:
 			else:
 				_clear_selection()
 			return
+		# R748（用户口径）：点**自身**（既不是主动发动、也不是枭熊原地起跳）= 什么都不发生。
+		# 原来这里会掉进下面「另一个己方单位 → 切换选中」，而那条以 `_pass_moved_pending()`
+		# 开头 —— 移动后手一抖点到自己，这一记攻击就被永久作废；`_cancel_armed` 时点自己
+		# 还会真的走「第二次点击 = 取消」。两条都不该由「点自己」触发。
+		if cell == src:
+			return
 		# 落到这里 = 没点中任何有效目标（空格 / 打不到的敌人）——
 		# 说明可做的事，然后按「切换选中 / 上膛 / 取消」处理。
 		var sel_p := engine.state.unit_at(src)

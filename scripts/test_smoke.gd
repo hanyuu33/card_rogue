@@ -3652,6 +3652,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_relic_gate(scene)
 	_check_r106(scene)
 	_check_cancel_armed(scene)
+	_check_click_self(scene)
 	_check_menu(scene)
 	_check_settings_overlay(scene)
 	_check_attack_art_variant()
@@ -5327,6 +5328,108 @@ func _cleanup_cancel_dummy(eng: GameEngine, src: Vector2i, tgt: Vector2i) -> voi
 	## R118 用例收尾：别把 dummy 留给后续用例（与 `_check_frozen_aura` 同一套路）。
 	eng.state.board.erase(src)
 	eng.state.board.erase(tgt)
+
+
+func _check_click_self(scene: Variant) -> void:
+	## R748（用户口径）：**移动后点「自身」= 什么都不发生。**
+	## 原来这一下会掉进「另一个己方单位 → 切换选中」的兜底分支，而那条以
+	## `_pass_moved_pending()` 开头 —— 手一抖点到自己，这记攻击就被永久作废（不可逆）；
+	## 若当时已经「上膛」，点自己还会真的走完「第二次点击 = 取消」。
+	## 注意「仅自身」：点**另一个**己方单位仍是切换选中，那条老语义不动。
+	var eng: GameEngine = scene.engine
+	if eng == null:
+		_smoke_fail("R748 点自身：拿不到 engine")
+		return
+	var src := Vector2i(-1, -1)
+	var tgt := Vector2i(-1, -1)
+	for r: int in [3, 4, 5]:
+		for c: int in range(FieldState.BOARD_COLS - 1):
+			if _smoke_free(eng, Vector2i(r, c)) and _smoke_free(eng, Vector2i(r, c + 1)):
+				src = Vector2i(r, c)
+				tgt = Vector2i(r, c + 1)
+				break
+		if src.x >= 0:
+			break
+	if src.x < 0:
+		_smoke_fail("R748 点自身：我方半场找不到两个相邻空格，用例前提不成立")
+		return
+	eng.current_side = GameEngine.SIDE_SELF
+	scene._clear_selection()
+	var base := CardData.new()
+	base.id = 7908
+	base.card_name = "点自身烟测 Dummy"
+	base.kind = "盟友"
+	base.power = 4
+	base.health = 12
+	base.attack_range = 1
+	base.move_speed = 2
+	base.rarity = 0
+	base.group = "player"
+	base.card_class = "森林精魄"
+	var foe_card := CardData.from_dict(base.to_dict())
+	foe_card.id = 7909
+	foe_card.card_name = "点自身烟测靶子"
+	foe_card.health = 30
+	foe_card.group = "enemy"
+	var me: Placement = eng.state.place(
+			CardData.from_dict(base.to_dict()), src, GameEngine.SIDE_SELF)
+	var foe: Placement = eng.state.place(foe_card, tgt, GameEngine.SIDE_OPPONENT)
+	me.moved = true
+	me.tapped = false
+	me.acts_left = 1
+	scene._select_board(src)          # 干净前置：已移动、未攻击、选区就在它身上
+	var sel0 := str(scene.selection)
+	var hp0: int = foe.health
+	var bad: Array[String] = []
+
+	# ---- ① 点自身：选区 / 攻击目标 / 横置 一个都不许动 ----
+	scene._on_board_click(src)
+	if me.tapped:
+		bad.append("① 点自身把单位横置了（放弃攻击）")
+	if str(scene.selection) != sel0:
+		bad.append("① 点自身把选区弄丢了（%s → %s）" % [sel0, str(scene.selection)])
+	if not scene.attack_targets_arr.has(tgt):
+		bad.append("① 点自身之后攻击目标没了")
+
+	# ---- ② 已「上膛」时点自身：不能真的取消 ----
+	var far := Vector2i(-1, -1)
+	for r2: int in range(FieldState.BOARD_ROWS):
+		for c2: int in range(FieldState.BOARD_COLS):
+			var cell := Vector2i(r2, c2)
+			if not _smoke_free(eng, cell) or cell == src or cell == tgt:
+				continue
+			if scene.move_targets.has(cell):
+				continue
+			if scene.attack_targets_arr.has(cell) or scene.hp_targets_arr.has(cell):
+				continue
+			far = cell
+			break
+		if far.x >= 0:
+			break
+	if far.x < 0:
+		bad.append("② 全盘找不到一个「空位」，用例前提不成立")
+	else:
+		scene._on_board_click(far)                 # 第一次点空位 = 上膛
+		scene._on_board_click(src)                 # 上膛中点自身
+		if me.tapped:
+			bad.append("② 上膛后点自身把单位横置了")
+		if str(scene.selection) != sel0:
+			bad.append("② 上膛后点自身把选区弄丢了")
+		if not bool(scene._cancel_armed):
+			bad.append("② 上膛中点自身把上膛状态吃掉了")
+		scene._cancel_armed = false                # 别把这个状态漏给 ③
+
+	# ---- ③ 点自身之后照样打得出去（「没取消攻击」的实证）----
+	scene._on_board_click(tgt)
+	if foe.health >= hp0:
+		bad.append("③ 点自身之后打不出攻击了（靶子 %d → %d 血）" % [hp0, foe.health])
+	if not bad.is_empty():
+		_smoke_fail("R748 移动后点自身 " + "；".join(bad))
+	else:
+		print("SMOKE OK R748 移动后点自身：① 选区/目标/横置全不动"
+				+ " ② 上膛中点自身不取消 ③ 之后照样打（%d→%d 血）" % [hp0, foe.health])
+	scene._clear_selection()
+	_cleanup_cancel_dummy(eng, src, tgt)
 
 
 func _check_treasure_free_cards(scene: Variant) -> void:
