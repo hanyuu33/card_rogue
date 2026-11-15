@@ -446,6 +446,8 @@ static func class_badge(cls: String) -> Texture2D:
 			key = "rogue"
 		"机械之心":
 			key = "mech"
+		"吟游诗人":
+			key = "bard"   # R761：隐藏职业，缺图时调用方一律回退
 	if key == "":
 		return null
 	return get_tex("class_" + key)
@@ -461,6 +463,8 @@ static func class_key(cls: String) -> String:
 			return "rogue"
 		"机械之心":
 			return "mech"
+		"吟游诗人":
+			return "bard"   # R761：class_cg_bard / class_avatar_bard
 	return ""
 
 

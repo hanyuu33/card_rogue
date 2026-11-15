@@ -1,0 +1,32 @@
+REDRAW the character from this reference image as a CLASS-SELECT CG for a game, in the SAME
+soft painterly anime style as the reference. Keep the character identical, but change her POSE
+and MOVE her to the right side of the frame with her body turned the other way.
+
+KEEP EXACTLY (do NOT change her design):
+- A small cute guinea-pig-eared bard girl. Ash-blond / warm-cream short wavy hair with a soft
+  fringe, two ROUND fluffy guinea-pig ears on top of her head, small daisy flower ornaments and
+  pale green leaves in her hair, big warm amber-gold eyes, gentle smile.
+- Her outfit: cream and pale-sage-green frilly dress with lace trim, ribbon bows, a small golden
+  brooch at the collar, white lace stockings. Keep every colour and every detail.
+- She holds a small antique GOLDEN HARP (small lyre) — keep the same instrument design.
+- Rendering style: soft pastel watercolour cel shading, delicate lineart, warm cream / pale green
+  / antique gold palette, gentle blooming sunlight. Same as the reference, do NOT switch to a
+  different art style.
+
+CHANGE (this is the point of the redraw):
+- POSE: she is STANDING UPRIGHT (do not sit, do not crouch, no branch, no log). Full-body standing
+  pose, 3/4 view, body and shoulders turned slightly toward the LEFT side of the frame, head
+  slightly tilted, one hand holding the little golden harp up near her chest, the other hand
+  relaxed beside her skirt. Different pose from the reference: she is standing, not sitting.
+- POSITION & CROP: she stands in the RIGHT part of the frame — her body occupying roughly
+  60% to 80% of the frame width, head near the top edge, cropped around mid-thigh by the bottom
+  edge (3/4 body). The LEFT THIRD of the frame must stay relatively open and empty of the
+  character (background only), because a UI panel is drawn on top of it.
+- FACING: slightly toward the LEFT (her face turned a little to the viewer's left), like the other
+  class CGs of this game.
+- BACKGROUND: the same sunlit forest glade — tall trees, soft green foliage, warm light rays,
+  scattered white daisies and tiny floating light motes. Keep it airy and bright, character
+  clearly the sharpest thing in the frame.
+- FRAMING: wide 16:9 horizontal composition.
+
+STRICTLY NO text, NO letters, NO logo, NO watermark, NO signature, NO border, NO UI elements.

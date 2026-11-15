@@ -51,7 +51,7 @@ func enemy_cards() -> Array[CardData]:
 	return by_group("enemy")
 
 
-func obtainable_cards() -> Array[CardData]:
+func obtainable_cards(include_hidden := false) -> Array[CardData]:
 	## 「可获得池」= 奖励池去掉**禁卡**那一层（R346）。
 	## 为什么要单独一个口：禁卡界面必须**列出已被禁的卡**，否则玩家一点它就消失、
 	## 再也点不回来（取消禁卡都做不到）。所以：
@@ -68,12 +68,17 @@ func obtainable_cards() -> Array[CardData]:
 		# 不进随机奖励池（reward_pool 已拦），更不该出现在禁卡表里可被 ban。
 		if c.event_only:
 			continue
+		# R761：隐藏职业（吟游诗人）的卡**默认不进任何玩家可见的池** ——
+		# 随机奖励 / 商店 / 事件 / 禁卡表全读这里，一处拦死。
+		# `include_hidden=true` 只给「用吟游诗人本人开局」那条路（见 reward_pool_for）。
+		if not include_hidden and PlayerClass.is_hidden_class(c.card_class):
+			continue
 		out.append(c)
 	out.sort_custom(func(a: CardData, b: CardData): return a.id < b.id)
 	return out
 
 
-func reward_pool() -> Array[CardData]:
+func reward_pool(include_hidden := false) -> Array[CardData]:
 	## 肉鸽卡牌奖励的候选池：只有 普通/稀有/史诗（rarity 0~2）能通过奖励获得；
 	## 初始（3）、怪物（4）与事件卡（5）排除。
 	## R346 起再按玩家的**账号进度**过闸（唯一口 —— 商店 / 事件 / 奖励全都读这里）：
@@ -82,7 +87,7 @@ func reward_pool() -> Array[CardData]:
 ##      局外 = 账号表任意职业禁过都算）→ 不进池（就是下面这一段）。
 	## 两道闸都默认「空」，所以老存档 / 新玩家看到的池子与以前完全一致。
 	var out: Array[CardData] = []
-	for c: CardData in obtainable_cards():
+	for c: CardData in obtainable_cards(include_hidden):
 		if RunState.is_card_banned(c.id):
 			continue
 		# R467：`event_only` = 只该从事件 / 关卡奖励拿到的卡（洞穴的枭熊 9213）→ 不进随机池。
@@ -102,6 +107,10 @@ func reward_pool_for(cid: String) -> Array[CardData]:
 	## cid 留空 → 不过滤（返回完整奖励池，演示 / 测试用）。
 	if cid == "":
 		return reward_pool()
+	# R761：隐藏职业（吟游诗人）没有「本职业卡池」这一说 —— 它的玩法就是借别职业的
+	# 盟友（招募）与道具（诗），所以给**含隐藏卡的完整池**（它自己那两张也在里面）。
+	if PlayerClass.is_hidden_class(cid):
+		return reward_pool(true)
 	var out: Array[CardData] = []
 	for c: CardData in reward_pool():
 		if is_own_class_card(c, cid):

@@ -1634,6 +1634,16 @@
    "name": "负载增量员",
    "effect_text": "回合开始时，将一张「攻击」和一张「木栅栏」加入对方抽牌库。",
    "changed": false
+  },
+  "9263": {
+   "name": "杜鹃",
+   "effect_text": "",
+   "changed": false
+  },
+  "9264": {
+   "name": "招募",
+   "effect_text": "从三个其他职业的盟友中选一张，加入手卡。",
+   "changed": false
   }
  }
 }

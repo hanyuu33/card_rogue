@@ -1,0 +1,5 @@
+Draw ONE game item icon in exactly the same art style as the reference image: cartoon game inventory icon, thick dark navy outline, flat cel shading with a soft top-left highlight, slightly saturated colors, no frame, no border, centered composition, transparent background, 1:1 square.
+
+Subject: a bard's poem. A small rolled parchment scroll lying diagonally, tied in the middle with a red ribbon, its top edge curling open. A single golden musical note (an eighth note with a flowing flag) floats just above the scroll. Warm cream parchment, crimson ribbon, gold note. Keep it simple and readable at 128x128 — one object, no background elements, no hands, no animals, no text, no letters, no watermark.
+
+The reference image only tells you the style (line weight, shading, palette) — draw the new subject, do not copy the reference object.

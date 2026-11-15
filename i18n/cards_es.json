@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 323,
+ "count": 325,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1297,6 +1297,14 @@
   "9262": {
    "name": "Incrementador de Carga",
    "effect_text": "Al comienzo de cada turno, añade un «Ataque» y una «Valla de Madera» a la pila de robo del oponente."
+  },
+  "9263": {
+   "name": "Cuco",
+   "effect_text": ""
+  },
+  "9264": {
+   "name": "Reclutar",
+   "effect_text": "Elige 1 de 3 Aliados (uno de cada otra clase) y añádelo a la mano."
   }
  }
 }

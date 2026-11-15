@@ -1,0 +1,20 @@
+Draw a HEAD-ONLY character icon (avatar) of the character in the reference image, in the same
+soft anime style, for a small round portrait in a game UI.
+
+CHARACTER (same as reference, keep identical):
+- A small cute guinea-pig-eared bard girl. Ash-blond / warm-cream short wavy hair with a soft
+  fringe, two ROUND fluffy guinea-pig ears on top of her head, small white daisy flower ornaments
+  with pale green leaves in her hair, big warm amber-gold eyes, soft gentle smile, faint blush.
+- Cream and pale sage-green outfit colour scheme, a tiny golden brooch at the collar.
+
+COMPOSITION (this is important):
+- ONLY her head and a little of her neck/shoulders — a big chibi-like head that FILLS most of the
+  square frame, centred, top of the hair close to the top edge.
+- Face turned very slightly toward the LEFT, eyes open and looking at the viewer.
+- Clean silhouette, no cropping of the ears or the daisies, no body, no hands, no harp.
+
+BACKGROUND: PURE MAGENTA, flat hex FF00FF, completely solid and even — the whole background must
+be one single magenta colour with no gradient, no shadow, no floor, no vignette.
+Absolutely NO magenta reflection or pink spill on her hair, skin or clothes.
+
+Square 1:1 image. STRICTLY NO text, NO letters, NO logo, NO watermark, NO signature, NO border.

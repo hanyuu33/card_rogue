@@ -345,6 +345,10 @@ static func gallery_visible(c: CardData, release_mode: bool) -> bool:
 	## R642：图鉴可见性的**唯一判据**。抽成静态是为了测试能直接调
 	## （`preload("res://scripts/gallery_scene.gd").gallery_visible(card, true)`），
 	## 不必把整个场景实例化起来才能验一条布尔。
+	## R761：隐藏职业（吟游诗人）的卡**永远不进图鉴** —— 与版本无关，
+	## 连「全部」列表和职业下拉都不该出现它（职业下拉是从实际卡汇总的）。
+	if PlayerClass.is_hidden_class(c.card_class):
+		return false
 	if release_mode and not ProfileData.is_card_seen(c.id):
 		return false
 	return true

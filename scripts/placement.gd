@@ -128,6 +128,10 @@ var harp_atk: int = 0
 ## 与竖琴唯一的差别是生效判据：竖琴看「现在是否持有道具」，图腾看「本场是否已经用过」
 ## —— 工具用掉就从工具栏移除，按「持有」判会当场失效。赋值而不是累加，用两次还是 +2。
 var totem_atk: int = 0
+## R761 诗（6069，吟游诗人初始道具）：「**其他职业**的盟友 +2 力量」——
+## 与竖琴 / 野性图腾**逐字同构**的持续 buff（赋值不累加、绝不写回 `card.power`）。
+## 与竖琴唯一的差别是判据：只看「这张盟友不是吟游诗人自己的」（杜鹃不算）。
+var poem_atk: int = 0
 ## R383 骑士剑（6053）：「己方所有盟友 +1 力量」（R634 起）与竖琴是**同一套持续 buff 写法** ——
 ## 只记这个字段、由 `effective_power()` 并进攻击力，**绝不写回 `card.power`**。
 ## 触发条件由引擎记（本场第一次击杀），这里只管「在场上就生效」：
@@ -238,7 +242,7 @@ func effective_power() -> int:
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
 			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk + sword_atk
-			+ totem_atk
+			+ totem_atk + poem_atk
 			- debuff - mnemo_down)
 	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
 	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）
@@ -346,6 +350,9 @@ func status_entries() -> Array[Dictionary]:
 				"col": COL_B, "kind": "buff"})
 	if totem_atk > 0:
 		out.append({"label": "野性图腾：力量 +%d（本场，不叠加）" % totem_atk,
+				"col": COL_B, "kind": "buff"})
+	if poem_atk > 0:
+		out.append({"label": "诗：力量 +%d（本场，不叠加）" % poem_atk,
 				"col": COL_B, "kind": "buff"})
 	if sword_atk > 0:
 		out.append({"label": "骑士剑：力量 +%d（本场首次击杀后）" % sword_atk,
@@ -490,7 +497,7 @@ const _SAVE_FIELDS: Array[String] = [
 	"trap_trig_turn", "end_atk", "fence_bonus_hp", "upgrade_atk", "upgrade_hp",
 	"upgrade_stacks", "stack_hp_applied", "upgrade_range", "upgrade_speed",
 	"dmg_reduce", "first_hit_shield", "armor", "regen", "upgrade_feed_turn",
-	"mass_mnemo_turn", "sleep_left", "stun_left", "harp_atk", "sword_atk",
+	"mass_mnemo_turn", "sleep_left", "stun_left", "harp_atk", "sword_atk", "poem_atk",
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",

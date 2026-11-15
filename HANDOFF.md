@@ -1962,3 +1962,69 @@ manifest 的 9018 条目已更新 ref / prompt / note。
   短故事拖不动是正常现象（`_body_max_scroll()` = 0），不是坏了。
 - **回归**：smoke 新增 `_check_r735_story_drag_rows`（喂 76px 拖动必须正好滚 1 行；再喂 38px 只留余量），
   74✓ 0✗；engine 6070 / 八套全绿；`RESTORE_VERIFY OK`。
+
+## 2026-11-15 Bard class-select CG
+- Goal: redraw reference bard standing on the right, open forest on left.
+- Added assets/ui/bg_bard_class_select_v2.png using built-in imagegen; original unchanged; no scene wiring.
+- Prompt: preserve reference character, dress, golden lyre and watercolor anime style; upright pose, one hand holding lyre and one relaxed, left-facing three-quarter composition, mid-thigh crop, 16:9 sunlit forest, no text/UI.
+- Verification: visually inspected generated image; right placement, upright pose, clear left background. Facing remains near frontal.
+- Git status/commit blocked: git.exe execution returned Access is denied. No commit or push performed.
+- Next: review asset and integrate if approved.
+
+
+## 2026-11-15 Bard head-only avatar
+- Goal: square reference-matched bard portrait on solid #FF00FF for game UI.
+- Added assets/ui/avatar_bard_magenta_v1.png using built-in imagegen; no scene wiring.
+- Prompt: same soft anime guinea-pig bard, cream wavy hair, round fluffy ears, daisies, amber eyes, gentle smile; oversized head with minimal collar and gold brooch; slight image-left turn, viewer gaze; solid #FF00FF without spill; no hands, harp, text or border.
+- Verification: visually inspected generated output; ears and daisies intact, square tight portrait, magenta backdrop. Turn is near frontal; exact pixel color not programmatically checked.
+- Git status command failed: git.exe Access is denied. Existing modifications could not be enumerated; no commit or push performed.
+- Next: commit this asset and this handoff addition when Git execution is available; UI integration outside this request.
+
+## 2026-11-15 Curtain bard class-select redraw
+- Goal: reference-identical bard, standing close portrait on right with open left third.
+- Added assets/ui/bg_curtain_class_select_v1.png via built-in imagegen. Existing reference and scenes preserved.
+- Prompt: preserve reference watercolor anime style, cream/sage lace outfit, round ears, daisies and golden lyre; upright three-quarter left-facing pose, harp at chest, other hand beside skirt; head at top, mid-thigh bottom crop; right placement, airy forest, 16:9, no text/UI.
+- Verification: visually inspected generated output: upright, right placement, open left third, thigh crop and no UI. Face turn is subtle, near frontal. No runtime changes or tests needed.
+- Git status failed with git.exe Access is denied; existing external changes cannot be enumerated. No commit or push performed.
+- Next: commit this asset and handoff addition when Git execution is available. Scene integration not requested.
+
+
+## 2026-11-15 Bard poem icon
+- Goal: generate one transparent square bard poem inventory icon using the harp reference style.
+- Scope: assets/ui/bard_poem_generated_v1.png; no game scene or existing asset replacement.
+- Tool: built-in image_gen. Prompt: cream rolled parchment diagonal, crimson ribbon at center, curling top edge, one floating golden eighth note; thick navy outline, flat cel shading, soft top-left highlight; centered transparent square; no text or background elements; readable at 128px.
+- Validation: visually reviewed generated output for subject, composition and absence of text. No game integration or scene acceptance requested.
+- Limitation: git status could not execute (git.exe access denied); existing uncommitted changes could not be inventoried. No commit or push performed.
+- Next: review icon before game integration; commit these explicit files when Git is available.
+
+## 2026-11-15 R761 隐藏职业「吟游诗人」（默认玩家不可感知）
+- **口径（店长）**：「这个职业目前不可见，不可选，卡牌不可在图鉴查到，不能被随机到，总之就是玩家不能感知到，
+  只能我自己用指令打开能玩吟游诗人的特殊版本。」「吟游诗人头像放到森林精魄头像正上方。」
+- **三条约束各留一个判据口**（不是「每个界面各藏一次」）：界面 `PlayerClass.ids()`（可见三职业，
+  `playable_ids()` = 它 + 开关）；卡池 `CardRepo.obtainable_cards()` 默认拦 `is_hidden_class()`；
+  图鉴 `gallery_scene.gallery_visible()` 恒 false（与发布/测试版无关）。
+- **开关**：`PlayerClass.bard_enabled()`（`_bard_forced` → 命令行 `-- --bard` → `OS.get_cmdline_user_args()`）；
+  写口只有 `set_bard_enabled(true)`；AI 对局桥 `POST /mode {"bard":true}`。
+- **内容**：杜鹃 9263（盟友 3 费 3/1/1/8 · 水风）、招募 9264（0 费技能，三职业各一张盟友三选一）、
+  赠品道具「诗」6069（每回合第一次用别职业盟友回 1 费；别职业盟友 +2 力量，`Placement.poem_atk`
+  与竖琴 6052 逐字同构、赋值不累加、绝不写回 `card.power`）。
+- **初始卡组 13 张** = 木栅栏×5 + 攻击×5 + 杜鹃×2 + 招募×1（`starter_substitute(BARD) = -1`），最大生命 64。
+- **招募**：候选在出牌那一刻摇定并缓存（引擎 rng，可复现），走 `PickOverlay` 的新 `"recruit"` 形态
+  （`_pick_active_kind` / `_build_pick_cfg` / `_on_pick_confirmed` 各一条分支）。
+- **头像槽位**：`_bard_rect()` = `_av_rect(0)` 上方 56px、同宽同名牌；`_draw_bard_slot()` 首行
+  `if not PlayerClass.bard_enabled(): return` → 默认版本零像素差异。头像行塞不进第四枚
+  （空档 228px，需 498px），所以是独立槽位不是第四列。
+- **美术**：`assets/ui/class_cg_bard.png`（1280×720，codex 图生图 v2 定稿）、
+  `class_avatar_bard.png`（320² 透明）、`relic_icon_6069.png`（128² 卷轴 + 音符）；
+  源图 / prompt / 验收页在 `art_src/2026-11-15_吟游诗人CG_R761/`。
+- **回归**：`_verify.py` 全绿 —— engine **6188✓ 0✗**（+34 条 `_test_r761()`）、reward 26、bgm 39、
+  traps 176、trapinput 70、smoke 74。计数锁：卡牌 325 / 玩家卡 247 / 敌 78 / 道具 63 / 玩家技能卡 104。
+- **截图**：`_R761_pick_default.png`（无槽位）/ `_R761_pick_bard.png`（槽位在森林精魄正上方）/
+  `_R761_pick_bardsel.png`（选中态：CG 站姿略朝左、面板 64 血、槽位青边）。新增出图开关
+  `-- --screenshot --bard --bardsel`。
+- **i18n**：cards 三语 + `zh_canonical` + `glossary`（道具名要登记 id）+ noncard 四语；
+  五个校验脚本剩下的都是**既有**红项（计量工坊 / 奇异雕像 / 巅峰之上 / 6027「生命值」/ l10n 隐私页）。
+- **没动**：`关卡与敌人配置总览.md`（工作区那批 39→40 属另一条线未提交）；
+  `assets/ui/avatar_bard_magenta_v1.png` / `bard_poem_generated_v1.png` /
+  `bg_curtain_class_select_v1.png` / `bg_bard_class_select_v2.png` 是另一条线出的图、**无代码引用**，
+  本轮没删没换，等店长定夺。

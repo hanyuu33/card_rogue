@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 323,
+ "count": 325,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1297,6 +1297,14 @@
   "9262": {
    "name": "Load Incrementer",
    "effect_text": "At the start of each turn, add one 「Attack」 and one 「Wooden Fence」 to the opponent's draw pile."
+  },
+  "9263": {
+   "name": "Cuckoo",
+   "effect_text": ""
+  },
+  "9264": {
+   "name": "Recruit",
+   "effect_text": "Choose 1 of 3 Allies (one from each other class) and add it to your Hand."
   }
  }
 }

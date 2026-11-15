@@ -15,6 +15,11 @@ extends RefCounted
 const DRUID := "森林精魄"
 const ROGUE := "暗影刺客"
 const MECH := "机械之心"          # R82：0 费素体滚雪球 + 「升级」改造场面
+## R761：**隐藏职业**。默认玩家感知不到 —— 不在选人界面、不进图鉴、不进任何随机池；
+## 只有打开「特殊版本」开关（命令行 `-- --bard` / `PlayerClass.set_bard_enabled(true)` /
+## AI 对局桥的 `/mode {"bard":true}`）才会多出一枚可选头像。
+## 卡牌归属写在 cards.json 的 `class` 字段（"吟游诗人"），见 `is_hidden_class()`。
+const BARD := "吟游诗人"
 ## 奖励池按角色过滤（R47）：cards.json 的 `class` 字段 = 该卡的**归属角色**，
 ## 只有本角色能摇到本角色卡（见 CardRepo.reward_pool_for）。
 ## `class` 留空 = 通用卡（两边都能摇到；当前库内暂无通用卡）。
@@ -48,13 +53,65 @@ static func skin_class(id: int, own_class: String) -> String:
 		return RunState.player_class
 	return own_class
 
+## ── 隐藏职业开关（R761）──
+## `-1` = 跟随命令行（默认）；`0` / `1` = 被 `set_bard_enabled()` 强制。
+## ⚠️ 判据**只在这一个函数里**：界面 / 卡池 / 图鉴全都读 `bard_enabled()`，
+##    别在别处再写一遍 `--bard in args`。
+static var _bard_forced := -1
+const BARD_ARG := "--bard"
+
+
+static func bard_enabled() -> bool:
+	## 吟游诗人这个隐藏职业此刻是否**可见可玩**（特殊版本）。
+	## 默认关：命令行没带 `-- --bard` 时玩家完全感知不到它。
+	if _bard_forced >= 0:
+		return _bard_forced == 1
+	return BARD_ARG in OS.get_cmdline_user_args()
+
+
+static func set_bard_enabled(v: bool) -> void:
+	## 开关的**唯一写入口**（AI 对局桥 `/mode`、测试注入）。
+	## 生产代码里只有命令行那一条路径，不会自己打开。
+	_bard_forced = 1 if v else 0
+
+
+static func is_hidden_class(cid: String) -> bool:
+	## 是不是「隐藏职业」—— 图鉴 / 禁卡表 / 随机奖励池一律要把它筛掉。
+	## 唯一判据口：`CardRepo` / `gallery_scene` 都读这里，不许各处比字符串。
+	return cid == BARD
+
+
 ## 玩家初始最大生命的**基础值**（R182 起按职业加加成）。
 ## 角色选择界面读 base_hp_of 展示，RunState.start_run 用它初始化玩家生命。
 const BASE_HP := 50
 
-## 可选角色（顺序 = 角色选择界面的展示顺序）。
+## **可见**角色（顺序 = 角色选择界面的展示顺序）。
+## R761：隐藏职业**永远不在这里** —— 这一份是「玩家看得见的三个」，
+## 图鉴职业下拉 / 禁卡表页签 / 随机摇人 / 解锁体系全都读它，于是吟游诗人
+## 天然进不去任何玩家可见的列表。要连隐藏职业一起处理请用 `all_ids()`。
 static func ids() -> Array[String]:
 	return [DRUID, ROGUE, MECH]
+
+
+static func hidden_ids() -> Array[String]:
+	## 隐藏职业（R761 起只有吟游诗人）。
+	return [BARD]
+
+
+static func all_ids() -> Array[String]:
+	## **全集**（可见 + 隐藏）。只给素材审计 / 存档校验 / 回归用 —— **别拿来画界面**。
+	var out := ids()
+	out.append_array(hidden_ids())
+	return out
+
+
+static func playable_ids() -> Array[String]:
+	## 此刻**真能开局选到**的职业：可见三个 + （开关打开时）吟游诗人。
+	## 选人界面与 AI 对局桥的 `new_run` 读这一份；随机摇人仍走 `ids()`。
+	var out := ids()
+	if bard_enabled():
+		out.append(BARD)
+	return out
 
 
 static func default_id() -> String:
@@ -88,6 +145,8 @@ static func _subtitle_zh(cid: String) -> String:
 			return "疾影出手 · 幽影与快刀同行"
 		MECH:
 			return "拆解重组 · 用「升级」把单位越堆越强"
+		BARD:
+			return "弦上生风 · 借他人之力奏自己的歌"
 	return ""
 
 
@@ -111,6 +170,12 @@ static func _desc_zh(cid: String) -> String:
 			## 「留手」只能让素体在**一场战斗内**跨回合保留，天花版永远是 2 张。改这里之前先看这两处。
 			return "积少成多。每场战斗开场就能握着 2 张 0 费的素体，它们回合结束不会被弃掉，"\
 					+ "可以留到合适的时机再逐个「升级」，养成难以击破的硬块。\n起手偏慢，一旦成型就很难被单个点破。"
+		BARD:
+			## R761：隐藏职业。打法取向 = 借牌 —— 自己的卡很少，靠「招募」把别职业盟友
+			## 拉进手牌，再由初始道具「诗」把这些外来的盟友喂成主力。
+			return ("借力打力。自己的卡只有两张杜鹃，主力全靠「招募」从别的职业借来，"
+					+ "再用「诗」给这些外来盟友加力量、顺便回费。\n自己的底子薄，"
+					+ "手牌一旦断档就会很难受。")
 	return ""
 
 
@@ -123,6 +188,8 @@ static func relic_of(cid: String) -> int:
 			return 6023
 		MECH:
 			return 6025
+		BARD:
+			return 6069   # R761「诗」：每回合第一次用别职业盟友回 1 费 + 别职业盟友力量 +2
 	return -1
 
 
@@ -135,6 +202,10 @@ static func bonus_deck_of(cid: String) -> Array[int]:
 			return [9086]   # 终结 ×1
 		MECH:
 			return [8026, 8026, 8027]   # 构装体 ×2 + 升级 ×1
+		BARD:
+			## R761：杜鹃 ×2（3 费 3/1/1/8 盟友，同时充当「基础盟友」那两张）+ 招募 ×1。
+			## 合计 5 木栅栏 + 5 攻击 + 2 杜鹃 + 1 招募 = 13 张，与其它职业同宽。
+			return [9263, 9263, 9264]
 	return []
 
 
@@ -146,6 +217,10 @@ static func starter_substitute(cid: String) -> int:
 		ROGUE:
 			return 8005
 		MECH:
+			return -1
+		BARD:
+			## R761：吟游诗人不用别职业的基础盟友 —— 那两张位置由它自己的杜鹃占掉
+			## （杜鹃同样 3 费 3/1/1/8，见 `bonus_deck_of`）。
 			return -1
 	return 8003
 
@@ -180,6 +255,8 @@ static func hp_bonus_of(cid: String) -> int:
 			return 10
 		MECH:
 			return 16
+		BARD:
+			return 14   # R761：底子薄但比刺客厚一点（64 血）
 	return 0
 
 

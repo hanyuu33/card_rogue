@@ -37,6 +37,10 @@ var _font_bold: Font
 var sfx: Sfx
 var _menu: UiMenu = null      # Esc 主菜单（R148）
 var _hover := -1              # 悬停的头像下标
+## R761：隐藏职业「吟游诗人」是否被选中。它**不在** `PlayerClass.ids()` 里，
+## 所以不能用 `_selected` 表示；两者互斥（点头像清它、点它清 `_selected`）。
+var _bard_sel := false
+var _bard_hover := false      # 上方那枚槽位的悬停态（自绘，得自己跟）
 var _selected := -1           # 已选职业下标（_ready 里默认置 0 = 第一角色；-1 仅作初值）
 var _picked := false
 var _rand_hover := false      # R519b：「随机」钮的悬停态（自绘按钮，得自己跟）
@@ -48,6 +52,8 @@ var _seed_bad := false            # 输入的种子不合法（红框 + 提示�
 ## R346：上次选中的角色下标 —— 从「禁卡表」回来时**恢复**原来的选择。
 ## 这个界面每次进都重建，不留一份就会「去禁个卡，回来角色变回第一个」。
 static var last_selected := 0
+## R761：上次选的是不是吟游诗人（从禁卡表回来要恢复成同一枚）。
+static var last_bard := false
 
 
 func _ready() -> void:
@@ -83,10 +89,17 @@ func _ready() -> void:
 	# R346：从禁卡表回来 → 恢复上次选的角色（`--sel` 显式指定时以它为准）
 	if uargs.find("--sel") < 0:
 		_selected = clampi(last_selected, 0, PlayerClass.ids().size() - 1)
+		# R761：上次玩的是吟游诗人 → 恢复成同一枚（开关关着就退回普通头像）
+		_bard_sel = last_bard and PlayerClass.bard_enabled()
 	# R223：`-- --screenshot --diff N` 预选难度档位（0~10，看累计 debuff 文本的换行情况）。
 	for ai in uargs.size():
 		if uargs[ai] == "--diff" and ai + 1 < uargs.size():
 			RunState.set_difficulty(int(uargs[ai + 1]))
+	# R761 出图核验：`-- --screenshot --bard --bardsel` 预选吟游诗人（看它的 CG 与面板）。
+	# 只在这一个开关打开时生效，默认版本连读都不读。
+	if PlayerClass.bard_enabled() and "--bardsel" in uargs:
+		_bard_sel = true
+		last_bard = true
 	queue_redraw()
 	# R148：Esc 主菜单
 	_menu = UiMenu.attach(self, _menu_items, {
@@ -123,6 +136,20 @@ func _av_row_x0() -> float:
 func _av_rect(i: int) -> Rect2:
 	var x0 := _av_row_x0()
 	return Rect2(x0 + i * (AV + AV_GAP), size.y - AV - 64.0, AV, AV)
+
+
+func _bard_rect() -> Rect2:
+	## R761：吟游诗人的槽位 = **森林精魄头像正上方**，同尺寸同名牌。
+	## 纵向：槽底与 firstName 的名字条之间留 4px；横向：与 av0 严格同 x。
+	var r := _av_rect(0)
+	return Rect2(r.position.x, r.position.y - AV - 56.0, AV, AV)
+
+
+func _current_cid() -> String:
+	## 此刻「在选谁」的唯一口（三职业走 `_selected`，吟游诗人走 `_bard_sel`）。
+	if _bard_sel and PlayerClass.bard_enabled():
+		return PlayerClass.BARD
+	return PlayerClass.ids()[clampi(_selected, 0, PlayerClass.ids().size() - 1)]
 
 
 func _rand_rect() -> Rect2:
@@ -304,7 +331,7 @@ func _draw() -> void:
 		draw_string(_font, Vector2(0, 330), GameI18n.ui("shell", "CLASS_PICK_EMPTY_HINT", "点头像查看该角色，再选难度、确认进入"),
 				HORIZONTAL_ALIGNMENT_CENTER, size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED)
 	else:
-		var cid := PlayerClass.ids()[_selected]
+		var cid := _current_cid()
 		var cg := UiAssets.class_cg(cid)
 		if cg != null:
 			draw_texture_rect_region(cg, bleed,
@@ -315,7 +342,40 @@ func _draw() -> void:
 		_draw_seed_panel()
 	for i in PlayerClass.ids().size():
 		_draw_avatar(i)
+	_draw_bard_slot()
 	_draw_rand_button()
+
+
+func _draw_bard_slot() -> void:
+	## R761：吟游诗人的槽位（隐藏职业）。**开关关着时整支不执行** ——
+	## 玩家看到的选人界面与以前逐像素相同。
+	if not PlayerClass.bard_enabled():
+		return
+	var cid := PlayerClass.BARD
+	var r := _bard_rect()
+	var sel := _bard_sel and not _rand_pending
+	var cc: Color = UiTheme.class_color(cid)
+	UiTheme.draw_info_card(self, r)
+	var tex := UiAssets.class_avatar(cid)
+	if tex != null:
+		var fr := CardFace.fit_rect(tex.get_size(), r.grow(-6.0))
+		draw_texture_rect(tex, fr, false)
+	else:
+		# 缺图回退：职业圆徽（再缺则只留框 + 名字）
+		var badge := UiAssets.class_badge(cid)
+		if badge != null:
+			draw_texture_rect(badge, r.grow(-8.0), false)
+	draw_rect(r, cc if sel else Color(1, 1, 1, 0.25), false, 4.0 if sel else 2.0)
+	if _bard_hover and not sel:
+		draw_rect(r.grow(3.0), Color(1, 1, 1, 0.55), false, 2.0)
+	# 名牌与头像行同一套尺寸 / 字体（写在槽位**下面**，正好落在 av0 上方那条缝里）
+	UiTheme.draw_info_card(self, Rect2(r.position.x - 4, r.end.y + 4, r.size.x + 8, 48))
+	draw_string(_font_bold, Vector2(r.position.x, r.end.y + 24.0), PlayerClass.name_of(cid),
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
+	var hp_txt := GameI18n.ui("shell", "CLASS_PICK_HP", "生命 %d") % PlayerClass.base_hp_of(cid)
+	draw_string(_font, Vector2(r.position.x, r.end.y + 44.0), hp_txt,
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, UiTheme.FS_CAPTION,
+			UiTheme.class_color(cid).lightened(0.35))
 
 
 func _draw_rand_button() -> void:
@@ -379,7 +439,7 @@ func _roll_random() -> void:
 func _draw_avatar(i: int) -> void:
 	var cid := PlayerClass.ids()[i]
 	var r := _av_rect(i)
-	var sel := i == _selected and not _rand_pending   # R545：盲选态不标任何头像
+	var sel := i == _selected and not _rand_pending and not _bard_sel   # R545/R761
 	var unlocked := UnlockSystem.is_class_unlocked(cid)
 	var cc: Color = UiTheme.class_color(cid)
 	UiTheme.draw_info_card(self, r)
@@ -459,7 +519,7 @@ func _effective_class() -> String:
 	var ids := PlayerClass.ids()
 	if _rand_pending:
 		return ids[clampi(_rand_pick, 0, ids.size() - 1)]
-	return ids[clampi(_selected, 0, ids.size() - 1)]
+	return _current_cid()
 
 
 func _diff_cap() -> int:
@@ -612,12 +672,17 @@ func _gui_input(event: InputEvent) -> void:
 		if rh != _rand_hover:
 			_rand_hover = rh
 			queue_redraw()
+		# R761：吟游诗人槽位（开关关着时恒为 false，不参与命中）
+		var bh := PlayerClass.bard_enabled() and _bard_rect().grow(5.0).has_point(event.position)
+		if bh != _bard_hover:
+			_bard_hover = bh
+			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position
 		if _selected >= 0:
 			if _confirm_rect().has_point(pos):
-				_choose(PlayerClass.ids()[_selected])
+				_choose(_current_cid())
 				return
 			if _ban_rect().has_point(pos):
 				# R346：去禁卡表（账号级选择，回来还停在原来选的角色上）
@@ -640,12 +705,23 @@ func _gui_input(event: InputEvent) -> void:
 					return
 				_selected = i
 				last_selected = i
+				_bard_sel = false        # R761：点具体头像 = 取消吟游诗人
+				last_bard = false
 				_rand_pending = false   # R545：点具体角色 = 取消盲选
 				# R550：换职业后难度可能超出新职业上限 → 当场压回
 				_diff_set_to(RunState.difficulty)
 				sfx.play("click")
 				queue_redraw()   # R186（原来靠 _process 每帧重绘）
 				return
+		# R761：吟游诗人槽位（在森林精魄头像正上方，与头像行不重叠）
+		if PlayerClass.bard_enabled() and _bard_rect().grow(5.0).has_point(pos):
+			_bard_sel = true
+			last_bard = true
+			_rand_pending = false
+			_diff_set_to(RunState.difficulty)   # 换职业后难度可能超上限 → 当场压回
+			sfx.play("click")
+			queue_redraw()
+			return
 		# R519b：「随机」钮 —— 放在头像循环之后判，两者不重叠所以顺序无所谓，
 		# 但**必须在 `_selected >= 0` 那个块之外**：`_selected` 为 -1 时也要能点。
 		if _rand_rect().grow(4.0).has_point(pos):
@@ -678,6 +754,8 @@ func _reveal_random(code: String) -> void:
 	## R545：揭晓盲选结果。先把 CG / 面板换成随到的角色，0.6 秒后真正开局。
 	_selected = clampi(_rand_pick, 0, PlayerClass.ids().size() - 1)
 	last_selected = _selected
+	_bard_sel = false
+	last_bard = false
 	_rand_pending = false
 	_picked = true          # 揭晓瞬间锁定输入（防连点再摇）
 	queue_redraw()

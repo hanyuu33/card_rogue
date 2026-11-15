@@ -395,6 +395,9 @@ const RARITY_CURSE := Color("4e4560")    ## 6 诅咒（R223「疲惫」）
 const CLASS_DRUID := Color("3a7d44")   ## 森林精魄 自然绿
 const CLASS_ROGUE := Color("5b3a8e")   ## 暗影刺客 幽紫
 const CLASS_MECH := Color("b8860b")    ## 机械之心 黄铜
+## R761：吟游诗人（隐藏职业）—— 青碧。故意避开森林的绿、刺客的紫、机械的黄铜，
+## 卡面左侧竖条 / 纸底色 / 选人界面描边一眼能认出是「另一个职业」。
+const CLASS_BARD := Color("1f8f8a")   ## 吟游诗人 青碧
 const CLASS_ENEMY := Color("7a1f1f")   ## 敌人 暗红
 ## R277：**公用卡**（cards.json 里 class 留空 = 不属于任何职业的事件 / 道具产出卡）
 ## 的中性灰 —— 与「无归属」的语义一致：不站任何一边，但也确实是卡库里的正式成员。
@@ -473,6 +476,8 @@ static func class_color(card_class: String) -> Color:
 			return CLASS_ROGUE
 		"机械之心":
 			return CLASS_MECH
+		"吟游诗人":
+			return CLASS_BARD
 		"敌人":
 			return CLASS_ENEMY
 	return Color(0, 0, 0, 0)

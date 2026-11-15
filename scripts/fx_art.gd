@@ -70,6 +70,9 @@ const CLASS_FAMILY := {
 	"森林精魄": FAM_NATURE,
 	"暗影刺客": FAM_SHADOW,
 	"机械之心": FAM_HOLY,
+	## R761：吟游诗人 = 水风（琴音如风）。现存八个族里唯一没被任何职业占用的一个，
+	## 卡面写空 `color` 时它就是「吟游诗人的默认特效」。
+	"吟游诗人": FAM_STORM,
 }
 ## 敌人没有职业可依 → 普通打击就是物理（橙红爆点），一眼看得懂。
 const ENEMY_FAMILY := FAM_PHYS

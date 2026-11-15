@@ -242,6 +242,22 @@ func _route(c: Dictionary, method: String, path: String, body: String) -> void:
 			return
 		_send(c, 200, "application/json; charset=utf-8", JSON.stringify(new_run(dn as Dictionary)))
 		return
+	if clean == "/mode":
+		# R761：隐藏职业「吟游诗人」的开关 —— 店长口径「只能我用指令打开的特殊版本」。
+		# `{"bard":true}` 打开 / `{"bard":false}` 关掉；不传就是查询。
+		# 与命令行 `-- --bard` 落在同一个唯一写入口 `PlayerClass.set_bard_enabled()`。
+		var dm: Variant = JSON.parse_string(body) if body.strip_edges() != "" else {}
+		if dm is Dictionary and (dm as Dictionary).has("bard"):
+			PlayerClass.set_bard_enabled(bool((dm as Dictionary)["bard"]))
+		_send(c, 200, "application/json; charset=utf-8", JSON.stringify({
+			"ok": true,
+			"bard": PlayerClass.bard_enabled(),
+			"playable": PlayerClass.playable_ids(),
+			"msg": "吟游诗人：%s（选人界面%s）" % [
+					"已开启" if PlayerClass.bard_enabled() else "已关闭",
+					"已出现，需回到选人界面查看" if PlayerClass.bard_enabled() else "不再出现"],
+		}))
+		return
 	if clean == "/rewind":
 		_send(c, 200, "application/json; charset=utf-8", JSON.stringify(rewind_battle()))
 		return
@@ -352,8 +368,10 @@ func new_run(d: Dictionary) -> Dictionary:
 	var cid := str(d.get("class", "")).strip_edges()
 	if cid == "":
 		cid = PlayerClass.default_id()
-	if not PlayerClass.ids().has(cid):
-		return {"ok": false, "msg": "职业只能是：%s" % "、".join(PlayerClass.ids())}
+	# R761：`playable_ids()` = 可见三个 +（开关打开时）吟游诗人。随机摇人仍走 `ids()`，
+	# 所以「吟游诗人不能被随机到」不受这里影响。
+	if not PlayerClass.playable_ids().has(cid):
+		return {"ok": false, "msg": "职业只能是：%s" % "、".join(PlayerClass.playable_ids())}
 	var code := str(d.get("seed", "")).strip_edges().to_upper()
 	if code != "" and RunState.seed_value_of(code) < 0:
 		return {"ok": false, "msg": "种子码不合法（10 位 A-Z / 0-9）：%s" % code}

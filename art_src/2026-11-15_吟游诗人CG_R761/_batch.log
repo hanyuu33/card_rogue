@@ -1,0 +1,10 @@
+[21:28:40] 代理预检 HTTP 200
+[21:28:40] RUN  cg_bard_v1.png  参考=bg_curtain.png  第1次
+[21:30:56] OK   cg_bard_v1.png  136s  2625686 字节
+[21:30:56] RUN  avatar_bard_v1.png  参考=bg_curtain.png  第1次
+[21:32:40] OK   avatar_bard_v1.png  104s  2658619 字节
+[21:32:40] === R761 结束 成功2 / 失败0 []
+[21:33:47] 代理预检 HTTP 200
+[21:33:47] RUN  cg_bard_v2.png  参考=bg_curtain.png  第1次
+[21:35:53] OK   cg_bard_v2.png  126s  2704555 字节
+[21:35:53] === R761 结束 成功1 / 失败0 []

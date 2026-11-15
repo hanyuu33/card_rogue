@@ -6731,6 +6731,45 @@
       "target_mode": "none",
       "color": "物理",
       "image": ""
+    },
+    {
+      "id": 9263,
+      "name": "杜鹃",
+      "kind": "盟友",
+      "cost": 3,
+      "power": 3,
+      "health": 8,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 3,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9264,
+      "name": "招募",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 3,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "从三个其他职业的盟友中选一张，加入手卡。",
+      "target_mode": "none",
+      "value": 1,
+      "color": "水风",
+      "image": ""
     }
   ]
 }

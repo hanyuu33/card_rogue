@@ -22,6 +22,10 @@ const CLASS_ORDER: Array[String] = [PlayerClass.ROGUE, PlayerClass.MECH]
 
 static func is_class_unlocked(cid: String) -> bool:
 	## 该职业当前是否可选。
+	## R761：隐藏职业（吟游诗人）**不参与解锁体系** —— 它没有故事条件、也不该写进
+	## 玩家档案的 `unlocked_classes`：开关打开就整份可用，关着根本不上界面。
+	if PlayerClass.is_hidden_class(cid):
+		return PlayerClass.bard_enabled()
 	if not GameBuild.is_release():
 		return true
 	if cid == PlayerClass.DRUID:
@@ -31,6 +35,9 @@ static func is_class_unlocked(cid: String) -> bool:
 
 static func difficulty_cap(cid: String) -> int:
 	## 该职业当前**可选到的最高难度**（含）。
+	## R761：隐藏职业不给难度进度留档（它只给店长自测），开关打开即最高档。
+	if PlayerClass.is_hidden_class(cid):
+		return RunState.DIFFICULTY_COUNT - 1
 	if not GameBuild.is_release():
 		return RunState.DIFFICULTY_COUNT - 1
 	return clampi(ProfileData.class_difficulty(cid), 0, RunState.DIFFICULTY_COUNT - 1)

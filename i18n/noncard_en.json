@@ -41,7 +41,7 @@
     },
     "6012": {
       "name": "One Bag of Pain",
-      "desc": "After the first time your Health takes damage each turn, draw 1 card, and your Skills deal +1 damage for the rest of the turn."
+      "desc": "Feel pain. After the first time your Health takes damage each turn, draw 1 card, and your Skills deal +1 damage for the rest of the turn."
     },
     "6013": {
       "name": "Superposition Duck",
@@ -250,6 +250,10 @@
     "6068": {
       "name": "Toolbox",
       "desc": "Gain a random tool immediately. At the start of every new layer, gain another random tool."
+    },
+    "6069": {
+      "name": "Poem",
+      "desc": "The first time each turn you use an Ally from another class: gain 1 Cost. Allies from other classes have +2 Power (persistent; does not stack)."
     }
   },
   "classes": {

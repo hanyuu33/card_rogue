@@ -41,7 +41,7 @@
     },
     "6012": {
       "name": "Un saco de dolor",
-      "desc": "Después de que tu Vida reciba daño por primera vez cada turno, roba 1 carta y tus Habilidades infligen +1 de daño durante el resto del turno."
+      "desc": "Siente el dolor. Después de que tu Vida reciba daño por primera vez cada turno, roba 1 carta y tus Habilidades infligen +1 de daño durante el resto del turno."
     },
     "6013": {
       "name": "Pato en superposición",
@@ -250,6 +250,10 @@
     "6068": {
       "name": "Caja de herramientas",
       "desc": "Obtienes una herramienta aleatoria de inmediato. Al entrar en cada nuevo nivel, obtienes otra herramienta aleatoria."
+    },
+    "6069": {
+      "name": "Poema",
+      "desc": "La primera vez cada turno que uses un Aliado de otra clase, ganas 1 de Coste. Los Aliados de otras clases tienen +2 de Poder (efecto persistente; no se acumula)."
     }
   },
   "classes": {

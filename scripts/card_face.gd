@@ -723,6 +723,10 @@ static func art_frame_kind(card: CardData) -> String:
 			return "shadow"
 		"机械之心":
 			return "mech"
+		"吟游诗人":
+			## R761：隐藏职业。`art_frame_bard.png` 还没做 → 走 `_draw_art_frame` 的同色细线
+			## 回退（青碧），既不是公用白框、也不会空白。
+			return "bard"
 	return "common"
 
 
@@ -747,6 +751,8 @@ static func _draw_art_frame(canvas: CanvasItem, card: CardData, box: Rect2, k: f
 			col = Color("7a5c33")
 		"common":
 			col = Color("f6f9fc")
+		"bard":
+			col = Color("1f8f8a")   # R761：与 UiTheme.CLASS_BARD 同色
 		"enemy":
 			col = Color("8a1c1c")
 	canvas.draw_rect(box.grow(-maxf(0.5, 1.0 * k)), col, false, maxf(1.0, 2.0 * k))
