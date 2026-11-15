@@ -11,6 +11,12 @@ extends Node
 ## ⚠️ 上限取「刷新率 + 2」而不是正好刷新率：垂直同步真的生效时，若限帧与刷新
 ##    完全相等，帧预算和呈现时刻会互相顶到边界，个别驱动会掉成半帧率（60 → 30）。
 ##    多给 2 帧让垂直同步当主节拍，限帧只作兜底。
+##
+## R749（店长口径）：桌面端固定锁 **99fps**。只有「显示器刷新率本身低于 99」时
+## 才退回「刷新率 + 2」（60Hz 屏锁 62）—— 否则限帧高于刷新率会重新引入帧间隔漂移。
+
+const DESKTOP_MAX_FPS := 99
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -25,9 +31,7 @@ func _ready() -> void:
 	var r := DisplayServer.screen_get_refresh_rate()
 	if r > 1.0:
 		hz = int(round(r))
-	# 上限封在 120：回合制卡牌超过 120fps 没有任何观感收益，而每多一帧就多一次
-	# 「整屏背景 + 全图格子」的重画。本机 240Hz 屏实测原先是 300fps。
-	hz = clampi(hz, 30, 120)
-	Engine.max_fps = hz + 2
+	hz = clampi(hz, 30, 240)
+	Engine.max_fps = DESKTOP_MAX_FPS if hz > DESKTOP_MAX_FPS else hz + 2
 	print("[PerfBoot] 刷新率 %.1f → max_fps=%d，vsync=%d"
 			% [r, Engine.max_fps, DisplayServer.window_get_vsync_mode()])
