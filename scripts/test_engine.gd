@@ -75146,7 +75146,24 @@ func _test_r592b() -> void:
 
 	check(r642_gs.gallery_visible(r642_new_card, false),
 
-			"R642 判据：全卡开仍然全部可见，交给绘制层遮蔽成通用未解锁图")
+			"R642 判据：全卡开仍然全部可见（R753 起测试版直接全解锁，不再遮蔽）")
+
+	# ---- R753（店长口径「图鉴锁只用于发布版，测试版默认全解锁」）----
+
+	# ① 同一张没见过的卡：测试版不锁、发布版锁
+	check(not r642_gs.gallery_locked(r642_new_card, false),
+			"R753 判据：测试版图鉴默认全解锁（没见过的卡也不遮成问号）")
+	check(r642_gs.gallery_locked(r642_new_card, true)
+			and not r642_gs.gallery_locked(r642_seen_card, true),
+			"R753 判据：发布版仍然「没见过就锁」")
+
+	# ② 源码锁：锁挂在版本闸门上；顶栏也不再报未解锁张数
+	var r753_gs_src := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
+	check_src(r753_gs_src.contains("static func gallery_locked(")
+			and r753_gs_src.contains("return gallery_locked(c, GameBuild.is_release())"),
+			"R753 源码锁：`_locked()` 走 `gallery_locked(c, GameBuild.is_release())`")
+	check_src(not r753_gs_src.contains("GALLERY_SUMMARY_LOCKED"),
+			"R753 源码锁：测试版顶栏不再报未解锁张数")
 
 	# ③ 落盘往返：见过去的卡进档案，重读还在；没见过的不会凭空出现
 

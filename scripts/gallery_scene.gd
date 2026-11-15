@@ -334,9 +334,12 @@ func _set_group(g: String) -> void:
 
 # ------------------------------------------------------------ 解锁（R642）
 #
-# 店长口径：**发布版**图鉴只列「见过」的卡 —— 没见过的连条目都没有、搜也搜不到；
-# 全卡开（测试版）时全部位置都排出来，没见过的画成一张**通用未解锁图**。
-# 「见过」的记账在 `CardFace.draw() / draw_pick()`（唯一口），见 `ProfileData`。
+# 店长口径（R642，R753 修订）：
+#   * **发布版**：只列「见过」的卡 —— 没见过的连条目都没有、搜也搜不到；
+#   * **测试版**：图鉴**默认全解锁**（R753）。以前这里会把没见过的位置排出来再遮成
+#     「通用未解锁图」，开发自测时反而挡路 —— 现在一把全开，不遮了。
+# 「见过」的记账在 `CardFace.draw() / draw_pick()`（唯一口），见 `ProfileData`：
+# 照记不误（发布版要用），只是测试版读的时候不看。
 
 static func gallery_visible(c: CardData, release_mode: bool) -> bool:
 	## R642：图鉴可见性的**唯一判据**。抽成静态是为了测试能直接调
@@ -352,10 +355,18 @@ func _visible(c: CardData) -> bool:
 	return gallery_visible(c, GameBuild.is_release())
 
 
-func _locked(c: CardData) -> bool:
-	## 只有全卡开才可能为真：位置排出来了，但玩家还没见过 → 遮蔽成通用图。
-	## 发布版里未见的卡在 `_visible()` 就被挡掉，走不到这里。
+static func gallery_locked(c: CardData, release_mode: bool) -> bool:
+	## R753：**锁只属于发布版**。测试版一律不锁 —— 图鉴就是开发时的全卡清单。
+	## 与 `gallery_visible()` 同规格抽成静态，测试可以直接调，不必实例化场景。
+	if not release_mode:
+		return false
 	return not ProfileData.is_card_seen(c.id)
+
+
+func _locked(c: CardData) -> bool:
+	## 这张卡要不要遮成通用未解锁图。发布版里未见的卡在 `_visible()` 就先被挡掉了，
+	## 所以正常路径走不到这一支 —— 留着是给「发布版哪天改成露空位」兜底。
+	return gallery_locked(c, GameBuild.is_release())
 
 
 func _has_active_filter() -> bool:
@@ -473,7 +484,8 @@ func _apply_filters() -> void:
 		# R642：发布版没见过的卡**不存在**于图鉴（因此也搜不到）。
 		if not _visible(c):
 			continue
-		# 全卡开才有的一层：未解锁的只在默认视图占位，一旦筛选 / 搜索就退出。
+		# 占位层（R642）：未解锁的只在默认视图出现，一旦筛选 / 搜索就退出。
+		# R753 起测试版恒不锁，这一支实际只对发布版（且理论不可达）有效。
 		if _locked(c) and _has_active_filter():
 			continue
 		if not _match_kind(c):
@@ -496,11 +508,9 @@ func _apply_filters() -> void:
 		if _shown.size() != int(gc[1]):
 			summary += GameI18n.ui("map", "GALLERY_SUMMARY_SHOWN", "（显示 %d 张）") % _shown.size()
 	else:
+		# R753：测试版图鉴全解锁 → 不再报「其中 N 张未解锁」。
+		# 那句话此刻会跟满格可见的卡面自相矛盾（锁都取消了，还报几个锁着）。
 		summary = GameI18n.ui("map", "GALLERY_SUMMARY_TEST", "%s · 共 %d 种卡牌") % [_group_title(), _shown.size()]
-		var gc2 := _group_counts()
-		var unknown_n := int(gc2[0]) - int(gc2[1])
-		if unknown_n > 0 and not _has_active_filter():
-			summary += GameI18n.ui("map", "GALLERY_SUMMARY_LOCKED", "（其中 %d 张未解锁）") % unknown_n
 	# R631：命中的卡里有相当一部分「卡名里没有这个词」——它可能来自效果文，也可能是
 	# 特性 / 字段 / 职业（搜「机械」会命中整个机械之心）。文案只说「卡名不含」这个**事实**，
 	# 不承诺命中的是哪一处（详情右栏能看到来源），免得玩家以为搜索串了。
@@ -554,7 +564,8 @@ func _on_grid_draw() -> void:
 		var rect := _cell_rect(i)
 		if rect.end.y < top or rect.position.y > bottom:
 			continue
-		# R642：全卡开时未解锁的位置画**通用未解锁图**，不泄露卡名 / 数值 / 卡图。
+		# R642：未解锁的位置画**通用未解锁图**，不泄露卡名 / 数值 / 卡图。
+		# R753：测试版 `_locked()` 恒 false → 走不到这一支。
 		if _locked(_shown[i]):
 			CardFace.draw_locked(grid, rect, _font_bold)
 			continue
