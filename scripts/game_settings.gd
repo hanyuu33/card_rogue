@@ -37,6 +37,11 @@ static var language := "zh"
 ## 是否已经完成过「首次语言选择」。正式版第一次进首页前会看这一位；
 ## 老玩家（已有档案 / 存档 / 对战记录）视为已选择，不拿一次弹窗打断他们。
 static var language_chosen := false
+## R757 匿名对局数据的授权：0 = 还没问过 / 1 = 同意 / 2 = 拒绝。
+## ⚠️ **默认 0 等价于「不发」**：只有玩家明确点过同意，`Telemetry` 才允许上传。
+## 本机事件流（`user://telemetry.jsonl`）本来就只写在玩家自己的机器上，
+## 弹窗管的是「要不要往外发」，不是「要不要记录」—— 这两件事在文案里也必须说清。
+static var telemetry_opt_in := 0
 
 ## R388：合法档位 —— 按钮就是在这三个值里循环（1 → 1.5 → 2 → 1）。
 const FOE_SPEEDS := [1.0, 1.5, 2.0]
@@ -63,6 +68,7 @@ static func ensure_loaded() -> void:
 	if language == "":
 		language = "zh"
 	language_chosen = bool(cf.get_value("i18n", "chosen", false))
+	telemetry_opt_in = clampi(int(cf.get_value("privacy", "telemetry", 0)), 0, 2)
 	next_seed_code = str(cf.get_value("run", "seed_code", ""))
 	if next_seed_code == "":
 		# 旧版（R241~R260）的 int 种子 → 迁移成同值的 10 位种子码（复现结果不变）
@@ -89,6 +95,7 @@ static func save() -> void:
 	cf.set_value("i18n", "language", language)
 	cf.set_value("i18n", "chosen", language_chosen)
 	cf.set_value("run", "seed_code", next_seed_code)
+	cf.set_value("privacy", "telemetry", telemetry_opt_in)
 	# 旧键（int 种子）清掉：否则玩家把种子清空后，下次启动又被旧键迁移回来
 	if cf.has_section_key("run", "seed"):
 		cf.erase_section_key("run", "seed")
@@ -186,6 +193,30 @@ static func set_language(code: String, chosen := true) -> void:
 	_apply_locale()
 	if dirty:
 		save()
+
+
+static func set_telemetry_opt_in(v: int) -> void:
+	## R757：玩家在首次弹窗或设置页给出的回答（1 = 同意 / 2 = 拒绝）。
+	## 0 只用于「重置询问」（测试用）—— 正常流程不会写回 0，否则每次启动都再问一遍。
+	ensure_loaded()
+	v = clampi(v, 0, 2)
+	if v == telemetry_opt_in:
+		return
+	telemetry_opt_in = v
+	save()
+
+
+static func telemetry_upload_allowed() -> bool:
+	## **能不能往服务器发**的唯一判据：发布版 + 玩家明确同意过。
+	## 测试版永远不满足第一条 —— 这与「本机记不记」是两件事，别合并。
+	ensure_loaded()
+	return GameBuild.is_release() and telemetry_opt_in == 1
+
+
+static func needs_telemetry_ask() -> bool:
+	## 要不要弹一次询问：发布版 + 还没回答过。回答过（1 / 2 都算）就再也不问。
+	ensure_loaded()
+	return GameBuild.is_release() and telemetry_opt_in == 0
 
 
 static func _apply_locale() -> void:

@@ -95,6 +95,9 @@ static var bandage_pending := 0
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
 static var pending_node: Dictionary = {}     # 即将进入的地图节点（地图 → 休息/事件）
 static var reward_context := ""              # 奖励来源："battle" / "event" / ""（演示）
+## R757 遥测：本局最终落在哪（"win" / "lose" / ""）。`mark_run_won/lost` 落章时写，
+## `end_run()` 读它并交出一条 `run_end` —— 那两处都已经知道结果，不必再传参绕一圈。
+static var _tele_outcome := ""
 static var reward_type := "normal"           # 奖励类型："normal" / "boss"（概率构成不同）
 static var pending_event := ""               # 即将进入的事件子类型："treasure" / "whisper"
 static var pending_deck_edit := ""           # 事件「遗忘之泉」的待办卡组操作："" / "delete"（删一张卡）
@@ -1040,6 +1043,32 @@ static func lose_max_hp(amount: int) -> int:
 
 # ------------------------------------------------------------ run 生命周期
 
+# ------------------------------------------------------------ R757 遥测上下文
+
+static func _tele_ctx() -> Dictionary:
+	## 奖励摆到面前那一刻的处境 —— 分析时用来解释「为什么这三张里偏选它」：
+	## 血少时倾向回血 / 防御，钱多时才敢买贵的，层深了才敢押上限。
+	## ⚠️ 只在发布版拼这个字典（先问 `Telemetry.is_enabled()`）—— 测试版连这点开销都不花。
+	if not Telemetry.is_enabled():
+		return {}
+	return {"layer": current_layer, "node": current_node_id, "hp": hp, "mhp": max_hp,
+			"gold": gold, "deck": deck_ids.size()}
+
+
+static func _tele_src() -> String:
+	## 这组奖励从哪来：boss / elite / battle / event / shop / demo。
+	## 必须分开统计 —— 「战斗后必给的三选一」和「商店里要花 80 金」的选择压力完全不同，
+	## 混在一起算出来的选择率没有意义。
+	var t := str(pending_node.get("type", ""))
+	if t == "boss":
+		return "boss"
+	if t == "elite":
+		return "elite"
+	if reward_context != "":
+		return reward_context
+	return "demo"
+
+
 static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 		cid: String = "", seed_override := 0, seed_code := "") -> void:
 	## 新 run：满血、初始卡组、载入地图、定位起点（第 0 列唯一节点）。
@@ -1077,6 +1106,12 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	ProfileData.bump(ProfileData.K_RUN_START)
 	# R580：故事 3「用暗影刺客进行一局游戏」—— 按职业再记一份，不影响故事 1 的无后缀计数。
 	ProfileData.bump(ProfileData.K_RUN_START_CLASS + player_class)
+	# R757 遥测：一局开始（只有发布版会真写；测试版 `Telemetry.is_enabled()` 恒 false）。
+	# `runs` 传「本局**之前**玩过多少局」—— 上面刚 +1，所以这里减一。这个数是分层比较
+	# 的前提：新手和老手的同名卡牌胜率不能直接平均。
+	Telemetry.begin_run(run_seed, player_class, difficulty,
+			maxi(0, ProfileData.stat(ProfileData.K_RUN_START) - 1))
+	_tele_outcome = ""
 	# R576 Steam 成就：初次启程（幂等，重复开局无害）。
 	SteamAchievements.note_first_step()
 	# R374：新的一局 → 事件账本清空。R575：事件在**进房时**才决定，生成期不再往账本登记；
@@ -1186,6 +1221,7 @@ static func mark_run_won() -> void:
 	if run_finished:
 		return
 	run_finished = true
+	_tele_outcome = "win"     # R757：落章时记结果，等 `end_run()` 交出一条 run_end
 	# R640：**先立墓碑，再删档**。两件事都可能失败（墓碑文件写不进 / 档被占用删不掉），
 	# 顺序反了就有一半概率让这一局复活；先立墓碑的话，最坏也只是盘上多一份**读不进去**的档。
 	# 墓碑 = 「这个 seed 已经打通」的权威记录，读档口认它（见 `RunSave.is_cleared`）。
@@ -1200,6 +1236,7 @@ static func mark_run_lost() -> void:
 	if run_finished:
 		return
 	run_finished = true
+	_tele_outcome = "lose"    # R757：同 `mark_run_won` —— 失败在结算页点「确定」才 end_run
 	RunSave.clear_save("run_lost")
 
 
@@ -1209,6 +1246,13 @@ static func end_run(clear_save: bool = true) -> void:
 	##   * clear_save = false：只复位内存里的 run 状态，**保留续档**（R167）——
 	##     给「返回标题」这种「先离开一下、回头还能点『继续游戏』」的路径用。
 	## 记录与持久化文件照旧保留。
+	# R757 遥测：**必须在清空 deck_ids / gold 之前**交出这一局的收尾事件 —— 下面几行
+	# 就把它们全抹掉了。只在真的收尾（clear_save）时记：回标题保留续档的那条路不是
+	# 「一局结束」，记了会把同一局拆成两半。
+	if clear_save and _tele_outcome != "":
+		Telemetry.end_run(_tele_outcome == "win",
+				{"cls": player_class, "diff": difficulty})
+		_tele_outcome = ""
 	run_active = false
 	pipe_ready = false          # R446：一局结束 → 烟斗状态位复位
 	core_lost = 0               # R458：核心的累计与触发位同样复位
@@ -1583,7 +1627,8 @@ static func queue_tool_reward(id: int) -> bool:
 	if id <= 0:
 		return false
 	_drop_settled_batch()
-	pending_rewards.append({"kind": "tool", "id": id, "state": REWARD_PENDING})
+	var oid := Telemetry.note_tool_offer([id], _tele_src(), _tele_ctx())
+	pending_rewards.append({"kind": "tool", "id": id, "state": REWARD_PENDING, "tel": oid})
 	return true
 
 
@@ -1999,7 +2044,10 @@ static func queue_relic_reward(id: int) -> void:
 	if id <= 0:
 		return
 	_drop_settled_batch()
-	pending_rewards.append({"kind": "relic", "id": id, "state": REWARD_PENDING})
+	# R757 遥测：道具掉落同样是一组「只有一件的候选」—— 领不领都要进分母，
+	# 「这件东西摆在这儿没人要」正是道具强度与出现时机最直接的反馈。
+	var oid := Telemetry.note_relic_offer([id], _tele_src(), _tele_ctx())
+	pending_rewards.append({"kind": "relic", "id": id, "state": REWARD_PENDING, "tel": oid})
 
 
 # ------------------------------------------------------------ R454 熔炉（furnace 事件）
@@ -2068,7 +2116,7 @@ static func furnace_invest(id: int) -> Dictionary:
 
 
 static func queue_card_reward(reward_type: String = "normal",
-		kinds: Array[String] = []) -> int:
+		kinds: Array[String] = [], src := "") -> int:
 	## 一组卡牌奖励（三选一）入队。**候选在这一刻**用 run_rng 摇定 ——
 	## 候选早就定了，玩家只是稍后才看、才选，所以同一种子逐步一致。
 	## 返回队列下标（-1 = 卡池空，没有可给的卡）。
@@ -2081,9 +2129,12 @@ static func queue_card_reward(reward_type: String = "normal",
 	if ids.is_empty():
 		return -1
 	_drop_settled_batch()
+	# R757 遥测：**候选摆出来的这一刻**就要记账 —— 这是「选择率」的分母。
+	# 玩家选不选是下一步的事，但「曾经有这三个选项」只在此刻存在，晚记一位都补不回来。
+	var oid := Telemetry.note_card_offer(ids, src if src != "" else _tele_src(), _tele_ctx())
 	pending_rewards.append({"kind": "cards", "type": reward_type,
 			"kinds": kinds.duplicate(), "candidates": ids, "picked": -1,
-			"state": REWARD_PENDING})
+			"state": REWARD_PENDING, "tel": oid})
 	return pending_rewards.size() - 1
 
 
@@ -2099,13 +2150,17 @@ static func queue_fixed_card_reward(card_id: int, legendary := false) -> int:
 	if card_id <= 0:
 		return -1
 	_drop_settled_batch()
+	# R757 遥测：指定卡（洞穴的传说卡）也是「一组候选」，只是只有一张 —— 照样入分母，
+	# 否则分析时会看到一个从没被提议过的 id，永远算不出选择率。
+	var oid := Telemetry.note_card_offer([card_id], "event", _tele_ctx())
 	pending_rewards.append({"kind": "cards", "type": "legendary", "kinds": [],
 			"candidates": [card_id], "picked": -1,
-			"state": REWARD_PENDING, "legendary": legendary})
+			"state": REWARD_PENDING, "legendary": legendary, "tel": oid})
 	return pending_rewards.size() - 1
 
 
-static func queue_battle_card_rewards(reward_type: String = "normal") -> int:
+static func queue_battle_card_rewards(reward_type: String = "normal",
+		src := "") -> int:
 	## 战斗胜利后的卡牌奖励**唯一入队口**（battle_scene 只调这里，别直接调
 	## `queue_card_reward`）。持有采集刀 6050（传奇）→ 额外再来一组。
 	## 返回实际入队的组数（卡池空、摇不出候选的那一组不算）。
@@ -2118,7 +2173,7 @@ static func queue_battle_card_rewards(reward_type: String = "normal") -> int:
 		groups += HARVEST_KNIFE_EXTRA
 	var queued := 0
 	for _i in groups:
-		if queue_card_reward(reward_type) >= 0:
+		if queue_card_reward(reward_type, [], src) >= 0:
 			queued += 1
 	return queued
 
@@ -2199,7 +2254,7 @@ static func queue_elite_bonus(force := "") -> int:
 					"state": REWARD_PENDING})
 			idx = pending_rewards.size() - 1
 		BONUS_CARDS:
-			idx = queue_card_reward("normal")
+			idx = queue_card_reward("normal", [], "bonus")
 		BONUS_DELETE:
 			idx = queue_deck_delete_reward(1)
 		BONUS_RELIC:
@@ -2395,6 +2450,7 @@ static func claim_pending_reward(idx: int) -> bool:
 		if not gain_trap(int(e.get("id", 0))):
 			return false
 		e["state"] = REWARD_CLAIMED
+		Telemetry.note_pick(int(e.get("tel", 0)), int(e.get("id", 0)))
 		return true
 	if str(e.get("kind", "")) != "relic":
 		return false
@@ -2404,6 +2460,7 @@ static func claim_pending_reward(idx: int) -> bool:
 	else:
 		gain_relic(rid)      # 宝箱层等：直接进道具栏
 	e["state"] = REWARD_CLAIMED
+	Telemetry.note_pick(int(e.get("tel", 0)), rid)
 	return true
 
 
@@ -2420,6 +2477,9 @@ static func skip_pending_reward(idx: int) -> bool:
 	# 道具奖励与月亮的删卡奖励照旧可放弃（卡面只写了「卡牌奖励」）。
 	if str(e.get("kind", "")) == "cards" and relics.has(DARK_POWER_RELIC_ID):
 		return false
+	# R757 遥测：走到这里就一定会置灰了（唯一的拒绝分支已过）—— 记一次「整组跳过」。
+	# 跳过**必须**留在分母里：一组摆出来却没人要，比「没人选」更能说明这张卡有问题。
+	Telemetry.note_skip(int(e.get("tel", 0)))
 	if str(e.get("kind", "")) == "deck_delete":
 		e["state"] = REWARD_SKIPPED
 		return true
@@ -2516,6 +2576,8 @@ static func pick_pending_card(idx: int, card_id: int) -> bool:
 	e["picked"] = card_id
 	e["state"] = REWARD_CLAIMED
 	add_card(card_id)
+	# R757 遥测：把这次「从哪几个里选了谁」配上 —— `oid` 在入队那一刻已经写好。
+	Telemetry.note_pick(int(e.get("tel", 0)), card_id)
 	return true
 
 
@@ -2606,6 +2668,7 @@ static func delete_deck_card(index: int) -> bool:
 	deck_ids.remove_at(index)
 	_sync_mods_remove(index)     # R181：附魔下标同步前移
 	_reap_card_growth(cid)       # R750（用户口径）：卡走了，它的本局成长账也一并收走
+	Telemetry.note_deck_change("del", cid, 0)
 	pending_relic = -1
 	return true
 
@@ -2628,6 +2691,7 @@ static func transform_deck_card(repo: CardRepo, index: int, same_class := false)
 	if index < deck_mods.size():
 		deck_mods[index] = {}       # R181：变形后附魔失效
 	_reap_card_growth(old_id)       # R750：旧 id 若已彻底离开卡组，成长账一起走
+	Telemetry.note_deck_change("transform", old_id, new_id)
 	pending_relic = -1
 	return {"ok": true, "old_id": old_id, "new_id": new_id}
 

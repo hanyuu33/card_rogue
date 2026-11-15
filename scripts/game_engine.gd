@@ -8337,18 +8337,20 @@ func _demon_fetch(_p: Placement, discount: int = DEMON_FETCH_DISCOUNT,
 func _water_element_fetch(_p: Placement, source: String = "水元素") -> void :
 	## R690：水元素 9068「使用时，将一张「漩涡」加入手卡」的**唯一实现口**。
 	## 与旧口径（从卡组捞一张效果卡、再给它减 2 费）彻底分开：
-	##   * **不查卡组**：漩涡 9186 是剧情场地卡（`locked`），牌库里本来就不该有它 ——
-	##     按卡库造一张独立实例发过去，水元素就是它目前唯一的获得渠道。
+	##   * **不查卡组**：漩涡 9186 是普通卡池卡（R757 起 `locked` 已去掉），牌库里有它；
+	##     但这条效果是「凭空给一张」，不该碰牌库，所以按卡库造独立实例发过去。
 	##   * `own_copy = true`：新造副本，之后对它减费 / 改造不会串到卡库那份
 	##     （与 `_demon_fetch` 里那一步同理）。
 	##   * 手牌满 → 走 `_grant_to_hand()` 的统一口径（进弃牌区，不静默蒸发）。
-	##   * 漩涡当前 0 费（R690 店长口径：拿到手就能直接摆），费用读卡库，不写死在这里。
+	##   * **给出去的这张是 0 费**（店长口径：水元素效果才会变 0）—— 卡库本体仍是 3 费；
+	##     `from_dict` 出来的是独立实例，改它的 cost 串不到原型。
 	var proto: CardData = CardRepo.load_json().get_card(WATER_VORTEX_ID)
 	if proto == null:
 		_log("%s：找不到 %d 号卡（漩涡）" % [source, WATER_VORTEX_ID])
 		return
 	var vortex := CardData.from_dict(proto.to_dict())
 	vortex.own_copy = true
+	vortex.cost = 0
 	var landed := _grant_to_hand(vortex, source)
 	_log("%s：将一张「%s」加入手卡%s" % [
 			source, vortex.card_name,

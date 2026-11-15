@@ -138,6 +138,12 @@ func _ready() -> void:
 			"rot": randf() * TAU,
 			"kind": (1 if i % 4 == 0 else 0),   # 1/4 光尘，其余花瓣
 		})
+	# R757：发布版首次进标题页 —— 问一次「能不能发匿名对局数据」，顺带把上次攒下的
+	# 存量发出去。测试版两者都是空操作（`GameBuild.is_release()` 那一道闸）。
+	# ⚠️ 出图时**不弹**：`--screenshot` 那张图是核对标题页版式的，被对话框挡住就白拍。
+	if not ("--screenshot" in OS.get_cmdline_user_args()):
+		TelemetryConsent.maybe_ask()
+	TelemetryUploader.maybe_start()
 	# 命令行 -- --screenshot：打开后自动截图退出（视觉验证用）
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()

@@ -1761,7 +1761,7 @@
       "traits": [
         "水元素"
       ],
-      "effect_text": "自己场上每有一张效果卡，这张卡费用 -1。使用时，将一张「漩涡」加入手卡。",
+      "effect_text": "自己场上每有一张效果卡，这张卡费用 -1。使用时，将一张「漩涡」加入手卡，其费用变为 0。",
       "target_mode": "none",
       "value": 0,
       "color": "水风",
@@ -5360,7 +5360,7 @@
       "id": 9186,
       "name": "漩涡",
       "kind": "场地",
-      "cost": 0,
+      "cost": 3,
       "rarity": 0,
       "group": "player",
       "class": "森林精魄",
@@ -5372,8 +5372,7 @@
       "field_vortex_dmg": 15,
       "target_mode": "none",
       "color": "水风",
-      "image": "",
-      "locked": true
+      "image": ""
     },
     {
       "id": 9187,

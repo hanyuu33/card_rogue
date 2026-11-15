@@ -624,7 +624,7 @@
   },
   "9068": {
    "name": "Water Elemental",
-   "effect_text": "This card's Cost is -1 for each Effect card on your side of the field. On Use: add a \"Vortex\" to your Hand."
+   "effect_text": "This card's Cost is -1 for each Effect card on your side of the field. On Use: add a \"Vortex\" to your Hand. Its Cost becomes 0."
   },
   "9069": {
    "name": "Duck Nest",

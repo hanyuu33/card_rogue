@@ -494,6 +494,10 @@ func _setup_shop() -> void:
 	_row3 = _row3_template()
 	_reindex_rows()
 	_sync_shop_state()
+	# R757 遥测：**货架快照**（发布版才写）。成交记录只说明「买了什么」，
+	# 摆出来的是什么才是分母 —— 「摆在店里没人买」和「根本没上过货架」
+	# 是两件事，后者不该拉低这张卡的选择率。
+	_tele_shelf()
 
 
 func _row3_template() -> Array:
@@ -601,6 +605,30 @@ func _restore_shop(st: Dictionary) -> bool:
 	_row3 = o3
 	_reindex_rows()
 	return true
+
+
+func _tele_shelf() -> void:
+	## R757 遥测：把三行货位拼成一层数组交给 `Telemetry`。
+	## ⚠️ 只在**进货**时调一次（`_roll()` 末尾）—— 放进 `_sync_shop_state()` 会变成
+	##    「每买一件就重记一份货架」，分母翻倍，选择率全错。
+	if not Telemetry.is_enabled():
+		return
+	var items: Array = []
+	for e: Dictionary in _row1:
+		var c: CardData = e["card"]
+		items.append({"k": "card", "id": c.id, "price": _row1_price(e)})
+	for e2: Dictionary in _row2:
+		if str(e2.get("kind", "")) == "trap":
+			items.append({"k": "trap", "id": int(e2["id"]),
+					"price": int((e2["trap"] as TrapData).price)})
+		else:
+			items.append({"k": "enchant", "id": 0, "price": 0,
+					"name": str(e2.get("id", ""))})
+	for e3: Dictionary in _row3:
+		items.append({"k": "service", "id": 0, "price": int(e3["price"]),
+				"name": str(e3.get("key", ""))})
+	Telemetry.note_shop_shelf(items, {"layer": RunState.current_layer,
+			"gold": RunState.gold, "hp": RunState.hp, "deck": RunState.deck_ids.size()})
 
 
 func _sync_shop_state() -> void:
@@ -1650,6 +1678,7 @@ func _buy_card(i: int) -> void:
 		return
 	e["sold"] = true
 	RunState.add_card(card.id)
+	Telemetry.note_shop("card", card.id, price, true)
 	_sync_shop_state()                                    # R390：重进要看到「已售罄」
 	_start_fly(card, _row1_rect(i))                       # R390：卡飞进卡组
 	_set_hint(GameI18n.ui("shop", "SHOP_CARD_PURCHASED", "购买「%s」（%s）") % [card.card_name, _paid_tag(price)])
@@ -1713,6 +1742,7 @@ func _buy_trap(i: int) -> void:
 	e["sold"] = true
 	_sync_shop_state()      # R390：售罄位要进货架存档，重进店不重摇
 	RunState.gain_trap(int(t.id))
+	Telemetry.note_shop("trap", int(t.id), int(t.price), true)
 	_set_hint("获得工具「%s」· %s" % [t.trap_name, _paid_tag(int(t.price))])
 
 

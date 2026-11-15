@@ -136,6 +136,11 @@ static func finish(result: String, allow_fallback := false) -> void:
 		all.pop_front()
 	_write_records(all)
 	_delete_pending()
+	# R757 遥测：「中断」本身就是一局的结局之一 —— 交一条 `run_end` 出去。
+	# ⚠️ 只认 interrupted：win / lose 由 `RunState.end_run()` 交（那里能取到结算前的
+	#    卡组 / 金币；跑到这里时内存已被清空，记出来的是一份空局）。
+	if result == "interrupted":
+		Telemetry.note_run_interrupted()
 
 
 static func peek_elapsed() -> int:

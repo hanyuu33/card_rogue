@@ -472,6 +472,12 @@ func _activate_row(d: Dictionary) -> void:
 	## 点行 = 切换（开关翻面 / 档位循环）。唯一落地点都在这一个函数里。
 	GameSettings.ensure_loaded()
 	match str(d.get("id", "")):
+		"telemetry":
+			# R757：关掉要写 2（明确拒绝），不能写回 0（未询问）—— 写 0 会让下次启动
+			# 又弹一遍询问框，玩家会觉得自己被反复纠缠。
+			GameSettings.set_telemetry_opt_in(
+					2 if GameSettings.telemetry_opt_in == 1 else 1)
+			sfx.play("click")
 		"sfx":
 			GameSettings.set_sfx_on(not GameSettings.sfx_on)
 			sfx.enabled = GameSettings.sfx_on
@@ -570,7 +576,7 @@ func _rows() -> Array:
 						"desc": L10n.t("settings.music_vol_desc")},
 			]
 		TAB_DISPLAY:
-			return [
+			var rows := [
 				{"id": "fullscreen", "kind": "toggle", "on": GameSettings.fullscreen,
 						"title": L10n.t("settings.fullscreen"),
 						"desc": L10n.t("settings.fullscreen_desc")},
@@ -579,6 +585,14 @@ func _rows() -> Array:
 						"title": L10n.t("settings.foe_speed"),
 						"desc": L10n.t("settings.foe_speed_desc")},
 			]
+			# R757：匿名对局数据**只有发布版才出现这一项**。测试版根本不发，摆一个开关
+			# 反而会让人以为「关了就不记录」—— 本机事件流照记，那是给作者自己复盘的。
+			if GameBuild.is_release():
+				rows.append({"id": "telemetry", "kind": "toggle",
+						"on": GameSettings.telemetry_opt_in == 1,
+						"title": L10n.t("settings.telemetry"),
+						"desc": L10n.t("settings.telemetry_desc")})
+			return rows
 	return []
 
 

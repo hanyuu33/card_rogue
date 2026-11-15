@@ -48,7 +48,7 @@ def stop():
     return 0
 
 
-def launch(port=DEFAULT_PORT, headless=False, wait=30.0):
+def launch(port=DEFAULT_PORT, headless=False, wait=30.0, extra=None):
     if port_open(port):
         print("AI 接口已在 %d 上运行" % port)
         return 0
@@ -58,7 +58,7 @@ def launch(port=DEFAULT_PORT, headless=False, wait=30.0):
     args = [str(GODOT), "--path", str(ROOT)]
     if headless:
         args.append("--headless")
-    args += ["--", "--ai-bridge=%d" % port]
+    args += ["--", "--ai-bridge=%d" % port] + list(extra or [])
     log = ROOT / ".ai_bridge.log"
     fh = open(log, "w", encoding="utf-8")
     proc = subprocess.Popen(args, stdout=fh, stderr=subprocess.STDOUT,
@@ -85,16 +85,21 @@ def launch(port=DEFAULT_PORT, headless=False, wait=30.0):
 def main(argv):
     port = DEFAULT_PORT
     headless = False
+    # R757：把「游戏侧」开关原样透传（`--sim` 标注模拟局、`--telemetry` 让测试版也写
+    # 事件流、`--release` 走发布版闸门）。只认这三个，别把启动器的参数漏给游戏。
+    passthru = []
     for a in argv[1:]:
         if a == "--stop":
             return stop()
         if a == "--headless":
             headless = True
+        elif a in ("--sim", "--telemetry", "--release"):
+            passthru.append(a)
         elif a.startswith("--port="):
             port = int(a.split("=", 1)[1])
         elif a == "--port" and argv.index(a) + 1 < len(argv):
             port = int(argv[argv.index(a) + 1])
-    return launch(port, headless)
+    return launch(port, headless, extra=passthru)
 
 
 if __name__ == "__main__":

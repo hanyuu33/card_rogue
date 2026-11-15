@@ -4678,6 +4678,14 @@ func _on_flee() -> void:
 	RunState.duck_revive_chance = engine.duck_revive_chance
 	RunState.hp = maxi(0, engine.state.hp_self)
 	RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
+	# R757 遥测：逃跑同样是一场战斗的结局。不记的话，这场会从统计里彻底消失 ——
+	# 「打不过就跑」的敌人会被算成「从没遇上」，胜率虚高。
+	Telemetry.note_battle_end(false, {
+		"turns": engine.turn_number,
+		"hp1": maxi(0, engine.state.hp_self),
+		"dmg_in": engine.state.self_hp_damage_taken,
+		"out": "flee",
+	})
 	RunState.complete_current()
 	SceneFx.goto("res://scenes/map.tscn")
 
@@ -4831,6 +4839,10 @@ func load_level(lvl: Dictionary) -> void:
 	_hover_card = null
 	_hover_pl = null
 	_cur_level = lvl
+	# R757 遥测：**战斗开局快照**（发布版才写）。层号只有 run 里才有意义，
+	# 单关演示给 0 —— 分析时按 layer 分层比较，演示局不会混进正式数据里。
+	Telemetry.note_battle_start(lvl, p_hp, RunState.max_hp, deck.size(),
+			RunState.current_layer if RunState.run_active else 0)
 	_refresh_flee_btn()   # R341 洞窟绳：换关（含重开）后重新判一次能不能逃跑
 	# R176：战斗 BGM 按关卡分级取（一般 Dramatic / 精英 EpicBattle / Boss Raid_FolkMetal）。
 	# R364：启示者（key = boss_revelator）**按阶段**换曲（Soaring / Relentless / Havoc），
@@ -8508,6 +8520,17 @@ func _record_defeat() -> void:
 
 
 func _show_over(win: bool) -> void:
+	# R757 遥测：本场结算（发布版才写）。挂在这里而不是 `_record_defeat()`：
+	# 胜 / 负两条路都会走到这个函数，且此刻 `engine.state` 还没被清。
+	# `ehp0` 取 `max_hp_opponent`（关卡配置的敌方总血），`ehp1` 取当前值 ——
+	# 两者之差就是「这一场打掉了多少」，比胜负更能区分难度。
+	if engine != null:
+		Telemetry.note_battle_end(win, {
+			"turns": engine.turn_number,
+			"hp1": maxi(0, engine.state.hp_self),
+			"dmg_in": engine.state.self_hp_damage_taken,
+			"out": "win" if win else "lose",
+		})
 	_over_shown = true
 	flee_btn.visible = false   # R341：打完了就不该再挂着一个「逃跑」
 	_clear_battle_checkpoint()   # R323：这场结束了 → 续档不再指向它
@@ -8620,7 +8643,7 @@ func _show_over(win: bool) -> void:
 					and RunState.third_layer_locked() and fixed_cards.is_empty():
 				RunState.gain_key(RunState.SCREW_RELIC_ID)
 			elif fixed_cards.is_empty():
-				RunState.queue_battle_card_rewards(RunState.reward_type)
+				RunState.queue_battle_card_rewards(RunState.reward_type, engine.battle_kind)
 			else:
 				for fc in fixed_cards:
 					RunState.queue_fixed_card_reward(int(fc), true)
@@ -8732,6 +8755,10 @@ func _show_over(win: bool) -> void:
 				# 通关时领到的鸭血们「选了也没地方去」（`run_active` 假 → `waiting_pick_scene()`
 				# 恒空）。改成只落章 `run_finished`，等玩家真离开再清（见 `_on_over_restart`）。
 				RunState.mark_run_won()
+				# R757 遥测：这一局到这里已经定了 —— **不等结算页点「确定」**。
+				# 玩家很可能直接关窗口，那样这局在统计里就整条消失（只剩半截 run_start）。
+				Telemetry.end_run(true, {"cls": RunState.player_class,
+						"diff": RunState.difficulty})
 		else:
 			# R367：正常路径下这里已经是第二次（`engine.over` 首帧就记过了）——
 			# `_record_defeat()` 自带幂等，不会写出两条「失败」。
@@ -8756,6 +8783,9 @@ func _show_over(win: bool) -> void:
 			# 只落章「本局结束」+ 删档（镜像整局通关的 mark_run_won），真正的清空交给
 			# 结算页点「确定」时再跑 end_run() —— 否则 run_summary 会被 reset_run_stats 清掉。
 			RunState.mark_run_lost()
+			# R757 遥测：失败同理 —— 这是「死在哪一层 / 哪一关」的唯一记录点。
+			Telemetry.end_run(false, {"cls": RunState.player_class,
+					"diff": RunState.difficulty})
 			_run_boss_win = false
 	else:
 		# 单关/演示模式：胜利 → 剩余生命带回 run（下一场接着用）；失败 → 重置满血再来
