@@ -95,20 +95,39 @@ const APP_ID := 0
 > 建议沿用游戏内卡图同一套画风做 64px 缩略，未达成版统一转灰阶 —— 玩家一眼能看出
 > 「还没拿到」，跟卡面观感也统一。最终以后台表单的实际提示为准（Valve 会小幅调整）。
 
-## 五、GodotSteam 集成（可选外部依赖）
+## 五、GodotSteam 集成（✅ R740 已装好）
 
 游戏用的是 **Godot 4.3（GL Compatibility）**，对应 GodotSteam 的 **4.1–4.3 专用预编译包**：
 
-1. 下载 `godotsteam-4.15-gdextension-plugin-4.1-4.3.zip`
-   （`https://codeberg.org/godotsteam/godotsteam/releases`，选 4.1–4.3 的 gde 包）。
-2. 解压到**项目根目录**，得到 `addons/godotsteam/`（含 `.gdextension` + `steam_api64.dll` 等）。
-3. 重启 Godot 编辑器让 GDExtension 加载。
-4. **AppID 一般不用管** —— 留空即读环境变量（发行形态）。只有本地离线调试才按
-   「三、AppID 怎么填」放一份 `steam_appid.txt`；发行包靠 `*.txt` 排除规则天然不带它。
-5. 导出时确保 `steam_api64.dll` 进包（GodotSteam 包已含，`export_filter="all_resources"` 会带上）。
+| 项 | 实装值 |
+|---|---|
+| 包 | `godotsteam-4.15-gdextension-plugin-4.1-4.3.zip`（GodotSteam 4.15 / Steamworks SDK 1.62） |
+| 来源 | `https://codeberg.org/godotsteam/godotsteam/releases/download/v4.15-gde/godotsteam-4.15-gdextension-plugin-4.1-4.3.zip` |
+| 位置 | `addons/godotsteam/`（37MB，全平台二进制原样保留；实际只用到 win64） |
+| 注册 | `res://.godot/extension_list.cfg` 需含一行 `res://addons/godotsteam/godotsteam.gdextension` |
+
+**换机器 / 新克隆后自检一次**（项目根）：
+
+```bash
+$GODOT --headless --path . --script res://tools/steam_selftest.gd            # 只读体检
+$GODOT --headless --path . --script res://tools/steam_selftest.gd -- --appid 480   # Spacewar 连链路
+$GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --hooks  # 后台建好后真解锁
+```
+
+**两个实测坑（已踩过，别再踩）**：
+
+1. **`extension_list.cfg` 那一行不会自己出现**。它由编辑器首次打开工程时写入；
+   本机 `--headless --editor` 扫描会被 `Scan thread aborted` 打断（工程大 + 退出太快）。
+   自检报「GodotSteam 未加载」时，先看这一行在不在，手写即可。
+2. **导出依赖不用手工拷**。虽然 `[dependencies]` 段是 Godot 4.4 才正式支持的写法，
+   4.3 的 `--export-release` 实测仍会把 `libgodotsteam.windows.template_release.x86_64.dll`
+   和 `steam_api64.dll` 一起放到 exe 同目录（2026-11-15 实测，单文件内嵌 pck 形态）。
 
 > ⚠️ **Overlay 已知坑**：GodotSteam 的 Steam Overlay 在编辑器里用 Forward+ 渲染器不显示，
 > 但本项目是 **GL Compatibility**，且导出后经 Steam 客户端启动正常 —— 无需改渲染器。
+
+> 💡 **追踪开关**：启动前设 `QUACKILL_STEAM_TRACE=1`，每次成就触发会打一行
+> `[steam-trace] <API名>`（Steam 没连上也记），用来核对「玩到某节点该解锁的有没有被调」。
 
 ## 六、与测试版 / 发布版的关系
 

@@ -1827,6 +1827,7 @@ func _check_r735_story_drag_rows(scene: Variant) -> void:
 	scene._scroll = 0
 	scene._drag_accum = 0.0
 
+
 func _check_r677_story_detail(scene: Variant) -> void:
 	## R682（用户口径）：「两个按钮都去掉，明暗地显示一段：点击任意位置关闭」。
 	## 钉三件事：
@@ -2624,6 +2625,10 @@ func _next() -> void:
 	_frames = 0
 	if _idx >= _plan.size():
 		print("SMOKE === 结束：%d 通过 / %d 失败 ===" % [_ok, _fail])
+		# 收掉 Steamworks：smoke 会实例化 title.tscn，其 _ready 里调过 SteamAchievements.init()。
+		# 不 shutdown 的话 GDExtension 留着几个对象，引擎退出时随机报
+		# 「N resources still in use at exit」—— 3 次里出 1 次，典型的假红。
+		SteamAchievements.shutdown()
 		quit()
 		return
 	var entry: Array = _plan[_idx]
@@ -5539,8 +5544,7 @@ func _check_frozen_aura(scene: Variant) -> void:
 		return
 	# 常驻光环：只在 draw 信号中绘制；headless 验证状态，真实渲染验证像素
 	var c2: Vector2 = scene._display_center(pl, cell)
-	scene.draw.connect(scene._draw_frozen_aura.bind(c2, 40.0, 56.0, 0), CONNECT_ONE_SHOT)
-	scene.draw.connect(scene._draw_frozen_aura.bind(c2, 40.0, 56.0, 1), CONNECT_ONE_SHOT)   # 徽标在第 2 行（上方留给嘲讽）
+	scene.draw.connect(scene._draw_frozen_aura.bind(c2, 40.0, 56.0), CONNECT_ONE_SHOT)
 	if not scene._board_has_taunt():
 		pass   # 本用例没放嘲讽单位，这里只是确认函数可共存调用
 	# frozen 事件：引擎唯一入口会 emit，界面据此演飘字
@@ -5597,10 +5601,9 @@ func _check_sleep_aura(scene: Variant) -> void:
 	if not scene._board_has_sleep():
 		_smoke_fail("沉睡特效：场上有 sleep_left > 0 的单位时 _board_has_sleep() 应为真")
 		return
-	# 徽标行号 0/1/2 都画一遍 → 三个状态同时成立时也不该有绘制错误/重叠
+	# 常驻光环只负责状态光圈；徽标行号由状态徽标绘制流程另行处理
 	var cs: Vector2 = scene._display_center(sp, cell)
-	for row in 3:
-		scene.draw.connect(scene._draw_sleep_aura.bind(cs, 40.0, 56.0, 2, row), CONNECT_ONE_SHOT)
+	scene.draw.connect(scene._draw_sleep_aura.bind(cs, 40.0, 56.0), CONNECT_ONE_SHOT)
 	# 徽标宽度随文案长度自适应（「沉睡 2」比「冰封」长，写死宽度会被截断）
 	var bw2 := maxf(40.0, 14.0 + float("沉睡 2".length()) * 11.0)
 	if bw2 <= 40.0:

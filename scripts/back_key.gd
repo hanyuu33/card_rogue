@@ -17,6 +17,10 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE:
+		# 退出前收掉 Steamworks（未装 GodotSteam / 没初始化过时是空操作）。
+		SteamAchievements.shutdown()
+		return
 	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
 	var cur := get_tree().current_scene

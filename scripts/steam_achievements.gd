@@ -57,6 +57,7 @@ static var _init_done := false   ## init() 是否已跑过（幂等保护）
 static var _init_ok := false     ## Steamworks 是否真的可用（决定 unlock 走不走）
 static var _init_status := -1    ## 0=OK；2/20=客户端没开；79=AppID 无效；-2=没装插件
 static var _init_verbal := ""    ## Steamworks 回传的失败原因（原样保留，便于排查）
+static var _app_id_override := 0 ## 调试用：强制 AppID（0 = 不干预）。工具 `tools/steam_selftest.gd` 会设它
 
 
 # ------------------------------------------------------------ 桥接（唯一入口）
@@ -85,11 +86,19 @@ static func _read_local_appid() -> int:
 
 
 static func effective_app_id() -> int:
-	## 本次初始化实际用的 AppID：常量优先 → 本地 steam_appid.txt → 0（交给环境变量）。
+	## 本次初始化实际用的 AppID：调试覆盖 → 常量 → 本地 steam_appid.txt → 0（交给环境变量）。
 	## 三者都没有时返回 0 —— 这正是发行形态（Steam 客户端注入 SteamAppId）。
+	if _app_id_override > 0:
+		return _app_id_override
 	if APP_ID > 0:
 		return APP_ID
 	return _read_local_appid()
+
+
+static func set_app_id_override(app_id: int) -> void:
+	## **仅供自检工具 / 临时调试**：在 init() 之前强制指定 AppID（0 = 取消覆盖）。
+	## 发行逻辑一行都不用改；正常游戏流程从不调它。
+	_app_id_override = app_id
 
 
 static func init() -> void:
@@ -147,6 +156,19 @@ static func status_text() -> String:
 	return "初始化失败（status %d）：%s" % [_init_status, _init_verbal]
 
 
+static func shutdown() -> void:
+	## 退出前收掉 Steamworks。**幂等**，没初始化过就什么都不做。
+	## 为什么要它：GDExtension 不主动 shutdown 时会留几个内部对象，引擎退出时报
+	## 「N resources still in use at exit」—— 实测 3 次跑 1 次（典型的假红），
+	## 而「移除插件后同一条命令 0 次」证明来源就是它，不是游戏代码泄漏。
+	if not _init_done:
+		return
+	var steam := _steam()
+	if steam != null and steam.has_method("steamShutdown"):
+		steam.call("steamShutdown")
+	_init_ok = false
+
+
 static func reset_for_test() -> void:
 	## **仅供测试**：复位静态状态让 init() 能重跑。别在游戏逻辑里调。
 	_init_done = false
@@ -158,12 +180,20 @@ static func reset_for_test() -> void:
 static func unlock(api: String) -> void:
 	## 解锁一个 Steam 成就。幂等（Steam 端重复解锁无害）。
 	## 未装 GodotSteam / 未初始化成功 → 静默跳过，绝不影响测试版 / 本地开发。
+	## 想看见「到底该解锁哪一条」：设环境变量 `QUACKILL_STEAM_TRACE=1` 再跑游戏，
+	## 每次触发会打一行 `[steam-trace]`（不需要 Steam 客户端，实机核对钩子用）。
+	var trace := OS.get_environment("QUACKILL_STEAM_TRACE") == "1"
 	if not _init_ok:
+		if trace:
+			print("[steam-trace] %s（Steamworks 未就绪，仅记录不解锁）" % api)
 		return
 	var steam := _steam()
 	if steam == null or not steam.has_method("setAchievement"):
 		return
-	if not bool(steam.call("setAchievement", api)):
+	var ok := bool(steam.call("setAchievement", api))
+	if trace:
+		print("[steam-trace] %s -> %s" % [api, "set" if ok else "拒绝（后台无此成就？）"])
+	if not ok:
 		return
 	# 立刻落盘：否则要等 Steam 正常退出才提交，崩溃 / 强杀会丢成就。
 	if steam.has_method("storeStats"):

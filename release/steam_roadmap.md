@@ -16,7 +16,7 @@
 | 品牌 | `GameBrand`：中《嘎嘎乱杀》／英 `Quackill`／`risusumai`／`v1.0` | ✅ 已定稿 |
 | `GameBrand.FOOTER` | 仍是 `v{v}-rogue · 肉鸽开发版` | ⚠️ 发布前必改 |
 | Steam 成就桥 | `scripts/steam_achievements.gd` 完整：8 成就 + `Engine.get_singleton` 反射 + `storeStats` 落盘 + AppID 三级回落 | ✅ 代码就绪 |
-| GodotSteam 插件 | **`addons/` 不存在** | ❌ 硬缺口（成就全链路未实机验证） |
+| GodotSteam 插件 | `addons/godotsteam/` **已装 4.15 GDExtension**（plugin 4.1–4.3，Steamworks SDK 1.62）；4.3 编辑器与导出包都实测加载成功（`has_singleton(Steam)=true`，815 个方法，导出目录自动带 `libgodotsteam.*.dll` + `steam_api64.dll`） | ✅ R740 已装（只剩「后台建成就」没做） |
 | 成就数量 / 层次 | 8 个，全是「进度型」（初见 / 通关 / 难度） | ⚠️ 偏少，缺长尾（组合、图鉴、每日） |
 | 导出预设 | Windows Desktop（debug+release）、Android（debug+release） | ✅ 在，但 `export_path` 仍是 `dist/DuckCardsRogue.apk` |
 | 桌面纹理 | 卡图 `compress/mode=2` + `high_quality=true`，生成 **bptc + astc 双变体** | ⚠️ 包体账（281MB）是按 Android/astc 记的，**桌面侧未重测** |
@@ -35,9 +35,9 @@
 
 | # | 事项 | 要点 | 判据 |
 |---|---|---|---|
-| A1 | 安装 GodotSteam（GDExtension，对齐 4.3） | 只引 GDExtension，不引 GDNative；`addons/godotsteam/`；**不进 Android 预设** | `SteamAchievements.status_text()` 返回「已连接 Steam」 |
-| A2 | AppID 与本地联调 | 用 Spacewar `480` 或放 `steam_appid.txt`（**发行包不带**）；`APP_ID` 常量保持 0 | 本地 status=0；发行包内无 `steam_appid.txt` |
-| A3 | 8 个成就逐个实机解锁 | 用测试 build 引信触发 `note_*`；核对后台 API 名大小写完全一致 | Steam 后台显示 8/8 可解锁、`storeStats` 生效 |
+| A1 | 安装 GodotSteam（GDExtension，对齐 4.3） | 只引 GDExtension，不引 GDNative；`addons/godotsteam/`；**不进 Android 预设** | `SteamAchievements.status_text()` 返回「已连接 Steam」 → **R740 达成** |
+| A2 | AppID 与本地联调 | 用 Spacewar `480` 或放 `steam_appid.txt`（**发行包不带**）；`APP_ID` 常量保持 0 | 本地 status=0；发行包内无 `steam_appid.txt` → **R740 `--appid 480` 实测 status=0** |
+| A3 | 8 个成就逐个实机解锁 | 用测试 build 引信触发 `note_*`；核对后台 API 名大小写完全一致 | Steam 后台显示 8/8 可解锁、`storeStats` 生效 → **卡在「后台还没建这 8 个成就」** |
 | A4 | 成就长尾补 4~6 个 | 建议：首次组合 / 组合产物达 N 种 / 图鉴全收 / 每日挑战首胜 / 无伤过精英 / 单回合斩杀 100+ | 后台 + 代码 `API_*` 两处同名 |
 | A5 | 云存档（Steam Auto-Cloud 或 Remote Storage） | 只同步 `profile.json` + `run_records.json` + `run_save.sav`；**排除** `save_trace.log` / `*_test.*` | A 机打一半→B 机续档成功；冲突时取「本地 mtime 新」，且 `save_trace` 有记录 |
 | A6 | 单实例互斥 | 双开会抢同一个 `user://`（`run_save` 注释里已有警告） | 第二个进程弹「已在运行」并退出，不产生半截档 |
@@ -46,6 +46,52 @@
 | A9 | Overlay / Deck 自评 | Overlay 默认可用；Deck 评级先做 Playable 诚实自评 | 提交时 Steam 后台填 Deck 兼容性 |
 
 > A1–A3 是关键路径：成就代码已写完但**从未实机跑过**，越早验越安全。
+
+### 1.1 R740 实测记录（GodotSteam 已装 + 一条命令自检）
+
+**装的是什么**：`godotsteam-4.15-gdextension-plugin-4.1-4.3.zip`
+（GodotSteam 4.15 / Steamworks SDK 1.62，`compatibility_minimum = 4.1`，正好配 4.3）。
+来源：`https://codeberg.org/godotsteam/godotsteam/releases/download/v4.15-gde/godotsteam-4.15-gdextension-plugin-4.1-4.3.zip`
+（11.5MB 包 → 解压 37MB 到 `addons/godotsteam/`，全平台二进制原样保留，不裁剪）。
+
+**一个必须知道的坑**：GDExtension 要被认出来，`res://.godot/extension_list.cfg` 里必须有
+`res://addons/godotsteam/godotsteam.gdextension` 这一行。这个文件由**编辑器打开工程时**写入；
+本机 `--headless --editor` 跑扫描时被 `Scan thread aborted` 打断（工程大 + 退出太快），
+手写该行后一切正常。**换机器 / 新克隆**后若自检报「未加载」，先看这一行在不在。
+
+**自检命令**（项目根，把 `GODOT` 换成本机 Godot 4.3）：
+
+```bash
+# ① 只读体检：插件在不在 / Steamworks 连没连上 / 后台 8 个成就名对不对
+$GODOT --headless --path . --script res://tools/steam_selftest.gd
+
+# ② 没登 Steam 客户端也能验链路：用 Valve 公开测试 App Spacewar
+$GODOT --headless --path . --script res://tools/steam_selftest.gd -- --appid 480
+
+# ③ 真解锁 + 读回（后台建好 8 个成就、且拿得到自有 AppID 之后才跑）
+$GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --hooks
+```
+
+退出码：`0` 全绿 / `1` 插件没加载 / `2` Steamworks 没连上 / `3` 后台成就名对不上 / `4` 解锁失败。
+
+**实测结果（2026-11-15）**：
+
+| 检查 | 结果 |
+|---|---|
+| 4.3 编辑器进程内加载插件 | ✅ `has_singleton(Steam)=true`，815 个方法 |
+| `--export-release` 导出产物 | ✅ 自动带 `libgodotsteam.windows.template_release.x86_64.dll` **和** `steam_api64.dll`（都在 exe 同目录，不用手工拷） |
+| 导出包内跑 engine 全套 | ✅ 全通过；包内同样识别到插件（日志：本机已装 GodotSteam） |
+| AppID 480 实连 | ✅ `status=0`，账号 `みうバニー`，`getNumAchievements()=0`（Spacewar 本来就没成就） |
+| 8 个成就名比对后台 | ❌ 后台一个都没建 → 这正是 A3 的唯一阻塞 |
+| 不传 AppID 直接跑 | `status=1`（No appID found）—— 正常，发行版由 Steam 客户端注入 |
+
+**还剩两步**（都在 Steamworks 后台，不在代码里）：
+1. 后台按 `release/steam_achievements.md` 第一节建 8 个成就（API Name 一字不差）。
+2. 拿到 AppID 后跑命令 ③，看到 `8 个成就解锁调用全部成功` + 客户端弹出成就，A3 就算过。
+
+**给玩家/自己看的追踪开关**：设环境变量 `QUACKILL_STEAM_TRACE=1` 再启动游戏，
+每次成就触发会打 `[steam-trace] FIRST_STEP`（即使 Steam 没连上也记一行），
+用来确认「玩到那个节点时该解锁的到底有没有被调」。
 
 ---
 

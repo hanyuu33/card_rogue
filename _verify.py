@@ -105,9 +105,18 @@ def main():
         # 而 smoke 的「N 通过 / 0 失败」里**照样全绿**（失败发生在用例跑完之后，
         # 例如 battle 场景已跑完才发现 battle_scene.gd 解析不了）。
         # 所以这里把解析错误单独抽出来打在最后一行，判绿时先看它。
-        broken = "Parse Error" in d or "SCRIPT ERROR" in d
+        # smoke 没有引擎负向用例，普通 ERROR 也必须挂红；engine 等套件会故意走拒绝路径，不能一刀切。
+        # ⚠️ 例外（R740 起）：装了 GodotSteam 后，退出期偶发（实测 4 次里 1~2 次）
+        #    `ERROR: N resources still in use at exit` —— 那几个对象是 GDExtension 内部持有的，
+        #    脚本侧调过 steamShutdown 也未必立刻释放（title.tscn 的 _ready 会 init Steam）。
+        #    A/B 实测：把 addons/godotsteam 移走后同一条命令连跑 3 次 → 0 次出现。
+        #    所以只放行这一条「资源残留」提示；`ObjectDB instances leaked`（节点泄漏）照旧挂红。
+        smoke_errors = [l.strip() for l in lines
+                        if name == "smoke" and l.startswith("ERROR:")
+                        and "resources still in use" not in l]
+        broken = "Parse Error" in d or "SCRIPT ERROR" in d or bool(smoke_errors)
         parse_lines = [l.strip() for l in lines
-                       if "Parse Error" in l or "SCRIPT ERROR" in l]
+                       if "Parse Error" in l or "SCRIPT ERROR" in l] + smoke_errors
         smoke_ok = name != "smoke" or "0 失败" in d
         print("%-7s exit=%d  %d%s / %d%s" % (name, rc, good, OK, bad, BAD))
         print("        " + tail)
