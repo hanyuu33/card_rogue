@@ -679,7 +679,7 @@ func _gui_input(event: InputEvent) -> void:
 				else:
 					_records_scroll = maxf(0.0, _records_scroll + d / 24.0)
 				_panel_dragged = true
-			queue_redraw()   # R746：只有真的滚动了才重绘 —— 原来鼠标每动一下都全量重绘
+				queue_redraw()   # R747：真的滚动了才重绘（R746 只加了注释，判据没挪进来）
 			return
 		var c := _cell_at(event.position)
 		var nid := int(c.get("id", -1))
