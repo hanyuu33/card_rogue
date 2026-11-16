@@ -51,6 +51,12 @@ func _ready() -> void:
 	add_child(sfx)
 	# R176：标题页 BGM（Holy_Place）；选人 / 地图 / 战斗各自在进入时换曲。
 	Bgm.play("title")
+	# R767：玩家在标题页停留的时间足够长，顺手把「开始游戏 → 模式选择 → 选人页」这条链
+	# 送去后台读。安卓上这几步原来是同步加载，点下去要黑屏卡一阵。
+	SceneWarm.warm_all([
+		"res://scenes/mode_select.tscn",
+		"res://scenes/class_pick.tscn",
+	])
 	# R576：Steam 成就初始化（未装 GodotSteam 时静默跳过，见 steam_achievements.gd）。
 	SteamAchievements.init()
 	$Buttons/Row1/StartBtn.text = L10n.t("title.start")

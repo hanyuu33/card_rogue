@@ -21,6 +21,9 @@ static var run_active := false               # 是否在肉鸽 run 中（false =
 ## R762：空 = 标准局；非空 = 每日挑战的 UTC 日历日。rules 入榜名，改计分口径不混旧榜。
 static var daily_date := ""
 static var daily_rules := 0
+## R767：今日修饰的**效果汇总**（`DailyModifiers.fx_of()` 的产物）。空字典 = 标准局。
+## 只被下面那几个取数口读取 —— 想加一条修饰，先找到对应的取数口，别在别处直接改数值。
+static var daily_fx: Dictionary = {}
 static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复）
 ## R181 商店附魔：与 deck_ids **等长**的修饰列表。每个元素是 {}（无附魔）或
 ## {"cost":-1} / {"power":+10} / {"affix":"次元","power":+2,"health":+10} / {"affix":"保存"}。
@@ -598,7 +601,16 @@ static func battle_win_heal() -> int:
 
 static func rest_pct() -> float:
 	## 本档位的休息回复百分比。R224：休息处不再回血 → 全档位 0.0。
-	return DIFFICULTY_REST_PCT[_diff()]
+	## R767：每日修饰的 `rest`（温暖 +15% / 阴冷 −15%）加法叠加 —— 这是唯一能让
+	## 「休息回血」重新出现在游戏里的途径，别在事件里另写一套。
+	return maxf(0.0, DIFFICULTY_REST_PCT[_diff()] + float(daily_fx.get("rest", 0.0)))
+
+
+static func energy_per_turn() -> int:
+	## R767：我方每回合费用 = `FieldState.ENERGY_PER_TURN` + 每日修饰的 `energy`
+	## （灵光 +1 / 滞涩 −1），**下限 1** —— 费用被抹到 0 的话第一回合就什么都出不了。
+	## 敌方 `state.opp_energy` 不读它：修饰只针对玩家，敌人不该跟着变强或变弱。
+	return maxi(1, FieldState.ENERGY_PER_TURN + int(daily_fx.get("energy", 0)))
 
 
 static func rest_heal_amount() -> int:
@@ -899,7 +911,9 @@ static func consume_bandage_heal() -> int:
 
 static func start_gold() -> int:
 	## 新开一局（与换层）的初始金钱：0~6 档 = 150（含难度 0 的 +50），7 档起 = 100。
-	return DIFF_GOLD_HIGH if _diff() >= 7 else DIFF_GOLD_LOW
+	## R767：每日修饰的 `gold` 叠在这上面（「贫瘠」−50 也该能开盘，所以夹 0 下限）。
+	var base := DIFF_GOLD_HIGH if _diff() >= 7 else DIFF_GOLD_LOW
+	return maxi(0, base + int(daily_fx.get("gold", 0)))
 
 
 static func chocolate_per_layer() -> int:
@@ -907,9 +921,11 @@ static func chocolate_per_layer() -> int:
 	## R399（用户口径「第三层应该不再提供巧克力」）：第三层是 5 格直道，每格 `cost` 恒为 0，
 	## 巧克力在那儿一块也用不掉 —— 直接给 0，不再显示一个永远花不掉的数字。
 	## ⚠️ 读的是**当前层**（`advance_layer` 里先赋 `current_layer` 再调本函数）。
+	## R767：每日修饰的 `choco`（旅粮 +3 / 饥饿 −3）叠在这里；第三层仍然恒 0。
 	if current_layer == GameLayers.LAYER_THREE:
 		return 0
-	return DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
+	var base := DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
+	return maxi(0, base + int(daily_fx.get("choco", 0)))
 
 
 static func add_chocolate(n: int) -> void:
@@ -926,27 +942,31 @@ static func add_chocolate(n: int) -> void:
 
 static func max_hp_mul() -> float:
 	## 初始最大生命系数：9 档起「虚弱」= 0.8，其余 = 1.0。
-	return DIFF_MAX_HP_MUL if _diff() >= 9 else 1.0
+	## R767：每日修饰的 `hp_mul`（强健 ×1.15 / 贫血 ×0.88）**相乘**叠在难度系数上。
+	return (DIFF_MAX_HP_MUL if _diff() >= 9 else 1.0) * float(daily_fx.get("hp_mul", 1.0))
 
 
 static func enemy_hp_bonus_pct() -> float:
 	## 3 档起「敌人更加顽强」：敌方开场生命 +10%（向上取整）。
-	return DIFF_ENEMY_HP_PCT if _diff() >= 3 else 0.0
+	## R767：每日修饰的 `enemy_hp`（敌之孱弱 −15% / 敌之顽强 +20%）加法叠加。
+	return (DIFF_ENEMY_HP_PCT if _diff() >= 3 else 0.0) + float(daily_fx.get("enemy_hp", 0.0))
 
 
 static func enemy_power_bonus() -> int:
 	## 6 档起「敌人更加凶猛」：敌方开场攻击 +1（原本 0 攻工事除外，见 scaled_enemy_card）。
-	return DIFF_ENEMY_POWER if _diff() >= 6 else 0
+	## R767：每日修饰的 `enemy_power` 加法叠加，但**不叠成负数**（敌人攻击不能被抹到 0 以下）。
+	return maxi(0, (DIFF_ENEMY_POWER if _diff() >= 6 else 0) + int(daily_fx.get("enemy_power", 0)))
 
 
 static func rare_weight_mul() -> float:
 	## 4 档起「稀有卡牌获取概率降低」：卡牌奖励里稀有权重的乘数（×0.5）。
-	return DIFF_RARE_WEIGHT_MUL if _diff() >= 4 else 1.0
+	## R767：每日修饰的 `rare_mul`（幸运 ×1.6 / 倒霉 ×0.5）相乘。
+	return (DIFF_RARE_WEIGHT_MUL if _diff() >= 4 else 1.0) * float(daily_fx.get("rare_mul", 1.0))
 
 
 static func fatigue_active() -> bool:
-	## 5 档起「行动力低时疲惫」是否生效。
-	return _diff() >= DIFF_FATIGUE_FROM
+	## 5 档起「行动力低时疲惫」是否生效。R767：每日减益也会强制开启它。
+	return _diff() >= DIFF_FATIGUE_FROM or bool(daily_fx.get("fatigue", false))
 
 
 static func elite_weight_mul() -> float:
@@ -955,7 +975,9 @@ static func elite_weight_mul() -> float:
 	## 其他类型里扣掉，所以精英占比恰好涨 ×1.3，而不是权重 ×1.3 后只涨两成。
 	## 明房（`RogueMap.WEIGHTS`）与「?」房（`RogueMap.WEIGHTS_UNKNOWN`）两条途径都乘它，
 	## 而唯一消费点是 `RogueMap._weighted_far()` —— 所以「各种途径」天然只有一个口。
-	return DIFF_ELITE_MUL if _diff() >= DIFF_ELITE_FROM else 1.0
+	## R767：每日修饰的 `elite_mul`（冷清 ×0.75 / 拥挤 ×1.5）相乘。
+	return ((DIFF_ELITE_MUL if _diff() >= DIFF_ELITE_FROM else 1.0)
+			* float(daily_fx.get("elite_mul", 1.0)))
 
 
 static func unknown_shop_allowed() -> bool:
@@ -1082,6 +1104,10 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R762：每日身份与固定难度必须在**生命计算 / 种子选择 / 解锁钳制**之前落定。
 	daily_date = str(daily.get("date", ""))
 	daily_rules = int(daily.get("rules", 0)) if daily_date != "" else 0
+	# R767：每日修饰的数值汇总。**必须在下面 `max_hp_mul()` 被调用之前就位** ——
+	# 「强健 / 贫血」改的就是初始最大生命，晚一行赋值就等于这条修饰不存在。
+	var dfx: Variant = daily.get("fx", {})
+	daily_fx = (dfx as Dictionary).duplicate(true) if daily_date != "" and dfx is Dictionary else {}
 	if daily_date != "":
 		set_difficulty(int(daily.get("difficulty", difficulty)))
 	# 初始生命按职业不同（R182）：基础 50 + 职业加成（森林精魄+20/暗影刺客+10/机械之心+16）。
@@ -1164,7 +1190,15 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
-	deck_ids = PlayerClass.start_deck_ids(player_class)
+	# R767：每日挑战自带一套**随机卡组**（同一天所有人同一套）。这里**只读配置、不现摇** ——
+	# 开局那一刻再抽的话，同一个种子两局会不一样，Steam 榜就失去意义了。
+	var ddeck: Variant = daily.get("deck", [])
+	if daily_date != "" and ddeck is Array and not (ddeck as Array).is_empty():
+		deck_ids.clear()
+		for v: Variant in (ddeck as Array):
+			deck_ids.append(int(v))
+	else:
+		deck_ids = PlayerClass.start_deck_ids(player_class)
 	deck_mods = []                # R181：新开一局 → 附魔清空
 	lake_victim = -1              # R488：新开一局 → 湖中仙女没摇过「要失去的那张」
 	card_growth = {}             # R393：新开一局 → 击杀成长清零
@@ -1190,6 +1224,10 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	traps = [-1, -1, -1]   # R663：新的一局陷阱栏 3 空槽
 	tool_roll_seq = 0      # R694：新的一局 → 战斗掉落工具的重摇序号归零
 	toolbox_tool_seq = 0   # R745：工具箱发工具的序号同样归零
+	# R767：每日修饰 `tools`（工具箱）—— 开局多发 N 件工具。走 R745 的唯一发放口，
+	# 满栏时会自动排进「待领奖励」，不会静默吞掉。标准局 `daily_fx` 为空 → 循环 0 次。
+	for i: int in int(daily_fx.get("tools", 0)):
+		grant_random_tool("daily")
 	tool_deliver_seq = 0   # R752：快送鸭的序号同样归零
 	tool_drop_pledge = 0   # R754：新的一局没有「必掉」的祝福
 	bandage_pending = 0
@@ -1268,6 +1306,7 @@ static func end_run(clear_save: bool = true) -> void:
 	run_active = false
 	daily_date = ""               # R762：续档里另有副本；内存复位不删每日成绩
 	daily_rules = 0
+	daily_fx = {}                 # R767：修饰汇总必须一起清 —— 否则下一局标准模式还带着今日的减益
 	pipe_ready = false          # R446：一局结束 → 烟斗状态位复位
 	core_lost = 0               # R458：核心的累计与触发位同样复位
 	core_armed = false

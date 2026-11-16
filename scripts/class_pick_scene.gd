@@ -68,6 +68,13 @@ func _ready() -> void:
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
 	_build_seed_edit()   # R261：种子输入框（设置页的「下一局种子」会预填进来）
+	# R767：玩家在这页挑角色 / 改难度 / 输种子，通常要待十几秒 ——
+	# 正好把下一站地图送去后台读；点「开始」时就不用再同步加载一次。
+	SceneWarm.warm_all([
+		"res://scenes/map.tscn",
+		"res://assets/ui/class_cg_rogue.png",
+		"res://assets/ui/class_cg_mech.png",
+	])
 	# -- --screenshot：自动截图退出（视觉验证用）
 	if "--screenshot" in OS.get_cmdline_user_args():
 		var t := Timer.new()

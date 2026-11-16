@@ -242,6 +242,180 @@
     }
   },
   "scopes": {
+    "daily": {
+      "MOD_RICH": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "富裕"
+      },
+      "MOD_STURDY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "强健"
+      },
+      "MOD_RATIONS": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "旅粮"
+      },
+      "MOD_LUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "幸运"
+      },
+      "MOD_WARM": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "温暖"
+      },
+      "MOD_GIFTED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "工具箱"
+      },
+      "MOD_MIXED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "杂牌"
+      },
+      "MOD_FRAIL_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌之孱弱"
+      },
+      "MOD_QUIET": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "冷清"
+      },
+      "MOD_SURGE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "灵光"
+      },
+      "MOD_POOR": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "贫瘠"
+      },
+      "MOD_ANEMIC": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "贫血"
+      },
+      "MOD_HUNGRY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "饥饿"
+      },
+      "MOD_UNLUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "倒霉"
+      },
+      "MOD_COLD": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "阴冷"
+      },
+      "MOD_CURSED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "诅咒"
+      },
+      "MOD_TOUGH_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌之顽强"
+      },
+      "MOD_FIERCE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "凶猛"
+      },
+      "MOD_CROWDED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "拥挤"
+      },
+      "MOD_DRAINED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "滞涩"
+      },
+      "MODDESC_RICH": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "初始金币 +80"
+      },
+      "MODDESC_STURDY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "最大生命 +15%"
+      },
+      "MODDESC_RATIONS": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每层巧克力 +3"
+      },
+      "MODDESC_LUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "稀有卡获取概率 ×1.6"
+      },
+      "MODDESC_WARM": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "休息回复 +15% 最大生命"
+      },
+      "MODDESC_GIFTED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "开局多一件工具"
+      },
+      "MODDESC_MIXED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "卡组多 3 张随机卡"
+      },
+      "MODDESC_FRAIL_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌人生命 −15%"
+      },
+      "MODDESC_QUIET": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "精英出现概率 ×0.75"
+      },
+      "MODDESC_SURGE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每回合费用 +1"
+      },
+      "MODDESC_POOR": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "初始金币 −50"
+      },
+      "MODDESC_ANEMIC": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "最大生命 −12%"
+      },
+      "MODDESC_HUNGRY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每层巧克力 −3"
+      },
+      "MODDESC_UNLUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "稀有卡获取概率 ×0.5"
+      },
+      "MODDESC_COLD": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "休息回复 −15% 最大生命"
+      },
+      "MODDESC_CURSED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "卡组塞 2 张木栅栏"
+      },
+      "MODDESC_TOUGH_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌人生命 +20%"
+      },
+      "MODDESC_FIERCE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌人攻击 +1"
+      },
+      "MODDESC_CROWDED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "精英出现概率 ×1.5"
+      },
+      "MODDESC_DRAINED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每回合费用 −1"
+      },
+      "DAILY_MODS": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "今日修正"
+      },
+      "DAILY_DECK": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "卡组"
+      },
+      "MOD_DECK_RANDOM": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "随机构筑"
+      }
+    },
     "shop": {
       "SHOP_ENCHANT_COSTDOWN_NAME": {
         "source": "scripts/card_data.gd:112",

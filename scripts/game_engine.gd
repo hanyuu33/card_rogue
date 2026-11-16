@@ -2350,7 +2350,8 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	_three_bots_destroyed = 0   # R534：三个机器人的计数每场战斗重置
 	_thorn_ring_turn = -1
 	state.starting_hand(starting_hand)
-	state.energy = FieldState.ENERGY_PER_TURN
+	# R767：同上（开局那一次）
+	state.energy = RunState.energy_per_turn()
 	state.opp_energy = FieldState.ENERGY_PER_TURN
 	state.opp_hand_count = starting_hand
 	state.opp_deck_count = maxi(0, opponent_deck - starting_hand)
@@ -2484,7 +2485,9 @@ func _begin_turn(side: String) -> void :
 		_sync_poem()   # R761 诗：同一处对齐「其他职业的盟友 +2 力量」
 		_sync_knight_sword()   # R383 骑士剑：同一处补齐（含中途拿到道具的情况）
 		_sync_totem()   # R745 野性图腾：同一处补齐（用掉之后才上场的盟友 / 读档续战）
-		state.energy = FieldState.ENERGY_PER_TURN
+		# R767：我方每回合费用统一走 RunState.energy_per_turn()
+		# （每日修饰的「灵光 +1 / 滞涩 −1」就叠在它里面，标准局等于常量）
+		state.energy = RunState.energy_per_turn()
 		if state.turn_limit >= 0 and turn_number > state.turn_limit:
 			turn_number = state.turn_limit
 			_finish("失败", "%d 回合内未击破敌方 HP" % state.turn_limit)

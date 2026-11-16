@@ -287,6 +287,10 @@ static func snapshot() -> Dictionary:
 		"player_class": RunState.player_class,
 		"daily_date": RunState.daily_date,       # R762：续档恢复原每日局，不算第二次
 		"daily_rules": RunState.daily_rules,
+		## R767：每日修饰的数值汇总也必须进档。**漏了它，续档之后换层就会跳变** ——
+		## `start_gold()` / `chocolate_per_layer()` / `energy_per_turn()` 都在换层或开战时重算，
+		## 汇总一丢，金币和费用当场回到标准值，玩家会以为「读个档怎么buff没了」。
+		"daily_fx": RunState.daily_fx.duplicate(true),
 		"battle_wins": RunState.battle_wins,
 		"elite_wins": RunState.elite_wins,
 		# R630：**整局累计**三项（结算页 / 记录页读的就是它们）。原先只存了「本层」两个数 →
@@ -590,6 +594,10 @@ static func apply(d: Dictionary) -> bool:
 	RunState.player_class = str(d.get("player_class", PlayerClass.default_id()))
 	RunState.daily_date = str(d.get("daily_date", ""))       # R762：老档缺字段 = 标准局
 	RunState.daily_rules = int(d.get("daily_rules", 0)) if RunState.daily_date != "" else 0
+	# R767：修饰汇总跟着每日身份一起恢复；标准局与老存档（无此字段）一律空字典。
+	var fx: Variant = d.get("daily_fx", {})
+	RunState.daily_fx = ((fx as Dictionary).duplicate(true)
+			if RunState.daily_date != "" and fx is Dictionary else {})
 	RunState.battle_wins = int(d.get("battle_wins", 0))
 	RunState.elite_wins = int(d.get("elite_wins", 0))
 	# R630：整局累计跟着一起回填。**老档没有这三个键**（R630 之前的档）→ 用「本层」两个数

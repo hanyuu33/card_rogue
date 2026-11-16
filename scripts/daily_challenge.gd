@@ -6,7 +6,9 @@ extends RefCounted
 ## 本模块只拥有「今天是什么局、今天是否已经开过、成绩是多少」三本账。
 ## Steam 上传由 DailyLeaderboard 负责；离线时本地成绩照常保存。
 
-const RULES_VERSION := 1
+const RULES_VERSION := 2
+## ⚠️ 必须与 `DailyModifiers.RULES_VERSION` 保持一致 —— 两处一起加，别只改一边：
+## 规则一改，同一天的局就该变，而旧成绩必须留在旧板上（榜名带 V 号）。
 const PATH := "user://daily_challenge.json"
 const TEST_PATH := "user://daily_challenge_test.json"
 const FORMAT := 1
@@ -64,16 +66,24 @@ static func seed_for_date(date: String, rules := RULES_VERSION) -> int:
 
 static func config_for_date(date: String) -> Dictionary:
 	## 固定配置唯一口。职业轮换只读可见三职业，隐藏职业永不进每日池。
+	##
+	## R767：从「固定角色 + 固定难度」升级成「固定角色 + 固定难度 + 每日修饰 + 随机卡组」。
+	## 两条都从同一个根种子派生，所以同一天在任何机器上算出来完全一样；
+	## 而修饰池 / 卡池一旦变动就得升 `RULES_VERSION`，让旧榜留在旧规则下。
 	var root := seed_for_date(date)
 	var ids := PlayerClass.ids()
 	var cid := ids[root % ids.size()]
+	var mods := DailyModifiers.roll(root)
+	var fx := DailyModifiers.fx_of(mods)
 	return {
 		"date": date,
 		"rules": RULES_VERSION,
 		"seed": root,
 		"class": cid,
 		"difficulty": FIXED_DIFFICULTY,
-		"deck": PlayerClass.start_deck_ids(cid),
+		"deck": DailyModifiers.roll_deck(root, cid, fx),
+		"mods": mods,
+		"fx": fx,
 	}
 
 
