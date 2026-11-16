@@ -11,9 +11,14 @@ extends Node
 const RATE := 22050
 const VOICES := 8
 
+const GROUP := "sfx"
+
 var enabled := true
 ## R246：音量（0.0~1.0 线性）。100% = 0dB（原音量）；每次播放时落到播放器上。
+## R764：它只是**本实例**这一层上限 —— 真正的静音判据是 `settings_silent()`。
 var volume := 1.0
+## R764：进树那一刻的开关快照 —— `_exit_tree` 只在**本实例真被改过**时才写回设置。
+var _enabled_boot := true
 var _streams := {}
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
@@ -23,7 +28,9 @@ func _ready() -> void:
 	# R215：音效开关跟着设置走（各场景 Esc 菜单里的开关也不再随场景重置）。
 	GameSettings.ensure_loaded()
 	enabled = GameSettings.sfx_on
+	_enabled_boot = enabled
 	volume = GameSettings.sfx_volume
+	add_to_group(GROUP)   # R764：设置一改，sync_all 就能把所有活着的实例对齐
 	for i in VOICES:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -44,20 +51,51 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	## R215：离场时把当前开关写回设置 —— 「音效：开/关」从此跨场景记住。
-	GameSettings.set_sfx_on(enabled)
+	## R764：**只写「本实例真被改过」的那种**。设置页是浮层（R655），在战斗里关掉音效时
+	## 改的是浮层自己那份实例，战斗场景这份根本没动；它退出时若照旧无条件写回，
+	## 就把玩家刚关掉的开关又打开 —— 现象正是「关了所有声音，下一场战斗又有提示音」。
+	## Esc 菜单那条路自己改 `enabled`，与快照不同，所以那个记忆功能仍然保留。
+	if enabled != _enabled_boot:
+		GameSettings.set_sfx_on(enabled)
+
+
+static func settings_silent() -> bool:
+	## R764：**全局静音的唯一判据口** —— 每次都现问设置，不信实例里的缓存。
+	## 为什么必须有它：Sfx 是「各场景一份」（`TopBar` 那份还是 autoload，活到进程结束），
+	## 实例的 `enabled` 只在 `_ready` 那一刻与设置对齐。战斗里开设置浮层（R655）关音效，
+	## 改的是浮层自己那份实例 → 战斗那份照旧 `enabled = true`，于是「关了还在响」。
+	GameSettings.ensure_loaded()
+	return (not GameSettings.sfx_on) or GameSettings.sfx_volume <= 0.001
+
+
+static func sync_all(tree: SceneTree) -> void:
+	## R764：设置一改就把**所有活着的实例**对齐（浮层里关声音时，宿主战斗那份也要跟上）。
+	## 只对齐「开关」与「音量上限」；真正的静音判据始终是 `settings_silent()`。
+	if tree == null:
+		return
+	for n in tree.get_nodes_in_group(GROUP):
+		var s := n as Sfx
+		if s != null:
+			s.enabled = GameSettings.sfx_on
+			s.volume = GameSettings.sfx_volume
 
 
 func play(name: String) -> void:
 	if not enabled or not _streams.has(name):
 		return
+	# R764：设置是**硬闸** —— 别处（设置浮层 / 顶栏）改过开关或把音量拉到 0，
+	# 本实例立刻静默，不必等下一次 `_ready`。
+	if settings_silent():
+		return
+	var vol := minf(volume, GameSettings.sfx_volume)
+	# R246：音量 0 = 直接不播（linear_to_db(0) 是 -inf，别让它进到播放器里）
+	if vol <= 0.001:
+		return
 	var p := _players[_next]
 	_next = (_next + 1) % VOICES
 	p.stream = _streams[name]
 	p.pitch_scale = randf_range(0.96, 1.04)
-	# R246：音量 0 = 直接不播（linear_to_db(0) 是 -inf，别让它进到播放器里）
-	if volume <= 0.001:
-		return
-	p.volume_db = linear_to_db(clampf(volume, 0.001, 1.0))
+	p.volume_db = linear_to_db(clampf(vol, 0.001, 1.0))
 	p.play()
 
 

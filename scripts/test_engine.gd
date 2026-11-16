@@ -44315,6 +44315,46 @@ func _init() -> void:
 
 	r246_sfx.free()
 
+	# ---- R764：设置是硬闸 —— 浮层里关掉声音，战斗里那份 Sfx 也必须立刻静默 ----
+
+	var r764_sfx_src := FileAccess.get_file_as_string("res://scripts/sfx.gd")
+
+	check_src(r764_sfx_src.contains("static func settings_silent")
+
+			and r764_sfx_src.contains("if settings_silent():")
+
+			and r764_sfx_src.contains("if enabled != _enabled_boot")
+
+			and r764_sfx_src.contains("static func sync_all"),
+
+			"R764 源码：静音走 settings_silent 硬闸 + 退出只写回本实例改过的开关")
+
+	var r764_set_src := FileAccess.get_file_as_string("res://scripts/settings_scene.gd")
+
+	check_src(r764_set_src.count("Sfx.sync_all(get_tree())") >= 2,
+
+			"R764 源码：设置页的开关与音量都广播到宿主那份 Sfx")
+
+	var r764_on0 := GameSettings.sfx_on
+
+	var r764_vol0 := GameSettings.sfx_volume
+
+	GameSettings.set_sfx_on(false)
+
+	check(Sfx.settings_silent(), "R764 硬闸：设置关音效 → 全局静默判据为真")
+
+	GameSettings.set_sfx_on(r764_on0)
+
+	GameSettings.set_sfx_volume(0.0)
+
+	check(Sfx.settings_silent(), "R764 硬闸：音效音量 0 → 全局静默判据为真")
+
+	GameSettings.set_sfx_volume(r764_vol0)
+
+	GameSettings.set_sfx_on(r764_on0)
+
+	check(not Sfx.settings_silent(), "R764 硬闸：开关与音量恢复后不再误判静默")
+
 	# ---- 起手附魔：50 → 30 金（价格真源在 shop_scene.ENCHANTS）----
 
 	var r246_shop_map: Dictionary = (load("res://scripts/shop_scene.gd") as Script) 			.get_script_constant_map()

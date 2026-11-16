@@ -506,6 +506,9 @@ func _activate_row(d: Dictionary) -> void:
 		"sfx":
 			GameSettings.set_sfx_on(not GameSettings.sfx_on)
 			sfx.enabled = GameSettings.sfx_on
+			# R764：浮层模式下宿主（战斗）那份 Sfx 还活着 —— 一起对齐，
+			# 否则「关了声音、战斗里还在响」（硬闸在 Sfx.settings_silent）
+			Sfx.sync_all(get_tree())
 			if sfx.enabled:
 				sfx.play("click")
 		"music":
@@ -539,6 +542,7 @@ func _set_volume(id: String, v: float) -> void:
 	if id == "sfx_vol":
 		GameSettings.set_sfx_volume(nv)
 		sfx.volume = nv
+		Sfx.sync_all(get_tree())   # R764：音量同样要落到宿主那份实例上
 		if nv > 0.0:
 			sfx.play("click")   # 当场听到新音量
 	else:
