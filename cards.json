@@ -2186,10 +2186,12 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "打出时，若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡。",
+      "effect_text": "使用时，若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡。",
       "target_mode": "none",
       "color": "暗影",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "fetch_skill", "if_third": true}]}
     },
     {
       "id": 8007,
@@ -2281,7 +2283,9 @@
       "effect_text": "自己回合开始时，这张卡破坏。这张卡破坏时，从卡组将一张随机技能卡加入手卡。",
       "target_mode": "none",
       "color": "暗影",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "death", "effects": [], "turn_start_effects": [{"type": "self_destruct"}]},
+      "lower_effect": {"effects": [{"type": "fetch_skill"}]}
     },
     {
       "id": 9093,
@@ -3086,7 +3090,9 @@
       "effect_text": "每拥有一层改造，这张卡获得 **+3 生命**。",
       "target_mode": "none",
       "color": "物理",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "upgraded", "effects": []},
+      "lower_effect": {"effects": [{"type": "bonus_hp_per_upgrade", "value": 3}]}
     },
     {
       "id": 8035,
@@ -6624,7 +6630,9 @@
       "effect_text": "使用时，在这张卡两边各召唤一只「小鸭」（如果可能）。",
       "target_mode": "none",
       "color": "自然",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "summon", "value": 9251, "count": 2}]}
     },
     {
       "id": 9251,

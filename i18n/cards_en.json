@@ -70,7 +70,7 @@
   },
   "8006": {
    "name": "Shadow Cat",
-   "effect_text": "When played, if this is the 3rd card you have played this turn, add a random Skill card from your Draw Pile to your Hand."
+   "effect_text": "When used, if this is the 3rd card you have played this turn, add a random Skill card from your Draw Pile to your Hand."
   },
   "8007": {
    "name": "Shadow Fiend",

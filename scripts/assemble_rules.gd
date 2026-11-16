@@ -39,7 +39,9 @@ static func valid_effect(fx: Variant) -> bool:
 		return false
 	# R583：absorb_linked 是「破坏一批卡并把属性加到自身」，没有数值字段。
 	if fx.type in ["shield", "taunt", "freeze", "stun", "absorb_linked",
-			"fetch_cheapest_ally", "recall_ally_from_discard"]:
+			"fetch_cheapest_ally", "recall_ally_from_discard",
+			# R775：fetch_skill（无减费从卡组取技能卡）/ self_destruct（自毁）都无数值字段。
+			"fetch_skill", "self_destruct"]:
 		return true
 	if fx.type == "summon":
 		return (fx.get("value") is int or fx.get("value") is float) and int(fx.get("value")) > 0
@@ -92,7 +94,9 @@ static func valid_effect(fx: Variant) -> bool:
 			"hand_cost_raise", "add_copy", "buff_allies_atk",
 			# R589：减 0 费 / 每张 +0 生命同样是空动作。
 			"next_effect_discount", "next_ally_discount",
-			"hand_skill_discount", "hp_per_zero_skill"]:
+			"hand_skill_discount", "hp_per_zero_skill",
+			# R775：堡垒「每拥有一层改造 +N 生命」—— N 必须 ≥1，否则是空动作。
+			"bonus_hp_per_upgrade"]:
 		return int(fx.value) >= 1
 	return true
 
@@ -140,6 +144,12 @@ static func valid_upper(part: Variant) -> bool:
 	if not part.get("enter_effects", []) is Array:
 		return false
 	for fx in part.get("enter_effects", []):
+		if not valid_effect(fx):
+			return false
+	# R775：独立回合开始段（幽灵「自己回合开始时自毁」）—— 与入场段同源，不挂主扳机。
+	if not part.get("turn_start_effects", []) is Array:
+		return false
+	for fx in part.get("turn_start_effects", []):
 		if not valid_effect(fx):
 			return false
 	for affix in part.get("extra_affixes", []):
@@ -253,6 +263,15 @@ static func effect_text(fx: Dictionary) -> String:
 			return "手牌增加一张此卡的「短暂复制」"
 		"buff_allies_atk":
 			return "自己场上其他盟友力量 +%d" % n
+		# R775：三条新动作。文案逐字对原卡写，保真锁 `_fx_in_text` 有对应分支。
+		"bonus_hp_per_upgrade":
+			return "每拥有一层改造，这张卡获得 +%d 生命" % n
+		"fetch_skill":
+			if fx.get("if_third", false):
+				return "若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡"
+			return "从卡组将一张随机技能卡加入手卡"
+		"self_destruct":
+			return "这张卡破坏"
 	return ""
 
 
@@ -301,7 +320,11 @@ static func assembled_text(asm: Dictionary) -> String:
 	var es := effects_text(asm.get("enter_effects", []))
 	if es != "":
 		es = "入场时，" + es + "。"
-	var head := pv + es
+	# R775：独立回合开始段（幽灵自毁）—— 印在入场段之后、主扳机之前。
+	var ts := effects_text(asm.get("turn_start_effects", []))
+	if ts != "":
+		ts = "自己回合开始时，" + ts + "。"
+	var head := pv + es + ts
 	# R568 / R585：只有永续段、入场段而没有扳机效果时，产物文本就是那半句（不硬凑空冒号）。
 	if out == "":
 		return head
@@ -329,6 +352,10 @@ static func fragment_text(part: Dictionary) -> String:
 	var es := effects_text(part.get("enter_effects", []))
 	if es != "":
 		body = "入场时，" + es + "。" + body
+	# R775：独立回合开始段印在入场段之后、主扳机之前（原卡语序）。
+	var ts := effects_text(part.get("turn_start_effects", []))
+	if ts != "":
+		body = "自己回合开始时，" + ts + "。" + body
 	var pv := passive_text(part)
 	if pv != "":
 		return pv + body
@@ -370,6 +397,8 @@ static func build(base: CardData, upper: Dictionary, lower: Dictionary, reverse:
 		"extra_affixes": (first.get("extra_affixes", []) as Array).duplicate(true),
 		# R585：独立入场段只来自上半（reverse 时也不跟着换），不挂主扳机。
 		"enter_effects": (upper.get("enter_effects", []) as Array).duplicate(true),
+		# R775：独立回合开始段（幽灵自毁）—— 同样只来自上半，不挂主扳机。
+		"turn_start_effects": (upper.get("turn_start_effects", []) as Array).duplicate(true),
 	}
 	for affix in result.assemble.extra_affixes:
 		result.add_affix(str(affix))

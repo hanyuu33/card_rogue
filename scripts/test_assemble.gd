@@ -85,6 +85,7 @@ func _init() -> void:
 	_test_r592_combo_dimension()
 	_test_r604_opening()
 	_test_r714_defer_note()
+	_test_r775_materials()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
@@ -144,6 +145,18 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 			return text.contains("费用最低的盟友") and text.contains("加入手卡")
 		"recall_ally_from_discard":
 			return text.contains("弃牌堆") and text.contains("盟友回到手卡")
+		# ── R775：补 summon 保真（鸭妈妈）+ 三条新动作。每条都要有判据，
+		#    不写就落到 return true 零校验（R583 踩过的坑）。
+		"summon":
+			return text.contains("召唤")
+		"bonus_hp_per_upgrade":
+			return text.contains("+%d 生命" % n)
+		"fetch_skill":
+			if fx.get("if_third", false):
+				return text.contains("达到 3 张") and text.contains("随机技能卡")
+			return text.contains("随机技能卡")
+		"self_destruct":
+			return text.contains("这张卡破坏")
 	return true
 
 
@@ -166,6 +179,11 @@ func _test_r565_fidelity() -> void:
 		for fx in (c.upper_effect.get("enter_effects", []) as Array):
 			check(_fx_in_text(fx, text),
 					"R585 保真：%d %s 的入场段「%s」在原文里找不到出处（原文：%s）"
+					% [c.id, c.card_name, Rules.effect_text(fx), text])
+		# R775：独立回合开始段（幽灵自毁）同样逐字对原文。
+		for fx in (c.upper_effect.get("turn_start_effects", []) as Array):
+			check(_fx_in_text(fx, text),
+					"R775 保真：%d %s 的回合开始段「%s」在原文里找不到出处（原文：%s）"
 					% [c.id, c.card_name, Rules.effect_text(fx), text])
 		check(str(c.upper_effect.get("trigger", "")) in Rules.TRIGGERS,
 				"R565：%d 上半时机必须在白名单" % c.id)
@@ -1425,7 +1443,7 @@ func _test_r589_materials() -> void:
 	##   · 忒修斯奇械 9222「上半超负荷 + 每次生命降到 0 或更低」→ `lethal` 跨越判定 + 常驻字段；
 	##   · 小精灵 9074 / 斑鸠 9052 / 巨鼠 9046 / 乌鸦 9039：上半「使用后」；
 	##   · 水元素 9068 / 影魔 8007：上半「使用时」。
-	## 另外两张**明确不入池**：堡垒 8034（纯持续效果，没有扳机）、素体 8025（万用素材）。
+	## 另外**明确不入池**：素体 8025（万用素材）。堡垒 8034 已在 R775 入池（upgraded 扳机）。
 	var repo := CardRepo.load_json()
 	# ① 三条新扳机在白名单与文案表里
 	for tk: String in ["active", "use_after", "lethal"]:
@@ -1477,11 +1495,10 @@ func _test_r589_materials() -> void:
 	check(sdl.size() == 2 and str((sdl[1] as Dictionary).get("type", "")) == "hp_per_zero_skill" \
 			and int((sdl[1] as Dictionary).get("value", 0)) == 3,
 			"R589：影魔下半 = 减 1 费 + 每张 0 费技能卡 +3 生命")
-	# ③ 两张明确不入池
-	for cid: int in [8034, 8025]:
-		var c2: CardData = repo.get_card(cid)
-		check(c2 != null and c2.upper_effect.is_empty() and c2.lower_effect.is_empty(),
-				"R589：%d 不加入候选池（用户口径）" % cid)
+	# ③ 素体永不入池（堡垒 8034 已入池，R775 口径变更，素材校验见 _test_r775_materials）
+	var proto: CardData = repo.get_card(8025)
+	check(proto != null and proto.upper_effect.is_empty() and proto.lower_effect.is_empty(),
+			"R589：素体 8025 不加入候选池（用户口径）")
 	# ④ 产物文案：主动发动必须把规则句一起印出来（卡面写了才敢这么结算）
 	var probe := CardData.new()
 	probe.card_name = "R589 探针"
@@ -1703,4 +1720,73 @@ func _test_r714_defer_note() -> void:
 	e4._end_turn_surplus("foe")
 	check(e4.state.opp_energy == 5 and e4._assemble_deferred.is_empty(),
 			"R716：敌方回合结束才兑现它自己那笔 +5")
+
+
+func _test_r775_materials() -> void:
+	## R775：堡垒 / 鸭妈妈 / 影子猫 / 幽灵 入池 —— 三个新动作 + 幽灵回合开始自毁段。
+	## 素体 8025 / 小鸭 9251 是衍生卡，**永不入池**（引擎 _combo_candidate_cards 已写死挡素体）。
+	var repo := CardRepo.load_json()
+	# ① 堡垒：upgraded + 每层改造 +3 生命（bonus_hp_per_upgrade）
+	var fort: CardData = repo.get_card(8034)
+	check(fort != null and str(fort.upper_effect.get("trigger", "")) == "upgraded"
+			and (fort.upper_effect.get("effects", []) as Array).is_empty()
+			and str((fort.lower_effect.effects[0] as Dictionary).get("type", "")) == "bonus_hp_per_upgrade"
+			and int((fort.lower_effect.effects[0] as Dictionary).get("value", 0)) == 3,
+			"R775：堡垒切分 = upgraded + bonus_hp_per_upgrade(3)")
+	# ② 鸭妈妈：use + summon 小鸭 ×2
+	var duck: CardData = repo.get_card(9250)
+	check(duck != null and str(duck.upper_effect.get("trigger", "")) == "use"
+			and str((duck.lower_effect.effects[0] as Dictionary).get("type", "")) == "summon"
+			and int((duck.lower_effect.effects[0] as Dictionary).get("value", 0)) == 9251
+			and int((duck.lower_effect.effects[0] as Dictionary).get("count", 1)) == 2,
+			"R775：鸭妈妈切分 = use + summon(9251 ×2)")
+	# ③ 影子猫：use + fetch_skill(if_third) + 描述改「使用时」
+	var cat: CardData = repo.get_card(8006)
+	check(cat != null and str(cat.upper_effect.get("trigger", "")) == "use"
+			and (cat.lower_effect.effects[0] as Dictionary).get("if_third", false) == true,
+			"R775：影子猫切分 = use + fetch_skill(if_third)")
+	check(cat != null and cat.effect_text.begins_with("使用时"), "R775：影子猫描述改为「使用时」")
+	# ④ 幽灵：death 主扳机 + turn_start_effects 自毁段 + fetch_skill
+	var ghost: CardData = repo.get_card(8008)
+	var g_ts: Array = (ghost.upper_effect.get("turn_start_effects", []) as Array) if ghost != null else []
+	check(ghost != null and str(ghost.upper_effect.get("trigger", "")) == "death"
+			and g_ts.size() == 1
+			and str((g_ts[0] as Dictionary).get("type", "")) == "self_destruct"
+			and str((ghost.lower_effect.effects[0] as Dictionary).get("type", "")) == "fetch_skill",
+			"R775：幽灵切分 = death + turn_start 自毁 + fetch_skill")
+	# ⑤ 四个新动作都在白名单（含补保真的 summon）
+	for t in ["summon", "bonus_hp_per_upgrade", "fetch_skill", "self_destruct"]:
+		check(CardData.ASSEMBLE_EFFECT_TYPES.has(t), "R775：动作 %s 已登记白名单" % t)
+	# ⑥ 堡垒产物行为：upgraded 扳机触发 bonus_hp_per_upgrade(3) → 额外 +3 生命（不加力量）
+	var base := CardData.new()
+	base.card_name = "测试底座"
+	base.kind = "盟友"
+	base.health = 10
+	base.power = 2
+	base.cost = 0
+	var built := Rules.build(base, fort.upper_effect, fort.lower_effect)
+	check(built != null and built.assemble.trigger == "upgraded", "R775：堡垒组合产物 upgraded 扳机")
+	var e1 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e1.ai_enabled = false
+	var q1 := e1.state.place(CardData.from_dict(built.to_dict()), Vector2i(4, 0), "self")
+	e1._assemble_execute(q1, Vector2i(4, 0), "upgraded")
+	check(q1.upgrade_hp == 3 and q1.health == 13 and q1.upgrade_atk == 0,
+			"R775：bonus_hp_per_upgrade(3) 额外 +3 生命（不加力量）")
+	# ⑦ 幽灵产物行为：turn_start 自毁 → death 加卡
+	var gbuilt := Rules.build(base, ghost.upper_effect, ghost.lower_effect)
+	check(gbuilt != null and gbuilt.assemble.trigger == "death"
+			and (gbuilt.assemble.get("turn_start_effects", []) as Array).size() == 1,
+			"R775：幽灵组合产物 = death + turn_start 自毁段")
+	var e2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e2.ai_enabled = false
+	var skill := CardData.new()
+	skill.card_name = "测试技能"
+	skill.kind = "技能"
+	skill.cost = 1
+	e2.state.deck.append(skill)
+	var q2 := e2.state.place(CardData.from_dict(gbuilt.to_dict()), Vector2i(4, 0), "self")
+	e2._assemble_execute(q2, Vector2i(4, 0), "turn_start")
+	check(not e2.state.board.has(Vector2i(4, 0)), "R775：幽灵回合开始自毁（单位已离场）")
+	check(e2.state.hand.size() == 1 and str(e2.state.hand[0].card_name) == "测试技能",
+			"R775：幽灵死亡后从卡组随机技能卡入手")
 

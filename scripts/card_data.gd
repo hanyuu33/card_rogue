@@ -375,6 +375,8 @@ const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"next_effect_discount", "next_ally_discount", "add_effect_from_deck",
 	"hand_skill_discount", "hp_per_zero_skill",
 	"fetch_cheapest_ally", "recall_ally_from_discard",
+	# R775：三条新动作 —— 堡垒「每层改造 +生命」/ 影子猫·幽灵「从卡组随机技能卡入手」/ 幽灵「自毁」。
+	"bonus_hp_per_upgrade", "fetch_skill", "self_destruct",
 ]
 
 
@@ -473,6 +475,11 @@ static func from_dict(d: Dictionary) -> CardData:
 		var pv_out: Dictionary = {}
 		if asm_in.get("passive", {}) is Dictionary:
 			pv_out = (asm_in.get("passive", {}) as Dictionary).duplicate(true)
+		# R775：上半的**独立回合开始段**（幽灵「自己回合开始时自毁」）也要一起重建 ——
+		# 漏了它，组合卡一被复制回合开始自毁就凭空消失。
+		var ts_out: Array = []
+		for fx in (asm_in.get("turn_start_effects", []) as Array):
+			ts_out.append((fx as Dictionary).duplicate(true))
 		c.assemble = {
 			"trigger": str(asm_in.get("trigger", "")),
 			"effects": fx_out,
@@ -481,6 +488,7 @@ static func from_dict(d: Dictionary) -> CardData:
 			"passive": pv_out,
 			"extra_affixes": xa_out,
 			"enter_effects": efx_out,
+			"turn_start_effects": ts_out,
 		}
 	# R559 组合：上下半句随复制通道走（深拷贝），漏了它待选卡拖进槽位取不到效果。
 	c.upper_effect = (d.get("upper_effect", {}) as Dictionary).duplicate(true)
