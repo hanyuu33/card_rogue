@@ -678,6 +678,8 @@ var _floaters: Array = []       # {pos, text, col, start, dur}                �
 ## R770：伤害数字底板（只有拖卡预览用）。每帧 new 一个 StyleBoxFlat 太浪费 →
 ## 复用同一实例，只改颜色 / 圆角。
 var _dmg_plate_box: StyleBoxFlat = null
+## R770b：说明类飘字（胶囊徽标）的 1px 色相细边。同样复用实例。
+var _dmg_edge_box: StyleBoxFlat = null
 ## R386：战场对话气泡（`SpeechBubble` 实例）。台词由关卡 / 道具 / 引擎播报通过
 ## `say_bubble()` 排进来；本层只负责按格锚点绘制、排队推进与回收。
 ## 同时最多 3 句 —— 再多就互相盖住；同一张卡连说两句走**队列**（一句接一句），
@@ -16630,14 +16632,12 @@ func _draw_floaters() -> void:
 		# 说明类分支不改 → 不钉回来就会被上一张数字的缩放 / 旋转带歪。
 		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
 		if not is_num:
-			# R770：说明类飘字（法术名 / 「接下 5」/「冰封」）保持 R140 的带底条样式 ——
-			# 它们要**读**，不是要感受分量；换成大字反而挤掉信息。
+			# R770b：说明类飘字（法术名 / 「接下 5」/「冰封」）从「便利贴方块」换成
+			# **胶囊徽标** —— 它们要**读**，所以不进数字那套弹性弹字；但样式得跟
+			# 数字同代，不然同屏一个贴纸一个大字。
 			var alpha := 1.0 - t * t
-			var size := int(f.get("size", 15))
-			col.a = alpha
-			_draw_string_box_center(_font_bold, size, txt,
-					base_pos + Vector2(0, -30.0 * t), col,
-					Color(TEXT_BG.r, TEXT_BG.g, TEXT_BG.b, TEXT_BG.a * alpha))
+			_paint_status_label(_font_bold, base_pos + Vector2(0, -30.0 * t), txt,
+					col, alpha, int(f.get("size", 15)))
 			continue
 		# R770：伤害 / 治疗数字 —— 弹性 pop + 双层描边 + 厚度层 + 顶高光。
 		# 字号仍以调用方给的 `size`（历史默认 20）为基准，按分级再放大一档。
@@ -16724,7 +16724,11 @@ func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
 	# 比旧版那个硬方块窄一大圈，但压得够实（不然会和卡面数值糊成一片）。
 	var plate := Rect2(center.x - w * 0.5 - 8.0, center.y - float(px) * 0.52 - 3.0,
 			w + 16.0, float(px) + 6.0)
-	_dmg_plate(plate, Color(0.045, 0.034, 0.027, 0.82), 7)
+	_dmg_plate(plate, Color(0.045, 0.034, 0.027, 0.86), 7)
+	# R770b：再加一圈同色相细边 —— 纯黑块压在浅卡面上像贴了块膏药，
+	# 有边才像「数值芯片」，也顺手把它的边和卡面数值行分开。
+	var dep: Color = pal["depth"]
+	_dmg_edge(plate, Color(dep.r, dep.g, dep.b, 0.88), 7)
 	_paint_dmg_number(_font_bold, center, px, txt, 1.0, pal, tier)
 
 
@@ -16737,6 +16741,60 @@ func _dmg_plate(rect: Rect2, col: Color, rad: int) -> void:
 	_dmg_plate_box.bg_color = col
 	_dmg_plate_box.set_corner_radius_all(rad)
 	draw_style_box(_dmg_plate_box, rect)
+
+
+func _dmg_edge(rect: Rect2, col: Color, rad: int) -> void:
+	## R770b：1px 色相细边（透明底 + 一圈 border）。Capsule 的圆角直接给 rad
+	## （= 高的一半），StyleBoxFlat 会自动夹到合法范围。
+	if _dmg_edge_box == null:
+		_dmg_edge_box = StyleBoxFlat.new()
+		_dmg_edge_box.anti_aliasing = true
+		_dmg_edge_box.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+		_dmg_edge_box.set_border_width_all(1)
+	_dmg_edge_box.border_color = col
+	_dmg_edge_box.set_corner_radius_all(rad)
+	draw_style_box(_dmg_edge_box, rect)
+
+
+func _paint_status_label(font: Font, center: Vector2, text: String, tint: Color,
+		alpha: float, px: int) -> void:
+	## R770b：说明类飘字的**唯一画法**（胶囊徽标）。`center` 是屏幕空间的中心。
+	## 五层：落地阴影 → 深底 → 上半弧面高光 → 1px 色相细边 → 描边文字。
+	## ⚠️ 与 `_paint_dmg_number()` 一样**不改变换**；几何与配色全部取 `DmgNumber`。
+	if px < 7:
+		px = 7
+	var met := DmgNumber.label_metrics(px)
+	var pad_x := float(met["pad_x"])
+	var pad_y := float(met["pad_y"])
+	var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px)
+	var h := font.get_height(px)
+	var rect := Rect2(center.x - sz.x * 0.5 - pad_x, center.y - h * 0.5 - pad_y,
+			sz.x + pad_x * 2.0, h + pad_y * 2.0)
+	var rad := int(round(rect.size.y * 0.5))
+	var edge := DmgNumber.label_edge(tint)
+	# ⓪ 外圈微光：比本体大 2px 的一圈同色相淡光 —— 水面 / 木纹这类高频底图上，
+	# 没有这层胶囊的边会和背景咬在一起。
+	_dmg_plate(rect.grow(2.0),
+			Color(edge.r, edge.g, edge.b, DmgNumber.LABEL_GLOW_ALPHA * alpha), rad + 2)
+	# ① 落地阴影：往下错 2px，让胶囊「贴」在木板上而不是浮着
+	_dmg_plate(Rect2(rect.position + Vector2(0.0, 2.0), rect.size),
+			Color(0.0, 0.0, 0.0, DmgNumber.LABEL_SHADOW_ALPHA * alpha), rad)
+	# ② 主体深底
+	_dmg_plate(rect, Color(0.055, 0.045, 0.038, DmgNumber.LABEL_PLATE_ALPHA * alpha), rad)
+	# ③ 上半弧面高光：圆管的上沿受光，做出立体；半径夹一次，别超过自身半高
+	var arc := Rect2(rect.position + Vector2(0.0, 1.0),
+			Vector2(rect.size.x, rect.size.y * 0.46))
+	_dmg_plate(arc, Color(1.0, 1.0, 1.0, DmgNumber.LABEL_ARC_ALPHA * alpha),
+			mini(rad, int(arc.size.y * 0.5)))
+	# ④ 一圈色相细边
+	_dmg_edge(rect, Color(edge.r, edge.g, edge.b, DmgNumber.LABEL_EDGE_ALPHA * alpha), rad)
+	# ⑤ 字：先深描边再填 —— 底色已经压住底图，描边只为让笔画立起来
+	var ink := DmgNumber.label_ink(tint)
+	var pos := Vector2(center.x - sz.x * 0.5, center.y + float(px) * 0.36)
+	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
+			int(met["outline"]), Color(0.04, 0.03, 0.025, 0.85 * alpha))
+	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
+			Color(ink.r, ink.g, ink.b, alpha))
 
 
 func _draw_highlights() -> void:

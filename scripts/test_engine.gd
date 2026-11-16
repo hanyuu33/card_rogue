@@ -61426,8 +61426,25 @@ func _init() -> void:
 			and r770_bs.find("_paint_dmg_number(_font_bold, Vector2.ZERO") >= 0
 			and r770_bs.find("_paint_dmg_number(_font_bold, center") >= 0,
 			"R770 源码：飘字与预览共用 _paint_dmg_number（数字 + 预览两个调用点）")
-	check_src(r770_bs.find("_draw_string_box_center(_font_bold, size, txt,") >= 0,
-			"R770 源码：说明类飘字仍走带底条样式（不能全换成大字）")
+	# R770b：说明类飘字改走胶囊徽标 —— 守卫换成新口，且**必须是徽标口**，
+	# 不许顺手把它塞进数字的弹字（说明文字要读，不需要「分量」）。
+	check_src(r770_bs.find("_paint_status_label(_font_bold") >= 0
+			and r770_bs.find("_dmg_edge(rect,") >= 0,
+			"R770b 源码：说明类飘字走 _paint_status_label（胶囊徽标），不再垫直角方块")
+	# 徽标几何：留白随字号长，且上下小于左右（长条胶囊，不是正方形贴纸）
+	var r770_lm := DmgNumber.label_metrics(20)
+	check(int(r770_lm["pad_x"]) > int(r770_lm["pad_y"]),
+			"R770b 徽标：左右留白 > 上下留白（横向长条）")
+	check(int(r770_lm["pad_y"]) * 2 + 20 < 40,
+			"R770b 徽标：胶囊总高要压得住，别把飘字撑成大块")
+	check(int(r770_lm["outline"]) >= 2, "R770b 徽标：描边至少 2px（笔画才立得住）")
+	# 字面比细边亮、且两者都留色相：冰封的冷色不能被洗成灰白
+	var r770_ink := DmgNumber.label_ink(Color("8ad4f0"))
+	var r770_edg := DmgNumber.label_edge(Color("8ad4f0"))
+	check(r770_ink.v > 0.95 and r770_ink.v - r770_edg.v > 0.15,
+			"R770b 徽标：字面接近全亮、细边明显更暗（边比字亮会抢视线）")
+	check(absf(r770_ink.h - Color("8ad4f0").h) < 0.03,
+			"R770b 徽标：字面保留色相（冰封仍是冷色）")
 
 
 

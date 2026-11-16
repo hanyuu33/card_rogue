@@ -48,6 +48,41 @@ const EDGE_FATAL := Color("1f0502")
 const HI_ALPHA := Color(1.0, 1.0, 1.0, 0.24)
 
 
+## ---------------------------------------------------------------- 说明类飘字（徽标）
+## R770b：说明类飘字（「冰封」「隐藏能源 -3」「接下 5」）原来是**便利贴** —— 直角深色方块，
+## 和 GBF 化的数字摆在一起像两个年代的 UI。改成**胶囊徽标**：落地阴影 + 深底 +
+## 上半弧面高光 + 一圈色相细边 + 描边文字。它们仍然要**读**（所以不进数字的弹字曲线），
+## 但不再是「贴纸」。规格照样收在这里，绘制层只取数。
+const LABEL_PAD_X_RATIO := 0.62   ## 左右留白 / 字号
+const LABEL_PAD_Y_RATIO := 0.26   ## 上下留白 / 字号（小于左右 → 天然长条胶囊）
+const LABEL_PLATE_ALPHA := 0.80   ## 深底不透明度（比旧的 TEXT_BG 0.76 略实，因为面积小）
+const LABEL_EDGE_ALPHA := 0.85    ## 色相细边（太淡等于没有：0.52 实地几乎看不见）
+const LABEL_SHADOW_ALPHA := 0.26  ## 落地阴影
+const LABEL_ARC_ALPHA := 0.07     ## 上半弧面高光
+const LABEL_GLOW_ALPHA := 0.10    ## 外圈微光（把胶囊从底图上托起来）
+
+
+static func label_metrics(px: int) -> Dictionary:
+	## 徽标的几何：留白与描边宽度。字号越小比例越要紧一点，否则小字被留白淹没。
+	var p := maxi(7, px)
+	return {
+		"pad_x": int(round(float(p) * LABEL_PAD_X_RATIO)),
+		"pad_y": int(round(float(p) * LABEL_PAD_Y_RATIO)),
+		"outline": maxi(2, int(round(float(p) * 0.18))),
+	}
+
+
+static func label_ink(tint: Color) -> Color:
+	## 字面：留住色相、压饱和、亮度拉满。徽标底已经是深色 —— 字再暗就糊；
+	## 直接写纯白又会把「冰封」的冷色 / 「隐藏能源」的紫调丢掉。
+	return Color.from_hsv(tint.h, minf(tint.s * 0.55, 0.45), 1.0)
+
+
+static func label_edge(tint: Color) -> Color:
+	## 细边：同色相但比字暗一档。边比字亮会抢视线，也容易变成霓虹条。
+	return Color.from_hsv(tint.h, minf(tint.s, 1.0), 0.74)
+
+
 ## ---------------------------------------------------------------- 分级与配色
 static func tier_of_amount(amount: int) -> int:
 	## 绝对值分级 —— 治疗走正数，重击的门槛与伤害同口径。
@@ -178,6 +213,6 @@ static func preview_size(tier: int) -> int:
 		TIER_FATAL:
 			return 38
 		TIER_HEAVY:
-			return 32
+			return 33
 		_:
-			return 26
+			return 28
