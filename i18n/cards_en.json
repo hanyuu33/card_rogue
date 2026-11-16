@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 329,
+ "count": 331,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1321,6 +1321,14 @@
   "9268": {
    "name": "Pipe Organ",
    "effect_text": "When it attacks, add a random Skill card from your deck to your Hand; its cost is -1 this turn. While in play, whenever you use a Skill card, deal 3 damage to all enemies."
+  },
+  "9269": {
+   "name": "Rainbow Verse",
+   "effect_text": "Pick 3 different other classes at random. Add one random Ally or Skill card of each to your Hand; its cost is reduced by 1 for the rest of this battle."
+  },
+  "9270": {
+   "name": "Wind Song",
+   "effect_text": "All Allies gain +1 Move Speed. Allies of another class instead act twice each turn."
   }
  }
 }

@@ -794,6 +794,21 @@ const RECRUIT_ID:= 9264
 #      离手自动恢复原价，不必在那十来个离手口逐个清标记）。
 const CALL_ID:= 9266
 const CALL_ENERGY:= 1     # 本局每回合费用 +1
+# R777 彩虹诗（9269，吟游诗人 2 费稀有技能）：
+#   随机 **3 个不同**的其他职业，各摇一张「盟友或技能卡」加入手卡，
+#   这些卡**本局**（= 本场战斗内）费用各 -1。
+# ⚠️ 减费走 `state.hand_cost_delta`（手卡内减费唯一口径），**不是** `hand_free` ——
+#    后者是「归 0」，这里要的是「-N 且可叠」（同一天手里两张彩虹诗就是 -2）。
+const RAINBOW_ID:= 9269
+const RAINBOW_CLASSES:= 3   # 摇几个不同职业
+const RAINBOW_CUT:= 1       # 每张费用本局 -1
+# R777b 疾风乐章（9270，吟游诗人 2 费史诗效果卡）：
+#   己方所有**盟友**移动速度 +1；**其他职业盟友**不给移速，改为「一回合行动两次」。
+# ⚠️ 双动复用哈气那套 `Placement.haste_double`（单点永久、单位离场自动消失）——
+#    `unit_actions()` 每回合都读它，所以不必在回合开始再刷一遍；
+#    写成「改 card.actions」会把双动焊到卡面数值上，改造 / 复制卡都会跟着走，不行。
+const WIND_SONG_ID:= 9270
+const WIND_SONG_SPEED:= 1     # 非其他职业盟友：移动速度 +1
 const CALL_COST_GAP:= 1   # 找的盟友 = 本卡费用 +1
 # R776 激励乐章（9267，吟游诗人 1 费普通技能）：**本回合**场上所有己方盟友 +N 力量；
 # 「原本职业不属于自己」的盟友（`_other_class_card()` 同一判据）改为 +M。
@@ -9099,6 +9114,9 @@ func _free_effect_play(card: CardData, reason: String) -> bool:
 	# R689 生命循环 9150（效果卡）：使用时己方所有盟友获得「次元」+「死亡」。
 	if card.id == LIFE_CYCLE_ID:
 		_life_cycle_all(SIDE_SELF)
+	# R777b 疾风乐章 9270（效果卡）：己方盟友移速 +1；其他职业盟友改为每回合行动两次。
+	if card.id == WIND_SONG_ID:
+		_wind_song_apply(SIDE_SELF)
 	_log("%s：%s（效果区持续生效）" % [reason, card.card_name])
 
 	state.apply_extra_actions(SIDE_SELF)
@@ -10795,6 +10813,80 @@ func _random_call_ally(base: CardData) -> CardData:
 	return pool[rng.randi() % pool.size()]
 
 
+func _roll_rainbow_cards() -> Array:
+	## R777 彩虹诗（9269）：**随机 3 个不同**的其他职业，各摇一张「盟友或技能卡」。
+	## * 候选职业 = `PlayerClass.ids()` 去掉玩家当前职业 —— 隐藏职业（吟游诗人）
+	##   天然不在 `ids()` 里，所以它那几张永远不会被非吟游诗人摇到（R761 的规矩）；
+	## * 挑职业走 Fisher-Yates 前缀，随机源是引擎 `rng` → 同种子同结果、回放可复现；
+	## * 每个职业的池子走 `reward_pool_for(cls)`（剧情锁 / 本局禁卡 / event_only 一并生效），
+	##   再按 `card_class == cls` 精确定位本职业卡 —— 通用卡（class 留空）不算「其他职业」；
+	## * 池空 → 退回该职业的全部卡（与招募 9264 / 森林的朋友们 9183 同一条退路）；
+	##   再空就少给一张，不拿别职业的卡凑数（凑了就破坏「不同职业」这条保证）。
+	## 返回**独立副本**：减费表以卡对象为键，绝不能拿卡库共享实例（R281 的教训）。
+	var repo := CardRepo.load_json()
+	var classes: Array[String] = []
+	for cls: String in PlayerClass.ids():
+		if cls == RunState.player_class:
+			continue
+		classes.append(cls)
+	var want := mini(RAINBOW_CLASSES, classes.size())
+	for i in want:
+		var j := i + int(rng.randi() % (classes.size() - i))
+		var tmp: String = classes[i]
+		classes[i] = classes[j]
+		classes[j] = tmp
+	var out: Array = []
+	for k in want:
+		var cls2: String = classes[k]
+		var pool: Array[CardData] = []
+		for c: CardData in repo.reward_pool_for(cls2):
+			if c.card_class == cls2 and (c.kind == "盟友" or c.kind == "技能"):
+				pool.append(c)
+		if pool.is_empty():
+			for c2: CardData in repo.player_cards():
+				if c2.card_class == cls2 and (c2.kind == "盟友" or c2.kind == "技能"):
+					pool.append(c2)
+		if pool.is_empty():
+			continue
+		out.append(_new_own_card(pool[rng.randi() % pool.size()]))
+	return out
+
+
+func _wind_song_apply(side: String) -> void:
+	## R777b 疾风乐章（9270）：己方所有**盟友**移动速度 +1；
+	## 「原本职业不属于自己」的盟友（`_other_class_card()` 唯一判据）改为**一回合行动两次**。
+	## * 双动走 `Placement.haste_double`（与哈气同一条单点永久通道）→ `unit_actions()`
+	##   每回合自动给到，`reset_units()` 也不用额外处理；
+	## * 当回合立刻能多动一次：走 `grant_actions()` 的差额口（已经把两轮走完的单位
+	##   会撤掉横置、补出新的一轮）—— 这正是「打出当回合就生效」的成色；
+	## * 工事 / 场地不算「盟友」（卡面写的是盟友）；
+	## * 遍历按格子排序 → 同种子回放时日志顺序稳定。
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		cells.append(cell)
+	cells.sort()
+	var moved := 0
+	var doubled := 0
+	for cell2: Vector2i in cells:
+		var p: Placement = state.unit_at(cell2)
+		if p == null or p.owner != side or p.card.kind != "盟友":
+			continue
+		if _other_class_card(p.card):
+			p.haste_double = true
+			state.grant_actions(p, FieldState.HASTE_ACTIONS)
+			doubled += 1
+			_log("疾风乐章：%s（其他职业）一回合行动两次" % p.card.card_name)
+		else:
+			# 与改造 `_feed_upgrade_card()` 同一口径：场上 card 已是独立副本，直接抬数值。
+			p.card.move_speed += WIND_SONG_SPEED
+			moved += 1
+			_log("疾风乐章：%s 移动速度 +%d（→%d）"
+					% [p.card.card_name, WIND_SONG_SPEED, p.card.move_speed])
+	if moved + doubled <= 0:
+		_log("疾风乐章：场上没有盟友 → 效果落空")
+	action.emit("wind_song", {"moved": moved, "doubled": doubled, "side": side})
+
+
 func _roll_recruit_cards() -> Array:
 	## R761 招募（9264）：**每个可见职业各摇一张盟友**当候选（店长口径「每种职业各一张」）。
 	## 池子走 `reward_pool_for(职业)` —— 剧情锁与本局禁卡一并生效；空了再退回该职业全部
@@ -11769,6 +11861,38 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			if not cl_got:
 				return "费用 +%d；手牌已满，「%s」进弃牌区" % [CALL_ENERGY, cl_copy.card_name]
 			return "费用 +%d；「%s」加入手卡，其费用本局为 0" % [CALL_ENERGY, cl_copy.card_name]
+		RAINBOW_ID:
+			# 彩虹诗（9269，R777，吟游诗人 2 费稀有技能）：
+			#   随机 3 个不同其他职业，各摇一张「盟友或技能卡」入手，其费用本局 -1。
+			# * 「本局 -1」= `state.hand_cost_delta`：表挂在 FieldState 上，一场战斗一个 →
+			#   跨回合有效，换层 / 新战斗自然复位（与「呼唤」用 hand_free 只是口径不同）；
+			# * 手牌满 → `_grant_to_hand` 通用口径（进弃牌区，不蒸发）：那张按原价躺在弃牌堆，
+			#   `cost_of` 的 `hand.has()` 判据自然不生效，抽回手里才 -1 —— 不必特判；
+			# * 摇不满 3 张（其他职业池被剧情锁 / 禁卡清空）→ 有几张给几张。
+			var rb_list := _roll_rainbow_cards()
+			if rb_list.is_empty():
+				_log("彩虹诗：卡池里摇不出其他职业的盟友或技能卡")
+				return "卡池里没有可借的卡，效果落空"
+			var rb_names: Array[String] = []
+			var rb_landed := 0
+			for rb_c: CardData in rb_list:
+				var rb_got := _grant_to_hand(rb_c, "彩虹诗")
+				state.hand_cost_delta[rb_c] = int(state.hand_cost_delta.get(rb_c, 0)) + RAINBOW_CUT
+				rb_names.append(rb_c.card_name)
+				if rb_got:
+					rb_landed += 1
+			_log("彩虹诗：%d 张%s（%s），各费用本局 -%d" % [
+					rb_landed, "加入手卡" if rb_landed == rb_list.size() else "入手 / 弃牌区",
+					"、".join(rb_names), RAINBOW_CUT])
+			action.emit("rainbow", {"cards": rb_list, "landed": rb_landed,
+					"cut": RAINBOW_CUT})
+			if rb_landed == rb_list.size():
+				return "%d 张加入手卡，其费用本局 -%d" % [rb_landed, RAINBOW_CUT]
+			if rb_landed == 0:
+				return "手牌已满，%d 张改投弃牌区" % rb_list.size()
+			# 手牌只装得下一部分：报实际入手张数，别把进弃牌区的也算成「加入手卡」。
+			return "手牌只装下 %d 张（另 %d 张进弃牌区），其费用本局 -%d" % [
+					rb_landed, rb_list.size() - rb_landed, RAINBOW_CUT]
 		RECRUIT_ID:
 			# 招募（9264，R761，吟游诗人 0 费初始技能）：
 			#   从**三个其他职业的盟友**里各摇一张当候选，玩家选一张加入手卡。

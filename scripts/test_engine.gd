@@ -387,9 +387,9 @@ func _init() -> void:
 
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
 
-	check(repo.all_cards().size() == 329,
+	check(repo.all_cards().size() == 331,
 
-			"图鉴 = 329 张（R776 +2：激励乐章 9267 / 管风琴 9268（吟游诗人 · 1 费普通技能 / 4 费史诗工事）；R773 +1：呼唤 9266（吟游诗人 · 0 费普通技能 · rarity 0，但职业隐藏 → 默认不进图鉴 / 随机池）；R766 +1：懊悔 9265（猴爪的代价 · 1 费诅咒 · 次元 · 选弃牌区一张其他职业卡消失）；R761 +2：杜鹃 9263 / 招募 9264（吟游诗人 · 隐藏职业的初始卡，rarity 3 不进随机池）；R758 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262（三个单位一套）；R756 +1：代偿 9252（契约核心的代价 · 2 费诅咒 · 次元 · 手卡里其余卡 +1 费）；R692 +2：鸭妈妈 9250 / 小鸭 9251；R689 +2：种子 9248 / 被眷顾者 9249；R632 −1：删工事罐子 9158；R582 +援护炮击 9192 / 技术结合 9193；R580 +猫鼠游戏 9190 / 黑暗嵌合 9191；R572 +宝石兽 9246 / 拼装工厂 9247（均稀有，进池）；R561 −3：删拼装主体 8083/8087/8088，拼装并入组合；R560 +传授 8085/8086；R559 +传授 8084；R556 +毒沼 8082；R541 +普罗诺亚之影 9242 / 炮击构状体 9243 / 护盾构状体 9244 / 迅捷构状体 9245；R539 +激光炮 9241；R536 删旧土元素 9218 −1；R525 +巴兰-α 9237 / 安西-β 9238 / 塔基尼-γ 9239 / 通缉令 9240（第二层 Boss「叛逃机械」）；R523 +土元素 9235 / 火元素 9236；R505 +恐惧收割；R504 +恐惧化身 / 噩兆 / 厄运的使者 / 灵魂收割者；R503 删 14 张陷阱系 + 加 6 张标记系；R502 +执法者 9223（第二层精英简单「执法者的审判」敌方单位）；R496 +忒修斯奇械 9222（机械之心 · 稀有盟友）；R494 +阵地保卫者 9220 / 结合者 9221；R493 +土元素 9218 / 压感地雷 9219；R473 +乱打 9215 / 飞踢 9216 / 冲拳 9217（武术大师事件专属，rarity 5 + traits「事件」不进随机池）；R467 +枭熊之怒 9212（洞穴关卡效果）+ 枭熊 9213（传说卡 · event_only，不进随机池）+ 枭熊 9214（洞穴敌方单位）；R465 +折射炮 9211（机械之心 · 3 费史诗效果卡）；R461 +寒霜结界 9210（寒冰防线敌方效果卡 · 冰封从冰冻术士的战吼搬过来）；R451 +量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209（第二层「母舰空袭」，R506 上调精英困难）；R446 +雪豹 8081（第一层事件「雪豹出现」选项 2）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄；漩涡 R757 起为普通池卡，鹅仍剧情锁）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+			"图鉴 = 331 张（R777b +1：疾风乐章 9270（吟游诗人 · 2 费史诗效果，职业隐藏 → 不进图鉴 / 随机池）；R777 +1：彩虹诗 9269（吟游诗人 · 2 费稀有技能，职业隐藏 → 不进图鉴 / 随机池）；R776 +2：激励乐章 9267 / 管风琴 9268（吟游诗人 · 1 费普通技能 / 4 费史诗工事）；R773 +1：呼唤 9266（吟游诗人 · 0 费普通技能 · rarity 0，但职业隐藏 → 默认不进图鉴 / 随机池）；R766 +1：懊悔 9265（猴爪的代价 · 1 费诅咒 · 次元 · 选弃牌区一张其他职业卡消失）；R761 +2：杜鹃 9263 / 招募 9264（吟游诗人 · 隐藏职业的初始卡，rarity 3 不进随机池）；R758 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262（三个单位一套）；R756 +1：代偿 9252（契约核心的代价 · 2 费诅咒 · 次元 · 手卡里其余卡 +1 费）；R692 +2：鸭妈妈 9250 / 小鸭 9251；R689 +2：种子 9248 / 被眷顾者 9249；R632 −1：删工事罐子 9158；R582 +援护炮击 9192 / 技术结合 9193；R580 +猫鼠游戏 9190 / 黑暗嵌合 9191；R572 +宝石兽 9246 / 拼装工厂 9247（均稀有，进池）；R561 −3：删拼装主体 8083/8087/8088，拼装并入组合；R560 +传授 8085/8086；R559 +传授 8084；R556 +毒沼 8082；R541 +普罗诺亚之影 9242 / 炮击构状体 9243 / 护盾构状体 9244 / 迅捷构状体 9245；R539 +激光炮 9241；R536 删旧土元素 9218 −1；R525 +巴兰-α 9237 / 安西-β 9238 / 塔基尼-γ 9239 / 通缉令 9240（第二层 Boss「叛逃机械」）；R523 +土元素 9235 / 火元素 9236；R505 +恐惧收割；R504 +恐惧化身 / 噩兆 / 厄运的使者 / 灵魂收割者；R503 删 14 张陷阱系 + 加 6 张标记系；R502 +执法者 9223（第二层精英简单「执法者的审判」敌方单位）；R496 +忒修斯奇械 9222（机械之心 · 稀有盟友）；R494 +阵地保卫者 9220 / 结合者 9221；R493 +土元素 9218 / 压感地雷 9219；R473 +乱打 9215 / 飞踢 9216 / 冲拳 9217（武术大师事件专属，rarity 5 + traits「事件」不进随机池）；R467 +枭熊之怒 9212（洞穴关卡效果）+ 枭熊 9213（传说卡 · event_only，不进随机池）+ 枭熊 9214（洞穴敌方单位）；R465 +折射炮 9211（机械之心 · 3 费史诗效果卡）；R461 +寒霜结界 9210（寒冰防线敌方效果卡 · 冰封从冰冻术士的战吼搬过来）；R451 +量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209（第二层「母舰空袭」，R506 上调精英困难）；R446 +雪豹 8081（第一层事件「雪豹出现」选项 2）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄；漩涡 R757 起为普通池卡，鹅仍剧情锁）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 
 			% repo.all_cards().size())
 
@@ -415,9 +415,9 @@ func _init() -> void:
 
 	var grp_enemy := repo.enemy_cards()
 
-	check(grp_player.size() == 251 and grp_enemy.size() == 78,
+	check(grp_player.size() == 253 and grp_enemy.size() == 78,
 
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 251 / 78（R776 玩家 +2：激励乐章 9267 / 管风琴 9268；R773 玩家 +1：呼唤 9266；R766 玩家 +1：懊悔 9265；R761 玩家 +2：杜鹃 9263 / 招募 9264（吟游诗人）；R758 敌人 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262；R692 玩家 +2：鸭妈妈 9250 / 小鸭 9251；R689 玩家 +2；R632 玩家 −1：删工事罐子 9158；R582 玩家 +2；R580 玩家 +2；R572 玩家 +2：宝石兽 9246 / 拼装工厂 9247；R561 玩家 −3：删拼装主体 8083/8087/8088；R560 玩家 +2：传授 8085/8086；R559 玩家 +1：传授 8084；R556 玩家 +1：毒沼 8082；R541 敌人 +4：普罗诺亚之影 / 炮击构状体 / 护盾构状体 / 迅捷构状体；R536 玩家 −1 = 删旧土元素 9218；R525 敌人 +4：叛逃机械三只 + 通缉令；R523 玩家 +2：土元素 / 火元素；R505 玩家 +1；R504 玩家 +4；R503 玩家 -14 +6；（R502 敌人 +1：执法者 9223）；R496 玩家 +1：忒修斯奇械；R494 玩家 +2：阵地保卫者 / 结合者）；R493 玩家 +2：土元素 / 压感地雷；R473 玩家 +3（乱打 / 飞踢 / 冲拳）；R467 玩家 +1（枭熊 9213 · 传说卡）、敌人 +2（枭熊之怒 9212 · 枭熊 9214）；R465 玩家 +1（折射炮 9211）；R461 +1 张敌方关卡效果卡（寒霜结界 9210 · 寒冰防线）；R451 +3 张敌方卡（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R393 +3 张玩家卡；R406 +1 张玩家卡（独行 9189）；R404 +1 张玩家卡（涂装机器人 8080）；R397 +1 张敌方卡（量产型赫尔墨斯 9188）；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 253 / 78（R777b 玩家 +1：疾风乐章 9270；R777 玩家 +1：彩虹诗 9269；R776 玩家 +2：激励乐章 9267 / 管风琴 9268；R773 玩家 +1：呼唤 9266；R766 玩家 +1：懊悔 9265；R761 玩家 +2：杜鹃 9263 / 招募 9264（吟游诗人）；R758 敌人 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262；R692 玩家 +2：鸭妈妈 9250 / 小鸭 9251；R689 玩家 +2；R632 玩家 −1：删工事罐子 9158；R582 玩家 +2；R580 玩家 +2；R572 玩家 +2：宝石兽 9246 / 拼装工厂 9247；R561 玩家 −3：删拼装主体 8083/8087/8088；R560 玩家 +2：传授 8085/8086；R559 玩家 +1：传授 8084；R556 玩家 +1：毒沼 8082；R541 敌人 +4：普罗诺亚之影 / 炮击构状体 / 护盾构状体 / 迅捷构状体；R536 玩家 −1 = 删旧土元素 9218；R525 敌人 +4：叛逃机械三只 + 通缉令；R523 玩家 +2：土元素 / 火元素；R505 玩家 +1；R504 玩家 +4；R503 玩家 -14 +6；（R502 敌人 +1：执法者 9223）；R496 玩家 +1：忒修斯奇械；R494 玩家 +2：阵地保卫者 / 结合者）；R493 玩家 +2：土元素 / 压感地雷；R473 玩家 +3（乱打 / 飞踢 / 冲拳）；R467 玩家 +1（枭熊 9213 · 传说卡）、敌人 +2（枭熊之怒 9212 · 枭熊 9214）；R465 玩家 +1（折射炮 9211）；R461 +1 张敌方关卡效果卡（寒霜结界 9210 · 寒冰防线）；R451 +3 张敌方卡（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R393 +3 张玩家卡；R406 +1 张玩家卡（独行 9189）；R404 +1 张玩家卡（涂装机器人 8080）；R397 +1 张敌方卡（量产型赫尔墨斯 9188）；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 
 			% [grp_player.size(), grp_enemy.size()])
 
@@ -18826,13 +18826,13 @@ func _init() -> void:
 
 		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 75
 
-			and int(dr_cls_count.get(PlayerClass.BARD, 0)) == 5
+			and int(dr_cls_count.get(PlayerClass.BARD, 0)) == 7
 
 			and int(dr_cls_count.get("敌人", 0)) == 78
 
 			and int(dr_cls_count.get("", 0)) == 27,
 
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 78 / 66 / 75 / 78 / 吟游诗人 5 / 公用 27（R776 吟游诗人 +2：激励乐章 9267 / 管风琴 9268；R773 吟游诗人 +1：呼唤 9266；R766 公用 +1：懊悔 9265；R761 吟游诗人 +2：杜鹃 9263 / 招募 9264）；R758 敌人 +3（常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262）；R756 公用 +1（代偿 9252）；R689 森林精魄 +2（种子 9248 / 被眷顾者 9249）；R582 机械之心 +2；R580 暗影刺客 +2（猫鼠游戏 9190 / 黑暗嵌合 9191）；R572 森林精魄 +1（宝石兽 9246）/ 机械之心 +1（拼装工厂 9247）；R561 森林精魄 −1（删树灵雏形 8087）/ 暗影刺客 −1（删影偶 8088）/ 机械之心 −1（删拼装原型 8083）；R560 暗影刺客 +1（影缚 8085）/ 机械之心 +1（重构 8086）；R559 森林精魄 +1（传授 8084）；R541 敌人 +4（普罗诺亚之影 / 三种构状体）；R539 +激光炮 9241；R536 森林精魄 −1（删旧土元素 9218）；R525 敌人 +4（叛逃机械三只 + 通缉令）；R523 森林精魄 +2；R505 暗影刺客 +1；R504 暗影刺客 +4；R503 暗影刺客 -8（删 14 增 6）；R502 敌人 +1（执法者 9223）；R496 机械之心 +1（忒修斯奇械 9222）；R494 机械之心 +2（阵地保卫者 / 结合者）；R493 森林精魄 +1（土元素）/ 机械之心 +1（压感地雷）；R467 敌人 +2（枭熊之怒 9212 · 枭熊 9214）、公用 +1（枭熊 9213 · class 留空）；R465 机械之心 +1（折射炮 9211）；R461 敌人 +1（寒霜结界 9210）；R451 敌人 +3（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R429 森林精魄 -1 = 删魔法学徒 9081；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 19（R446 +雪豹 8081）；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 78 / 66 / 75 / 78 / 吟游诗人 7 / 公用 27（R777b 吟游诗人 +1：疾风乐章 9270；R777 吟游诗人 +1：彩虹诗 9269；R776 吟游诗人 +2：激励乐章 9267 / 管风琴 9268；R773 吟游诗人 +1：呼唤 9266；R766 公用 +1：懊悔 9265；R761 吟游诗人 +2：杜鹃 9263 / 招募 9264）；R758 敌人 +3（常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262）；R756 公用 +1（代偿 9252）；R689 森林精魄 +2（种子 9248 / 被眷顾者 9249）；R582 机械之心 +2；R580 暗影刺客 +2（猫鼠游戏 9190 / 黑暗嵌合 9191）；R572 森林精魄 +1（宝石兽 9246）/ 机械之心 +1（拼装工厂 9247）；R561 森林精魄 −1（删树灵雏形 8087）/ 暗影刺客 −1（删影偶 8088）/ 机械之心 −1（删拼装原型 8083）；R560 暗影刺客 +1（影缚 8085）/ 机械之心 +1（重构 8086）；R559 森林精魄 +1（传授 8084）；R541 敌人 +4（普罗诺亚之影 / 三种构状体）；R539 +激光炮 9241；R536 森林精魄 −1（删旧土元素 9218）；R525 敌人 +4（叛逃机械三只 + 通缉令）；R523 森林精魄 +2；R505 暗影刺客 +1；R504 暗影刺客 +4；R503 暗影刺客 -8（删 14 增 6）；R502 敌人 +1（执法者 9223）；R496 机械之心 +1（忒修斯奇械 9222）；R494 机械之心 +2（阵地保卫者 / 结合者）；R493 森林精魄 +1（土元素）/ 机械之心 +1（压感地雷）；R467 敌人 +2（枭熊之怒 9212 · 枭熊 9214）、公用 +1（枭熊 9213 · class 留空）；R465 机械之心 +1（折射炮 9211）；R461 敌人 +1（寒霜结界 9210）；R451 敌人 +3（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R429 森林精魄 -1 = 删魔法学徒 9081；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 19（R446 +雪豹 8081）；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 
@@ -20559,7 +20559,7 @@ func _init() -> void:
 
 	# 判据唯一口 `CardData.is_damage_spell()`：103 张玩家技能卡里恰好 42 张能直接造成伤害（R721 击退新增条件伤害 +1）（R582 +2 技能 / +1 伤害判据；R580 +2 技能 / +1 伤害判据）
 
-	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
+	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R777 彩虹诗 9269 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
 
 	var r226_dmg := 0
 
@@ -20583,7 +20583,7 @@ func _init() -> void:
 
 			r226_leak.append(r226_card.card_name)
 
-	check(r226_skills == 106 and r226_dmg == 42 and r226_leak.is_empty(),
+	check(r226_skills == 107 and r226_dmg == 42 and r226_leak.is_empty(),
 
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 
@@ -61546,6 +61546,36 @@ func _init() -> void:
 			"R774 解析：没关键词的中文走 font 兜底，不硬套图案")
 	check_src(r770_bs.find("StatusBadge.paint(") >= 0,
 			"R774 源码：说明类飘字委托给 StatusBadge（battle_scene 只留一行）")
+	# R774c：非中文语言统一用英文艺术字（店长口径「以后除了中文版，全用英文版艺术字」）
+	var r774c_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not StatusBadge.WORD_TEX_EN.has(r774_g):
+			r774c_missing += str(r774_g) + " "
+	check(r774c_missing == "", "R774c 素材：每个主题都有英文状态词图（缺 %s）" % r774c_missing)
+	# 英文关键词表覆盖 11 主题（缺关键词，英文飘字会退回 font 中文兜底）
+	var r774c_en_seen := {}
+	for r774_rule: Array in StatusBadge.RULES_EN:
+		r774c_en_seen[int(r774_rule[1])] = true
+	var r774c_en_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not r774c_en_seen.has(r774_g):
+			r774c_en_missing += str(r774_g) + " "
+	check(r774c_en_missing == "", "R774c 关键词：RULES_EN 覆盖 11 主题（缺 %s）" % r774c_en_missing)
+	# 中文 / 英文词表一一对应（word_of 靠它切换，漏一个英文词就会飘空串）
+	var r774c_word_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not StatusBadge.WORD_ZH.has(r774_g) or str(StatusBadge.WORD_ZH[r774_g]) == "":
+			r774c_word_missing += "zh" + str(r774_g) + " "
+		if not StatusBadge.WORD_EN.has(r774_g) or str(StatusBadge.WORD_EN[r774_g]) == "":
+			r774c_word_missing += "en" + str(r774_g) + " "
+	check(r774c_word_missing == "", "R774c 词表：WORD_ZH / WORD_EN 一一对应（缺 %s）" % r774c_word_missing)
+	# 英文素材文件真实存在（路径登记了但文件没进 pck 会在实机静默失败）
+	var r774c_file_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not ResourceLoader.exists(str(StatusBadge.WORD_TEX_EN[r774_g])):
+			r774c_file_missing += str(r774_g) + " "
+	check(r774c_file_missing == "", "R774c 素材：英文状态词图文件真实存在（缺 %s）" % r774c_file_missing)
+
 
 
 
@@ -73652,6 +73682,8 @@ func _init() -> void:
 	_test_r769()
 
 	_test_r773()
+	_test_r777()
+	_test_r777b()
 	_test_r776()
 	_test_r767()
 
@@ -76811,6 +76843,403 @@ func _test_r773() -> void:
 	RunState.spent_relics = r773_sv_spent
 	RunState.run_active = r773_sv_active
 	RunState.player_class = r773_sv_class
+
+
+# ================= R777：吟游诗人「彩虹诗」9269 =================
+# 店长口径（原话）：
+#   「2费，从随机3个不同其他职业的盟友或技能卡中各随机一张加入手卡，
+#    并使这些卡本局费用-1。」
+# 落地口径：
+#   * 「随机 3 个不同**其他职业**」= `PlayerClass.ids()` 去掉玩家当前职业后洗牌取前 3 ——
+#     隐藏职业（吟游诗人）天然不在 ids() 里，所以非吟游诗人永远摇不到它那几张；
+#   * 「盟友或技能卡」= kind 二选一，工事 / 效果 / 诅咒一律不进；
+#   * 「本局费用 -1」= `state.hand_cost_delta`（手卡内减费唯一口径）：表在 FieldState 上，
+#     一场战斗一个 → 跨回合有效、新战斗自然复位；**不是** `hand_free`（那是归 0 且不可叠）。
+func _test_r777() -> void:
+	var r777_gs = preload("res://scripts/gallery_scene.gd")
+	var r777_repo := CardRepo.load_json()
+	var r777_card: CardData = r777_repo.get_card(9269)
+	var r777_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r777_sv_spent: Array[int] = RunState.spent_relics.duplicate()
+	var r777_sv_active: bool = RunState.run_active
+	var r777_sv_class: String = RunState.player_class
+	RunState.run_active = false   # 测试里打的牌不许写进玩家成就统计
+	RunState.player_class = PlayerClass.BARD
+	RunState.relics = []
+	RunState.spent_relics = []
+
+	# ① 数据
+	check(r777_card != null and r777_card.card_name == "彩虹诗"
+			and r777_card.kind == "技能" and r777_card.cost == 2
+			and r777_card.rarity == 1
+			and r777_card.card_class == PlayerClass.BARD
+			and r777_card.target_mode == "none",
+			"R777 数据：彩虹诗 9269 = 吟游诗人 2 费稀有技能（rarity 1）")
+	if r777_card == null:
+		RunState.relics = r777_sv_relics
+		RunState.spent_relics = r777_sv_spent
+		RunState.run_active = r777_sv_active
+		RunState.player_class = r777_sv_class
+		return
+	check(r777_card.color == "水风"
+			and r777_card.effect_text.contains("3 个不同其他职业")
+			and r777_card.effect_text.contains("费用本局 -1"),
+			"R777 数据：卡色水风（与杜鹃 / 招募 / 呼唤同族）、卡面写明 3 个职业与 -1")
+
+	# ② 隐藏职业口径：与呼唤同一套（图鉴 / 默认池都不进）
+	check(not r777_gs.gallery_visible(r777_card, false)
+			and not r777_gs.gallery_visible(r777_card, true),
+			"R777 隐藏：吟游诗人卡不进图鉴（判据在职业，不在稀有度）")
+	var r777_in_default := false
+	for c0: CardData in r777_repo.obtainable_cards():
+		if c0.id == 9269:
+			r777_in_default = true
+	check(not r777_in_default,
+			"R777 卡池：默认可获得池不含 9269（三个可见职业抽不到）")
+	var r777_bard_has := false
+	for c1: CardData in r777_repo.reward_pool_for(PlayerClass.BARD):
+		if c1.id == 9269:
+			r777_bard_has = true
+	check(r777_bard_has, "R777 卡池：吟游诗人的奖励池含 9269（进得去才玩得到）")
+
+	# ③ 随机源：200 抽 —— 每次 ≤3 张、职业互不相同、都不是自己家、只出盟友 / 技能
+	var r777_probe := _new_engine([], 20, 20, -1, false)
+	var r777_bad: Array = []
+	var r777_cls_seen := {}
+	var r777_kind_seen := {}
+	var r777_full3 := 0
+	for _i77 in range(200):
+		var lst := r777_probe._roll_rainbow_cards()
+		if lst.size() > 3:
+			r777_bad.append("超量 %d" % lst.size())
+		if lst.size() == 3:
+			r777_full3 += 1
+		var seen := {}
+		for c2: CardData in lst:
+			if seen.has(c2.card_class):
+				r777_bad.append("同职业重复 %d" % c2.id)
+			seen[c2.card_class] = true
+			r777_cls_seen[c2.card_class] = true
+			r777_kind_seen[c2.kind] = true
+			if c2.card_class == PlayerClass.BARD or c2.card_class == "":
+				r777_bad.append("串职业 %d" % c2.id)
+			if c2.kind != "盟友" and c2.kind != "技能":
+				r777_bad.append("卡种 %s" % c2.kind)
+	check(r777_bad.is_empty(),
+			"R777 随机源：200 抽全是「不同其他职业的盟友 / 技能」（异常 %s）"
+			% str(r777_bad.slice(0, 5)))
+	check(r777_full3 == 200,
+			"R777 随机源：三个可见职业时每抽都给满 3 张（%d / 200）" % r777_full3)
+	check(r777_cls_seen.size() == 3,
+			"R777 随机源：三个职业都摇得到（本次 %s）" % str(r777_cls_seen.keys()))
+	check(r777_kind_seen.has("盟友") and r777_kind_seen.has("技能"),
+			"R777 随机源：盟友与技能卡都摇得到（本次 %s）" % str(r777_kind_seen.keys()))
+
+	# ④ 只有两个其他职业时给 2 张（不硬凑第 3 张，也不跨到隐藏职业）
+	RunState.player_class = PlayerClass.DRUID
+	var r777_two := r777_probe._roll_rainbow_cards()
+	var r777_two_bad := false
+	for c3: CardData in r777_two:
+		if c3.card_class == PlayerClass.DRUID or c3.card_class == PlayerClass.BARD:
+			r777_two_bad = true
+	check(r777_two.size() == 2 and not r777_two_bad,
+			"R777 少职业：森林精魄视角只有 2 个其他职业 → 给 2 张（实得 %d）"
+			% r777_two.size())
+	RunState.player_class = PlayerClass.BARD
+
+	# ⑤ 打出：2 费照扣、3 张入手、各自费用本局 -1
+	var r777_deck: Array[CardData] = []
+	r777_deck.append(r777_card)
+	var r777_e := _new_engine(r777_deck, 20, 20, -1, false)
+	r777_e.start_game(1)
+	r777_e.state.energy = 5
+	var r777_hand_before: int = r777_e.state.hand.size()
+	r777_e.use_spell(_find(r777_e.state.hand, 9269))
+	check(r777_e.state.energy == 3,
+			"R777 打出：2 费照扣（5 → %d）" % r777_e.state.energy)
+	check(r777_e.state.hand.size() == r777_hand_before + 2,
+			"R777 打出：打出 1 张、入手 3 张（%d → %d）"
+			% [r777_hand_before, r777_e.state.hand.size()])
+	var r777_got: Array[CardData] = []
+	for c4: CardData in r777_e.state.hand:
+		if r777_e.state.hand_cost_delta.has(c4):
+			r777_got.append(c4)
+	check(r777_got.size() == 3,
+			"R777 打出：3 张都记了手卡内减费（实得 %d）" % r777_got.size())
+	var r777_cost_bad: Array = []
+	var r777_got_cls := {}
+	for c5: CardData in r777_got:
+		r777_got_cls[c5.card_class] = true
+		if r777_e.cost_of(c5) != maxi(0, c5.cost - 1):
+			r777_cost_bad.append("%s %d→%d" % [c5.card_name, c5.cost, r777_e.cost_of(c5)])
+		if c5.card_class == PlayerClass.BARD or c5.card_class == "":
+			r777_cost_bad.append("串职业 %s" % c5.card_name)
+		if c5.kind != "盟友" and c5.kind != "技能":
+			r777_cost_bad.append("卡种 %s" % c5.kind)
+	check(r777_cost_bad.is_empty(),
+			"R777 打出：3 张都是其他职业的盟友 / 技能，费用各 -1（异常 %s）"
+			% str(r777_cost_bad))
+	check(r777_got_cls.size() == 3,
+			"R777 打出：3 张来自 3 个不同职业（本次 %s）" % str(r777_got_cls.keys()))
+
+	# ⑥ 「本局」的成色：换回合仍然 -1（hand_cost_delta 不在 end_turn / _begin_turn 清空）
+	var r777_probe_card: CardData = null
+	if not r777_got.is_empty():
+		r777_probe_card = r777_got[0]
+	var r777_base_cost := -1
+	var r777_after := -1
+	if r777_probe_card != null:
+		r777_base_cost = r777_probe_card.cost
+		r777_e.state.energy = 0
+		r777_e._begin_turn(GameEngine.SIDE_SELF)
+		r777_after = r777_e.cost_of(r777_probe_card)
+	check(r777_probe_card != null and r777_after == maxi(0, r777_base_cost - 1),
+			"R777 本局：新回合仍是 -1 费（卡面 %d → %d）" % [r777_base_cost, r777_after])
+
+	# ⑦ 可叠：同一张再吃一张彩虹诗 → 合计 -2（hand_cost_delta 是累加语义）
+	if r777_probe_card != null:
+		var r777_prev := int(r777_e.state.hand_cost_delta.get(r777_probe_card, 0))
+		r777_e.state.hand_cost_delta[r777_probe_card] = r777_prev + 1
+		check(r777_e.cost_of(r777_probe_card) == maxi(0, r777_base_cost - 2),
+				"R777 叠加：同一张 -1 再 -1 → 合计 -2（%d）"
+				% r777_e.cost_of(r777_probe_card))
+
+	# ⑧ 离手即恢复原价（判据是「此刻还在手牌里」，与隐藏能源 / 小精灵同一条路）
+	if r777_probe_card != null:
+		r777_e.state.hand.erase(r777_probe_card)
+		check(r777_e.cost_of(r777_probe_card) == r777_base_cost,
+				"R777 离手：不在手牌里就恢复卡面费用（%d）"
+				% r777_e.cost_of(r777_probe_card))
+
+	# ⑨ 手牌满：3 张改投弃牌区（不蒸发、也不按 -1 记账生效）
+	var r777_deck2: Array[CardData] = []
+	r777_deck2.append(r777_card)
+	var r777_e2 := _new_engine(r777_deck2, 20, 20, -1, false)
+	r777_e2.start_game(1)
+	r777_e2.state.energy = 5
+	var r777_fill := _card(19001, "占位", "技能", 1, 0, 0)
+	var r777_guard := 0
+	while not r777_e2.state.hand_full() and r777_guard < 24:
+		r777_e2.state.hand.append(r777_e2._new_own_card(r777_fill))
+		r777_guard += 1
+	var r777_discard_before: int = r777_e2.state.discard.size()
+	var r777_hand_full_n: int = r777_e2.state.hand.size()
+	r777_e2.use_spell(_find(r777_e2.state.hand, 9269))
+	# 手牌满 → 打出本卡先腾出 1 位 → 第 1 张补进手牌、其余 2 张进弃牌区；
+	# 弃牌区 +3 = 溢出的 2 张 + 打出的本卡本身（技能卡打出进弃牌区）。
+	check(r777_e2.state.hand.size() == r777_hand_full_n
+			and r777_e2.state.discard.size() == r777_discard_before + 3,
+			"R777 满手：腾出的 1 位补进 1 张、另 2 张进弃牌区（手 %d→%d / 弃 %d→%d）"
+			% [r777_hand_full_n, r777_e2.state.hand.size(),
+					r777_discard_before, r777_e2.state.discard.size()])
+
+	# ⑩ 三语：en / ja 都要真有译文（R702 / R718 都踩过「改了中文忘同步」）
+	var r777_lang_bak: String = GameSettings.language
+	# ⚠️ `naturalize_card` 只出**效果正文**，卡名不在里面（R773 的检查同样只查效果）——
+	#   卡名另走 `GameI18n.card_name`，两样都验才叫「三语齐了」。
+	GameSettings.language = "en"
+	GameI18n.reset_cache()
+	var r777_en_name: String = GameI18n.card_name(9269, r777_card.card_name)
+	var r777_en: String = CardText.naturalize_card(r777_card)
+	GameSettings.language = "ja"
+	GameI18n.reset_cache()
+	var r777_ja_name: String = GameI18n.card_name(9269, r777_card.card_name)
+	var r777_ja: String = CardText.naturalize_card(r777_card)
+	GameSettings.language = r777_lang_bak
+	GameI18n.reset_cache()
+	check(r777_en_name == "Rainbow Verse",
+			"R777 译文：en 卡名走 i18n（%s）" % r777_en_name)
+	check(r777_en.find("Ally") >= 0 and r777_en.find("Skill") >= 0
+			and r777_en.find("费用") < 0 and r777_en.find("盟友") < 0,
+			"R777 译文：en 下效果正文是英文（%s）" % r777_en.replace("\n", " ").left(40))
+	check(r777_ja_name == "虹の詩",
+			"R777 译文：ja 卡名走 i18n（%s）" % r777_ja_name)
+	check(r777_ja.find("味方") >= 0 and r777_ja.find("スキル") >= 0
+			and r777_ja.find("费用") < 0 and r777_ja.find("盟友") < 0,
+			"R777 译文：ja 下效果正文是日文（%s）" % r777_ja.replace("\n", " ").left(40))
+
+	# 收尾还原
+	RunState.relics = r777_sv_relics
+	RunState.spent_relics = r777_sv_spent
+	RunState.run_active = r777_sv_active
+	RunState.player_class = r777_sv_class
+
+
+# ================= R777b：吟游诗人「疾风乐章」9270 =================
+# 店长口径（原话）：
+#   「2费，疾风乐章。所有盟友移动速度+1.若为其他职业盟友，改为一回合行动两次」
+# 落地口径：
+#   * 「所有盟友」= 己方场上 `kind == "盟友"`（工事 / 场地不算）；
+#   * 「移动速度 +1」直接抬场上 `card.move_speed`（与「改造」同一口径，场上实例是独立副本）；
+#   * 「其他职业盟友」走 `_other_class_card()` 唯一判据（有归属 + 不是玩家当前职业；
+#     公用卡 class 留空 → 不算「其他职业」→ 照常吃移速）；
+#   * 「改为一回合行动两次」= **替代**移速，复用哈气的 `Placement.haste_double`
+#     （单点永久、离场消失）→ `unit_actions()` 每回合自动给到，不必重算。
+func _test_r777b() -> void:
+	var r777b_gs = preload("res://scripts/gallery_scene.gd")
+	var r777b_repo := CardRepo.load_json()
+	var r777b_card: CardData = r777b_repo.get_card(9270)
+	var r777b_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r777b_sv_spent: Array[int] = RunState.spent_relics.duplicate()
+	var r777b_sv_active: bool = RunState.run_active
+	var r777b_sv_class: String = RunState.player_class
+	RunState.run_active = false
+	RunState.player_class = PlayerClass.BARD
+	RunState.relics = []
+	RunState.spent_relics = []
+
+	# ① 数据
+	check(r777b_card != null and r777b_card.card_name == "疾风乐章"
+			and r777b_card.kind == "效果" and r777b_card.cost == 2
+			and r777b_card.rarity == 2
+			and r777b_card.card_class == PlayerClass.BARD
+			and r777b_card.traits.has("疾风乐章")
+			and r777b_card.target_mode == "none",
+			"R777b 数据：疾风乐章 9270 = 吟游诗人 2 费史诗效果卡（rarity 2）")
+	if r777b_card == null:
+		RunState.relics = r777b_sv_relics
+		RunState.spent_relics = r777b_sv_spent
+		RunState.run_active = r777b_sv_active
+		RunState.player_class = r777b_sv_class
+		return
+	check(r777b_card.color == "水风"
+			and r777b_card.effect_text.contains("移动速度 +1")
+			and r777b_card.effect_text.contains("一回合行动两次"),
+			"R777b 数据：卡色水风、卡面两条都写了（移速 / 双动）")
+
+	# ② 隐藏职业口径
+	check(not r777b_gs.gallery_visible(r777b_card, false)
+			and not r777b_gs.gallery_visible(r777b_card, true),
+			"R777b 隐藏：吟游诗人卡不进图鉴（判据在职业）")
+	var r777b_in_default := false
+	for c0: CardData in r777b_repo.obtainable_cards():
+		if c0.id == 9270:
+			r777b_in_default = true
+	check(not r777b_in_default, "R777b 卡池：默认可获得池不含 9270")
+	var r777b_bard_has := false
+	for c1: CardData in r777b_repo.reward_pool_for(PlayerClass.BARD):
+		if c1.id == 9270:
+			r777b_bard_has = true
+	check(r777b_bard_has, "R777b 卡池：吟游诗人的奖励池含 9270")
+
+	# ③ 打出：本职业盟友 +1 移速；其他职业盟友改双动（不给移速）；工事不沾
+	var r777b_deck: Array[CardData] = []
+	r777b_deck.append(r777b_card)
+	var r777b_e := _new_engine(r777b_deck, 20, 20, -1, false)
+	r777b_e.start_game(1)
+	r777b_e.state.energy = 5
+	var r777b_own: Placement = r777b_e.state.place(
+			CardData.from_dict(r777b_repo.get_card(9263).to_dict()),
+			Vector2i(1, 3), GameEngine.SIDE_SELF)          # 杜鹃：吟游诗人（本职业）
+	var r777b_alien: Placement = r777b_e.state.place(
+			CardData.from_dict(r777b_repo.get_card(8003).to_dict()),
+			Vector2i(1, 4), GameEngine.SIDE_SELF)          # 树人：森林精魄（其他职业）
+	var r777b_fort: Placement = r777b_e.state.place(
+			CardData.from_dict(r777b_repo.get_card(8001).to_dict()),
+			Vector2i(2, 4), GameEngine.SIDE_SELF)          # 木栅栏：工事
+	check(r777b_own != null and r777b_alien != null and r777b_fort != null,
+			"R777b 摆放：三个单位都上场了（盟友 ×2 + 工事 ×1）")
+	if r777b_own == null or r777b_alien == null or r777b_fort == null:
+		RunState.relics = r777b_sv_relics
+		RunState.spent_relics = r777b_sv_spent
+		RunState.run_active = r777b_sv_active
+		RunState.player_class = r777b_sv_class
+		return
+	var r777b_own_spd0: int = r777b_own.card.move_speed
+	var r777b_alien_spd0: int = r777b_alien.card.move_speed
+	var r777b_fort_spd0: int = r777b_fort.card.move_speed
+	var r777b_effects0: int = r777b_e.state.effects.size()
+	r777b_e.use_effect(_find(r777b_e.state.hand, 9270))
+	check(r777b_e.state.energy == 3,
+			"R777b 打出：2 费照扣（5 → %d）" % r777b_e.state.energy)
+	check(r777b_e.state.effects.size() == r777b_effects0 + 1,
+			"R777b 打出：进了效果区（%d → %d）"
+			% [r777b_effects0, r777b_e.state.effects.size()])
+	check(r777b_own.card.move_speed == r777b_own_spd0 + 1,
+			"R777b 移速：本职业盟友 %d → %d"
+			% [r777b_own_spd0, r777b_own.card.move_speed])
+	check(r777b_alien.card.move_speed == r777b_alien_spd0,
+			"R777b 替代：其他职业盟友**没有**拿到移速（%d → %d）"
+			% [r777b_alien_spd0, r777b_alien.card.move_speed])
+	check(r777b_alien.haste_double
+			and r777b_e.state.unit_actions(r777b_alien, GameEngine.SIDE_SELF)
+					== FieldState.HASTE_ACTIONS,
+			"R777b 双动：其他职业盟友改为每回合行动 %d 次"
+			% FieldState.HASTE_ACTIONS)
+	check(r777b_alien.acts_left >= 2,
+			"R777b 双动：打出当回合就补足行动轮数（acts_left=%d）" % r777b_alien.acts_left)
+	check(r777b_fort.card.move_speed == r777b_fort_spd0
+			and not r777b_fort.haste_double,
+			"R777b 工事：不算盟友，移速与双动都不沾")
+
+	# ④ 跨回合仍在（haste_double 是单点永久字段，移速是卡面数值）
+	r777b_e.state.reset_units(GameEngine.SIDE_SELF)
+	check(r777b_e.state.unit_actions(r777b_alien, GameEngine.SIDE_SELF)
+			== FieldState.HASTE_ACTIONS,
+			"R777b 本场：新回合仍是每回合两次（reset_units 后不变）")
+	check(r777b_own.card.move_speed == r777b_own_spd0 + 1,
+			"R777b 本场：新回合移速仍是 +1（%d）" % r777b_own.card.move_speed)
+
+	# ⑤ 叠两张：移速再 +1（双动不会重复叠成 3 次）
+	var r777b_deck2: Array[CardData] = []
+	r777b_deck2.append(r777b_card)
+	r777b_deck2.append(r777b_card)
+	var r777b_e2 := _new_engine(r777b_deck2, 20, 20, -1, false)
+	r777b_e2.start_game(1)
+	r777b_e2.state.energy = 9
+	var r777b_own2: Placement = r777b_e2.state.place(
+			CardData.from_dict(r777b_repo.get_card(9263).to_dict()),
+			Vector2i(1, 3), GameEngine.SIDE_SELF)
+	var r777b_alien2: Placement = r777b_e2.state.place(
+			CardData.from_dict(r777b_repo.get_card(8003).to_dict()),
+			Vector2i(1, 4), GameEngine.SIDE_SELF)
+	var r777b_own2_spd0: int = r777b_own2.card.move_speed
+	r777b_e2.use_effect(_find(r777b_e2.state.hand, 9270))
+	r777b_e2.use_effect(_find(r777b_e2.state.hand, 9270))
+	check(r777b_own2.card.move_speed == r777b_own2_spd0 + 2,
+			"R777b 叠加：两张 → 移速 +2（%d）" % r777b_own2.card.move_speed)
+	check(r777b_e2.state.unit_actions(r777b_alien2, GameEngine.SIDE_SELF)
+			== FieldState.HASTE_ACTIONS,
+			"R777b 叠加：双动仍是 2 次（不会叠成 3 次）")
+
+	# ⑥ 空场：没有盟友时照常吃掉费用、不崩
+	var r777b_deck3: Array[CardData] = []
+	r777b_deck3.append(r777b_card)
+	var r777b_e3 := _new_engine(r777b_deck3, 20, 20, -1, false)
+	r777b_e3.start_game(1)
+	r777b_e3.state.energy = 4
+	var r777b_msg: String = r777b_e3.use_effect(_find(r777b_e3.state.hand, 9270))
+	check(r777b_e3.state.energy == 2 and r777b_msg != "",
+			"R777b 空场：照常扣 2 费并生效（%s）" % r777b_msg)
+
+	# ⑦ 三语（`naturalize_card` 只出效果正文；卡名另走 GameI18n.card_name）
+	var r777b_lang_bak: String = GameSettings.language
+	GameSettings.language = "en"
+	GameI18n.reset_cache()
+	var r777b_en_name: String = GameI18n.card_name(9270, r777b_card.card_name)
+	var r777b_en: String = CardText.naturalize_card(r777b_card)
+	GameSettings.language = "ja"
+	GameI18n.reset_cache()
+	var r777b_ja_name: String = GameI18n.card_name(9270, r777b_card.card_name)
+	var r777b_ja: String = CardText.naturalize_card(r777b_card)
+	GameSettings.language = r777b_lang_bak
+	GameI18n.reset_cache()
+	check(r777b_en_name == "Wind Song",
+			"R777b 译文：en 卡名走 i18n（%s）" % r777b_en_name)
+	check(r777b_en.find("Move Speed") >= 0 and r777b_en.find("twice") >= 0
+			and r777b_en.find("移动速度") < 0 and r777b_en.find("盟友") < 0,
+			"R777b 译文：en 效果正文是英文（%s）" % r777b_en.replace("\n", " ").left(40))
+	check(r777b_ja_name == "疾風の楽章",
+			"R777b 译文：ja 卡名走 i18n（%s）" % r777b_ja_name)
+	check(r777b_ja.find("移動速度") >= 0 and r777b_ja.find("味方") >= 0
+			and r777b_ja.find("移动速度") < 0 and r777b_ja.find("盟友") < 0,
+			"R777b 译文：ja 效果正文是日文（%s）" % r777b_ja.replace("\n", " ").left(40))
+
+	# 收尾还原
+	RunState.relics = r777b_sv_relics
+	RunState.spent_relics = r777b_sv_spent
+	RunState.run_active = r777b_sv_active
+	RunState.player_class = r777b_sv_class
 
 
 # ================= R762：开始游戏 → 标准 / 每日挑战 =================

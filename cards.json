@@ -6860,6 +6860,46 @@
       "target_mode": "none",
       "color": "水风",
       "image": ""
+    },
+    {
+      "id": 9269,
+      "name": "彩虹诗",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "随机 3 个不同其他职业，各将一张随机盟友或技能卡加入手卡，其费用本局 -1。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9270,
+      "name": "疾风乐章",
+      "kind": "效果",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "疾风乐章"
+      ],
+      "affixes": [],
+      "effect_text": "所有盟友移动速度 +1；若为其他职业盟友，改为一回合行动两次。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
     }
   ]
 }
