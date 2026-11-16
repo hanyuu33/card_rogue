@@ -18,6 +18,8 @@ extends Control
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const L10n = preload("res://scripts/l10n.gd")
 const LanguageMenu = preload("res://scripts/language_menu.gd")
+# R763：不走 class_name —— 新脚本的全局类缓存要编辑器重扫，headless 门禁直接 preload 更稳。
+const DiagnosticBundle = preload("res://scripts/diagnostic_bundle.gd")
 
 const TABS := ["audio", "display", "language", "run"]
 const TAB_AUDIO := 0
@@ -51,6 +53,7 @@ var _last_mp := Vector2.INF
 var _seed_edit: LineEdit = null   # R241「下一局种子」输入框（唯一的原生控件）
 var _seed_guard := false          # 防止 text_changed 里改 text 触发二次回调
 var _seed_hover := false          # R325：「复制」按钮的悬停态（自绘按钮要自己记）
+var _diag_hover := false          # R763：诊断包按钮的悬停态
 ## R655：浮层模式（ESC 菜单进来的那条路）。`_overlay == true` 时「返回」= 关自己，
 ## **不切场景**；左上角文案跟着宿主改（战斗中 = 「← 返回战斗」）。
 var _overlay := false
@@ -217,6 +220,21 @@ func _seed_copy_rect() -> Rect2:
 	## R325：种子面板右上角的「复制」按钮（跟在「本局种子」一行的右端）。
 	var p := _seed_panel_rect()
 	return Rect2(p.position.x + p.size.x - 92.0, p.position.y + 30.0, 72.0, 26.0)
+
+
+func _diag_rect() -> Rect2:
+	## R763：对局页种子面板下方的诊断按钮。不是设置行 —— 不参与 `_rows()` 的开关语义。
+	var p := _seed_panel_rect()
+	# 页脚提示的基线在面板下方 +30，按钮必须再让开一行，否则英文长句会被压住。
+	return Rect2((size.x - ROW_W) * 0.5, p.end.y + 52.0, ROW_W, 58.0)
+
+
+func _export_diagnostics() -> void:
+	var result: Dictionary = DiagnosticBundle.create()
+	if bool(result.get("ok", false)):
+		UiToast.toast(L10n.tf("settings.diag_ok", [str(result.get("path", ""))]))
+	else:
+		UiToast.toast(L10n.tf("settings.diag_fail", [str(result.get("error", ""))]))
 
 
 func _seed_copy_text() -> String:
@@ -416,10 +434,12 @@ func _gui_input(event: InputEvent) -> void:
 		var th := _tab_at(event.position)
 		var h := _row_at(event.position)
 		var sh := _tab == TAB_RUN and _seed_copy_rect().has_point(event.position)
-		if th != _tab_hover or h != _hover or sh != _seed_hover:
+		var dh := _tab == TAB_RUN and _diag_rect().has_point(event.position)
+		if th != _tab_hover or h != _hover or sh != _seed_hover or dh != _diag_hover:
 			_tab_hover = th
 			_hover = h
 			_seed_hover = sh
+			_diag_hover = dh
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
@@ -437,6 +457,11 @@ func _gui_input(event: InputEvent) -> void:
 			if _seed_copy_text() != "":
 				sfx.play("click")
 			_copy_seed()
+			queue_redraw()
+			return
+		if _tab == TAB_RUN and _diag_rect().has_point(event.position):
+			sfx.play("click")
+			_export_diagnostics()
 			queue_redraw()
 			return
 		var i := _row_at(event.position)
@@ -620,6 +645,24 @@ func _draw() -> void:
 		_draw_language_note()
 	elif _tab == TAB_RUN:
 		_draw_seed_panel()
+		_draw_diag_button()
+
+
+func _draw_diag_button() -> void:
+	var r := _diag_rect()
+	UiTheme.draw_action(self, r, false, false, _diag_hover)
+	draw_string(_font_bold, Vector2(r.position.x + 20, r.position.y + 35),
+			L10n.t("settings.diag_export"), HORIZONTAL_ALIGNMENT_LEFT, 190,
+			UiTheme.FS_BODY, UiTheme.PAGE_INK)
+	# 英文 / 西语描述比中文长，按可用宽逐档缩字，避免像 v1 那样被按钮边框裁掉。
+	var desc := L10n.t("settings.diag_desc")
+	var avail := r.size.x - 238.0
+	var dfs := UiTheme.FS_CAPTION
+	while dfs > 9 and _font.get_string_size(desc, HORIZONTAL_ALIGNMENT_LEFT, -1, dfs).x > avail:
+		dfs -= 1
+	draw_string(_font, Vector2(r.position.x + 220, r.position.y + 34),
+			desc, HORIZONTAL_ALIGNMENT_LEFT, avail,
+			dfs, UiTheme.PAGE_MUTED)
 
 
 func _draw_tabs() -> void:

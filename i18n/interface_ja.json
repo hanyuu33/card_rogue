@@ -690,8 +690,6 @@
       "TITLE_TIP_SETTINGS": "効果音／音楽／全画面／言語",
       "TITLE_TIP_CREDITS": "エンジン／音楽クレジット（PeriTune）",
       "TITLE_FOOTER_GODOT": "Godot 4.3 同梱ビルド",
-      "TITLE_FOOTER_DEV": "ローグライク開発版",
-      "TITLE_VERSION_FOOTER": "v%s-rogue · %s",
       "TITLE_NEWER_SAVE_NOTICE": "このセーブデータは新しいバージョンのもので、このバージョンでは使用できません（ファイルは保持されています。更新後に続きからプレイできます）",
       "TITLE_LOAD_FAILED": "セーブデータの読み込みに失敗しました（run_save.sav.bad としてバックアップ済み）",
       "TITLE_LOAD_ERROR_BACKUP": "%s（元ファイルは .bad としてバックアップ済み）",
@@ -744,7 +742,7 @@
       "UI_MENU_TITLE": "メニュー",
       "UI_MENU_SEED": "シード：%s",
       "GAME_BRAND_NAME_ZH": "ガーガー乱殺",
-      "GAME_BRAND_FOOTER": "v{v}-rogue · ローグライク開発版"
+      "GAME_BRAND_FOOTER": "v{v}"
     },
     "shared": {
       "BAN_MENU_CONTINUE": "続ける",

@@ -45,8 +45,8 @@ const TEXT := {
 	"title.footer_godot": {"zh": "Godot 4.3 自包含副本",
 			"en": "Godot 4.3 self-contained build",
 			"ja": "Godot 4.3 同梱ビルド"},
-	"title.footer_dev": {"zh": "肉鸽开发版", "en": "Roguelike Dev Build",
-			"ja": "ローグライク開発版"},
+	# R763：正式版页脚不再显示开发标签；键位保留只为不打断旧翻译表行号。
+	"title.footer_dev": {"zh": "版本", "en": "Version", "ja": "バージョン"},
 
 	# ---- R757 匿名对局数据（发布版首次启动询问 + 设置页开关）----
 	"privacy.title": {"zh": "可以发送匿名对局数据吗？",
@@ -137,6 +137,17 @@ const TEXT := {
 	"settings.seed_tip": {"zh": "留空 = 每局随机；填入 10 位大写字母 / 数字 → 下一局用同一种子（用一次自动清空）",
 			"en": "Blank = random. 10 A-Z/0-9 = fixed next seed (cleared after use).",
 			"ja": "空欄＝ランダム。英数字10桁で次のシードを固定（1回で消去）。"},
+	# ---- R763：本地诊断包（Steam A8）----
+	"settings.diag_export": {"zh": "导出诊断包", "en": "Export Diagnostics",
+			"ja": "診断パックを出力", "es": "Exportar diagnóstico"},
+	"settings.diag_desc": {"zh": "设置 / 战绩 / 存档 / 日志打包到本机 zip（不上传）",
+			"en": "Settings, saves, logs → local zip only",
+			"ja": "設定・セーブ・ログをローカル zip に保存",
+			"es": "Ajustes, partidas y logs en zip local"},
+	"settings.diag_ok": {"zh": "诊断包已保存：%s", "en": "Diagnostics saved: %s",
+			"ja": "診断パックを保存しました：%s", "es": "Diagnóstico guardado: %s"},
+	"settings.diag_fail": {"zh": "诊断包导出失败：%s", "en": "Diagnostics failed: %s",
+			"ja": "診断パックの出力に失敗：%s", "es": "Error al exportar diagnóstico: %s"},
 	"settings.seed_footer": {"zh": "提示：种子决定整局的地图 / 掉落 / 摇卡；同一种子新开一局可复现同一局。",
 			"en": "Tip: the seed fixes the map, drops and card rolls. Start a new run with the same seed to replay it.",
 			"ja": "ヒント：シードはマップ・ドロップ・カード抽選を固定します。同じシードで同じ冒険を再現できます。"},

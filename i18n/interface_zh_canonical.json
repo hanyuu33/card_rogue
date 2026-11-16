@@ -64,7 +64,6 @@
     "shell.TITLE_TIP_SETTINGS": "title.tip_settings",
     "shell.TITLE_TIP_CREDITS": "title.tip_credits",
     "shell.TITLE_FOOTER_GODOT": "title.footer_godot",
-    "shell.TITLE_FOOTER_DEV": "title.footer_dev",
     "shell.SETTINGS_TITLE": "settings.title",
     "shell.SETTINGS_AUTOSAVE": "settings.autosave",
     "shell.SETTINGS_BACK_TITLE": "settings.back_title",
@@ -2912,14 +2911,6 @@
         "source": "scripts/l10n.gd:44",
         "zh": "Godot 4.3 自包含副本"
       },
-      "TITLE_FOOTER_DEV": {
-        "source": "scripts/l10n.gd:47",
-        "zh": "肉鸽开发版"
-      },
-      "TITLE_VERSION_FOOTER": {
-        "source": "scripts/title_scene.gd:212",
-        "zh": "v%s-rogue · %s"
-      },
       "TITLE_NEWER_SAVE_NOTICE": {
         "source": "scripts/title_scene.gd:224-225",
         "zh": "存档来自更新的版本，本版本不能使用（文件已保留，升级后可继续）"
@@ -3129,8 +3120,8 @@
         "zh": "嘎嘎乱杀"
       },
       "GAME_BRAND_FOOTER": {
-        "source": "scripts/game_brand.gd:49",
-        "zh": "v{v}-rogue · 肉鸽开发版"
+        "source": "scripts/game_brand.gd:51",
+        "zh": "v{v}"
       }
     },
     "shared": {
@@ -3509,7 +3500,7 @@
     "reward": 125,
     "map": 245,
     "battle": 75,
-    "shell": 218,
+    "shell": 216,
     "shared": 92
   }
 }

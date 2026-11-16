@@ -1,23 +1,23 @@
 @echo off
-rem Card Rogue (DuckCardsRogue) - built-in self test
+rem Card Rogue (Quackill) - built-in self test
 rem Runs the test suites that ship inside this build.
 chcp 65001 >nul
 pushd "%~dp0"
-rem R477: dist only keeps versioned packs (DuckCardsRogue_R<round>.exe).
-rem Try the plain name first, then fall back to the highest DuckCardsRogue_R*.exe
+rem R477: dist only keeps versioned packs (Quackill_R<round>.exe).
+rem Try the plain name first, then fall back to the highest Quackill_R*.exe
 rem (sort by NAME, not by mtime -- a freshly copied old pack would win on mtime).
-set "GAME=%~dp0DuckCardsRogue.exe"
-rem R612: --release build ships as DuckCardsRogue_release.exe (progressive unlock).
-if not exist "%GAME%" if exist "%~dp0DuckCardsRogue_release.exe" set "GAME=%~dp0DuckCardsRogue_release.exe"
+set "GAME=%~dp0Quackill.exe"
+rem R612: --release build ships as Quackill_release.exe (progressive unlock).
+if not exist "%GAME%" if exist "%~dp0Quackill_release.exe" set "GAME=%~dp0Quackill_release.exe"
 set "PICK="
 if not exist "%GAME%" (
-  for /f "delims=" %%F in ('dir /b /o-n "%~dp0DuckCardsRogue_R*.exe" 2^>nul') do (
+  for /f "delims=" %%F in ('dir /b /o-n "%~dp0Quackill_R*.exe" 2^>nul') do (
     if not defined PICK set "PICK=%%F"
   )
 )
 if defined PICK set "GAME=%~dp0%PICK%"
 if not exist "%GAME%" (
-  echo [ERROR] DuckCardsRogue.exe / DuckCardsRogue_R*.exe not found next to this script.
+  echo [ERROR] Quackill.exe / Quackill_R*.exe not found next to this script.
   pause
   popd
   exit /b 1

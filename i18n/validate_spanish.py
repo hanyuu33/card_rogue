@@ -144,9 +144,9 @@ def flatten_interface(data, translated=False):
     return rows, entries
 
 
-# 卡牌：319 个稳定 ID（R692 +鸭妈妈 9250 / 小鸭 9251；R689 +种子 9248 / 被眷顾者 9249）；名称与效果字段完整，空效果只允许仍为空。
+# 卡牌：325 个稳定 ID（R761 加杜鹃 9263 / 招募 9264、R758 加计量工坊三张、R756 加代偿 9252）；名称与效果字段完整，空效果只允许仍为空。
 check(set(CARDS_ES["cards"]) == set(CARDS_ZH["cards"]), "cards ID 覆盖与 canonical 一致")
-check(len(CARDS_ES["cards"]) == 319, "cards 共 319 张")
+check(len(CARDS_ES["cards"]) == 325, "cards 共 325 张")
 raw_cards = {str(row["id"]): row for row in RAW_CARDS}
 for cid, zh_row in CARDS_ZH["cards"].items():
     es_row = CARDS_ES["cards"].get(cid, {})
@@ -277,7 +277,7 @@ for dynamic_key, narrative_key in dynamic_map.items():
 interface_zh_rows, interface_entries = flatten_interface(INTERFACE_ZH)
 interface_es_rows, _ = flatten_interface(INTERFACE_ES, translated=True)
 check(set(interface_es_rows) == set(interface_zh_rows), "interface 全部 scope.key 覆盖一致")
-check(len(interface_zh_rows) == 827, "interface 共 827 条")
+check(len(interface_zh_rows) == 825, "interface 共 825 条")
 reuse_locked = set(INTERFACE_ZH.get("l10n_reuse", {})) | set(INTERFACE_ZH.get("glossary_reuse", {}))
 for path, zh_text in interface_zh_rows.items():
     entry = interface_entries[path]
@@ -294,7 +294,7 @@ pattern = re.compile(
 for match in pattern.finditer(l10n_source):
     l10n_zh_rows[match.group("key")] = json.loads(match.group("zh"))
 check(set(L10N_ES) == set(l10n_zh_rows), "l10n 骨架 key 覆盖一致")
-check(len(L10N_ES) == 56, "l10n 骨架共 56 条")
+check(len(L10N_ES) == 67, "l10n 骨架共 67 条")
 for key, zh_text in l10n_zh_rows.items():
     check_text("l10n." + key, zh_text, L10N_ES.get(key))
 
@@ -371,4 +371,4 @@ if errors:
     sys.exit(1)
 print("SPANISH I18N OK: %d checks" % checks)
 print("  cards=319 | relics=62 | classes=3 | traps=%d" % len(raw_traps))
-print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=156 | interface=794 | l10n=56")
+print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=156 | interface=794 | l10n=67")

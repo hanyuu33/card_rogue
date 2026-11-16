@@ -3,9 +3,9 @@
 # card_rogue Android APK one-shot build (signature-consistency guard)
 #
 # Usage:
-#     bash release/build_apk.sh R534                # test build -> dist/DuckCardsRogue_R534.apk
-#     bash release/build_apk.sh R534 release        # release build -> dist/DuckCardsRogue_release_R534.apk
-#     bash release/build_apk.sh                     # test build, no archive -> dist/DuckCardsRogue.apk
+#     bash release/build_apk.sh R534                # test build -> dist/Quackill_R534.apk
+#     bash release/build_apk.sh R534 release        # release build -> dist/Quackill_release_R534.apk
+#     bash release/build_apk.sh                     # test build, no archive -> dist/Quackill.apk
 #     bash release/build_apk.sh "" release          # release build, no archive
 #
 # Import-cache hygiene (R563): step 3 prunes stale .godot/imported/*.ctex on
@@ -58,8 +58,8 @@ PRESET="Android"
 [ "$MODE" = "release" ] && PRESET="Android Release"
 SFX=""
 [ "$MODE" = "release" ] && SFX="_release"
-OUT_UNSIGNED="$ROOT/dist/DuckCardsRogue${SFX}.apk"
-OUT_SIGNED="$ROOT/dist/DuckCardsRogue${SFX}-signed.apk"
+OUT_UNSIGNED="$ROOT/dist/Quackill${SFX}.apk"
+OUT_SIGNED="$ROOT/dist/Quackill${SFX}-signed.apk"
 
 say()  { printf '\n\033[1;36m[build]\033[0m %s\n' "$*"; }
 warn() { printf '\n\033[1;33m[build]\033[0m %s\n' "$*"; }
@@ -176,7 +176,7 @@ say "signature verified: SHA-256 $FINAL_SHA"
 # ---- 6/6 archive as R<round> ----------------------------------------------
 say "6/6 archive (mode=$MODE)"
 if [ -n "$ROUND" ]; then
-  FINAL="$ROOT/dist/DuckCardsRogue${SFX}_R${ROUND}.apk"
+  FINAL="$ROOT/dist/Quackill${SFX}_R${ROUND}.apk"
   cp -f "$OUT_SIGNED" "$FINAL"
   rm -f "$OUT_UNSIGNED" "$OUT_SIGNED"
   AUDIT_APK="$FINAL"
@@ -188,7 +188,7 @@ else
   rm -f "$OUT_SIGNED"
   AUDIT_APK="$OUT_UNSIGNED"
   ls -l "$OUT_UNSIGNED"
-  say "DONE: dist/DuckCardsRogue${SFX}.apk (no round given)"
+  say "DONE: dist/Quackill${SFX}.apk (no round given)"
 fi
 
 # post-build guard: no stale blobs may ship inside the finished APK

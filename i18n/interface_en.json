@@ -690,8 +690,6 @@
       "TITLE_TIP_SETTINGS": "Sound / music / fullscreen / language",
       "TITLE_TIP_CREDITS": "Engine / music credits (PeriTune)",
       "TITLE_FOOTER_GODOT": "Godot 4.3 self-contained build",
-      "TITLE_FOOTER_DEV": "Roguelike Dev Build",
-      "TITLE_VERSION_FOOTER": "v%s-rogue · %s",
       "TITLE_NEWER_SAVE_NOTICE": "This save is from a newer version and cannot be used in this version (the file has been preserved; update to continue)",
       "TITLE_LOAD_FAILED": "Failed to load save (backed up as run_save.sav.bad)",
       "TITLE_LOAD_ERROR_BACKUP": "%s (original backed up as .bad)",
@@ -744,7 +742,7 @@
       "UI_MENU_TITLE": "Menu",
       "UI_MENU_SEED": "Seed: %s",
       "GAME_BRAND_NAME_ZH": "Quackill",
-      "GAME_BRAND_FOOTER": "v{v}-rogue · Roguelike Dev Build"
+      "GAME_BRAND_FOOTER": "v{v}"
     },
     "shared": {
       "BAN_MENU_CONTINUE": "Resume",

@@ -73378,6 +73378,7 @@ func _init() -> void:
 
 	_test_r761()
 	_test_r762()
+	_test_r763()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -76432,3 +76433,92 @@ func _test_r762() -> void:
 			and r762_lb.contains("downloadLeaderboardEntries")
 			and r762_lb.contains("true, _details, _handle"),
 			"R762 接线锁：开始游戏进模式选择；Steam 建榜 / keep-best 上传 / 读取前十齐全")
+
+
+# ================= R763：正式构建身份 + 单实例 + 诊断包 =================
+func _test_r763() -> void:
+	# ---- B1/B6：版本与命名只有一个口径，导出预设不能偷偷回到开发名 ----
+	check(GameBrand.VERSION == "1.0.0",
+			"R763 版本单一来源：GameBrand.VERSION = 1.0.0")
+	check(GameBrand.footer_text() == "v1.0.0",
+			"R763 正式页脚只留版本号（不再出现开发版标签）")
+	var r763_ts: String = FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	check_src(r763_ts.contains("var ver := GameBrand.footer_text()")
+			and not r763_ts.contains("TITLE_VERSION_FOOTER")
+			and not r763_ts.contains("title.footer_dev"),
+			"R763 标题页版本串走 GameBrand，不再自己拼开发版后缀")
+	var r763_ep: String = FileAccess.get_file_as_string("res://export_presets.cfg")
+	check(r763_ep.contains('export_path="dist/Quackill.exe"')
+			and r763_ep.contains('export_path="dist/Quackill.apk"')
+			and r763_ep.contains('export_path="dist/Quackill_release.exe"')
+			and r763_ep.contains('export_path="dist/Quackill_release.apk"')
+			and not r763_ep.contains("DuckCardsRogue"),
+			"R763 导出预设：四个包名统一 Quackill（不再混 DuckCardsRogue）")
+	check(r763_ep.contains('application/product_name="Quackill"')
+			and r763_ep.contains('application/company_name="risusumai"')
+			and r763_ep.contains('application/file_version="1.0.0"')
+			and r763_ep.contains('application/product_version="1.0.0"')
+			and r763_ep.contains('application/modify_resources=true')
+			and r763_ep.contains('version/name="1.0.0"'),
+			"R763 构建身份：产品 / 厂牌 / exe 版本资源 / Android versionName 对齐")
+	var r763_proj: String = FileAccess.get_file_as_string("res://project.godot")
+	check_src(r763_proj.contains('AppInstanceGuard="*res://scripts/app_instance_guard.gd"')
+			and r763_proj.contains("file_logging/enable_file_logging=true")
+			and r763_proj.contains('file_logging/log_path="user://logs/godot.log"'),
+			"R763 启动接线：单实例守卫在 autoload 首位；PC 日志落 user://logs")
+	check_src(r763_proj.contains('config/name="卡牌肉鸽"'),
+			"R763 存档目录锁保留：展示名改了，但 config/name 没动")
+
+	# ---- A6：目录锁的原子性 + 活 PID 阻塞 + 死 PID 回收 ----
+	var Guard = preload("res://scripts/app_instance_guard.gd")
+	var r763_lock := "user://r763_instance_lock"
+	Guard.release_lock(r763_lock)
+	check(Guard.acquire(r763_lock, OS.get_process_id()),
+			"R763 单实例：第一个进程拿到锁")
+	check(not Guard.acquire(r763_lock, OS.get_process_id() + 100000),
+			"R763 单实例：第二个进程看到活 owner 后被拒绝")
+	Guard.release_lock(r763_lock)
+	check(Guard.acquire(r763_lock, 999999),
+			"R763 单实例：可注入一个已死 PID 制造 stale 锁")
+	check(Guard.acquire(r763_lock, OS.get_process_id()),
+			"R763 单实例：stale 锁在 PID 不存活时可被回收")
+	Guard.release_lock(r763_lock)
+	check(not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(r763_lock)),
+			"R763 单实例：正常退出后锁目录被清掉")
+	var r763_guard_src: String = FileAccess.get_file_as_string("res://scripts/app_instance_guard.gd")
+	check_src(r763_guard_src.contains("OS.alert(msg, ALERT_TITLE)")
+			and r763_guard_src.contains("get_tree().quit(1)")
+			and r763_guard_src.contains("DisplayServer.get_name() == \"headless\"")
+			and r763_guard_src.contains("--screenshot"),
+			"R763 单实例：重复启动提示后退出；headless / 截图探针自动跳过")
+
+	# ---- A8：诊断包只收本机文件，打包后能被 ZIPReader 读回 ----
+	var Diag = preload("res://scripts/diagnostic_bundle.gd")
+	Diag.set_test_mode(true)
+	var r763_diag: Dictionary = Diag.create("user://r763_diag_test")
+	check(bool(r763_diag.get("ok", false)) and FileAccess.file_exists(str(r763_diag.get("path", ""))),
+			"R763 诊断包：至少系统摘要能成功写成本机 zip")
+	var r763_zip := ZIPReader.new()
+	var r763_open_ok := r763_zip.open(str(r763_diag.get("path", ""))) == OK
+	var r763_names := r763_zip.get_files() if r763_open_ok else PackedStringArray()
+	if r763_open_ok:
+		r763_zip.close()
+	check(r763_open_ok and r763_names.has("system_info.txt"),
+			"R763 诊断包：zip 可打开且包含 system_info.txt")
+	var r763_diag_src: String = FileAccess.get_file_as_string("res://scripts/diagnostic_bundle.gd")
+	check_src(not r763_diag_src.contains('"telemetry.jsonl"')
+			and r763_diag_src.contains("set_test_mode")
+			and r763_diag_src.contains("logs/godot.log"),
+			"R763 诊断包：不塞平衡遥测；回归只收测试档；日志入口已接")
+	var r763_zp := str(r763_diag.get("path", ""))
+	if r763_zp != "" and FileAccess.file_exists(r763_zp):
+		DirAccess.remove_absolute(r763_zp)
+	var r763_diag_dir := ProjectSettings.globalize_path("user://r763_diag_test")
+	if DirAccess.dir_exists_absolute(r763_diag_dir):
+		DirAccess.remove_absolute(r763_diag_dir)
+	Diag.set_test_mode(false)
+	var r763_settings: String = FileAccess.get_file_as_string("res://scripts/settings_scene.gd")
+	check_src(r763_settings.contains("func _export_diagnostics()")
+			and r763_settings.contains("DiagnosticBundle.create()")
+			and r763_settings.contains("func _diag_rect()"),
+			"R763 设置页：诊断按钮有几何 / 点击 / 导出三处接线")

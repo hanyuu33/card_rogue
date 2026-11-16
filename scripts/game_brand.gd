@@ -42,11 +42,13 @@ const STUDIO_CN := ""
 ## 厂牌英文名。片头按温和字距逐字浮现；留空则只出中文。
 const STUDIO_EN := "risusumai"
 
-## 版本号（单一来源）：右下角版本串从这里取。
-const VERSION := "1.0"
+## 版本号（单一来源）：右下角版本串与导出预设的 file/product version 都对齐这里。
+## Steam depot 描述与 build 描述也填同一个值，发布前三处一起核。
+const VERSION := "1.0.0"
 
 ## 右下角版本串模板。`{v}` → VERSION。
-const FOOTER := "v{v}-rogue · 肉鸽开发版"
+## 正式版不再带「肉鸽开发版 / Dev Build」——商店截图与玩家界面不该出现开发期标签。
+const FOOTER := "v{v}"
 
 # ------------------------------------------------------------ 排版
 

@@ -1,3 +1,42 @@
+## 2026-11-16 R763 正式构建身份 + 单实例 + 诊断包；能本地处理的发布阻塞先收口
+
+**口径（店长）**：「能替我处理的阻塞现在就动手；不行的话先做建议完成的内容」。
+
+### 一、本轮实际落地
+
+| 线 | 内容 | 验证 |
+|---|---|---|
+| B1/B6 构建身份 | `GameBrand.VERSION=1.0.0`、`FOOTER` 改纯 `v{v}`；标题页改走 `footer_text()`；四个导出预设统一 `Quackill*.exe/apk`、厂牌 `risusumai`、`modify_resources=true` | engine 源码锁 + 真实 exe 属性 |
+| A6 单实例 | 新增 `scripts/app_instance_guard.gd`，autoload 首位；`user://instance.lock/` 目录锁，活 PID 拒绝、死 PID 回收；headless / 截图探针跳过 | 抢锁 / 第二进程拒绝 / stale 回收 / 正常释放四项回归 |
+| A8 诊断包 | `logs/godot.log` 5 份轮转；新增 `scripts/diagnostic_bundle.gd`，设置页「对局」页可导出本机 zip；不收遥测；回归只收测试档 | engine zip 可读回 `system_info.txt`；中英文按钮截图验收 |
+| 工具链 | 本机补 `rcedit v2.0.0`，写入 Godot 编辑器设置 `export/windows/rcedit` | 重新导出后 exe 属性不再是 Godot Engine |
+
+### 二、真实导出结果（不是预估）
+
+- 文件：`dist/Quackill_release.exe`，**260.1MB**，嵌入 pck。
+- Windows 属性：`FileDescription=Quackill`、`ProductName=Quackill`、`CompanyName=risusumai`、`FileVersion/ProductVersion=1.0.0`。
+- 导出目录无 `steam_appid.txt`；仓库根也没有该文件；导出预设 `*.txt` 排除规则保留。
+- 导出包 `--headless --quit-after 2` 启动通过；只有预期的「No appID found，成就跳过，游戏照常」警告。
+- ⚠️ `rcedit` 位于 `C:\Users\Administrator\.workbuddy\binaries\rcedit\rcedit-x64.exe`，是**机器本地工具**；换机不重配会退回 Godot Engine 版本资源。
+
+### 三、测试与边界
+
+- engine **6220✓ / 0✗**（R762 的 6203 基础上新增 17 条 R763 断言）。
+- smoke **75 / 0**；新增设置页诊断按钮几何与不越界断言。
+- `i18n/validate_interface.py` 仍只剩 5 个既有失效锚点（`REWARD_TOOL_FULL_SWAP` / `REWARD_TOOL_FULL_BTN` / `GALLERY_SUMMARY_LOCKED` / `STORY_GRANTS_BOTH` / `RECORD_MORE_RELICS`），本轮没有新增红项。
+- `i18n/validate_spanish.py` 从 23 项降到 **15 项**：补齐 privacy / telemetry / diag 四组西语骨架，剩余是既有卡牌术语与事件选项数锁。
+- 中 / 英 / 西三语设置页诊断按钮均已截图验收；英文长描述会按可用宽自动缩字。
+- **没有改 `project.godot` 的 `config/name`**：它决定 `user://` 路径，改了等于老玩家存档换目录；展示名走 `GameBrand` / `product_name`。
+
+### 四、仍然不能替店长做的阻塞
+
+1. **Steamworks 后台建 9 个成就并 Publish**：需要店长账号；代码与图标已备好，后台未建之前 A3 仍不算过。
+2. **自有 AppID 的成就真解锁 / 每日排行榜建榜、上传、前十读取**：本机只能验接线与离线降级，不能拿 Spacewar 冒充。
+3. **Steam 构建上传、干净 Windows 机 / 非管理员 / 中文路径启动**：需要构建账号与另一台干净机；本机导出只能算包体自检。
+4. **商店页素材与 Capsule / 5 张 1920×1080 截图 / AI 披露 / 年龄分级**：需要设计定稿与后台填写，不能由代码替代。
+5. **云存档后台规则（Auto-Cloud 白名单）**：代码文件和排除项已列，但必须到 Steamworks 后台配置后跨机验收。
+6. **A6 真机双开弹窗**：单元测试已覆盖锁逻辑，仍建议在正式包上人工开两次确认提示与退出观感。
+
 ## 2026-11-15 R757 漩涡 9186 恢复成普通卡池卡（3 费）；水元素给的那张才是 0 费
 
 **问题（店长）**：「漩涡现在 0 费吗？正常是 3 费，水元素效果才会变 0」→「漩涡本身应该在卡池里，作为 3 费卡」。

@@ -13,21 +13,21 @@
 
 | 项 | 现状 | 判定 |
 |---|---|---|
-| 品牌 | `GameBrand`：中《嘎嘎乱杀》／英 `Quackill`／`risusumai`／`v1.0` | ✅ 已定稿 |
-| `GameBrand.FOOTER` | 仍是 `v{v}-rogue · 肉鸽开发版` | ⚠️ 发布前必改 |
+| 品牌 | `GameBrand`：中《嘎嘎乱杀》／英 `Quackill`／`risusumai`／`v1.0.0` | ✅ 已定稿 |
+| `GameBrand.FOOTER` | R763 改为纯 `v{v}`；标题页统一走 `footer_text()`，不再显示「开发版」 | ✅ 已收口 |
 | Steam 成就桥 | `scripts/steam_achievements.gd` 完整：9 成就 + `Engine.get_singleton` 反射 + `storeStats` 落盘 + AppID 三级回落 | ✅ 代码就绪 |
 | GodotSteam 插件 | `addons/godotsteam/` **已装 4.15 GDExtension**（plugin 4.1–4.3，Steamworks SDK 1.62）；4.3 编辑器与导出包都实测加载成功（`has_singleton(Steam)=true`，815 个方法，导出目录自动带 `libgodotsteam.*.dll` + `steam_api64.dll`） | ✅ R740 已装（只剩「后台建成就」没做） |
 | 成就数量 / 层次 | 8 个，全是「进度型」（初见 / 通关 / 难度） | ⚠️ 偏少，缺长尾（组合、图鉴、每日） |
-| 导出预设 | Windows Desktop（debug+release）、Android（debug+release） | ✅ 在，但 `export_path` 仍是 `dist/DuckCardsRogue.apk` |
-| 桌面纹理 | 卡图 `compress/mode=2` + `high_quality=true`，生成 **bptc + astc 双变体** | ⚠️ 包体账（281MB）是按 Android/astc 记的，**桌面侧未重测** |
+| 导出预设 | 四个预设均改用 `Quackill*.exe/apk`；产品名 Quackill、厂牌 risusumai、exe 版本资源 1.0.0 | ✅ R763 已收口 |
+| 桌面纹理 | 卡图 `compress/mode=2` + `high_quality=true`，生成 **bptc + astc 双变体** | ⚠️ 纹理 PSNR 仍待重测；R763 已产出真实 260.1MB 包 |
 | 存档 | `run_save.sav`（局内）/ `profile.json`（玩家）/ `run_records.json` / `run_pending.json` / `save_trace.log`（取证，带时间戳、会涨） | ⚠️ 云存档需白名单，`save_trace.log` 不能同步 |
-| 本地化 | **零**：无 `.translation`、无 `TranslationServer`，文案硬编码在 `cards.json` / `stories.json` / 各 `_scene.gd` | ⚠️ 英/日版已定要做（Q1），见第 5 章 |
+| 本地化 | 四语界面与卡牌 / 道具翻译并行推进；本轮只清理旧标题页脚键 | ⚠️ 全量卡面排版与旧锚点仍待最终复验 |
 | 新手引导 | 教程机制代码在（`battle_scene._tutorial` + 7350+ 行引导条），但 **42 个关卡 `tutorial` 全为 `[]`**；且引导条只剩 36..52 共 16px 高度（源码注释明说必须先改版式） | ❌ 休眠态，恢复成本高于「新做一套」 |
 | 每日挑战 | R762 已接模式选择、UTC 日期种子、固定职业/难度/标准初始卡组、每日一次、续档、本地成绩与 Steam 榜桥 | ⚠️ 本地闭环已完成；自有 AppID 的真实建榜/上传/下载待验 |
 | 组合系统 | 唯一入口 `_open_combo()`；候选池 24 张；`combo_trigger` 卡 **仅 2 张**（9246 / 9247）；机械之心可用候选仅 4 张；R588「产物继承 traits / id」**未修** | ⚠️ 保真 bug + 内容面窄 |
 | 联机 | `net.gd` 局域网 UDP 广播 + TCP 47812（Python 版移植） | ⚠️ 影响隐私政策 / 防火墙 / 商店页措辞，见决策 Q4 |
 | 分辨率 | 1280×720，`canvas_items` + `expand` | ✅ 天然适配 Deck / 各种 16:9 |
-| 包体 | 桌面单文件 exe 实测 **263.7MB**（R741 实测；此前 368.6MB）—— 差的 105MB 是 `release/` 里那批 HTML 总表被当成资源打进了 pck，R741 已把 `release/*` 加进 4 个预设的 exclude_filter | ✅ 已瘦身 |
+| 包体 | R763 正式 Windows 包实测 **260.1MB**（`dist/Quackill_release.exe`，嵌入 pck）；R741 已把 `release/*` 排除出 4 个预设 | ✅ 已瘦身，B3 实测有数 |
 
 ---
 
@@ -41,9 +41,9 @@
 | A3′ | 成就图标（铜/银/金三档） | 单色金属徽章一套：进度型铜、通关型银、高难型金；未达成统一灰石 | ✅ `release/achievement_icons/` 9×2 张 64px 已备好，直接上传 |
 | A4 | 成就长尾补 4~6 个 | 建议：首次组合 / 组合产物达 N 种 / 图鉴全收 / 每日挑战首胜 / 无伤过精英 / 单回合斩杀 100+ | 后台 + 代码 `API_*` 两处同名 |
 | A5 | 云存档（Steam Auto-Cloud 或 Remote Storage） | 只同步 `profile.json` + `run_records.json` + `run_save.sav` + `daily_challenge.json`（每日次数跨机一致）；**排除** `save_trace.log` / `run_pending.json` / `*_test.*` | A 机打一半→B 机续档成功；冲突时取「本地 mtime 新」，且 `save_trace` 有记录 |
-| A6 | 单实例互斥 | 双开会抢同一个 `user://`（`run_save` 注释里已有警告） | 第二个进程弹「已在运行」并退出，不产生半截档 |
+| A6 | 单实例互斥 | `AppInstanceGuard` 在 autoload 首位抢 `user://instance.lock/`；活 PID 拒绝，死 PID 回收；headless / 截图探针跳过 | 静态回归已覆盖抢锁 / 拒绝 / 回收；R763 真机双开弹窗仍需一次人工验收 |
 | A7 | 存档格式版本迁移框架 | 现在 `RunRecord.FORMAT=1`，加字段可空；`run_save` 无版本号 | 用旧档启动不崩、不丢；有 `save_version` 字段 |
-| A8 | 桌面端日志与反馈出口 | `--log-file` 落到 `user://`；设置页加「导出诊断包」 | 崩溃后能拿到日志；玩家能一键打包 |
+| A8 | 桌面端日志与反馈出口 | 项目开启 `user://logs/godot.log`（5 份轮转）；设置页「导出诊断包」打成本机 zip | ✅ R763 已落代码与测试；真实玩家机崩溃复现仍待发售后验证 |
 | A9 | Overlay / Deck 自评 | Overlay 默认可用；Deck 评级先做 Playable 诚实自评 | 提交时 Steam 后台填 Deck 兼容性 |
 
 > A1–A3 是关键路径：成就代码已写完但**从未实机跑过**，越早验越安全。
@@ -100,12 +100,13 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 
 | # | 事项 | 要点 | 判据 |
 |---|---|---|---|
-| B1 | 名实一致收尾 | `FOOTER` 去「肉鸽开发版」；`export_path` 改 `dist/Quackill.exe` / `dist/Quackill.apk`；`description` / `copyright` / `company_name=risusumai` / `product_name=Quackill` | `git grep` 无 `DuckCardsRogue`；导出文件名 = `Quackill.exe` |
+| B1 | 名实一致收尾 | `FOOTER` 去「肉鸽开发版」；`export_path` 改 `dist/Quackill.exe` / `dist/Quackill.apk`；`description` / `copyright` / `company_name=risusumai` / `product_name=Quackill` | ✅ R763 完成；历史文档与旧归档包名保留，活动脚本 / 预设无旧名 |
+| B1′ | `rcedit` 工具链 | Godot 只有配置了 rcedit 才能把版本资源 / 图标写进 exe；本机已放 `C:\Users\Administrator\.workbuddy\binaries\rcedit\rcedit-x64.exe` 并写入编辑器设置 `export/windows/rcedit`。来源 rcedit v2.0.0，SHA-256 `3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a` | 换机必须重配；否则导出只得到 Godot Engine 版本资源 |
 | B2 | **桌面纹理变体重测** | `high_quality=true` → bptc + astc；Windows 走 bptc/S3TC。要重跑 `tools/shot_r596g_tex.gd` + `_psnr_r596g.py`（**关 `content_scale_mode`**） | 桌面 PSNR ≥ 45dB；内存 / 首屏加载不劣化 |
-| B3 | 桌面包体重算 | 桌面不带 v7a/arm64 两份 lib；PCK 走 bptc 体积与 astc 不同 | 产出真实 `.pck` + exe 体积表，替换「预估 281MB」 |
+| B3 | 桌面包体重算 | 桌面不带 v7a/arm64 两份 lib；PCK 走 bptc 体积与 astc 不同 | 🟡 R763 实测嵌入 pck 的 exe **260.1MB**；桌面纹理 PSNR 仍待 B2 |
 | B4 | Windows release 预设核查 | 图标用 `assets/ui/icon.ico`；`config/icon` 现指向 `icon_android_legacy.png`（**桌面也用它**，需确认尺寸观感） | 干净机双击可跑，任务栏图标正确 |
 | B5 | Steam 构建上传 | `steamcmd` + `app_build_<id>.vdf` + `depot_build.vdf`；只一个 depot（exe + pck） | 上传成功、Steam 客户端能下、能启动 |
-| B6 | 版本号单一来源 | `GameBrand.VERSION` = depot 描述 = exe 版本资源 = Steam build 描述 | 三处一致 |
+| B6 | 版本号单一来源 | `GameBrand.VERSION=1.0.0`；Windows exe FileVersion / ProductVersion 已实测 1.0.0；Android versionName 1.0.0 | ✅ 代码与包体完成；Steam depot / build 描述待后台填写 |
 | B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」 | 手改一个旧版本 → 更新 → 续档正常 |
 
 ---
@@ -272,5 +273,5 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 - [ ] 存档：损坏恢复、跨机续档、更新后旧档可读
 - [ ] 发行包内无 `steam_appid.txt`、无 `_preview` / `_review` / `_bk_*` / `_pending`
 - [ ] 商店页：胶囊 5 张、截图 5+、文案中英、AI 披露已填、语言表与实际一致
-- [ ] 版本号三处一致；`FOOTER` 无「开发版」字样
+- [ ] 版本号三处一致（代码 / exe 已 1.0.0，Steam depot 描述待填）；`FOOTER` 已无「开发版」字样
 - [ ] （本地化轮）`probe_ui_text.gd` 三语 0 溢出；卡面 303 条 effect_text 全部重验；语言表 = 实际支持语言

@@ -215,7 +215,9 @@ func _draw() -> void:
 	if not _has_art:
 		_draw_title_ornaments()
 	# 底部信息
-	var ver := GameI18n.ui("shell", "TITLE_VERSION_FOOTER", "v%s-rogue · %s") % [GameBrand.VERSION, L10n.t("title.footer_dev")]
+	# R763：版本串只走 GameBrand.footer_text()，不再在这里拼「开发版」后缀。
+	# 否则 GameBrand.FOOTER 改了、标题页仍显示旧标签，B1 的名实一致就是假完成。
+	var ver := GameBrand.footer_text()
 	draw_string(_font, Vector2(size.x - 250, size.y - 16), ver,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.FS_CAPTION, UiTheme.INK_500)
 	draw_string(_font, Vector2(14, size.y - 16), L10n.t("title.footer_godot"),

@@ -1112,6 +1112,9 @@ func _check_settings(scene: Variant) -> void:
 	var lang_vis: bool = scene._lang_list != null and scene._lang_list.visible
 	scene._set_tab(scene.TAB_RUN)
 	var seed_vis: bool = scene._seed_edit != null and scene._seed_edit.visible
+	var diag_rect: Rect2 = scene._diag_rect()
+	var diag_ok: bool = diag_rect.position.y >= scene._seed_panel_rect().end.y + 44.0 \
+			and diag_rect.end.y <= 720.0 and diag_rect.size.x == scene.ROW_W
 	scene._set_tab(scene.TAB_AUDIO)
 	if audio_rows.size() != 4:
 		_smoke_fail("R660c 设置页：音频页应有 4 行，实际 %d" % audio_rows.size())
@@ -1129,9 +1132,12 @@ func _check_settings(scene: Variant) -> void:
 		_smoke_fail("R660d 设置页：页签整栏宽度应等于下方框体宽（%.1f）" % scene.ROW_W)
 	elif not seam_ok:
 		_smoke_fail("R660d 设置页：页签之间必须贴紧（零间隙），不能是一排散按钮")
+	elif not diag_ok:
+		_smoke_fail("R763 设置页：诊断按钮应在种子面板下方且不越出 720 高（%s）" % str(diag_rect))
 	else:
 		print("SMOKE OK R660c 设置页：4 页签各摊自己的项 · 列表/输入框按页显隐")
 		print("SMOKE OK R660d 设置页：页签等分贴紧，整栏宽 = 框体宽 %.0f" % scene.ROW_W)
+		print("SMOKE OK R763 设置页：诊断按钮在种子面板下方，整行 %.0f×%.0f" % [diag_rect.size.x, diag_rect.size.y])
 
 
 func _check_record_list(scene: Variant) -> void:
