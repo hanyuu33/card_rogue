@@ -1,0 +1,32 @@
+Generate one single image: a flat vector PICTOGRAM of a human figure, drawn in the visual language used for the little black figures on road signs — and NOTHING ELSE.
+
+Think of the small solid-black human figure printed on a road sign, and imagine that figure alone, cut out of the sign, sitting on a plain background. That is exactly what is wanted. The sign itself must NOT be drawn.
+
+THE FIGURE:
+- One single solid black human silhouette, entirely solid filled black, no interior lines, no grey, no shading.
+- Built from simple thick geometric shapes: a plain filled black circle for the head, thick rounded bars for torso / arms / legs. Limbs are roughly uniform in thickness.
+- NO facial features at all: no eyes, no mouth, no nose. The head is a blank black disc.
+- NO clothing, NO hair, NO fingers, NO toes, NO muscle, NO detail of any kind.
+- Pose: bent forward under a heavy load — knees clearly bent, torso leaning far forward so the back is a flat sloping surface, head hanging low and forward, both arms reaching back and up to steady the load on the back. The whole posture must read as "carrying something very heavy".
+- The figure is centred and occupies about 55% of the frame height.
+
+THE ONE COLOUR ELEMENT — a boulder on the back:
+- One large irregular grey boulder (#8C8C96, with two or three flat darker grey facets #6A6A73 for simple rock planes — flat fills only, no gradients) sits on the figure's sloping back.
+- The boulder is clearly WIDER and TALLER than the figure's torso, so the weight is obvious. It rests squarely on the back and slightly overhangs on both sides.
+- The boulder has an angular, chipped outline — a few straight edges and corners, not a smooth blob and not a perfect circle.
+- The boulder is the ONLY thing that is not black. Nothing else is coloured.
+- The boulder must not touch the top of the head; there is clear empty space between the bowed head and the rock.
+
+ABSOLUTELY FORBIDDEN — this is the most important part:
+- NO red circle, NO red ring, NO white disc, NO white background circle.
+- NO diagonal slash or bar across anything.
+- NO triangle, NO square, NO rounded rectangle, NO sign plate, NO plaque, NO badge, NO emblem.
+- NO border, NO frame, NO outline around the image.
+- NO text, letters, numbers, punctuation or any symbols.
+- NO ground line, NO shadow, NO other objects, NO cart, NO sack, NO rope.
+
+STYLE: completely flat 2D vector. Solid flat colour fills. Sharp crisp edges. NO gradients, NO textures, NO 3D rendering, NO perspective, NO glow, NO bevel.
+
+BACKGROUND: one flat very dark desaturated purple (#1B1420) filling the whole frame. Uniform, empty, no vignette, no pattern.
+
+The result must still be instantly readable as "a person bent over carrying a boulder on their back" when shrunk to 150 pixels wide.

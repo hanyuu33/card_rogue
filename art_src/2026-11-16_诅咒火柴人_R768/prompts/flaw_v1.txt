@@ -1,0 +1,32 @@
+Generate one single image: a flat vector PICTOGRAM of a human figure, drawn in the visual language used for the little black figures on road signs — and NOTHING ELSE.
+
+Think of the small solid-black human figure printed on a road sign, and imagine that figure alone, cut out of the sign, sitting on a plain background. That is exactly what is wanted. The sign itself must NOT be drawn.
+
+THE FIGURE:
+- One single solid black human silhouette, entirely solid filled black, no interior lines, no grey, no shading.
+- Built from simple thick geometric shapes: a plain filled black circle for the head, thick rounded bars for torso / arms / legs. Limbs are roughly uniform in thickness.
+- NO facial features at all: no eyes, no mouth, no nose. The head is a blank black disc.
+- NO clothing, NO hair, NO fingers, NO toes, NO muscle, NO detail of any kind.
+- Pose: standing upright, feet slightly apart, arms hanging loosely at the sides, head straight. A neutral, defenceless standing posture.
+- The figure is centred and occupies about 62% of the frame height.
+
+THE ONE COLOUR ELEMENT — a crack running through the figure:
+- A single jagged, lightning-like CRACK splits the black silhouette diagonally, starting at the figure's shoulder area and running down across the torso to the hip.
+- The crack is a solid bright cyan-white band (#DFF7FA) with sharp zig-zag edges. It is about one quarter of the torso width, so it reads clearly even at small size.
+- The crack must visibly CUT THROUGH the body — the silhouette is broken into two pieces by it.
+- Two or three small solid cyan-white chips fly off the crack edges, as if the body is chipping apart. Keep them small and close to the figure.
+- The crack is the ONLY thing that is not black. Nothing else is coloured.
+
+ABSOLUTELY FORBIDDEN — this is the most important part:
+- NO red circle, NO red ring, NO white disc, NO white background circle.
+- NO diagonal slash or bar across anything.
+- NO triangle, NO square, NO rounded rectangle, NO sign plate, NO plaque, NO badge, NO emblem, NO shield, NO armour.
+- NO border, NO frame, NO outline around the image.
+- NO text, letters, numbers, punctuation or any symbols.
+- NO ground line, NO shadow, NO other objects.
+
+STYLE: completely flat 2D vector. Solid flat colour fills. Sharp crisp edges. NO gradients, NO textures, NO 3D, NO perspective, NO glow, NO bevel.
+
+BACKGROUND: one flat very dark desaturated purple (#1B1420) filling the whole frame. Uniform, empty, no vignette, no pattern.
+
+The result must still be instantly readable as "a standing person split by a crack" when shrunk to 150 pixels wide.

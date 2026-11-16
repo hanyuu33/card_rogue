@@ -1,0 +1,7 @@
+16:52:26	regret_a	OK
+16:53:56	regret_b	OK
+16:55:36	regret_c	OK
+17:15:29	regret_v2	OK
+17:20:04	flaw	OK
+17:21:31	paralysis	OK
+17:23:41	compensation	OK

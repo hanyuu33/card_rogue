@@ -1,0 +1,25 @@
+[16:49:37] 代理预检失败 http://127.0.0.1:7897：URLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1010)'))
+[16:49:37] 代理 http://127.0.0.1:7897 不可用：先启动 Clash Verge（7897），或用 CODEX_PROXY 指定。本次不出图。
+[16:50:20] 代理预检 OK https://api.openai.com/v1/models HTTP 401（链路通，目标站拒绝）
+[16:50:20] 代理预检 OK：http://127.0.0.1:7897
+[16:50:20] RUN  regret_a  纯文生图(无参考图)  第1次
+[16:52:26] OK   regret_a  <- exec-580f310b-01d0-4d65-a1bc-5e665a9a5cd9.png  (126s, 1229 KB)
+[16:52:26] RUN  regret_b  纯文生图(无参考图)  第1次
+[16:53:56] OK   regret_b  <- exec-4d5b1779-8037-4904-84a9-0f61f8ba6567.png  (90s, 1217 KB)
+[16:53:56] RUN  regret_c  纯文生图(无参考图)  第1次
+[16:55:36] OK   regret_c  <- exec-e0e9444e-3b0f-4b6c-8815-a4a93e5c2c61.png  (100s, 1157 KB)
+[16:55:36] === R767 懊悔卡图结束 成功3 / 失败0 []
+[17:14:15] 代理预检 OK https://api.openai.com/v1/models HTTP 401（链路通，目标站拒绝）
+[17:14:15] 代理预检 OK：http://127.0.0.1:7897
+[17:14:15] RUN  regret_v2  纯文生图(无参考图)  第1次
+[17:15:29] OK   regret_v2  <- exec-95c0d65b-b98b-4610-b5d1-218cce353248.png  (73s, 1009 KB)
+[17:15:29] RUN  flaw  纯文生图(无参考图)  第1次
+[17:18:54] 代理预检 OK https://api.openai.com/v1/models HTTP 401（链路通，目标站拒绝）
+[17:18:54] 代理预检 OK：http://127.0.0.1:7897
+[17:18:54] RUN  flaw  纯文生图(无参考图)  第1次
+[17:20:04] OK   flaw  <- exec-ef72e2bd-f86b-4b03-b4ba-6678da502ddd.png  (70s, 1082 KB)
+[17:20:04] RUN  paralysis  纯文生图(无参考图)  第1次
+[17:21:31] OK   paralysis  <- exec-aefa66dd-af5b-40bb-b8e7-e539453e629d.png  (87s, 1109 KB)
+[17:21:31] RUN  compensation  纯文生图(无参考图)  第1次
+[17:23:41] OK   compensation  <- exec-dec4c28d-d6ef-4315-9a57-f4bac2efcef5.png  (131s, 1149 KB)
+[17:23:41] === R767 懊悔卡图结束 成功3 / 失败0 []

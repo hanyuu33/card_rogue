@@ -1,0 +1,32 @@
+Generate one single image: a flat vector PICTOGRAM of a human figure, drawn in the visual language used for the little black figures on road signs — and NOTHING ELSE.
+
+Think of the small solid-black human figure printed on a road sign, and imagine that figure alone, cut out of the sign, sitting on a plain background. That is exactly what is wanted. The sign itself must NOT be drawn.
+
+THE FIGURE:
+- One single solid black human silhouette, entirely solid filled black, no interior lines, no grey, no shading.
+- Built from simple thick geometric shapes: a plain filled black circle for the head, thick rounded bars for torso / arms / legs. Limbs are roughly uniform in thickness.
+- NO facial features at all: no eyes, no mouth, no nose. The head is a blank black disc.
+- NO clothing, NO hair, NO fingers, NO toes, NO muscle, NO detail of any kind.
+- Pose: standing STIFF and rigid like a board — legs straight and locked together, torso rigid and leaning slightly backwards, head tilted back, both arms held stiffly out from the body with the forearms bent at a hard right angle, as if the body has locked up and cannot move. Frozen, paralysed, not relaxed.
+- The figure is centred and occupies about 58% of the frame height.
+
+THE COLOUR ELEMENT — yellow electric bolts:
+- Three solid bright yellow lightning bolts (#FFD400), each a sharp angular zig-zag of three segments with pointed ends.
+- They strike inwards towards the figure from three different directions: one from the upper left, one from the upper right, one from the lower left.
+- The bolts are drawn as bold flat shapes, thick enough to read instantly, and they clearly POINT AT the figure — sharp tips facing the body — but they do NOT cross over the silhouette and do NOT form a straight line through it.
+- There are also two or three tiny yellow spark strokes right at the body edges where the bolts arrive.
+- Yellow is the ONLY other colour in the image. Nothing else is coloured.
+
+ABSOLUTELY FORBIDDEN — this is the most important part:
+- NO red circle, NO red ring, NO white disc, NO white background circle.
+- NO single straight diagonal bar across the figure (the bolts must be zig-zag and must not read as a slash).
+- NO triangle, NO square, NO rounded rectangle, NO sign plate, NO plaque, NO badge, NO emblem.
+- NO border, NO frame, NO outline around the image.
+- NO text, letters, numbers, punctuation or any symbols other than the three bolts.
+- NO ground line, NO shadow, NO other objects.
+
+STYLE: completely flat 2D vector. Solid flat colour fills. Sharp crisp edges. NO gradients, NO textures, NO 3D, NO perspective, NO glow, NO bevel.
+
+BACKGROUND: one flat very dark desaturated purple (#1B1420) filling the whole frame. Uniform, empty, no vignette, no pattern.
+
+The result must still be instantly readable as "a person being struck by electricity, body locked stiff" when shrunk to 150 pixels wide.

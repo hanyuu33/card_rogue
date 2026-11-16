@@ -1,0 +1,17 @@
+Generate one single image: a flat vector pictogram in the style of an official road traffic sign, square 1:1 framing, perfectly centered.
+
+COMPOSITION (follow exactly):
+- One perfect circle, its diameter about 62% of the frame width, centered in the frame.
+- The circle's ring is thick and pure saturated traffic-sign red (#D0342C). Ring thickness is about 7% of the circle diameter.
+- The interior of the circle is flat pure white. No shading, no gradient, no texture.
+- Inside the circle: one black stick figure in a crouched pose of regret. It kneels on both knees, the head is bowed forward and downward, and both arms are bent upward with the hands resting on the back of the head — the classic "hands on head in despair" pictogram. Head is a plain filled black circle with NO facial features. Body, arms and legs are simple uniform black strokes, about 8% of the circle diameter thick, with rounded caps.
+- The whole stick figure fits comfortably inside the circle with clear white margin on every side. Nothing touches or crosses the red ring.
+- One thick red diagonal bar crosses the circle from the upper-left edge to the lower-right edge, at the same red as the ring and slightly thinner than the ring, drawn ON TOP of the stick figure.
+
+STYLE: flat 2D vector graphic. Sharp crisp edges. High contrast. Solid flat colour fills only. NO gradients, NO textures, NO 3D, NO perspective, NO drop shadows, NO glow, NO bevel, NO outline around the frame.
+
+BACKGROUND: flat very dark desaturated purple (#181020) filling the rest of the frame. No vignette, no pattern, no objects.
+
+STRICTLY FORBIDDEN: any text, letters, numbers, punctuation, arrows, icons or symbols other than the stick figure described above. No watermark, no signature, no caption, no border, no picture frame. No photorealism, no human skin, no faces with eyes or mouths.
+
+The final image must be instantly readable as a road sign when shrunk to 150 pixels wide.
