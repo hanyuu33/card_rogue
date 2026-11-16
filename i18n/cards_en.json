@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 327,
+ "count": 329,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1313,6 +1313,14 @@
   "9266": {
    "name": "Call",
    "effect_text": "Gain +1 Energy for the rest of this battle. Add a random Ally of another class that costs 1 more than this card to your Hand; its cost becomes 0 for the rest of this battle."
+  },
+  "9267": {
+   "name": "Rousing Anthem",
+   "effect_text": "This turn, all Allies on the field gain +4 Power. Allies whose original class is not yours gain +6 instead."
+  },
+  "9268": {
+   "name": "Pipe Organ",
+   "effect_text": "When it attacks, add a random Skill card from your deck to your Hand; its cost is -1 this turn. While in play, whenever you use a Skill card, deal 3 damage to all enemies."
   }
  }
 }

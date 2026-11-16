@@ -795,6 +795,21 @@ const RECRUIT_ID:= 9264
 const CALL_ID:= 9266
 const CALL_ENERGY:= 1     # 本局每回合费用 +1
 const CALL_COST_GAP:= 1   # 找的盟友 = 本卡费用 +1
+# R776 激励乐章（9267，吟游诗人 1 费普通技能）：**本回合**场上所有己方盟友 +N 力量；
+# 「原本职业不属于自己」的盟友（`_other_class_card()` 同一判据）改为 +M。
+# ⚠️ 力量记在 `Placement.atk_buff_turn`（本回合力量，回合结束自然清零）——
+#    卡面写的是「本回合」，**不是** `totem_atk` 那层要挂到战斗结束的持续 buff。
+const ANTHEM_ID:= 9267
+const ANTHEM_POWER:= 4         # 同职业盟友 +4
+const ANTHEM_POWER_OTHER:= 6   # 原本职业非自己的盟友 +6
+# R776 管风琴（9268，吟游诗人 4 费史诗工事 · 0 力量 / 射程 7 / 19 生命）：
+#   ① **攻击时**从卡组取一张随机技能卡入手，该卡本回合费用 -1 —— 直接复用
+#      `_fetch_skill_card()`（赤狐 9034 的唯一口），不另写一份取牌逻辑；
+#   ② 在场时**每使用一张技能卡** → 对所有敌人 3 点伤害（场上每有一台各结算一份）。
+# ② 的挂点在 `_note_card_played()`（出牌唯一收尾口），与疾风 / 潜影者同一排。
+const ORGAN_ID:= 9268
+const ORGAN_TRAIT:= "管风琴"
+const ORGAN_SKILL_DMG:= 3       # 每用一张技能卡，对所有敌人 3 伤
 # R745 野性图腾（工具 7008）：**使用后**本场所有己方盟友 +2 力量。
 # 与竖琴同一套持续 buff（`Placement.totem_atk` + `effective_power()`），
 # 但生效判据是「本场是否已经用过这个工具」，不是「是否持有道具」（用完就摘槽了）。
@@ -8544,6 +8559,82 @@ func _fetch_skill_card(source: String, discount: int = FETCH_SKILL_DISCOUNT) -> 
 		"source": source})
 
 
+func _inspire_anthem(side: String) -> String :
+	## 激励乐章（9267）：**本回合**场上所有己方盟友力量 +4；
+	## 「原本职业不属于自己」的盟友（`_other_class_card()` 唯一判据）改为 +6。
+	## ⚠️ 只认 `kind == "盟友"` —— 卡面写的是「所有盟友」，工事 / 场地不算。
+	## 力量记在 `atk_buff_turn`：回合结束由 `end_turn()` 统一清零 →「本回合」名副其实。
+	var n:= 0
+	var other:= 0
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.owner != side or p.card.kind != "盟友":
+			continue
+		var gain:= ANTHEM_POWER_OTHER if _other_class_card(p.card) else ANTHEM_POWER
+		p.atk_buff_turn += gain
+		n += 1
+		if gain == ANTHEM_POWER_OTHER:
+			other += 1
+		_log("激励乐章：%s 本回合力量 +%d（现 %d）"
+				% [p.card.card_name, gain, p.effective_power()])
+	if n <= 0:
+		return "场上没有盟友"
+	action.emit("inspire", {"count": n, "other": other, "side": side})
+	return "场上 %d 个盟友本回合力量 +%d（其中 %d 个其他职业盟友 +%d）" \
+			% [n, ANTHEM_POWER, other, ANTHEM_POWER_OTHER]
+
+
+func _organ_attack_fetch(p: Placement) -> void :
+	## 管风琴（9268）**攻击时**：从卡组取一张随机技能卡入手，该卡本回合费用 -1。
+	## 取牌本体走 `_fetch_skill_card()`（赤狐 9034 的唯一口）—— 减费口径 / 手牌满进弃牌区 /
+	## `turn_card_discount` 按实例记账全部沿用，不在这里重写一份。
+	if p == null or p.owner != SIDE_SELF or not p.card.traits.has(ORGAN_TRAIT):
+		return
+	_fetch_skill_card("管风琴")
+
+
+func _organ_tick(side: String, played: CardData) -> void :
+	## 管风琴（9268）**在场时**：该方每使用一张**技能卡** → 对所有敌人各 3 点伤害。
+	## 场上几台就打几份（与魔法塔 / 飓风咆哮「每张各结算一次」同一口径）。
+	## ⚠️ 只认 `played.kind == "技能"`：盟友 / 工事 / 效果卡都触发不了它。
+	## 伤害是**定值 3**，不套 `_spell_dmg()` —— 卡面写死「3 点」，被荧光草 / 魔法塔
+	## 抬成 4 点就不是这张卡了（与疾风「不叠符文」同一条纪律的更强版本）。
+	if played == null or played.kind != "技能":
+		return
+	var organs:= 0
+	for cell: Vector2i in state.board:
+		var p: Placement = state.unit_at(cell)
+		if p != null and p.owner == side and p.card.traits.has(ORGAN_TRAIT):
+			organs += 1
+	if organs <= 0:
+		return
+	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var cells: Array[Vector2i] = []
+	for cell2: Vector2i in state.board:
+		var q: Placement = state.unit_at(cell2)
+		if q != null and q.owner == foe:
+			cells.append(cell2)
+	cells.sort()
+	var total:= ORGAN_SKILL_DMG * organs
+	if cells.is_empty():
+		_damage_player(foe, total, "管风琴")
+		_log("管风琴：%d 台 × %d 伤 → 场上没有敌人，直击对方 HP %d 点"
+				% [organs, ORGAN_SKILL_DMG, total])
+		action.emit("organ", {"hits": 0, "dmg": total, "hp": total, "organs": organs})
+		return
+	var hit:= 0
+	for cell3 in cells:
+		var q2: Placement = state.unit_at(cell3)
+		if q2 == null:
+			continue
+		_hit_unit(q2, total, "管风琴")
+		hit += 1
+	_log("管风琴：使用「%s」→ %d 个敌人各受 %d 点伤害（%d 台）"
+			% [played.card_name, hit, total, organs])
+	_destroy_dead()
+	action.emit("organ", {"hits": hit, "dmg": total, "organs": organs})
+
+
 func _dove_trigger(n: int = TURTLE_DOVE_DISCOUNT, source: String = "斑鸠") -> void :
 	## 斑鸠 9052「使用后，本回合使用下一个盟友时费用 -1」的**唯一实现口**。
 	## ⚠️ 这个减费只作用于**下一个**盟友：`play_from_hand` 里盟友上场时先把
@@ -9097,6 +9188,7 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	_poem_tick(side, played)
 	_phantom_cloak_tick(side)
 	_gale_tick(side, played)
+	_organ_tick(side, played)
 	_lurker_tick(side, played)
 	_sleepless_tick(side)
 	_wind_fairy_tick(side)
@@ -11635,6 +11727,13 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					% [ff_copy.card_name, FOREST_FRIENDS_DISCOUNT])
 			return "「%s」加入手卡，其本回合费用 -%d" % [ff_copy.card_name,
 					FOREST_FRIENDS_DISCOUNT]
+		ANTHEM_ID:
+			# 激励乐章（9267，R776，吟游诗人 1 费普通技能）：
+			#   **本回合**场上所有己方盟友 +4 力量；原本职业不属于自己的盟友改为 +6。
+			# * 无目标（`target_mode` = none）：全场一次性结算，不读 `target`；
+			# * 「其他职业」判据复用 `_other_class_card()`（有归属 + 不是当前职业，公用卡不算）；
+			# * 场上没有盟友 → 照常吃掉这 1 费并回报「场上没有盟友」，不开空面板。
+			return _inspire_anthem(side)
 		CALL_ID:
 			# 呼唤（9266，R773，吟游诗人 0 费普通技能）：
 			#   ① 本场战斗内每回合费用 +1（`_battle_energy_bonus` 累加，叠几张算几层）；
@@ -18255,6 +18354,7 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		# 放在 `_tap` 之前 —— 前进完再结束行动，落点才是最终位置。
 		_goose_lunge(attacker, dst)
 		_attack_gain_energy(side, attacker)   # 地狱咏唱者 8022 / 黑暗祭坛 8023：攻击时 +1 费
+		_organ_attack_fetch(attacker)   # 管风琴（9268，R776）：攻击时从卡组取一张技能卡入手
 		_assemble_execute(attacker, _cell_of(attacker), "attack")
 		_snow_leopard_discount(attacker)   # 雪豹（8081，R446）：攻击时随机一张手牌本回合 -1 费
 		_tap(attacker, "行动完毕")
@@ -18365,6 +18465,7 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		attacker.ramp_atk = 0
 		_log("潜影者：攻击 HP 后力量重置（当前 %d）" % attacker.effective_power())
 	_attack_gain_energy(side, attacker)   # 地狱咏唱者 / 黑暗祭坛：直击 HP 也算一次攻击
+	_organ_attack_fetch(attacker)   # 管风琴（9268，R776）：直击 HP 也算一次攻击
 	_assemble_execute(attacker, _cell_of(attacker), "attack")
 	_tap(attacker, "攻击 HP，行动完毕")
 	_check_game_over()
