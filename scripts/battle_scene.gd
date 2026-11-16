@@ -14248,6 +14248,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": sb_pos + sb_off, "sc": _grid_scroll,
 					"text": "%s 力量 -%d" % [sb_lab, int(data.get("amount", 0))],
 					"col": UiTheme.STAT_POWER, "start": sb_at, "dur": 1300, "size": 16})
+		"anthem":
+			# 激励乐章（9267，R776）：本回合全场盟友 +4 力量，其他职业盟友改为 +6。
+			# 飘字写清两个数 —— 同一张卡两种数值，只写一个会被读成「另一个是 bug」。
+			sfx.play("spell")
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 12),
+					"text": "激励乐章 · %d 个盟友 +%d 力量（其他职业 +%d）"
+						% [int(data.get("count", 0)), int(data.get("power", 0)),
+							int(data.get("other_power", 0))],
+					"col": Color("4fb0d8"), "start": n, "dur": 1500})
+		"organ":
+			# 管风琴（9268，R776）：每用一张技能卡 → 所有敌人各 3 伤（场上每台各结算一份）。
+			# 飘字**按格逐个挂**（引擎给的是真正命中的格子）：命中几个写几处，
+			# 不做「全体 -N」那种假汇总。
+			sfx.play("hit")
+			for og_c: Vector2i in (data.get("cells", []) as Array):
+				var og_pos := _cell_center(og_c)
+				_fx_push_cell(FxArt.SKILL_SHADOW, og_c, n, 460, 150.0)
+				_floaters.append({"pos": og_pos + Vector2(0, -12), "sc": _grid_scroll,
+						"text": "管风琴 -%d" % int(data.get("dmg", 0)),
+						"col": Color("3d7fb8"), "start": n, "dur": 1200})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))

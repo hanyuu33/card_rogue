@@ -8579,7 +8579,11 @@ func _inspire_anthem(side: String) -> String :
 				% [p.card.card_name, gain, p.effective_power()])
 	if n <= 0:
 		return "场上没有盟友"
-	action.emit("inspire", {"count": n, "other": other, "side": side})
+	# ⚠️ 事件名是 `anthem` 不是 `inspire`：8077「激发」早已占用 `inspire`，
+	# 复用会让界面按「激发 ×N 轮」的假飘字渲染（battle_scene 的 inspire 分支只认
+	# count / dmg / cells）。两张卡的效果毫不相干，事件名也必须分开。
+	action.emit("anthem", {"count": n, "other": other, "power": ANTHEM_POWER,
+			"other_power": ANTHEM_POWER_OTHER, "side": side})
 	return "场上 %d 个盟友本回合力量 +%d（其中 %d 个其他职业盟友 +%d）" \
 			% [n, ANTHEM_POWER, other, ANTHEM_POWER_OTHER]
 
@@ -8620,7 +8624,8 @@ func _organ_tick(side: String, played: CardData) -> void :
 		_damage_player(foe, total, "管风琴")
 		_log("管风琴：%d 台 × %d 伤 → 场上没有敌人，直击对方 HP %d 点"
 				% [organs, ORGAN_SKILL_DMG, total])
-		action.emit("organ", {"hits": 0, "dmg": total, "hp": total, "organs": organs})
+		action.emit("organ", {"hits": 0, "dmg": total, "hp": total, "organs": organs,
+				"cells": []})
 		return
 	var hit:= 0
 	for cell3 in cells:
@@ -8632,7 +8637,8 @@ func _organ_tick(side: String, played: CardData) -> void :
 	_log("管风琴：使用「%s」→ %d 个敌人各受 %d 点伤害（%d 台）"
 			% [played.card_name, hit, total, organs])
 	_destroy_dead()
-	action.emit("organ", {"hits": hit, "dmg": total, "organs": organs})
+	action.emit("organ", {"hits": hit, "dmg": total, "organs": organs,
+			"cells": cells})
 
 
 func _dove_trigger(n: int = TURTLE_DOVE_DISCOUNT, source: String = "斑鸠") -> void :
