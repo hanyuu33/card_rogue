@@ -24,7 +24,7 @@
 - engine **6220✓ / 0✗**（R762 的 6203 基础上新增 17 条 R763 断言）。
 - smoke **75 / 0**；新增设置页诊断按钮几何与不越界断言。
 - `i18n/validate_interface.py` 仍只剩 5 个既有失效锚点（`REWARD_TOOL_FULL_SWAP` / `REWARD_TOOL_FULL_BTN` / `GALLERY_SUMMARY_LOCKED` / `STORY_GRANTS_BOTH` / `RECORD_MORE_RELICS`），本轮没有新增红项。
-- `i18n/validate_spanish.py` 从 23 项降到 **15 项**：补齐 privacy / telemetry / diag 四组西语骨架，剩余是既有卡牌术语与事件选项数锁。
+- `i18n/validate_spanish.py` 从 23 项降到 **14 项**：补齐 privacy / telemetry / diag 四组西语骨架，剩余是既有卡牌术语与事件选项数锁。
 - 中 / 英 / 西三语设置页诊断按钮均已截图验收；英文长描述会按可用宽自动缩字。
 - **没有改 `project.godot` 的 `config/name`**：它决定 `user://` 路径，改了等于老玩家存档换目录；展示名走 `GameBrand` / `product_name`。
 
