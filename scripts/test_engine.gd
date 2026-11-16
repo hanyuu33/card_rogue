@@ -44339,21 +44339,32 @@ func _init() -> void:
 
 	var r764_vol0 := GameSettings.sfx_volume
 
+	# 前提自己摆：玩家档里音效可能就是关的 / 音量就是 0，不能拿它当"开"的基准。
+	GameSettings.set_sfx_on(true)
+
+	GameSettings.set_sfx_volume(1.0)
+
+	check(not Sfx.settings_silent(), "R764 硬闸：开 + 满音量 → 不静默")
+
 	GameSettings.set_sfx_on(false)
 
-	check(Sfx.settings_silent(), "R764 硬闸：设置关音效 → 全局静默判据为真")
+	check(Sfx.settings_silent(), "R764 硬闸：关音效 → 静默")
 
-	GameSettings.set_sfx_on(r764_on0)
+	GameSettings.set_sfx_on(true)
+
+	check(not Sfx.settings_silent(), "R764 硬闸：重新打开 → 恢复发声")
 
 	GameSettings.set_sfx_volume(0.0)
 
-	check(Sfx.settings_silent(), "R764 硬闸：音效音量 0 → 全局静默判据为真")
+	check(Sfx.settings_silent(), "R764 硬闸：音效音量 0 → 静默")
 
-	GameSettings.set_sfx_volume(r764_vol0)
+	GameSettings.set_sfx_volume(1.0)
+
+	check(not Sfx.settings_silent(), "R764 硬闸：音量恢复 → 恢复发声")
 
 	GameSettings.set_sfx_on(r764_on0)
 
-	check(not Sfx.settings_silent(), "R764 硬闸：开关与音量恢复后不再误判静默")
+	GameSettings.set_sfx_volume(r764_vol0)
 
 	# ---- 起手附魔：50 → 30 金（价格真源在 shop_scene.ENCHANTS）----
 
