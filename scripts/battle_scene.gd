@@ -17072,7 +17072,7 @@ func _draw_enemy_effect_popup() -> void:
 		if int(m["count"]) > 1:
 			nm += " ×%d" % int(m["count"])
 		items.append({"name": nm,
-				"desc": CardText.naturalize_card(m["card"]).replace("\n", " ").strip_edges()})
+				"desc": CardText.naturalize_detail(m["card"]).replace("\n", " ").strip_edges()})
 	var lay := ee_popup_layout(_font, items, max_w, bottom - top)
 	var lfs := int(lay["fs"])
 	var lh := float(lay["line_h"])
@@ -18486,7 +18486,7 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	#   例：集中突破 `造成 **10** 点伤害` → `造成 18（10＋8）点伤害`。
 	# R702：正文走 `parse_card()` —— 本局成长（猎杀 +4/击杀）已经把卡库的 22 抬到 30 了，
 	# 这里若还读 `effect_text` 原文，左栏会一直印基础伤害。
-	var body_segs: Array = CardText.parse_card(card)
+	var body_segs: Array = CardText.parse_card_detail(card)
 	if not now.is_empty():
 		if bool(now.get("amount", false)):
 			# R706：`3X` 这种**整体标记**（土元素）→ `30（3×10）`。X=1 时只换字、不染红：

@@ -157,7 +157,7 @@ func _draw() -> void:
 	# R602：仍然「能全文就全文」，但先按可用高度**折行 + 缩字号**（16→10），
 	# 长了就降字号而不是把后半句直接砍掉。
 	# R702：成长卡的正文要写**当前**伤害（猎杀 22 → 30），与上面数值行同一口径。
-	var eff := CardText.naturalize_card(_card)
+	var eff := CardText.naturalize_detail(_card)
 	if eff != "":
 		var avail_h := t.end.y - y
 		# R631：缩字号下限 10 → 9，并按「末行墨迹底」判（与卡面同一套口径）。

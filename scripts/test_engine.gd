@@ -63051,9 +63051,9 @@ func _init() -> void:
 	# R718：弹窗那句原来是 `naturalize_card(card)`，排版重做后取的是合并表里的
 	# `card`（`_merged_effects` 的条目），字面串对不上 —— 改成锁「desc 字段由它生成」，
 	# 判据比变量名稳（变量名一改就又假红）。
-	check_src(r702_bs.find("CardText.parse_card(card)") >= 0
+	check_src(r702_bs.find("CardText.parse_card_detail(card)") >= 0
 
-			and r702_bs.find("\"desc\": CardText.naturalize_card(") >= 0,
+			and r702_bs.find("\"desc\": CardText.naturalize_detail(") >= 0,
 
 			"R702/R718 源码：战斗左栏 + 敌方效果弹窗都走 parse_card / naturalize_card")
 
@@ -63063,13 +63063,40 @@ func _init() -> void:
 
 	var r702_cfs := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-	check_src(r702_dvs.find("CardText.naturalize_card(c)") >= 0
+	check_src(r702_dvs.find("CardText.naturalize_detail(c)") >= 0
 
-			and r702_dos.find("CardText.naturalize_card(_card)") >= 0
+			and r702_dos.find("CardText.naturalize_detail(_card)") >= 0
 
 			and r702_cfs.find("CardText.naturalize_card(card") >= 0,
 
 			"R702 源码：卡组浏览 / 详情浮层 / 卡面正文同口径")
+
+	# R771（店长报「暗影刺客不少卡牌弹出的详细和卡不匹配」）：详情页必须给**全文**。
+	# 卡面格子小 → 继续藏补注；但「点开看全文」的四处（选卡详情 / 卡组浏览 / 图鉴 / 战斗左栏）
+	# 一律走 `*_detail()` 口 —— 藏掉「（本卡自己造成的不算）」等于换了一套规则。
+	var r771_c: CardData = repo.get_card(9234)
+	check(CardText.naturalize_detail(r771_c).contains("本卡自己造成的不算")
+
+			and not CardText.naturalize_card(r771_c).contains("本卡自己造成的不算"),
+
+			"R771 详情口保留括号补注 / 卡面口仍隐藏")
+	# 「造成第 3 次伤害后」是**次数型触发**，显示层以前把它改写成「时」（提前一次）——
+	# 术语统一不许改语义，这条改写在 R771 撤掉了。
+	check(CardText.naturalize_detail(r771_c).contains("造成第 3 次伤害后")
+
+			and not CardText.naturalize_detail(r771_c).contains("造成第 3 次伤害时"),
+
+			"R771 显示层不再把「…后」改写成「…时」（恐惧收割 9234）")
+	var r771_g := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
+	var r771_cd := FileAccess.get_file_as_string("res://scripts/card_detail_overlay.gd")
+	var r771_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r771_g.find("naturalize_detail_text(") >= 0
+
+			and r771_cd.find("naturalize_detail(_card)") >= 0
+
+			and r771_bs.find("CardText.parse_card_detail(card)") >= 0,
+
+			"R771 源码：图鉴右栏 / 选卡详情 / 战斗左栏都走详情口")
 
 	# R703：卡面窄 → **不带**括号（多那几个字会挤掉末行），只写当前值
 

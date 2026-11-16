@@ -61,7 +61,8 @@ const PHRASE_FIXES := [
 	["交付完成后", "交付完成时"],
 	["整列打穿后", "整列打穿时"],
 	["攻击敌人后", "攻击敌人时"],
-	["造成第 3 次伤害后", "造成第 3 次伤害时"],
+	# R771：删掉「造成第 3 次伤害后」→「时」。那是**次数型触发**（跑完第 3 次
+	# 之后才结算），改成「时」等于提前一次 —— 显示层只统一术语，不许改语义。
 	["其他卡后", "其他卡时"],
 	# R344：术语三统一（**只在显示层**，cards.json 保持原样 —— 测试按原文断言）。
 	# ① 「攻击力」→「力量」：卡面数值、左栏信息、道具说明里都叫「力量」，
@@ -361,6 +362,27 @@ static func naturalize_card(card: CardData, hide_parens := HIDE_PARENS,
 	if card == null:
 		return ""
 	return segments_plain(parse_card(card, hide_parens, with_note))
+
+
+## R771：**详情页**专用正文 —— 保留括号补注。
+##
+## 为什么单开一套：卡面（`CardFace`）格子小，`HIDE_PARENS=true` 必须藏补注；
+## 但「点开看全文」的页面（选卡页详情 / 卡组浏览 / 图鉴 / 战斗左栏）玩家就是来查规则的，
+## 藏掉「（本卡自己造成的不算）」「（替代标记本身的加伤）」这类限定 = 换了一套规则。
+## 用户口径（2026-11-16）：详情里写的和卡实际效果对不上。
+##
+## ⚠️ 判据唯一口：详情类一律走这三个函数，**别在调用点手写 `false`** ——
+##    手写的话下次有人加详情页又会漏，源码守卫也盯不住。
+static func naturalize_detail(card: CardData, with_note := true) -> String:
+	return naturalize_card(card, false, with_note)
+
+
+static func parse_card_detail(card: CardData, with_note := true) -> Array:
+	return parse_card(card, false, with_note)
+
+
+static func naturalize_detail_text(md: String) -> String:
+	return naturalize(md, false)
 
 
 static func growth_segs(segs: Array, note: Dictionary, with_note := true) -> Array:

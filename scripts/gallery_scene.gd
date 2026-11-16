@@ -674,8 +674,20 @@ func _refresh_detail() -> void:
 	# R602：正文框 236×230 固定 → 长效果文先折行、再缩字号，缩到底才裁。
 	# R717：长译文下限与 CardDetailOverlay / DeckViewer 统一为 9px。英文「毒沼」连同行距
 	# 在 11px 仍需 249px，旧下限会让末行压出框；短卡仍从 16px 起，只有确实放不下才降。
-	UiTheme.autoshrink_label(detail_text, CardText.naturalize(c.effect_text),
-			16, 9, B_BODY)
+	# R771：正文优先给**全文**（含括号补注）—— 图鉴同样是查规则的地方。
+	# 但右栏 236×230 是 `scenes/gallery.tscn` 写死的硬框，西 / 日译文加上补注之后
+	# **没有余量**（es 9235 土元素缩到 9px 仍需 237px，R717 的越界断言直接抓）。
+	# 所以先量再选：放得下用全文，放不下退回「隐藏补注」的老口径 ——
+	# 少一句补注总好过把字压出框（R631 的教训）。判据只在这一处，别在别处再抄一份。
+	var eff_full := CardText.naturalize_detail_text(c.effect_text)
+	var body_txt := eff_full
+	# 与 R717 的越界断言**同一把尺子**（`text_need` 已把 Label 的 line_spacing 算进去）：
+	# 用 `get_multiline_string_size` 会少算行距，量出来不超、实际还是压框。
+	var need := UiTheme.text_need(UiTheme.font(), eff_full, B_BODY.x, 9, true,
+			float(detail_text.get_theme_constant("line_spacing")))
+	if need.y > B_BODY.y - 0.5:
+		body_txt = CardText.naturalize(c.effect_text)
+	UiTheme.autoshrink_label(detail_text, body_txt, 16, 9, B_BODY)
 	# 编号附在名字后
 	# R632：玩家不需要看到卡牌编号（内部 id）—— 只写卡名。
 	UiTheme.autoshrink_label(detail_name, GameI18n.card_name(c.id, c.card_name), 20, 13, B_TITLE)
