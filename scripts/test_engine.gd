@@ -61429,8 +61429,8 @@ func _init() -> void:
 	# R770b：说明类飘字改走胶囊徽标 —— 守卫换成新口，且**必须是徽标口**，
 	# 不许顺手把它塞进数字的弹字（说明文字要读，不需要「分量」）。
 	check_src(r770_bs.find("_paint_status_label(_font_bold") >= 0
-			and r770_bs.find("_dmg_edge(rect,") >= 0,
-			"R770b 源码：说明类飘字走 _paint_status_label（胶囊徽标），不再垫直角方块")
+			and r770_bs.find("StatusBadge.paint(") >= 0,
+			"R770b 源码：说明类飘字走 _paint_status_label → StatusBadge，不再垫直角方块")
 	# 徽标几何：留白随字号长，且上下小于左右（长条胶囊，不是正方形贴纸）
 	var r770_lm := DmgNumber.label_metrics(20)
 	check(int(r770_lm["pad_x"]) > int(r770_lm["pad_y"]),
@@ -61445,6 +61445,40 @@ func _init() -> void:
 			"R770b 徽标：字面接近全亮、细边明显更暗（边比字亮会抢视线）")
 	check(absf(r770_ink.h - Color("8ad4f0").h) < 0.03,
 			"R770b 徽标：字面保留色相（冰封仍是冷色）")
+
+	# R770c：艺术字徽标 —— 关键词配图案，图案全是矢量画的（不依赖素材）
+	check(StatusBadge.glyph_of("冰封") == StatusBadge.GLYPH_ICE, "R770c 图案：冰封 → 雪晶")
+	check(StatusBadge.glyph_of("中毒 -3") == StatusBadge.GLYPH_POISON,
+			"R770c 图案：中毒 → 毒滴")
+	check(StatusBadge.glyph_of("燃烧 2") == StatusBadge.GLYPH_FLAME,
+			"R770c 图案：燃烧 → 火焰")
+	check(StatusBadge.glyph_of("屏障 5") == StatusBadge.GLYPH_SHIELD,
+			"R770c 图案：屏障 → 盾")
+	check(StatusBadge.glyph_of("治疗 +8") == StatusBadge.GLYPH_HEAL,
+			"R770c 图案：治疗 → 十字")
+	check(StatusBadge.glyph_of("隐藏能源 -3") == StatusBadge.GLYPH_ENERGY,
+			"R770c 图案：能源 → 菱形")
+	check(StatusBadge.glyph_of("眩晕") == StatusBadge.GLYPH_STAR, "R770c 图案：眩晕 → 星")
+	check(StatusBadge.glyph_of("嘲讽") == StatusBadge.GLYPH_TAUNT,
+			"R770c 图案：嘲讽 → 感叹号")
+	check(StatusBadge.glyph_of("接下 5") == StatusBadge.GLYPH_NONE,
+			"R770c 图案：没关键词就 NONE（乱配图案比不配更糟，玩家会读出机制）")
+	# 圆盘尺寸：16px 字下半径 9~12 —— 5px 时六角雪晶会糊成白团（实测）
+	var r770_er := StatusBadge.emblem_radius(16)
+	check(r770_er >= 9.0 and r770_er <= 12.0,
+			"R770c 徽章：16px 字下圆盘半径 %.1f 要在 9~12" % r770_er)
+	check(StatusBadge.emblem_gap(16) >= 3.0 and StatusBadge.emblem_gap(16) <= 6.0,
+			"R770c 徽章：圆盘与文字间距 3~6px")
+	# 每种图形都要真有绘制分支 —— 防「登记了关键词但没画」的静默失败
+	var r770_sb := FileAccess.get_file_as_string("res://scripts/status_badge.gd")
+	var r770_missing := ""
+	for gname: String in ["ICE", "FLAME", "POISON", "BOLT", "SHIELD", "HEAL", "SWORD",
+			"ENERGY", "SKULL", "STAR", "TAUNT"]:
+		if r770_sb.find("GLYPH_" + gname + ":") < 0:
+			r770_missing += gname + " "
+	check_src(r770_missing == "", "R770c 图案：每个图形都有绘制分支（缺 %s）" % r770_missing)
+	check_src(r770_bs.find("StatusBadge.paint(") >= 0,
+			"R770c 源码：说明类飘字委托给 StatusBadge（battle_scene 只留一行）")
 
 
 

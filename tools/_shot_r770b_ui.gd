@@ -69,9 +69,14 @@ func _stuff_labels(sc: Node, t_ratio: float) -> void:
 	var start := now - int(float(dur) * t_ratio)
 	var samples: Array = [
 		{"cell": Vector2i(2, 0), "text": "冰封", "col": Color("8ad4f0"), "size": 16},
-		{"cell": Vector2i(2, 1), "text": "隐藏能源 -3", "col": Color("c9a6f0"), "size": 15},
-		{"cell": Vector2i(2, 2), "text": "接下 5", "col": Color("f0d48a"), "size": 15},
-		{"cell": Vector2i(3, 0), "text": "-27", "col": UiThemeRef.SIDE_FOE, "size": 20},
+		{"cell": Vector2i(2, 1), "text": "中毒 -3", "col": Color("9fe07a"), "size": 15},
+		{"cell": Vector2i(2, 2), "text": "燃烧 2", "col": Color("f6a45c"), "size": 15},
+		{"cell": Vector2i(3, 0), "text": "屏障 5", "col": Color("a8c6f0"), "size": 15},
+		{"cell": Vector2i(3, 1), "text": "治疗 +8", "col": Color("9fe0a6"), "size": 15},
+		{"cell": Vector2i(3, 2), "text": "隐藏能源 -3", "col": Color("c9a6f0"), "size": 15},
+		{"cell": Vector2i(4, 0), "text": "眩晕", "col": Color("f0d48a"), "size": 15},
+		{"cell": Vector2i(4, 1), "text": "嘲讽", "col": Color("e0a0a0"), "size": 15},
+		{"cell": Vector2i(4, 2), "text": "接下 5", "col": Color("cfcfcf"), "size": 15},
 	]
 	for s: Dictionary in samples:
 		sc._floaters.append({
@@ -118,8 +123,14 @@ func _m() -> void:
 	await _wait(3)
 	var img := _snap("label")
 	var band := Rect2(float(sc.GRID_X) + 10.0, float(sc.GRID_Y) + 10.0,
-			float(sc.GRID_W) - 20.0, 320.0)
+			float(sc.GRID_W) - 20.0, 470.0)
 	_crop_zoom(img, band, "label_zoom", 2)
+	# 4 倍单枚特写：15px 字下图案只有 8~9px，2 倍看不出画的是什么
+	for zc: Vector2i in [Vector2i(2, 0), Vector2i(2, 1), Vector2i(2, 2), Vector2i(3, 0),
+			Vector2i(3, 1), Vector2i(3, 2), Vector2i(4, 0), Vector2i(4, 1)]:
+		var cr: Rect2 = sc._cell_rect(zc)
+		_crop_zoom(img, Rect2(cr.position.x + 6.0, cr.position.y + 20.0, cr.size.x - 12.0, 46.0),
+				"badge_%d_%d" % [zc.x, zc.y], 4)
 	sc._floaters.clear()
 
 	# ② 真拖卡：一张单体伤害卡（攻击 8002）拖在敌方单位上

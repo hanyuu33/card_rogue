@@ -16758,43 +16758,13 @@ func _dmg_edge(rect: Rect2, col: Color, rad: int) -> void:
 
 func _paint_status_label(font: Font, center: Vector2, text: String, tint: Color,
 		alpha: float, px: int) -> void:
-	## R770b：说明类飘字的**唯一画法**（胶囊徽标）。`center` 是屏幕空间的中心。
-	## 五层：落地阴影 → 深底 → 上半弧面高光 → 1px 色相细边 → 描边文字。
-	## ⚠️ 与 `_paint_dmg_number()` 一样**不改变换**；几何与配色全部取 `DmgNumber`。
-	if px < 7:
-		px = 7
-	var met := DmgNumber.label_metrics(px)
-	var pad_x := float(met["pad_x"])
-	var pad_y := float(met["pad_y"])
-	var sz := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px)
-	var h := font.get_height(px)
-	var rect := Rect2(center.x - sz.x * 0.5 - pad_x, center.y - h * 0.5 - pad_y,
-			sz.x + pad_x * 2.0, h + pad_y * 2.0)
-	var rad := int(round(rect.size.y * 0.5))
-	var edge := DmgNumber.label_edge(tint)
-	# ⓪ 外圈微光：比本体大 2px 的一圈同色相淡光 —— 水面 / 木纹这类高频底图上，
-	# 没有这层胶囊的边会和背景咬在一起。
-	_dmg_plate(rect.grow(2.0),
-			Color(edge.r, edge.g, edge.b, DmgNumber.LABEL_GLOW_ALPHA * alpha), rad + 2)
-	# ① 落地阴影：往下错 2px，让胶囊「贴」在木板上而不是浮着
-	_dmg_plate(Rect2(rect.position + Vector2(0.0, 2.0), rect.size),
-			Color(0.0, 0.0, 0.0, DmgNumber.LABEL_SHADOW_ALPHA * alpha), rad)
-	# ② 主体深底
-	_dmg_plate(rect, Color(0.055, 0.045, 0.038, DmgNumber.LABEL_PLATE_ALPHA * alpha), rad)
-	# ③ 上半弧面高光：圆管的上沿受光，做出立体；半径夹一次，别超过自身半高
-	var arc := Rect2(rect.position + Vector2(0.0, 1.0),
-			Vector2(rect.size.x, rect.size.y * 0.46))
-	_dmg_plate(arc, Color(1.0, 1.0, 1.0, DmgNumber.LABEL_ARC_ALPHA * alpha),
-			mini(rad, int(arc.size.y * 0.5)))
-	# ④ 一圈色相细边
-	_dmg_edge(rect, Color(edge.r, edge.g, edge.b, DmgNumber.LABEL_EDGE_ALPHA * alpha), rad)
-	# ⑤ 字：先深描边再填 —— 底色已经压住底图，描边只为让笔画立起来
-	var ink := DmgNumber.label_ink(tint)
-	var pos := Vector2(center.x - sz.x * 0.5, center.y + float(px) * 0.36)
-	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
-			int(met["outline"]), Color(0.04, 0.03, 0.025, 0.85 * alpha))
-	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
-			Color(ink.r, ink.g, ink.b, alpha))
+	## R770c：说明类飘字的**唯一入口**。真正的画法在 `StatusBadge.paint()` ——
+	## 那里要按关键词配图案（冰封 → 雪晶 / 中毒 → 毒滴…），比一层「胶囊 + 描边字」
+	## 重得多；留在本函数里会把 battle_scene 再撑长两百行。
+	## ⚠️ 仍然**不改变换**（坐标是屏幕空间中心），与 `_paint_dmg_number()` 同规矩。
+	# R770c：短状态名在 15px 上图案只有 8px，细节全糊 → 抬到 16 起画。
+	StatusBadge.paint(self, font, center, text, tint, alpha, maxi(px, 16))
+
 
 
 func _draw_highlights() -> void:

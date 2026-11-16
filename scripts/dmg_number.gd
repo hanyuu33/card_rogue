@@ -75,7 +75,9 @@ static func label_metrics(px: int) -> Dictionary:
 static func label_ink(tint: Color) -> Color:
 	## 字面：留住色相、压饱和、亮度拉满。徽标底已经是深色 —— 字再暗就糊；
 	## 直接写纯白又会把「冰封」的冷色 / 「隐藏能源」的紫调丢掉。
-	return Color.from_hsv(tint.h, minf(tint.s * 0.55, 0.45), 1.0)
+	## ⚠️ R770c：饱和上限从 0.45 提到 0.68 —— 0.45 洗出来几乎是灰白，看着像没上色；
+	## 艺术字要「一眼看出属性」靠的就是这层颜色（冰＝淡青 / 火＝橙 / 毒＝绿）。
+	return Color.from_hsv(tint.h, minf(tint.s * 0.90, 0.68), 1.0)
 
 
 static func label_edge(tint: Color) -> Color:
