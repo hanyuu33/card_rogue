@@ -988,7 +988,7 @@ func _battle_targets(s: Variant) -> Array:
 		# R453：洞窟绳（6048）—— 判据只用 `RunState.can_use_cave_rope()` 那一处，
 		# 与 `battle_scene._refresh_flee_btn()` 的按钮显隐同源；这里不列就说明按钮也不该出现。
 		if RunState.can_use_cave_rope(e.battle_kind):
-			out.append({"id": "flee", "hint": "用洞窟绳逃跑（放弃本场，不拿奖励，道具用掉）"})
+			out.append({"id": "flee", "hint": "用洞窟绳逃跑（放弃本场，不拿奖励，道具用掉，返还 1 块巧克力）"})
 	else:
 		out.append({"id": "wait", "hint": "敌方回合，等它打完（读一次 /state 看进度）"})
 	return out
@@ -1021,7 +1021,7 @@ func _battle_click(target: String) -> Dictionary:
 		if not RunState.can_use_cave_rope(e.battle_kind):
 			return {"ok": false, "msg": "这场不能逃跑（没有洞窟绳 / 这是 Boss 战）"}
 		s._on_flee()
-		return {"ok": true, "msg": "洞窟绳：放弃本场，回地图"}
+		return {"ok": true, "msg": "洞窟绳：放弃本场，返还 1 块巧克力，回地图"}
 
 	# 复活术 / 返修 / 暗影步：从弃牌区取一张（`rc<弃牌下标>`）
 	if target.begins_with("rc") and target.substr(2).is_valid_int():

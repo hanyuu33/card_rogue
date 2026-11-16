@@ -4674,6 +4674,7 @@ func _on_flee() -> void:
 	if not RunState.spend_relic(RunState.CAVE_ROPE_RELIC_ID):
 		return
 	engine.self_relics = RunState.active_relics()
+	RunState.cave_rope_refund()   # R772：逃跑退还进房扣掉的 1 块巧克力（第三层不返还）
 	_ai_timer.stop()
 	_foe_phase = false
 	_clear_battle_checkpoint()

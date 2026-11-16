@@ -185,7 +185,7 @@
     },
     "6048": {
       "name": "Cave Rope",
-      "desc": "Battles other than Boss battles have an additional \"Flee\" button. After fleeing, lose this Relic and gain no rewards."
+      "desc": "Battles other than Boss battles have an additional \"Flee\" button. After fleeing once, lose this Relic and gain no rewards, but refund 1 Chocolate (the room still counts as explored)."
     },
     "6049": {
       "name": "Stag Head Trophy",

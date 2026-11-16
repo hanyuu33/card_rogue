@@ -1951,6 +1951,16 @@ static func can_use_cave_rope(battle_kind: String) -> bool:
 	return has_relic(CAVE_ROPE_RELIC_ID) and battle_kind != "boss"
 
 
+static func cave_rope_refund() -> void:
+	## R772 洞窟绳：逃跑时退还进房扣掉的 1 块巧克力。
+	##   * 这一格进房时已经标进 `cleared_ids`（「已探索」），回访不触发战斗，也就不会反复退还；
+	##   * 第三层不收步数（每格 cost 恒 0）→ 不返还；
+	##   * 走 add_chocolate：巧克力从 0 回到 1 时顺手撤销 boss_pending（最后一格逃了不算入夜）。
+	if current_layer == GameLayers.LAYER_THREE:
+		return
+	add_chocolate(1)
+
+
 static func lose_relic(id: int) -> bool:
 	## 失去道具（R311）：不锈钢盆 6041 / 洞窟绳 6048 这类「用完就走」的统一出口。
 	## 返回是否真的失去了（本来就没有 → false）。

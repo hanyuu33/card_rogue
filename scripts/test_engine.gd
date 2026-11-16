@@ -58881,6 +58881,50 @@ func _init() -> void:
 
 		"R367 绳子：灰掉之后 `can_use_cave_rope` 为 false（不能逃第二次）")
 
+	# ---- R772 洞窟绳：逃跑退还 1 块巧克力（第三层不返还）----
+
+	var r772_choco_bak: int = RunState.chocolate
+
+	var r772_layer_bak: int = RunState.current_layer
+
+	var r772_boss_bak: bool = RunState.boss_pending
+
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+
+	RunState.chocolate = 5
+
+	RunState.cave_rope_refund()
+
+	check(RunState.chocolate == 6,
+
+		"R772 洞窟绳：逃跑返还 1 块巧克力（5 → 6）")
+
+	RunState.chocolate = 0
+
+	RunState.boss_pending = true
+
+	RunState.cave_rope_refund()
+
+	check(RunState.chocolate == 1 and not RunState.boss_pending,
+
+		"R772 洞窟绳：最后一格逃了返还 1 块，并撤销 boss_pending")
+
+	RunState.current_layer = GameLayers.LAYER_THREE
+
+	RunState.chocolate = 0
+
+	RunState.cave_rope_refund()
+
+	check(RunState.chocolate == 0,
+
+		"R772 洞窟绳：第三层不收步数，逃跑不返还巧克力")
+
+	RunState.chocolate = r772_choco_bak
+
+	RunState.current_layer = r772_layer_bak
+
+	RunState.boss_pending = r772_boss_bak
+
 
 
 	# ---- 商店抵账：盆灰在栏里，而不是凭空消失 ----
