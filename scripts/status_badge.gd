@@ -46,6 +46,21 @@ const RULES := [
 	["嘲讽", GLYPH_TAUNT],
 ]
 
+## 英文关键词表（非中文语言统一用英文艺术字，店长口径）。长词在前，避免 Burn 误吞 Burning。
+const RULES_EN := [
+	["Frozen", GLYPH_ICE], ["Freezing", GLYPH_ICE], ["Freeze", GLYPH_ICE],
+	["Burning", GLYPH_FLAME], ["Burn", GLYPH_FLAME],
+	["Poisoned", GLYPH_POISON], ["Poison", GLYPH_POISON],
+	["Electrified", GLYPH_BOLT], ["Shock", GLYPH_BOLT],
+	["Barrier", GLYPH_SHIELD], ["Shield", GLYPH_SHIELD],
+	["Healing", GLYPH_HEAL], ["Heal", GLYPH_HEAL],
+	["Strength", GLYPH_SWORD], ["Power", GLYPH_SWORD],
+	["Death", GLYPH_SKULL], ["Dead", GLYPH_SKULL],
+	["Energy", GLYPH_ENERGY],
+	["Stunned", GLYPH_STAR], ["Stun", GLYPH_STAR],
+	["Taunt", GLYPH_TAUNT],
+]
+
 ## 主题 → 状态词素材。关键词（冻结/冰冻/灼烧…）都归到同一张主素材。
 const WORD_TEX := {
 	GLYPH_ICE: "res://assets/fx/status_words/bingfeng.png",
@@ -59,6 +74,33 @@ const WORD_TEX := {
 	GLYPH_SKULL: "res://assets/fx/status_words/siwang.png",
 	GLYPH_STAR: "res://assets/fx/status_words/xuanyun.png",
 	GLYPH_TAUNT: "res://assets/fx/status_words/chaofeng.png",
+}
+
+## 英文状态词素材（非中文语言统一用这一套）。
+const WORD_TEX_EN := {
+	GLYPH_ICE: "res://assets/fx/status_words_en/frozen.png",
+	GLYPH_FLAME: "res://assets/fx/status_words_en/burn.png",
+	GLYPH_POISON: "res://assets/fx/status_words_en/poison.png",
+	GLYPH_BOLT: "res://assets/fx/status_words_en/shock.png",
+	GLYPH_SHIELD: "res://assets/fx/status_words_en/barrier.png",
+	GLYPH_HEAL: "res://assets/fx/status_words_en/heal.png",
+	GLYPH_SWORD: "res://assets/fx/status_words_en/power.png",
+	GLYPH_ENERGY: "res://assets/fx/status_words_en/energy.png",
+	GLYPH_SKULL: "res://assets/fx/status_words_en/death.png",
+	GLYPH_STAR: "res://assets/fx/status_words_en/stun.png",
+	GLYPH_TAUNT: "res://assets/fx/status_words_en/taunt.png",
+}
+
+## 状态词文本（飘字里「状态词」部分的 i18n 唯一口）。中文 → 中文词，其余 → 英文词。
+const WORD_ZH := {
+	GLYPH_ICE: "冰封", GLYPH_FLAME: "燃烧", GLYPH_POISON: "中毒", GLYPH_BOLT: "感电",
+	GLYPH_SHIELD: "屏障", GLYPH_HEAL: "治疗", GLYPH_SWORD: "力量", GLYPH_ENERGY: "能量",
+	GLYPH_SKULL: "死亡", GLYPH_STAR: "眩晕", GLYPH_TAUNT: "嘲讽",
+}
+const WORD_EN := {
+	GLYPH_ICE: "Frozen", GLYPH_FLAME: "Burn", GLYPH_POISON: "Poison", GLYPH_BOLT: "Shock",
+	GLYPH_SHIELD: "Barrier", GLYPH_HEAL: "Heal", GLYPH_SWORD: "Power", GLYPH_ENERGY: "Energy",
+	GLYPH_SKULL: "Death", GLYPH_STAR: "Stun", GLYPH_TAUNT: "Taunt",
 }
 
 ## 数字 / 符号素材。
@@ -94,8 +136,25 @@ static func _digit_h(ch: String, H: float) -> float:
 static var _tex_cache: Dictionary = {}
 
 
+static func _is_zh() -> bool:
+	return GameI18n.language() == "zh"
+
+
+static func _rules() -> Array:
+	return RULES if _is_zh() else RULES_EN
+
+
+static func _word_tex() -> Dictionary:
+	return WORD_TEX if _is_zh() else WORD_TEX_EN
+
+
+static func word_of(glyph: int) -> String:
+	## 状态词文本：中文版中文词，其余语言英文词（飘字 i18n 唯一口）。
+	return str((WORD_EN if not _is_zh() else WORD_ZH).get(glyph, ""))
+
+
 static func glyph_of(text: String) -> int:
-	for rule: Array in RULES:
+	for rule: Array in _rules():
 		if text.find(str(rule[0])) >= 0:
 			return int(rule[1])
 	return GLYPH_NONE
@@ -114,7 +173,7 @@ static func _segments(text: String) -> Array:
 	var out: Array = []
 	var word := ""
 	var glyph := GLYPH_NONE
-	for rule: Array in RULES:
+	for rule: Array in _rules():
 		if text.find(str(rule[0])) >= 0:
 			word = str(rule[0])
 			glyph = int(rule[1])
@@ -175,7 +234,7 @@ static func paint(ci: CanvasItem, font: Font, center: Vector2, text: String,
 		var w := float(widths[i])
 		match str(seg.get("kind", "")):
 			"word":
-				var tex := _tex(str(WORD_TEX[int(seg["glyph"])]))
+				var tex := _tex(str(_word_tex()[int(seg["glyph"])]))
 				var tw := float(tex.get_width()) * H / float(tex.get_height())
 				ci.draw_texture_rect(tex, Rect2(x, y, tw, H), false, mod)
 			"digit":
@@ -199,7 +258,7 @@ static func paint(ci: CanvasItem, font: Font, center: Vector2, text: String,
 static func _seg_width(ci: CanvasItem, font: Font, seg: Dictionary, H: float) -> float:
 	match str(seg.get("kind", "")):
 		"word":
-			var tex := _tex(str(WORD_TEX[int(seg["glyph"])]))
+			var tex := _tex(str(_word_tex()[int(seg["glyph"])]))
 			return float(tex.get_width()) * H / float(tex.get_height())
 		"digit":
 			var tex := _tex(str(DIGIT_TEX[str(seg["text"])]))

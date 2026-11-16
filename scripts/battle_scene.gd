@@ -13055,7 +13055,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					if data.get("card") is CardData else "?"
 			# R171：hpos 两个分支都活着（格治疗 / HP 横幅）→ 只给格分支打标
 			var h_flo := {"pos": hpos + Vector2(0, -12),
-					"text": "治疗 +%d" % int(data.get("amount", 0)),
+					"text": "%s +%d" % [StatusBadge.word_of(StatusBadge.GLYPH_HEAL), int(data.get("amount", 0))],
 					"col": Color("2fa36b"), "start": n, "dur": 1500}
 			if hcell is Vector2i:
 				h_flo["sc"] = _grid_scroll
@@ -13619,7 +13619,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fp_debuff := int(data.get("debuff", 0))
 			if fp_cell.x >= 0:
 				_floaters.append({"pos": _cell_center(fp_cell) + Vector2(0, -16),
-						"sc": _grid_scroll, "text": "力量 -%d" % fp_debuff,
+						"sc": _grid_scroll, "text": "%s -%d" % [StatusBadge.word_of(StatusBadge.GLYPH_SWORD), fp_debuff],
 						"col": Color("a06ae0"), "start": n, "dur": 1500, "size": 18})
 			_say("恐惧投射：本回合力量 -%d（现 %d）" % [fp_debuff,
 					int(data.get("power", 0))])
@@ -13961,7 +13961,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("9ad8ff"), "big": false})
 			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": fz_at + 90, "dur": 520,
 					"col": Color("e8f6ff"), "big": false})
-			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": "冰封",
+			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": StatusBadge.word_of(StatusBadge.GLYPH_ICE),
 					"col": Color("2b6fb3"), "start": fz_at, "dur": 1500, "size": 20})
 			_say("❄ %s 被冰封：下回合不能行动" % str(data.get("name", "")))
 		"stun":
@@ -13974,7 +13974,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_bursts.append({"pos": st_pos, "sc": _grid_scroll, "start": st_at, "dur": 560,
 					"col": Color("f0c040"), "big": false})
 			_floaters.append({"pos": st_pos + Vector2(0, -14), "sc": _grid_scroll,
-					"text": "眩晕", "col": Color("8a6d1f"), "start": st_at, "dur": 1500, "size": 20})
+					"text": StatusBadge.word_of(StatusBadge.GLYPH_STAR), "col": Color("8a6d1f"), "start": st_at, "dur": 1500, "size": 20})
 			_say("💫 %s 被眩晕：下回合不能行动" % str(data.get("name", "")))
 		"field_place":
 			# 场地卡（R74）放置：斜纹格亮一下 + 提示挂在哪一格
@@ -14955,7 +14955,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_bursts.append({"pos": _cell_center(ec_cell), "sc": _grid_scroll, "start": n,
 					"dur": 540, "col": Color("e2a03a"), "big": false})
 			_floaters.append({"pos": _cell_center(ec_cell) + Vector2(0, -20), "sc": _grid_scroll,
-					"text": "力量 +%d" % GameEngine.EMERGENCY_CALL_ATK,
+					"text": "%s +%d" % [StatusBadge.word_of(StatusBadge.GLYPH_SWORD), GameEngine.EMERGENCY_CALL_ATK],
 					"col": Color("e2a03a"), "size": 16, "start": n, "dur": 1500})
 			_say("📣 紧急呼叫：%s 入场（力量 +%d）" % [ec_name, GameEngine.EMERGENCY_CALL_ATK])
 		"revelator_cover":
