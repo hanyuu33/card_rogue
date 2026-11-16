@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 325,
+ "count": 327,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1309,6 +1309,10 @@
   "9265": {
    "name": "Regret",
    "effect_text": "Choose a card of another class in the discard pile. It is Banished."
+  },
+  "9266": {
+   "name": "Call",
+   "effect_text": "Gain +1 Energy for the rest of this battle. Add a random Ally of another class that costs 1 more than this card to your Hand; its cost becomes 0 for the rest of this battle."
   }
  }
 }

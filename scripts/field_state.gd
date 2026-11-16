@@ -136,7 +136,8 @@ var haste_pick_turn_self := 0
 var haste_pick_turn_opp := 0
 var card_discount := {}         # CardData -> int：实例级减费（智慧喷涌抽到的那一张效果卡费用 -N）
 var turn_free := {}             # CardData -> true：本回合费用为 0（使魔之夜的乌鸦；回合结束清空）
-## CardData -> true：**在手牌里期间**费用为 0（无限装甲 8038 供能的改造牌）。
+## CardData -> true：**在手牌里期间**费用为 0。
+## 现有用户：无限装甲 8038 供能的改造牌、R773 呼唤 9266「那张盟友本局费用为 0」。
 ## ⚠️ 与 `turn_free` 的关键区别 = **重置时机**：
 ##   * `turn_free` 在**回合结束**清空；
 ##   * 本表**回合结束不清** —— 判据是「这张卡此刻还在不在手牌里」，

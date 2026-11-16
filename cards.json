@@ -6792,6 +6792,25 @@
       "value": 0,
       "color": "暗影",
       "image": ""
+    },
+    {
+      "id": 9266,
+      "name": "呼唤",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "费用本局 +1。将一张随机比这张卡费用高 1 的其他职业盟友加入手卡，其费用本局变为 0。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
     }
   ]
 }

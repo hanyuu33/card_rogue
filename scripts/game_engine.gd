@@ -212,6 +212,11 @@ var regret_pending:= false
 ## 候选是**独立副本**（`_new_own_card`），且只在这里存一份 —— 面板只是把它画出来。
 var recruit_pending:= false
 var _recruit_cards: Array = []
+## R773 呼唤（9266）：**本场战斗内每回合费用 +N**（打出几张叠几层）。
+## ⚠️ 与「应急电源 9170」那种 `state.energy +=` 不是一回事 —— 那是「这一回合多出来的」，
+##    回合结束重置就没了；卡面写的是「本局」，所以必须记在这里，由 `_begin_turn` 发费时
+##    叠加、`max_energy()` 算进分母。每个新 GameEngine = 一场新战斗 → 自然复位。
+var _battle_energy_bonus:= 0
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
 var _knight_sword_fired:= false  # R383 骑士剑：本场战斗的第一次击杀是否已发生（每场一次）
@@ -781,6 +786,15 @@ const POEM_REBATE:= 1
 # 候选在**开面板那一刻**就摇定并缓存（与神秘牌 7011 同一口径），否则同一份存档读两次
 # 会出现两组不同的候选。随机源走引擎 rng → 同种子同结果、回放可复现。
 const RECRUIT_ID:= 9264
+# R773 呼唤（9266，吟游诗人 0 费普通技能）：
+#   ① **本场战斗内每回合费用 +1**（记在 `_battle_energy_bonus`，打出几张叠几层）——
+#      不是「这一回合多出来的」（那样下回合重置就没了，与卡面「本局」不符）；
+#   ② 一张随机**其他职业盟友**加入手卡：卡面费用恰好比本卡高 1（本卡 0 费 → 1 费），
+#      且它**本场战斗内**费用为 0（复用 `state.hand_free`：判据是「此刻还在手牌里」，
+#      离手自动恢复原价，不必在那十来个离手口逐个清标记）。
+const CALL_ID:= 9266
+const CALL_ENERGY:= 1     # 本局每回合费用 +1
+const CALL_COST_GAP:= 1   # 找的盟友 = 本卡费用 +1
 # R745 野性图腾（工具 7008）：**使用后**本场所有己方盟友 +2 力量。
 # 与竖琴同一套持续 buff（`Placement.totem_atk` + `effective_power()`），
 # 但生效判据是「本场是否已经用过这个工具」，不是「是否持有道具」（用完就摘槽了）。
@@ -2489,7 +2503,11 @@ func _begin_turn(side: String) -> void :
 		_sync_totem()   # R745 野性图腾：同一处补齐（用掉之后才上场的盟友 / 读档续战）
 		# R767：我方每回合费用统一走 RunState.energy_per_turn()
 		# （每日修饰的「灵光 +1 / 滞涩 −1」就叠在它里面，标准局等于常量）
-		state.energy = RunState.energy_per_turn()
+		# R773 呼唤：本场战斗内攒下的 +N 在这里叠加 —— 与 `max_energy()` 同一口径，
+		# 显示 = 判定 = 实发（卡面写的是「本局」，不能只加当回合）。
+		state.energy = RunState.energy_per_turn() + _battle_energy_bonus
+		if _battle_energy_bonus > 0:
+			_log("呼唤：本局每回合费用 +%d（本回合发费 %d）" % [_battle_energy_bonus, state.energy])
 		if state.turn_limit >= 0 and turn_number > state.turn_limit:
 			turn_number = state.turn_limit
 			_finish("失败", "%d 回合内未击破敌方 HP" % state.turn_limit)
@@ -8657,7 +8675,9 @@ func max_energy() -> int:
 	##   鸭翼（第 3 回合 +3）/ 冰淇淋（第 1 回合 +2）/ 勇气徽章（精英·Boss 首回合 +1）/
 	##   水晶骰子（前 X 回合 +1）/ 活力转移（上回合结转）/ 鸭之低语（随机 1/3）/
 	##   雕像（每用 10 张牌回 1）/ 契约签订者等「一次性回费」。
-	return FieldState.ENERGY_PER_TURN + permanent_energy_bonus()
+	# R773 呼唤：本场战斗内每回合 +N 也是「每回合都给」→ 必须进分母
+	# （不进的话费用条显示 5/5，实际却能用 6 点）。
+	return FieldState.ENERGY_PER_TURN + permanent_energy_bonus() + _battle_energy_bonus
 
 
 func permanent_energy_bonus() -> int:
@@ -10659,6 +10679,24 @@ func _random_forest_ally() -> CardData:
 	return pool[rng.randi() % pool.size()]
 
 
+func _random_call_ally(base: CardData) -> CardData:
+	## R773 呼唤（9266）：费用**恰好**比 `base` 高 `CALL_COST_GAP` 的随机**其他职业盟友**。
+	## * 池子走 `reward_pool()`（默认已筛掉隐藏职业卡）→ 过 `_other_class_card()`，
+	##   与猴爪 / 懊悔的「其他职业」判据同一个口（公用卡 class 留空，不算）；
+	## * `base.cost` 读**卡面费用**，不是 `cost_of()` —— 减费 / 免费不该改变
+	##   「比这张卡费用高 1」这条判据；
+	## * 随机源走引擎 `rng` → 同种子同结果、回放可复现（与招募 / 森林的朋友们同口径）。
+	var want: int = base.cost + CALL_COST_GAP
+	var repo := CardRepo.load_json()
+	var pool: Array[CardData] = []
+	for c: CardData in repo.reward_pool():
+		if c.kind == "盟友" and c.cost == want and _other_class_card(c):
+			pool.append(c)
+	if pool.is_empty():
+		return null
+	return pool[rng.randi() % pool.size()]
+
+
 func _roll_recruit_cards() -> Array:
 	## R761 招募（9264）：**每个可见职业各摇一张盟友**当候选（店长口径「每种职业各一张」）。
 	## 池子走 `reward_pool_for(职业)` —— 剧情锁与本局禁卡一并生效；空了再退回该职业全部
@@ -11597,6 +11635,35 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					% [ff_copy.card_name, FOREST_FRIENDS_DISCOUNT])
 			return "「%s」加入手卡，其本回合费用 -%d" % [ff_copy.card_name,
 					FOREST_FRIENDS_DISCOUNT]
+		CALL_ID:
+			# 呼唤（9266，R773，吟游诗人 0 费普通技能）：
+			#   ① 本场战斗内每回合费用 +1（`_battle_energy_bonus` 累加，叠几张算几层）；
+			#   ② 一张随机**其他职业盟友**进手卡：卡面费用恰好比本卡高 1，且它**本场**费用为 0。
+			# * 加费这里**额外**给一份当回合的 `state.energy +=`：上限虽然涨了，但本回合的费用
+			#   早在 `_begin_turn` 就发完了 —— 不给的话玩家打出这张 0 费卡反而「什么也没多出来」。
+			# * 归零走 `state.hand_free`（判据带 `state.hand.has(card)`）→ 离手自动恢复原价。
+			# * 手牌满 → `_grant_to_hand` 通用口径（进弃牌区，不蒸发）；那张没进手，
+			#   `hand_free` 也无处生效，不必特判。
+			_battle_energy_bonus += CALL_ENERGY
+			state.energy += CALL_ENERGY
+			var cl_c := _random_call_ally(card)
+			if cl_c == null:
+				_log("呼唤：卡池里没有费用 %d 的其他职业盟友" % (card.cost + CALL_COST_GAP))
+				return "费用 +%d；卡池里没有可呼唤的盟友" % CALL_ENERGY
+			var cl_copy := _new_own_card(cl_c)
+			cl_copy.affixes = (cl_c.affixes as Array).duplicate()
+			var cl_got := _grant_to_hand(cl_copy, "呼唤")
+			if cl_got:
+				state.hand_free[cl_copy] = true
+			_log("呼唤：费用 +%d（本局每回合累计 +%d）；%s「%s」（%d 费 → 本局 0 费）" % [
+					CALL_ENERGY, _battle_energy_bonus,
+					"手卡加入" if cl_got else "手牌已满 → 进弃牌区",
+					cl_copy.card_name, cl_c.cost])
+			action.emit("call", {"card": cl_copy, "to_hand": cl_got,
+					"energy": _battle_energy_bonus})
+			if not cl_got:
+				return "费用 +%d；手牌已满，「%s」进弃牌区" % [CALL_ENERGY, cl_copy.card_name]
+			return "费用 +%d；「%s」加入手卡，其费用本局为 0" % [CALL_ENERGY, cl_copy.card_name]
 		RECRUIT_ID:
 			# 招募（9264，R761，吟游诗人 0 费初始技能）：
 			#   从**三个其他职业的盟友**里各摇一张当候选，玩家选一张加入手卡。
