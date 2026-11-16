@@ -61527,20 +61527,22 @@ func _init() -> void:
 		if not StatusBadge.WORD_TEX.has(r774_g):
 			r774_missing += str(r774_g) + " "
 	check(r774_missing == "", "R774 素材：每个主题都有状态词图（缺 %s）" % r774_missing)
-	# 数字 0-9 + 符号 + - 都要有素材
-	var r774_dig := ""
-	for r774_c: String in "0123456789+-":
-		if not StatusBadge.DIGIT_TEX.has(r774_c):
-			r774_dig += r774_c + " "
-	check(r774_dig == "", "R774 素材：数字/符号素材齐全（缺 %s）" % r774_dig)
-	# 解析：中毒 -3 → word(中毒) + gap + digit(-) + digit(3)
+	# R774d（店长口径「倒回去用之前共用的伤害数字」）：
+	# 状态飘字里的数字不再贴素材，改由 DmgNumber.paint() 的字体五层笔法绘制。
+	# ① 撤干净：源码里不许再出现数字素材常量（残留 = 还有别的绘制路径在用）
+	var r774d_sb := FileAccess.get_file_as_string("res://scripts/status_badge.gd")
+	check_src(r774d_sb.find("DIGIT_TEX") < 0,
+			"R774d 撤素材：StatusBadge 不再引用 DIGIT_TEX（数字走 DmgNumber 笔法）")
+	# ② 数字委托：状态飘字的数字必须真调 DmgNumber.paint（换回贴图会静默退步）
+	check_src(r774d_sb.find("DmgNumber.paint(") >= 0,
+			"R774d 共用：状态飘字的数字走 DmgNumber.paint（与伤害数字同一实现）")
+	# ③ 解析：中毒 -3 → word(中毒) + gap + num(-3)（整串一段，交给字体排版）
 	var r774_seg := StatusBadge._segments("中毒 -3")
-	check(r774_seg.size() == 4 and str(r774_seg[0]["kind"]) == "word"
+	check(r774_seg.size() == 3 and str(r774_seg[0]["kind"]) == "word"
 			and int(r774_seg[0]["glyph"]) == StatusBadge.GLYPH_POISON,
 			"R774 解析：中毒 -3 首段是「中毒」状态词")
-	check(str(r774_seg[2]["kind"]) == "digit" and str(r774_seg[2]["text"]) == "-"
-			and str(r774_seg[3]["kind"]) == "digit" and str(r774_seg[3]["text"]) == "3",
-			"R774 解析：-3 拆成符号与数字两张图")
+	check(str(r774_seg[2]["kind"]) == "num" and str(r774_seg[2]["text"]) == "-3",
+			"R774d 解析：-3 收成一段 num（不再逐字符贴素材）")
 	var r774_seg2 := StatusBadge._segments("接下 5")
 	check(str(r774_seg2[0]["kind"]) == "text" and str(r774_seg2[0]["text"]) == "接下",
 			"R774 解析：没关键词的中文走 font 兜底，不硬套图案")

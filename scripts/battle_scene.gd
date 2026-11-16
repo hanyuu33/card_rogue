@@ -16681,39 +16681,10 @@ func _draw_floaters() -> void:
 
 func _paint_dmg_number(font: Font, center: Vector2, px: int, text: String, alpha: float,
 		pal: Dictionary, tier: int) -> void:
-	## R770：GBF 风伤害数字的笔法（**不加变换**：调用方负责，`center` 就是它那套空间的坐标）。
-	## 为什么不做成自带变换：飘字在屏幕空间（要叠震动）、拖卡预览在棋盘空间
-	## （缩放 + 滚动都还没复位），两套调用方坐标语义不同，硬塞进来必然错位。
-	##
-	## 从下往上五层：
-	##   ① 柔和辉光 —— 重击以上才开（普通伤害加光会糊，反而看不清数值）
-	##   ② 外描边（暗）—— 把数字从任何底图上「抠」出来，这是 GBF 观感的地基
-	##   ③ 厚度层 —— 往下错开半个笔宽，露出下缘的实体感
-	##   ④ 字面
-	##   ⑤ 顶高光 —— 整字上移一小截 + 半透白，上缘最亮、下缘仍是 core，形成伪渐变
-	if px < 8:
-		px = 8
-	var core: Color = pal["core"]
-	var depth: Color = pal["depth"]
-	var edge: Color = pal["edge"]
-	var hi: Color = pal["hi"]
-	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-	var origin := center + Vector2(-w * 0.5, float(px) * 0.36)
-	var ow := DmgNumber.outline_width(px)
-	if tier >= DmgNumber.TIER_HEAVY and alpha > 0.2:
-		var gr := float(px) * 1.35
-		for i in 3:
-			var k := 1.0 - 0.26 * float(i)
-			draw_circle(origin + Vector2(0.0, -float(px) * 0.06), gr * k,
-					Color(core.r, core.g, core.b, 0.042 * alpha))
-	draw_string_outline(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, ow,
-			Color(edge.r, edge.g, edge.b, alpha * 0.95))
-	draw_string(font, origin + Vector2(0.0, float(ow) * 0.45), text,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(depth.r, depth.g, depth.b, alpha))
-	draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
-			Color(core.r, core.g, core.b, alpha))
-	draw_string(font, origin - Vector2(0.0, float(ow) * 0.28), text,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(hi.r, hi.g, hi.b, hi.a * alpha))
+	## R770：GBF 风伤害数字的笔法 —— **R774d 起唯一实现在 `DmgNumber.paint()`**。
+	## 留这一层只是为了不动调用点（飘字 / 拖卡预览两处坐标语义不同），内部纯转发。
+	## ⚠️ 仍然不加变换：`center` 由调用方按自己那套空间算好再传进来。
+	DmgNumber.paint(self, font, center, px, text, alpha, pal, tier)
 
 
 func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:

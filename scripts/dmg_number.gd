@@ -11,6 +11,7 @@ extends RefCounted
 ##
 ## ⚠️ 这里的函数**一律不许有副作用**（不读节点、不读时钟），`t` 由调用方传进来；
 ##    `test_engine` 的 R770 段落直接喂数值断言曲线，不构造场景。
+##    唯一例外是 `paint()` —— 它要在调用方的 `_draw()` 里落笔，只画不改状态。
 
 ## ⚠️ `UiTheme` **故意没有 `class_name`**（见 ui_theme.gd 文件头）—— 只能 preload。
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -206,6 +207,45 @@ static func outline_width(px: int) -> int:
 	## 外描边宽（像素）。GBF 的数字靠这圈黑压住任何底图 —— 字号越大越要粗，
 	## 但上限 10：再粗会把「8」的内孔糊实。
 	return clampi(int(round(float(px) * 0.22)), 3, 10)
+
+
+## ---------------------------------------------------------------- 绘制
+static func paint(ci: CanvasItem, font: Font, center: Vector2, px: int, text: String,
+		alpha: float, pal: Dictionary, tier: int) -> void:
+	## R770 的五层笔法，**R774d 起是唯一实现**（从 battle_scene 搬进来）：
+	##   ① 柔和辉光 —— 重击以上才开（普通伤害加光会糊，反而看不清数值）
+	##   ② 外描边（暗）—— 把数字从任何底图上「抠」出来，这是 GBF 观感的地基
+	##   ③ 厚度层 —— 往下错开半个笔宽，露出下缘的实体感
+	##   ④ 字面
+	##   ⑤ 顶高光 —— 整字上移一小截 + 半透白，上缘最亮、下缘仍是 core（伪渐变）
+	##
+	## **故意不自带变换**：`center` 就是调用方那套空间的坐标 —— 飘字在屏幕空间
+	## （要叠震动）、拖卡预览在棋盘空间（缩放与滚动都没复位），硬塞进来必然错位。
+	## 状态特效文字（StatusBadge）后面的数字也走这一口，两边不许各写一份。
+	if alpha <= 0.004:
+		return
+	var p := maxi(8, px)
+	var core: Color = pal["core"]
+	var depth: Color = pal["depth"]
+	var edge: Color = pal["edge"]
+	var hi: Color = pal["hi"]
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, p).x
+	var origin := center + Vector2(-w * 0.5, float(p) * 0.36)
+	var ow := outline_width(p)
+	if tier >= TIER_HEAVY and alpha > 0.2:
+		var gr := float(p) * 1.35
+		for i in 3:
+			var k := 1.0 - 0.26 * float(i)
+			ci.draw_circle(origin + Vector2(0.0, -float(p) * 0.06), gr * k,
+					Color(core.r, core.g, core.b, 0.042 * alpha))
+	ci.draw_string_outline(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, p, ow,
+			Color(edge.r, edge.g, edge.b, alpha * 0.95))
+	ci.draw_string(font, origin + Vector2(0.0, float(ow) * 0.45), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, p, Color(depth.r, depth.g, depth.b, alpha))
+	ci.draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, p,
+			Color(core.r, core.g, core.b, alpha))
+	ci.draw_string(font, origin - Vector2(0.0, float(ow) * 0.28), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, p, Color(hi.r, hi.g, hi.b, hi.a * alpha))
 
 
 static func preview_size(tier: int) -> int:

@@ -1,7 +1,7 @@
 class_name StatusBadge
 extends RefCounted
-## R774：状态特效文字的**绘制唯一口**。素材来自 AI 生成（`assets/fx/status_words/`、
-## `assets/fx/status_digits/`），字形用内嵌思源黑体渲染锁死、AI 只贡献质感，黑底已抠透明。
+## R774：状态特效文字的**绘制唯一口**。素材来自 AI 生成（`assets/fx/status_words/`），
+## 字形用内嵌思源黑体渲染锁死、AI 只贡献质感，黑底已抠透明。
 ##
 ## 取代 R770c 的纯矢量徽标：那版「有图案没质感」，店长要的是「冰雪嘉年华」那种
 ## 主题艺术字（冰封=冰块带冰凌积雪、燃烧=熔岩龟裂、中毒=毒液气泡…）。AI 直接画整字
@@ -9,8 +9,11 @@ extends RefCounted
 ##   * 字形 = 内嵌字体渲染（100% 正确）；
 ##   * 质感 = AI 生成的整字图（image-to-image 锁字形，复杂字用纹理合成兜底）。
 ##
-## 文本解析：`_segments()` 把一条飘字拆成「状态词图 + 数字/符号图 + 兜底文字」片段，
-## 横向拼接（「中毒 -3」= 中毒.png + sign_minus.png + digit_3.png）。
+## 文本解析：`_segments()` 把一条飘字拆成「状态词图 + 数字段 + 兜底文字」片段，
+## 横向拼接（「中毒 -3」= 中毒.png + `DmgNumber.paint()` 画的 `-3`）。
+## ⚠️ R774d（店长口径「倒回去用之前共用的伤害数字」）：数字**不再贴素材** ——
+##    素材数字的字重跟 AI 艺术字对不上，摆一起像两个年代的 UI。数字一律走
+##    `DmgNumber.paint()` 的五层笔法，字号见 `_digit_px()`。
 ##
 ## ⚠️ 所有绘制发生在调用方 `_draw()` 内（`ci` 是那个 CanvasItem）；本类不 queue_redraw、
 ## 不读时钟。素材用静态缓存，不每帧 load。
@@ -103,34 +106,19 @@ const WORD_EN := {
 	GLYPH_SKULL: "Death", GLYPH_STAR: "Stun", GLYPH_TAUNT: "Taunt",
 }
 
-## 数字 / 符号素材。
-const DIGIT_TEX := {
-	"0": "res://assets/fx/status_digits/digit_0.png",
-	"1": "res://assets/fx/status_digits/digit_1.png",
-	"2": "res://assets/fx/status_digits/digit_2.png",
-	"3": "res://assets/fx/status_digits/digit_3.png",
-	"4": "res://assets/fx/status_digits/digit_4.png",
-	"5": "res://assets/fx/status_digits/digit_5.png",
-	"6": "res://assets/fx/status_digits/digit_6.png",
-	"7": "res://assets/fx/status_digits/digit_7.png",
-	"8": "res://assets/fx/status_digits/digit_8.png",
-	"9": "res://assets/fx/status_digits/digit_9.png",
-	"+": "res://assets/fx/status_digits/sign_plus.png",
-	"-": "res://assets/fx/status_digits/sign_minus.png",
-}
+## R774d：数字 / 符号改由字体绘制（`DmgNumber.paint()`），`assets/fx/status_digits/`
+## 那 12 张素材已随本轮删除 —— 别再把它加回来当绘制路径。
+## 数字字号相对状态词高度 H 的倍率：思源黑体数字字面高 ≈ 0.72 倍字号，
+## 1.0H 落到视觉高 ≈ 0.72H —— 状态词字面约 0.96H，两者比例 0.75，矮一档但不致于成脚注。
+const DIGIT_FONT_SCALE := 1.0
 
-## 素材基准高度（px）。状态词 / 数字统一缩放到这个高度，按各自宽高比定宽。
+## 素材基准高度（px）。状态词缩放到这个高度，按宽高比定宽。
 const BASE_H := 40.0
-## 数字相对状态词的高度倍率（数字单字符，略矮才不抢状态词的戏）。
-const DIGIT_H_SCALE := 0.82
 
-static func _digit_h(ch: String, H: float) -> float:
-	## 符号 / 数字的高度：减号是细横条（比数字矮），加号是十字（略矮于数字）。
-	if ch == "-":
-		return H * 0.24
-	if ch == "+":
-		return H * 0.72
-	return H * DIGIT_H_SCALE
+
+static func _digit_px(H: float) -> int:
+	## 数字字号（字体绘制）。减号 / 加号不再单独定高 —— 字体自己排，横杠粗细随字号走。
+	return maxi(9, int(round(H * DIGIT_FONT_SCALE)))
 
 
 static var _tex_cache: Dictionary = {}
@@ -190,21 +178,33 @@ static func _segments(text: String) -> Array:
 
 
 static func _push_chars(out: Array, s: String) -> void:
+	## R774d：连续的数字与 + / - **收入同一段 `num`** —— 交给 `DmgNumber.paint()`
+	## 用字体整串排版（字距自然、字重与状态词同代），不再逐字符贴素材图。
 	var buf := ""
+	var num := ""
 	for i in range(s.length()):
 		var c := s.substr(i, 1)
+		var is_num := c == "+" or c == "-" or (c >= "0" and c <= "9")
+		if is_num:
+			if buf != "":
+				out.append({"kind": "text", "text": buf})
+				buf = ""
+			num += c
+			continue
+		if num != "":
+			out.append({"kind": "num", "text": num})
+			num = ""
 		if c == " " or c == "\u3000":
+			# ⚠️ 空格前必须先冲掉 buf —— 否则「接下 5」会排成 gap + text("接下")，
+			#    分隔符跑到词前面，整条飘字凭空多出一个字距的空档。
 			if buf != "":
 				out.append({"kind": "text", "text": buf})
 				buf = ""
 			out.append({"kind": "gap"})
-		elif c == "+" or c == "-" or (c >= "0" and c <= "9"):
-			if buf != "":
-				out.append({"kind": "text", "text": buf})
-				buf = ""
-			out.append({"kind": "digit", "text": c})
 		else:
 			buf += c
+	if num != "":
+		out.append({"kind": "num", "text": num})
 	if buf != "":
 		out.append({"kind": "text", "text": buf})
 
@@ -219,7 +219,9 @@ static func paint(ci: CanvasItem, font: Font, center: Vector2, text: String,
 	var segs := _segments(text)
 	var mod := Color(1.0, 1.0, 1.0, alpha)
 
-	# 先量总宽（gap 固定 0.16H；text 用 font 按 H*0.72 号量）
+	# 先量总宽（gap 固定 0.30H；text 用 font 按 H*0.72 号量）
+	# R774d：gap 从 0.16H 放宽到 0.30H —— 数字换成字体笔法后两侧没有素材留白，
+	# 沿用旧值会贴到状态词上，看着像两句话挤在一起。
 	var widths: Array = []
 	var total := 0.0
 	for seg: Dictionary in segs:
@@ -237,11 +239,12 @@ static func paint(ci: CanvasItem, font: Font, center: Vector2, text: String,
 				var tex := _tex(str(_word_tex()[int(seg["glyph"])]))
 				var tw := float(tex.get_width()) * H / float(tex.get_height())
 				ci.draw_texture_rect(tex, Rect2(x, y, tw, H), false, mod)
-			"digit":
-				var tex := _tex(str(DIGIT_TEX[str(seg["text"])]))
-				var dh := _digit_h(str(seg["text"]), H)
-				var tw := float(tex.get_width()) * dh / float(tex.get_height())
-				ci.draw_texture_rect(tex, Rect2(x, y + (H - dh) * 0.5, tw, dh), false, mod)
+			"num":
+				# R774d：数字走共用伤害数字的笔法（外描边 / 厚度 / 字面 / 顶高光四层），
+				# 与状态词并排时字重同代；配色仍走 DmgNumber.palette（默认暖白、特殊染色留色相）。
+				DmgNumber.paint(ci, font, Vector2(x + w * 0.5, y + H * 0.5), _digit_px(H),
+						str(seg["text"]), alpha, DmgNumber.palette(DmgNumber.TIER_NORMAL, tint),
+						DmgNumber.TIER_NORMAL)
 			"text":
 				var fs := int(round(H * 0.72))
 				ci.draw_string_outline(font, Vector2(x, y + H * 0.78), str(seg["text"]),
@@ -260,15 +263,14 @@ static func _seg_width(ci: CanvasItem, font: Font, seg: Dictionary, H: float) ->
 		"word":
 			var tex := _tex(str(_word_tex()[int(seg["glyph"])]))
 			return float(tex.get_width()) * H / float(tex.get_height())
-		"digit":
-			var tex := _tex(str(DIGIT_TEX[str(seg["text"])]))
-			var dh := _digit_h(str(seg["text"]), H)
-			return float(tex.get_width()) * dh / float(tex.get_height())
+		"num":
+			return font.get_string_size(str(seg["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
+					_digit_px(H)).x
 		"text":
 			var fs := int(round(H * 0.72))
 			return font.get_string_size(str(seg["text"]),
 					HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		"gap":
-			return H * 0.16
+			return H * 0.30
 		_:
 			return 0.0
