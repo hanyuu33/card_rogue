@@ -27,7 +27,7 @@ PROC = D / "processed"
 REVIEW = D / "_review"
 UI = ROOT / "assets" / "ui"
 
-KEYS = ["choco_a", "choco_b"]
+KEYS = ["choco_a", "choco_b", "choco_c", "choco_d"]
 CANVAS = (320, 148)
 TOL = 30
 # 定稿调色（Brightness / Contrast / Color）：原样出图放在地图的深绿面板上偏灰 ——

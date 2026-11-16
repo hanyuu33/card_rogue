@@ -1,2 +1,4 @@
 15:17:04	choco_a	OK
 15:18:35	choco_b	OK
+15:31:13	choco_c	OK
+15:32:16	choco_d	OK

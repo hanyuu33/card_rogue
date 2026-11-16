@@ -34,7 +34,7 @@
 
 | 候选 | 构图 | 结论 |
 |---|---|---|
-| `choco_a` | 锡纸占左 ~38%，巧克力 4 列，咬口在右端中部 | **定稿** |
+| `choco_a` | 锡纸占左 ~38%，巧克力 4 列，咬口在右端中部 | 第一版定稿（**已被第二版替换**，见下「第二版修正」） |
 | `choco_b` | 锡纸占左 ~45%（更厚重），咬口在右上偏中、齿痕更明显 | 候选（锡纸占比大 → 棕色主体被压窄，小尺寸下弱一档） |
 
 选型依据是**缩到 52×24 再放大 8 倍**比出来的，不是看原图（`_review/_hud_3way.png`）——
@@ -56,7 +56,8 @@
 产物 `processed/choco_a_warm.png`。
 
 复现一致性已验证：脚本重跑后 `assets/ui/chocolate.png` 的 md5 与手调那版逐字节相同
-（`5566c746ac5151240df68efb25c88974`）。**原样版 `processed/choco_a.png` 也留着，一句话就能换回**。
+（第一版 `choco_a_warm` 为 `5566c746ac5151240df68efb25c88974`；第二版换图后 md5 已变，口径相同：
+脚本产物 = 手调产物，不靠对话里的临时处理）。**原样版 `processed/choco_a.png` 也留着，一句话就能换回**。
 
 ## 验收
 
@@ -79,6 +80,35 @@ traps 183 / trapinput 70 / smoke 75。跑前备份 `_bk_r764_userdata`（含 `.g
 
 本轮**零逻辑改动**（只换一张 png + 重导入），回归是照纪律走的，不是被改动逼出来的。
 
+## 第二版修正（店长口径：咬的位置不好，要从一个角咬，而不是一条边）
+
+第一版 prompt 写的是「the RIGHT END of the bar has ONE BIG BITE … cutting through the last two segments」——
+模型照字面理解成**从右端这条边上掰掉一块**，缺口在右边中部，读起来是「裂了 / 掰断」而不是「咬过」。
+问题在**指向**：只说「右端」没说是哪个部位，模型就落在最容易画的直边中段。
+
+第二版把咬口钉死在**角**上，并显式排除三种误读：
+
+- 主体句：「ONE BIG BITE has been taken out of the FAR-TOP-RIGHT CORNER … That corner is simply GONE」，
+  缺口区域定义为「corner itself」，弧线从顶边斜切进右端；
+- 反例句（这版新加的，效果最明显）：「must NOT be a notch in the middle of a straight edge,
+  NOT a rectangular chunk snapped off, NOT a chip taken out of a flat side」；
+- 失败判据也写进 prompt：「If the bite reads as 'a piece broke off the end' rather than
+  'someone bit the corner', the image is WRONG」。
+
+远角 / 近角各出一张（`corner_tr.txt` / `corner_br.txt`，后者由 `tools/_gen_r765_prompt_br.py`
+从前者派生，只换 3 处锚点，其余一字不改 —— 保证两个候选的差异只有「哪个角」）：
+
+| 候选 | 咬口位置 | 结论 |
+|---|---|---|
+| `choco_c` | **远右上角**，弧线从顶边斜切，缺口边缘有波浪齿痕 | **定稿** |
+| `choco_d` | 近右下角，从底边斜切，缺口更大更规整 | 候选（边缘偏直，更像「切掉一角」） |
+
+验收仍按 52×24 放大 8 倍比（`_review/_hud_corner_cmp.png`、`_hud_corner_alpha.png`）：
+C / D 的缺角轮廓在小尺寸下清楚，A 的边咬版则像裂口。
+
+⚠️ 踩到的预览坑：把 RGBA 直接 `paste` 到 RGB 画布上会**丢掉 alpha**，半透明边缘像素被当不透明贴出
+一圈彩色杂点，看起来像素材脏了。preview 必须 `alpha_composite` 到面板底色上。
+
 ## 复现
 
 ```bash
@@ -86,13 +116,14 @@ P="C:/Users/Administrator/.cache/codex-runtimes/codex-primary-runtime/dependenci
 cd art_src/2026-11-16_巧克力图标_R765
 "$P" -X utf8 _run_codex.py                    # 出图（已有成品自动跳过）
 "$P" -X utf8 _finish.py                       # 干跑：切图 + 对比页
-"$P" -X utf8 _finish.py --pick choco_a --write # 落地（然后跑一次 --import）
+"$P" -X utf8 _run_codex.py choco_c choco_d  # 第二版两个角咬候选
+"$P" -X utf8 _finish.py --pick choco_c --write # 落地（然后跑一次 --import）
 ```
 
 ## 文件清单
 
 - `prompts/choco.txt` · `_run_codex.py` · `_finish.py` · `_batch.log` · `_progress.txt`
-- `raw/choco_a_codex.png` · `raw/choco_b_codex.png`（1024 方图原档）
-- `processed/choco_a.png`（原样）· `choco_a_warm.png`（定稿）· `choco_b.png` · `_old_chocolate_R128.png`（旧版存档）
+- `raw/choco_a_codex.png` · `choco_b_codex.png` · `choco_c_codex.png` · `choco_d_codex.png`（1024 方图原档）
+- `processed/`：`choco_c_warm.png`（**当前线上定稿**）· `choco_c.png`（原样）· `choco_a|b|d(_warm).png`（落选候选）· `_old_chocolate_R128.png`（改版前旧图存档）
 - `_review/`：`_hud_3way.png` `_hud_tone.png` `_before_after.png` `_map_full.png`
   `_map_hud_zoom.png` `_map_hud_zoom_final.png` `r765_choco.html`

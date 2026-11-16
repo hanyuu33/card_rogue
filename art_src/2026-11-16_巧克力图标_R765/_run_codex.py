@@ -28,8 +28,15 @@ spec = importlib.util.spec_from_file_location("r562", os.path.join(R562, "_run_b
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
-# key -> prompt 文件名（两个候选共用同一份 prompt，出两张不同构图）
-JOBS = [("choco_a", "choco"), ("choco_b", "choco")]
+# key -> prompt 文件名
+#   choco_a / choco_b：第一版（「右端咬一口」→ 实际出成了从边上掰一块，店长退回）
+#   choco_c / choco_d：第二版，咬口明确落在**角**上 —— c = 远右上角，d = 近右下角
+JOBS = [
+    ("choco_a", "choco"),
+    ("choco_b", "choco"),
+    ("choco_c", "corner_tr"),
+    ("choco_d", "corner_br"),
+]
 PROXY = os.environ.get("CODEX_PROXY", m.PROXY)
 m.PROXY = PROXY
 
