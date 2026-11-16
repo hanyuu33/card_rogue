@@ -14468,7 +14468,7 @@ func _init() -> void:
 
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
 
-	check(ev_kinds_layer.size() == 10 and not ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 11 and not ev_kinds_layer.has("monster") \
 
 			and ev_kinds_layer.has("adventurer") \
 
@@ -14486,11 +14486,11 @@ func _init() -> void:
 
 			and not ev_kinds_layer.has("whisper"),
 
-			"第一层事件池：10 种子类型（挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语→改二层起点三选一；无凝视、无怪物）")
+			"第一层事件池：11 种子类型（挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师/R763d 奇异雕像；R512 移除卡牌宝箱；R514 移除鸭鸭低语→改二层起点三选一；无凝视、无怪物）")
 
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 
-	check(l2_ev_kinds.size() == 15 and l2_ev_kinds.has("smith") \
+	check(l2_ev_kinds.size() == 14 and l2_ev_kinds.has("smith") \
 
 			and l2_ev_kinds.has("martial") \
 
@@ -14500,9 +14500,13 @@ func _init() -> void:
 
 			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination")
 
-			and l2_ev_kinds.has("flyer") and l2_ev_kinds.has("statue"),
+			and l2_ev_kinds.has("flyer") and not l2_ev_kinds.has("statue"),
 
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 15 种子类型（R573 删除蓝色大肥鱼；R754 加奇异雕像）")
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 14 种子类型（R573 删除蓝色大肥鱼；R754 加奇异雕像；R763d 雕像挪去第一层）")
+
+	check(ev_kinds_layer.has("statue") and not l2_ev_kinds.has("statue"),
+
+			"奇异雕像 R763d 改为一层事件（第二层不再出 statue）")
 
 	var pear_ev_kinds := l2_ev_kinds        # 旧用例里沿用的变量名（保持后文读到本地变量）
 
@@ -43017,9 +43021,9 @@ func _init() -> void:
 
 	var r447_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
 
-	check(r447_l1.size() == 10 and r447_l1.has("adventurer"),
+	check(r447_l1.size() == 11 and r447_l1.has("adventurer"),
 
-			"R447 第一层事件池 10 种（+冒险家的遗物；R473 +武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语，实际 %d）" % r447_l1.size())
+			"R447 第一层事件池 11 种（+冒险家的遗物；R473 +武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语；R763d +奇异雕像，实际 %d）" % r447_l1.size())
 
 	check(not GameLayers.event_kinds(GameLayers.LAYER_TWO).has("adventurer"),
 
