@@ -1,3 +1,48 @@
+## 2026-11-16 R763b 打包：Quackill 测试版 exe + APK（顺带修掉三个发布阻塞）
+
+**口径（店长）**：「打包apk和exe」，构建类型选的是**测试版（全解锁）**。
+
+### 一、成品
+
+| 文件 | 大小 | 位置 |
+|---|---|---|
+| `Quackill.exe`（单文件，pck 内嵌）| 266,076,480 B / **253.75 MB** | `D:\work\卡牌肉鸽_独立版\` |
+| `Quackill.apk`（已签名）| 226,721,050 B / **216.22 MB** | `dist/`，另存 `D:\work\卡牌肉鸽_R763b.apk` |
+
+exe 版本资源实测：`ProductName=Quackill` / `CompanyName=risusumai` / `FileVersion=1.0.0` /
+`ProductVersion=1.0.0` / `LegalCopyright` 为 risusumai 版权行。
+APK：`com.hanyuu.cardrogue` / versionCode 1 / **versionName 1.0.0** / sdk 21→34 /
+arm64-v8a + armeabi-v7a，v1+v2+v3 签名全 true（CN=Android Debug），
+`assets/{cards,relics,stories}.json` 与工程逐字节一致（178,620 / 16,450 / 9,481 B）。
+
+### 二、先修掉的三个发布阻塞
+
+1. **`_release.py` 漏改产物名** —— R763 只改了 `export_presets.cfg` / `release/玩法说明.txt` /
+   `release/自检.bat` / `release/build_apk.sh`，根目录脚本的 `EXE_NAME`/`PCK_NAME` 还是
+   `DuckCardsRogue.*`，与说明里「双击 Quackill.exe」直接冲突。已统一为 Quackill（含 `_release` 后缀分支）。
+2. **`test_engine.gd` 两条 R763 守卫用了裸 `check()`**，读的是 `res://export_presets.cfg`
+   （`.cfg` 不进 pck）→ 第 4 步必红 2 条。已改 `check_src()`（76451 / 76457）。
+3. **`export/windows/rcedit` 为空** —— 预设里 `product_name` / `file_version` / `modify_resources`
+   都在，但没 rcedit 时 Godot 跳过资源改写，exe 属性仍是模板默认。
+   经 gh-proxy 装了 `rcedit-x64.exe` 并写进编辑器设置，本轮 exe 属性才对。
+   ⚠️ 这是**机器级**配置、不进仓库，换机要重配（步骤见发布 skill 关键坑 9）。
+
+### 三、验证
+
+- 包内自检（`_release.py` 第 4 步，拿成品 exe 跑）：
+  `engine:5383✓ reward:26✓ bgm:31✓ smoke:74通过`，0✗、EXIT=0。
+- dev engine 复跑：`== 结果：全部通过 ==`、EXIT=0（日志里 7 条 `ERROR` 全是负例用例的预期输出：
+  两条格式化串故意写错、五条 `FieldState.place 拒绝` 是拒绝路径断言）。
+- 发布目录清理：删掉遗留的 `DuckCardsRogue.exe`（R698b），现在恰好 3 个文件。
+
+### 四、记账
+
+- `scan_guard.py` 两个漏报 bug 已修：`var X: Type = ...` 不识别、var 行自己被当成守卫。
+  正是它报「0 条」才让第一轮白导了一次 exe。
+- APK 导出日志有一条 `No suitable library found for GDExtension: godotsteam` —— **预期**，
+  GodotSteam 没有 android 变体，移动端本来就用不上 Steam。
+- `dist/` 里旧的历史包（R510/R511/R694/R698b/release 各版本）仍在，未清理。
+
 ## 2026-11-16 R763b 血条「待扣冻结」泄漏：敌人顶着几十上百血被一刀打死
 
 **反馈（店长转述玩家）**：「昨晚打一半，敌人经常几十上百血一碰就死，所有伤害都可能有这个问题」。

@@ -46,7 +46,8 @@
     R386 实测旧发布包是「smoke 51 通过 / 4 失败」而 rc=0 —— 历史记录里的
     「包内四套全绿」有一半是假绿。现在改成解析输出文本（✗ / SMOKE FAIL /
     SCRIPT ERROR / 「结束：N 通过 / M 失败」）。
-  * 单文件模式下，目标目录里留着的旧 `DuckCardsRogue.pck` **必须删掉** ——
+  * 单文件模式下，目标目录里留着的旧 `Quackill.pck`（以及改名前的
+    `DuckCardsRogue.pck`）**必须删掉** ——
     单文件 exe 不读它，但留着会让玩家以为是必需文件，也会让「pck 缺失」的
     排查线索变乱。
   * exe 被正在运行的游戏锁住会抛 PermissionError，这里给明确提示而不是堆栈。
@@ -64,8 +65,8 @@ TARGET = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_独立版")
 
 PRESET = "Windows Desktop"
 PRESET_RELEASE = "Windows Desktop Release"   # R550：发布版（custom_features=cardrogue_release）
-EXE_NAME = "DuckCardsRogue.exe"
-PCK_NAME = "DuckCardsRogue.pck"
+EXE_NAME = "Quackill.exe"
+PCK_NAME = "Quackill.pck"
 PACK_REL = "dist/" + PCK_NAME
 EXTRA = "release"
 
@@ -186,8 +187,8 @@ def main():
     if release:
         PRESET = PRESET_RELEASE
         sfx = "_release"
-        EXE_NAME = "DuckCardsRogue" + sfx + ".exe"
-        PCK_NAME = "DuckCardsRogue" + sfx + ".pck"
+        EXE_NAME = "Quackill" + sfx + ".exe"
+        PCK_NAME = "Quackill" + sfx + ".pck"
         PACK_REL = "dist/" + PCK_NAME
     target = TARGET
     for a in args:

@@ -76448,13 +76448,13 @@ func _test_r763() -> void:
 			and not r763_ts.contains("title.footer_dev"),
 			"R763 标题页版本串走 GameBrand，不再自己拼开发版后缀")
 	var r763_ep: String = FileAccess.get_file_as_string("res://export_presets.cfg")
-	check(r763_ep.contains('export_path="dist/Quackill.exe"')
+	check_src(r763_ep.contains('export_path="dist/Quackill.exe"')
 			and r763_ep.contains('export_path="dist/Quackill.apk"')
 			and r763_ep.contains('export_path="dist/Quackill_release.exe"')
 			and r763_ep.contains('export_path="dist/Quackill_release.apk"')
 			and not r763_ep.contains("DuckCardsRogue"),
 			"R763 导出预设：四个包名统一 Quackill（不再混 DuckCardsRogue）")
-	check(r763_ep.contains('application/product_name="Quackill"')
+	check_src(r763_ep.contains('application/product_name="Quackill"')
 			and r763_ep.contains('application/company_name="risusumai"')
 			and r763_ep.contains('application/file_version="1.0.0"')
 			and r763_ep.contains('application/product_version="1.0.0"')
