@@ -812,6 +812,7 @@ const MECHANICAL_ARM_DISCOUNT:= 1
 # ⚠️ 「加入卡组」= 永久卡组，**本场抽牌堆不掺** —— 下一场战斗才抽得到。
 const MONKEY_CLAW_RELIC_ID:= 6066
 const MONKEY_CLAW_TURNS:= 3
+const MONKEY_CLAW_DISCOUNT:= 1   # R769：发进手牌的那张，本回合费用 -1
 const REGRET_CARD_ID:= 9265
 const FOREST_GUARD_ID:= 9037
 const FOREST_GUARD_LAST_WORD_DRAW:= 1   # R663 森林守护附带的「死亡：抽一张卡」
@@ -10471,7 +10472,8 @@ func _random_other_class_card() -> CardData:
 func _claw_tick() -> void:
 	## R766 猴爪（6066）：每场战斗的**前三个回合开始时**各触发一次。
 	## ① 随机其他职业卡 → 手牌（走 `_grant_to_hand` 唯一口：满手时按既有口径改投弃牌区，
-	##    卡不会凭空蒸发）；② 一张「懊悔」→ **卡组**（永久，`RunState.add_card`）。
+	##    卡不会凭空蒸发），并让它在**本回合**费用 -1（R769）；
+	##    ② 一张「懊悔」→ **卡组**（永久，`RunState.add_card`）。
 	## ⚠️ 调用点排在抽牌与耳环自动出牌**之后** —— 那时手牌状态已稳定，不会出现
 	##    「先塞一张再抽牌」把满手判定算在两套口径上。
 	## ⚠️ 每回合都**现问** `turn_number`，不另存计数器：读档续战 / 重开都能对上。
@@ -10485,8 +10487,16 @@ func _claw_tick() -> void:
 	else:
 		var copy:= _new_own_card(alien)
 		var got:= _grant_to_hand(copy, "猴爪")
-		_log("猴爪：第 %d 回合，%s「%s」" % [
-				turn_number, "手牌加入" if got else "手牌已满 → 改投弃牌区", copy.card_name])
+		# R769：加进手牌的这张，**本回合**费用 -1。复用 `state.hand_cost_turn` 既有链路
+		# （`cost_of` 唯一口读它、判据「此刻还在手牌里」、`end_turn` 清空、`_move_key` 迁移），
+		# 不新造卡字段 —— 所以 CardData / `_migrate_card_state` 都不用动。
+		# 只在 `got` 时标记：满手改投弃牌区的那张不在手牌，标记无处生效。
+		if got:
+			var cur:= int(state.hand_cost_turn.get(copy, 0))
+			state.hand_cost_turn[copy] = cur + MONKEY_CLAW_DISCOUNT
+		_log("猴爪：第 %d 回合，%s「%s」%s" % [
+				turn_number, "手牌加入" if got else "手牌已满 → 改投弃牌区", copy.card_name,
+				"（本回合费用 -1）" if got else ""])
 		action.emit("relic", {"id": MONKEY_CLAW_RELIC_ID, "turn": turn_number,
 				"card": copy, "to_hand": got})
 	RunState.add_card(REGRET_CARD_ID)

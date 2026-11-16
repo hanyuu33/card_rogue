@@ -73436,6 +73436,7 @@ func _init() -> void:
 	_test_r763()
 
 	_test_r766()
+	_test_r769()
 	_test_r767()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
@@ -76889,3 +76890,96 @@ func _test_r767() -> void:
 	# 还原
 	RunState.daily_fx = r767_sv_fx
 	RunState.set_difficulty(r767_sv_diff)
+
+
+func _test_r769() -> void:
+	## R769 猴爪：发进手牌的**那张**，本回合费用 -1（店长追加口径）。
+	## 走的是既有 `state.hand_cost_turn`（R276 随心组装同一张表），所以验的不是「新机制」，
+	## 而是**接得对不对**：标记写进去、cost_of 真降、离手与回合末都自动复原。
+	var r769_sv_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r769_sv_active: bool = RunState.run_active
+	RunState.run_active = false
+
+	var r769_e := _new_engine([], 20, 20, -1, false)
+	r769_e.self_relics = [GameEngine.MONKEY_CLAW_RELIC_ID]
+	r769_e.start_game(0)
+	var r769_alien: CardData = null
+	for c: CardData in r769_e.state.hand:
+		# 排除回响 9102：它卡面写死「最低 1 费」，_cost_floor 会压住这 -1，断言会假红
+		if r769_e._other_class_card(c) and c.id != GameEngine.ECHO_ID:
+			r769_alien = c
+	check(r769_alien != null,
+			"R769 准备：第 1 回合手牌里拿到一张其他职业卡（否则后面的断言是空的）")
+	if r769_alien != null:
+		check(int(r769_e.state.hand_cost_turn.get(r769_alien, 0)) == GameEngine.MONKEY_CLAW_DISCOUNT,
+				"R769 猴爪：发进手牌的那张打上「本回合费用 -1」标记")
+		var r769_before: int = r769_alien.cost
+		var r769_after: int = r769_e.cost_of(r769_alien)
+		check(r769_after == maxi(0, r769_before - 1),
+				"R769 猴爪：「%s」本回合费用 %d → %d（cost_of 唯一口）"
+				% [r769_alien.card_name, r769_before, r769_after])
+		check(r769_alien.cost == r769_before,
+				"R769 猴爪：**不改卡面原型**（card.cost 仍是 %d）—— 减费只按实例记账"
+				% r769_alien.cost)
+
+		# ③ 离手即复原
+		r769_e.state.hand.erase(r769_alien)
+		check(r769_e.cost_of(r769_alien) == r769_before,
+				"R769 猴爪：离手后立刻恢复原价（%d）" % r769_e.cost_of(r769_alien))
+		r769_e.state.hand.append(r769_alien)
+
+		# ④ 回合结束清表
+		r769_e.end_turn()
+		check(r769_e.state.hand_cost_turn.is_empty(),
+				"R769 猴爪：回合结束清空本回合减费表（剩 %d 条）"
+				% r769_e.state.hand_cost_turn.size())
+
+	# ④' 「-1 真生效」的硬证据：上面那张是随机摇的，可能是 0 费（0-1 被 maxi(0,…) 夹住，
+	#     断言虽过却嚼不出味道）。这里另取一张**确定 >=1 费**的别职业卡，挂同一个标记，
+	#     直接验 cost_of 真降 1 —— 前者证接线，这条证效果。
+	var r769_pick: CardData = null
+	for pc: CardData in CardRepo.load_json().reward_pool():
+		if r769_e._other_class_card(pc) and pc.cost >= 1 and pc.id != GameEngine.ECHO_ID:
+			r769_pick = pc
+			break
+	check(r769_pick != null, "R769 准备：卡池里有 >=1 费的别职业卡")
+	if r769_pick != null:
+		var r769_inst := r769_e._new_own_card(r769_pick)
+		r769_e.state.hand.append(r769_inst)
+		r769_e.state.hand_cost_turn[r769_inst] = GameEngine.MONKEY_CLAW_DISCOUNT
+		check(r769_e.cost_of(r769_inst) == r769_pick.cost - 1,
+				"R769 猴爪：「%s」%d 费 → 本回合 %d 费（-1 真落地，没被 0 费夹住）"
+				% [r769_pick.card_name, r769_pick.cost, r769_e.cost_of(r769_inst)])
+		r769_e.state.hand.erase(r769_inst)
+		r769_e.state.hand_cost_turn.erase(r769_inst)
+
+	# ⑤ 满手 → 改投弃牌区的那张不带标记
+	var r769_full := _new_engine([], 20, 20, -1, false)
+	r769_full.self_relics = [GameEngine.MONKEY_CLAW_RELIC_ID]
+	r769_full.start_game(0)
+	r769_full.state.hand.clear()
+	r769_full.state.hand_cost_turn.clear()
+	var r769_proto: CardData = CardRepo.load_json().get_card(8002)
+	while r769_full.state.hand.size() < FieldState.HAND_LIMIT:
+		r769_full.state.hand.append(CardData.from_dict(r769_proto.to_dict()))
+	var r769_disc_before: int = r769_full.state.discard.size()
+	r769_full.turn_number = 1
+	r769_full._claw_tick()
+	check(r769_full.state.discard.size() == r769_disc_before + 1,
+			"R769 猴爪：满手时那张照样有去处（进弃牌区，不蒸发）")
+	check(r769_full.state.hand_cost_turn.is_empty(),
+			"R769 猴爪：满手没进手牌 → 不写减费标记（剩 %d 条）"
+			% r769_full.state.hand_cost_turn.size())
+
+	# ⑥ 第 4 回合连发都不发，更不会带标记
+	r769_full.state.hand.clear()
+	r769_full.state.hand_cost_turn.clear()
+	r769_full.turn_number = GameEngine.MONKEY_CLAW_TURNS + 1
+	var r769_d4: int = r769_full.state.discard.size()
+	r769_full._claw_tick()
+	check(r769_full.state.discard.size() == r769_d4
+			and r769_full.state.hand.is_empty() and r769_full.state.hand_cost_turn.is_empty(),
+			"R769 猴爪：第 4 回合不再发卡、也不留减费标记")
+
+	RunState.deck_ids = r769_sv_deck.duplicate()
+	RunState.run_active = r769_sv_active
