@@ -13838,6 +13838,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				else ("黄桃罐头" if _ph > 0 else "自愈")
 			_say("%s：战斗结束回复 %d 点生命（剩余 %d）" % [
 					_src, _sh, int(data.get("hp", 0))])
+			if int(data.get("max_gain", 0)) > 0:
+				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 54),
+						"text": "最大生命 +%d" % int(data.get("max_gain", 0)),
+						"col": Color("a9b83c"), "start": n, "dur": 2000, "size": 18})
+				_say("黄桃罐头：最大生命 +%d" % int(data.get("max_gain", 0)))
 		"destroy":
 			var cell: Vector2i = data["cell"]
 			var center := _cell_center(cell)

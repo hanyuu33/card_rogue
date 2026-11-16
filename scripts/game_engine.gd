@@ -581,7 +581,8 @@ const HERO_DISCARD:= 4
 
 
 const PEACH_RELIC_ID:= 6014
-const PEACH_BATTLE_HEAL:= 4     # 黄桃罐头：每次战斗结束回复 4 点生命
+const PEACH_BATTLE_HEAL:= 6     # 黄桃罐头：每次战斗结束回复 6 点生命
+const PEACH_MAX_HP_GAIN:= 1     # 黄桃罐头：每次战斗结束最大生命 +1
 const DUCK_EYE_RELIC_ID:= 6009  # 鸭之眼：己方技能伤害 +X（X = 该技能卡的原始费用）
 const EARRING_RELIC_ID:= 6015
 const EARRING_AUTOPLAY_MAX:= 20
@@ -4616,15 +4617,20 @@ func battle_end_heal() -> int:
 		if c.traits.has(SELF_HEAL_TRAIT):
 			heal_val = maxi(heal_val, maxi(1, c.value))
 	amount += heal_val
-	var peach:= PEACH_BATTLE_HEAL if self_relics.has(PEACH_RELIC_ID) else 0
-	amount += peach   # 黄桃罐头：每次战斗结束回复 4 点生命
+	var peach:= 0
+	if self_relics.has(PEACH_RELIC_ID):
+		peach = PEACH_BATTLE_HEAL
+		# 黄桃罐头：每次战斗结束最大生命 +1（先抬上限，回复才吃得进新上限）。
+		state.max_hp_self += PEACH_MAX_HP_GAIN
+	amount += peach   # 黄桃罐头：每次战斗结束回复 6 点生命
 	if amount <= 0:
 		return 0
 	var before:= state.hp_self
 	state.hp_self = mini(state.max_hp_self, state.hp_self + amount)
 	var healed:= state.hp_self - before
 	_log("战斗结束结算：回复 %d 点生命（%d → %d）" % [healed, before, state.hp_self])
-	action.emit("self_heal", {"healed": healed, "hp": state.hp_self, "peach": peach})
+	action.emit("self_heal", {"healed": healed, "hp": state.hp_self, "peach": peach,
+			"max_gain": PEACH_MAX_HP_GAIN if peach > 0 else 0})
 	return healed
 
 

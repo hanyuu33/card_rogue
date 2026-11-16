@@ -17145,7 +17145,7 @@ func _init() -> void:
 
 
 
-	# ---- 黄桃罐头（6014）：每次战斗结束回复 4 点生命 ----
+	# ---- 黄桃罐头（6014）：每次战斗结束回复 6 点生命，且最大生命 +1 ----
 
 	var eng_pc := _new_engine(wm_deck, 20, 20, -1, false)
 
@@ -17155,9 +17155,13 @@ func _init() -> void:
 
 	eng_pc.state.hp_self = 10
 
-	check(eng_pc.battle_end_heal() == 4 and eng_pc.state.hp_self == 14,
+	check(eng_pc.battle_end_heal() == 6 and eng_pc.state.hp_self == 16,
 
-			"黄桃罐头：战斗结束回复 4 点生命（10 → %d）" % eng_pc.state.hp_self)
+			"黄桃罐头：战斗结束回复 6 点生命（10 → %d）" % eng_pc.state.hp_self)
+
+	check(eng_pc.state.max_hp_self == 21,
+
+			"黄桃罐头：战斗结束最大生命 +1（20 → %d）" % eng_pc.state.max_hp_self)
 
 	var eng_pc2 := _new_engine(wm_deck, 20, 20, -1, false)
 
@@ -17169,7 +17173,9 @@ func _init() -> void:
 
 	eng_pc2.battle_end_heal()
 
-	check(eng_pc2.state.hp_self == 20, "黄桃罐头：回复不超过上限（18 + 4 → 20）")
+	check(eng_pc2.state.hp_self == 21 and eng_pc2.state.max_hp_self == 21,
+
+			"黄桃罐头：先抬上限再回复，满血也吃得进新上限（18 + 6 → 21，上限 20 → 21）")
 
 	var eng_pc3 := _new_engine(wm_deck, 20, 20, -1, false)
 
