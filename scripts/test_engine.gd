@@ -61386,11 +61386,14 @@ func _init() -> void:
 			"R770 曲线：末帧要飘够高度（实测 %.1f）" % float(r770_a1["dy"]))
 	check(float(DmgNumber.anim(0.9)["dy"]) > float(r770_a1["dy"]),
 			"R770 曲线：上飘必须单调（后段变慢但不回头）")
-	# 分级两道坎
-	check(DmgNumber.tier_of_amount(14) == DmgNumber.TIER_NORMAL, "R770 分级：14 = 普通")
-	check(DmgNumber.tier_of_amount(15) == DmgNumber.TIER_HEAVY, "R770 分级：15 = 重击")
-	check(DmgNumber.tier_of_amount(30) == DmgNumber.TIER_FATAL, "R770 分级：30 = 致命")
-	check(DmgNumber.tier_of_amount(-35) == DmgNumber.TIER_FATAL, "R770 分级：负数取绝对值")
+	# 分级两道坎：店长口径 **严格大于** 20 / 40 —— 20 仍是普通、40 仍是重击
+	check(DmgNumber.tier_of_amount(20) == DmgNumber.TIER_NORMAL, "R770 分级：20 = 普通（门槛是 >20）")
+	check(DmgNumber.tier_of_amount(21) == DmgNumber.TIER_HEAVY, "R770 分级：21 = 重击")
+	check(DmgNumber.tier_of_amount(40) == DmgNumber.TIER_HEAVY, "R770 分级：40 = 重击（门槛是 >40）")
+	check(DmgNumber.tier_of_amount(41) == DmgNumber.TIER_FATAL, "R770 分级：41 = 致命")
+	check(DmgNumber.tier_of_amount(-45) == DmgNumber.TIER_FATAL, "R770 分级：负数取绝对值")
+	check(DmgNumber.HEAVY_AT == 20 and DmgNumber.FATAL_AT == 40,
+			"R770 分级：两道坎常量必须是 20 / 40（改口径要同改断言与 MEMORY_UI）")
 	check(DmgNumber.size_scale(DmgNumber.TIER_FATAL) > DmgNumber.size_scale(DmgNumber.TIER_HEAVY)
 			and DmgNumber.size_scale(DmgNumber.TIER_HEAVY)
 			> DmgNumber.size_scale(DmgNumber.TIER_NORMAL),

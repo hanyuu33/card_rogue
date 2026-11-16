@@ -74,8 +74,8 @@ func _stuff_floaters(sc: Node, t_ratio: float) -> void:
 	# 出图什么都看不见。棋盘是 3 列 5 行，单位只在第 1 行。
 	var samples: Array = [
 		{"cell": Vector2i(2, 0), "text": "-3", "col": UiThemeRef.SIDE_FOE, "size": 20},
-		{"cell": Vector2i(2, 1), "text": "-18", "col": UiThemeRef.SIDE_FOE, "size": 20},
-		{"cell": Vector2i(2, 2), "text": "-42", "col": UiThemeRef.SIDE_FOE, "size": 20},
+		{"cell": Vector2i(2, 1), "text": "-27", "col": UiThemeRef.SIDE_FOE, "size": 20},
+		{"cell": Vector2i(2, 2), "text": "-46", "col": UiThemeRef.SIDE_FOE, "size": 20},
 		{"cell": Vector2i(3, 0), "text": "+8", "col": Color("9fe0a6"), "size": 20},
 		{"cell": Vector2i(3, 1), "text": "-9", "col": Color("6fbf3a"), "size": 20},
 		{"cell": Vector2i(3, 2), "text": "冰封", "col": Color("8ad4f0"), "size": 16},

@@ -17,11 +17,13 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 
 ## ---------------------------------------------------------------- 分级
 const TIER_NORMAL := 0     ## 普通伤害
-const TIER_HEAVY := 1      ## 重击（>= 15）
-const TIER_FATAL := 2      ## 致命（>= 30）
+const TIER_HEAVY := 1      ## 重击（> 20）
+const TIER_FATAL := 2      ## 致命（> 40）
 
-const HEAVY_AT := 15
-const FATAL_AT := 30
+## 两道坎按店长口径取**严格大于**：20 仍是普通、40 仍是重击 —— 门槛抬高后
+## 金色留给真正的大数字，小伤害不再动不动跳金（首版 15 / 30 门槛太低）。
+const HEAVY_AT := 20
+const FATAL_AT := 40
 
 ## 字号倍率（相对调用方给的基准号，历史默认 20）。致命必须明显压过普通。
 ## R770 首版偏小（1.10/1.34/1.62）—— 实测在 1280x720 上「像普通提示文字」，
@@ -50,9 +52,9 @@ const HI_ALPHA := Color(1.0, 1.0, 1.0, 0.24)
 static func tier_of_amount(amount: int) -> int:
 	## 绝对值分级 —— 治疗走正数，重击的门槛与伤害同口径。
 	var a := absi(amount)
-	if a >= FATAL_AT:
+	if a > FATAL_AT:
 		return TIER_FATAL
-	if a >= HEAVY_AT:
+	if a > HEAVY_AT:
 		return TIER_HEAVY
 	return TIER_NORMAL
 
