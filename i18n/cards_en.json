@@ -1305,6 +1305,10 @@
   "9264": {
    "name": "Recruit",
    "effect_text": "Choose 1 of 3 Allies (one from each other class) and add it to your Hand."
+  },
+  "9265": {
+   "name": "Regret",
+   "effect_text": "Choose a card of another class in the discard pile. It is Banished."
   }
  }
 }

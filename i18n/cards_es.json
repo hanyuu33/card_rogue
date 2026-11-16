@@ -1305,6 +1305,10 @@
   "9264": {
    "name": "Reclutar",
    "effect_text": "Elige 1 de 3 Aliados (uno de cada otra clase) y añádelo a la mano."
+  },
+  "9265": {
+   "name": "Arrepentimiento",
+   "effect_text": "Elige una carta de otra clase en la pila de descarte. Se destierra."
   }
  }
 }

@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE SQUARE image, 1024x1024 if supported (otherwise the most square size available; do NOT generate a wide landscape image). Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+Generate ONE game RELIC item ICON, isolated on a PURE WHITE (#FFFFFF) FLAT background. This will be cut out into a transparent PNG icon, so a clean uniform white background is CRITICAL.
+
+STYLE: 2D hand-drawn anime game icon, THICK CLEAN BLACK OUTLINE around every shape, flat cel-shaded colour blocks with exactly TWO shading steps per object, hard-edged shadow shapes, low-saturation palette (muted purple-grey, dusty bone brown, one warm amber accent). Cozy light-fantasy storybook look, simple readable silhouette, drawn detail only where the eye lands.
+
+SUBJECT: a dried, shrivelled MONKEY'S PAW charm — a small mummified paw with wrinkled dusty-brown skin, THREE bony fingers curled inward with short dark claws, the stump end bound with a scrap of cloth. It hangs from a small tarnished BRASS RING at the top, with a short dark leather cord looped through the ring. The whole thing reads as one small hanging talisman, not as a living animal.
+
+COMPOSITION: ONE single object only, LARGE and CENTERED, filling about 74% of the frame, fully inside the frame with nothing cut off. SQUARE framing, straight-on view with no perspective tilt. The object must be COMPLETELY SEPARATED from the frame edges by white space. NO ground, NO pedestal, NO cast shadow, NO scenery, NO background objects, NO decorative border, NO frame, NO card, NO panel, NO sparkle, NO glow outside the object. The ENTIRE background MUST be uniform pure white: NO gradient, NO texture, NO pattern, NO vignette, NO coloured backdrop, NO checkerboard.
+
+STRICTLY FORBIDDEN: any text, letters, words, numbers, digits, labels, watermark, logo or signature anywhere in the image; any human figure, human face, human hands; any living monkey, any fur-covered animal body, any face or eyes on the paw (it is dried and faceless); any photorealistic texture, 3D render, PBR material, photo grain, noise, film grain, airbrush, soft glow bloom, volumetric fog, god rays; any second object; any other-game card frame or UI element.
+
+NO readable text. NO numbers. NO watermark. Pure white background only.

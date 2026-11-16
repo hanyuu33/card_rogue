@@ -206,6 +206,8 @@ var merge_body_name:= ""       # 面板选中的素体名（日志 / 目标失�
 var whale_remaining:= 0
 var foresight_mode:= false  # 预判（9097）：等玩家选效果①/②
 var wish_pending:= false    # 许愿（9168）：等玩家从**卡组**选一张卡加入手卡
+## R766 懊悔（9265）：等玩家从**弃牌区**选一张其他职业卡，让它消失（本场移除）。
+var regret_pending:= false
 ## R761 招募（9264）：等玩家从**三个其他职业的盟友**里选一张加入手卡。
 ## 候选是**独立副本**（`_new_own_card`），且只在这里存一份 —— 面板只是把它画出来。
 var recruit_pending:= false
@@ -802,6 +804,15 @@ const JUSTICE_BACKSTAB_MULT:= 2
 # 只有这张独立副本在首个我方回合费用 -1；离手 / 回合结束即恢复。
 const MECHANICAL_ARM_RELIC_ID:= 6065
 const MECHANICAL_ARM_DISCOUNT:= 1
+# R766 猴爪（6066）：每场战斗的**前三个回合开始时** ——
+#   ① 随机一张**其他职业卡**进手牌；② 向**卡组**（永久 `RunState.deck_ids`）塞一张「懊悔」。
+# ⚠️ 「其他职业」的唯一判据是 `_other_class_card()`：**有明确职业归属且不是玩家当前职业**。
+#    公用卡（class 留空，如雪豹 8081）**不算** —— 与诗 6069 的 `_poem_ally()` 故意不同
+#    （那里公用卡也算，因为诗吃的是「不是我谱的曲」，猴爪要的是「从别人家借来的卡」）。
+# ⚠️ 「加入卡组」= 永久卡组，**本场抽牌堆不掺** —— 下一场战斗才抽得到。
+const MONKEY_CLAW_RELIC_ID:= 6066
+const MONKEY_CLAW_TURNS:= 3
+const REGRET_CARD_ID:= 9265
 const FOREST_GUARD_ID:= 9037
 const FOREST_GUARD_LAST_WORD_DRAW:= 1   # R663 森林守护附带的「死亡：抽一张卡」
 const WISDOM_SPELL_ID:= 9005
@@ -2330,6 +2341,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	_death_effects.clear()
 	_death_card_pending = 0
 	wish_pending = false
+	regret_pending = false
 	recruit_pending = false
 	_recruit_cards.clear()
 	_poem_used = false          # R761 诗：每场战斗从「这回合还没回费」开始
@@ -2637,6 +2649,7 @@ func _begin_turn(side: String) -> void :
 		# 放在抽牌分支**之后**，这样「鸭语耳环自动出牌」那条分支也会照常触发。
 		if _zone_has(state.effects, ENDLESS_DARK_TRAIT):
 			_endless_dark(SIDE_SELF)
+		_claw_tick()   # R766 猴爪：前三个回合各发一张外来卡 + 一张「懊悔」进卡组
 		_melt_ice_walls(SIDE_SELF)
 		_clear_fire_walls(SIDE_SELF)
 		_wisdom_surge()
@@ -8703,6 +8716,8 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 	# 选牌 pending 期间**不许再出别的牌** —— 否则玩家可以在选牌过程中把目标那张
 	# 顺手打掉，下标就失效了。界面本身会拦点击（选卡页是模态的），这里是给联机 /
 	# 回放路径兜底。（R209：`sys_upgrade_pending` 已删，手牌目标改由选卡页驱动。）
+	if regret_pending:
+		return "懊悔：请先从弃牌区选择一张其他职业卡"
 	if overhaul_pending:
 		return "返修：请先从弃牌区选择一张盟友或工事"
 	# R271：手卡变化面板（创意 / 量产型代达罗斯）pending 期间同样不许出别的牌 ——
@@ -8831,7 +8846,7 @@ func _instinct_panel_open() -> bool:
 		or paint_pending \
 		or focus_pending or wish_pending or shadow_step_pending or revive_pending \
 		or merge_pending or crow_pending or whale_pending or endless_pending \
-		or rebirth_pending or eliminate_pending or recruit_pending
+		or rebirth_pending or eliminate_pending or recruit_pending or regret_pending
 
 
 func _instinct_cast(side: String) -> String:
@@ -9591,7 +9606,7 @@ func _sleepless_tick(side: String) -> void:
 	#  选卡改由场景的选卡页驱动，它自己会拦住出牌与回合收尾。）
 	if revive_pending or crow_pending or whale_pending or foresight_pick \
 			or endless_pending or shadow_step_pending \
-			or focus_pending or overhaul_pending:
+			or focus_pending or overhaul_pending or regret_pending:
 		return
 	if not _zone_has_id(side, SLEEPLESS_ID) or not state.hand.is_empty():
 		return
@@ -10428,6 +10443,51 @@ func _random_ally_card(side: String) -> CardData:
 	if pool.is_empty():
 		return null
 	return pool[rng.randi() % pool.size()]
+
+
+func _other_class_card(c: CardData) -> bool:
+	## R766：「其他职业卡」**唯一判据** —— 猴爪（随机发一张）与懊悔（弃牌区可选）共用这一个口。
+	## 判据两件套：① 有明确职业归属（`card_class` 非空）；② 不是玩家当前职业。
+	## ⚠️ 公用卡（class 留空）与诅咒（class 留空）都**不算** —— 见常量区那段注释。
+	return c != null and c.card_class != "" and c.card_class != RunState.player_class
+
+
+func _random_other_class_card() -> CardData:
+	## R766 猴爪：完整奖励池里随机一张**其他职业**的卡。
+	## 走引擎 `rng` → 同种子同结果、回放可复现（与 `_random_ally_card` 同一口径）。
+	var repo:= CardRepo.load_json()
+	var pool: Array[CardData] = []
+	for c: CardData in repo.reward_pool():
+		if _other_class_card(c):
+			pool.append(c)
+	if pool.is_empty():
+		return null
+	return pool[rng.randi() % pool.size()]
+
+
+func _claw_tick() -> void:
+	## R766 猴爪（6066）：每场战斗的**前三个回合开始时**各触发一次。
+	## ① 随机其他职业卡 → 手牌（走 `_grant_to_hand` 唯一口：满手时按既有口径改投弃牌区，
+	##    卡不会凭空蒸发）；② 一张「懊悔」→ **卡组**（永久，`RunState.add_card`）。
+	## ⚠️ 调用点排在抽牌与耳环自动出牌**之后** —— 那时手牌状态已稳定，不会出现
+	##    「先塞一张再抽牌」把满手判定算在两套口径上。
+	## ⚠️ 每回合都**现问** `turn_number`，不另存计数器：读档续战 / 重开都能对上。
+	if not self_relics.has(MONKEY_CLAW_RELIC_ID):
+		return
+	if turn_number <= 0 or turn_number > MONKEY_CLAW_TURNS:
+		return
+	var alien:= _random_other_class_card()
+	if alien == null:
+		_log("猴爪：卡池里没有其他职业的卡")
+	else:
+		var copy:= _new_own_card(alien)
+		var got:= _grant_to_hand(copy, "猴爪")
+		_log("猴爪：第 %d 回合，%s「%s」" % [
+				turn_number, "手牌加入" if got else "手牌已满 → 改投弃牌区", copy.card_name])
+		action.emit("relic", {"id": MONKEY_CLAW_RELIC_ID, "turn": turn_number,
+				"card": copy, "to_hand": got})
+	RunState.add_card(REGRET_CARD_ID)
+	_log("猴爪：第 %d 回合，「懊悔」加入卡组（本场抽牌堆不掺）" % turn_number)
 
 
 func _sync_harp() -> void:
@@ -11386,6 +11446,15 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 	if card.id in TEACH_IDS:
 		return _teach_spell(side)
 	match card.id:
+		REGRET_CARD_ID:
+			# 懊悔（9265，R766）：选弃牌区一张**其他职业卡**让它消失。
+			# 弃牌区没有其他职业卡就白打（这张自己仍按「次元」进消耗区，不进弃牌区）。
+			if regret_options().is_empty():
+				_log("懊悔：弃牌区没有其他职业的卡")
+				return "弃牌区没有其他职业的卡"
+			regret_pending = true
+			_log("懊悔：从弃牌区选择一张其他职业卡（弃牌区 %d 张）" % state.discard.size())
+			return "从弃牌区选择一张其他职业卡消失"
 		WISH_ID:
 			# 许愿（9168，R306）：**从卡组**选一张卡加入手卡 —— 选卡页接管（`wish_pending`），
 			# 结算口是 `wish_pick()`。卡组空了就白打（这张卡自己仍按「次元」进消耗区）。
@@ -13195,6 +13264,34 @@ func crow_recall(discard_index: int) -> bool:
 	crow_pending = false
 	_log("乌鸦：%s 从弃牌堆回到手牌" % c.card_name)
 	action.emit("crow_recall", {"card": c})
+	return true
+
+
+func regret_options() -> Array[int]:
+	## R766 懊悔（9265）：可选目标 = **弃牌区里其他职业卡**的下标（顺序即弃牌区顺序）。
+	## 判据只走 `_other_class_card()`，与猴爪发卡同一口 —— 不在这里另写一份职业判定。
+	var out: Array[int] = []
+	for i in state.discard.size():
+		if _other_class_card(state.discard[i]):
+			out.append(i)
+	return out
+
+
+func regret_pick(discard_index: int) -> bool:
+	## R766 懊悔的结算口：把弃牌区第 discard_index 张**移除** —— 这就是「消失」
+	## （口径见 canonical rules：消失 = 本场对战移除）。它已经在弃牌区了，
+	## 所以既不进消耗区、也不回任何区域，直接抹掉。
+	if not regret_pending:
+		return false
+	if discard_index < 0 or discard_index >= state.discard.size():
+		return false
+	var c: CardData = state.discard[discard_index]
+	if not _other_class_card(c):
+		return false
+	state.discard.remove_at(discard_index)
+	regret_pending = false
+	_log("懊悔：弃牌区的「%s」消失" % c.card_name)
+	action.emit("regret_pick", {"card": c})
 	return true
 
 

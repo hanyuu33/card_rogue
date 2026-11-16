@@ -243,6 +243,10 @@
       "name": "Brazo mecánico",
       "desc": "Al comienzo de cada combate, añade a tu mano un Aliado aleatorio del grupo de recompensas de la clase actual; tiene Coste -1 durante tu primer turno."
     },
+    "6066": {
+      "name": "Pata de mono",
+      "desc": "Al inicio de cada uno de los tres primeros turnos de cada combate: añade una carta aleatoria de otra clase a tu mano y añade un Arrepentimiento a tu mazo."
+    },
     "6067": {
       "name": "Poción de memoria",
       "desc": "Al comienzo de cada combate, juega una carta de Efecto aleatoria directamente desde tu pila de robo, sin pasar por tu mano y sin pagar su Coste. Si tu pila de robo no tiene cartas de Efecto, omite este efecto."

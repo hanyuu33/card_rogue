@@ -6451,6 +6451,9 @@ func _pick_active_kind() -> String:
 		return "wish"
 	if engine.crow_pending:
 		return "crow"
+	# R766 懊悔（9265）：从弃牌区选一张其他职业卡让它消失。
+	if engine.regret_pending:
+		return "regret"
 	if engine.whale_pending:
 		return "whale"
 	if engine.endless_pending:
@@ -6606,6 +6609,14 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"title": "乌鸦：选择弃牌堆一张盟友回到手卡（必须选一张）",
 					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
 					"cards": copts.map(disc_cards),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"regret":
+			# R766 懊悔（9265）：候选只列**其他职业卡**（引擎 `regret_options()` 唯一判据）。
+			var gopts: Array = engine.regret_options()
+			return {"kind": k, "short": "懊悔", "opts": gopts,
+					"title": "懊悔：选择弃牌区一张其他职业卡，让它消失（必须选一张）",
+					"note": "点卡选中，再点确认 —— 它本场对战消失（不回手牌、也不进消耗区）",
+					"cards": gopts.map(disc_cards),
 					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
 		"whale":
 			var wopts: Array = engine.whale_options()
@@ -6941,6 +6952,14 @@ func _on_pick_confirmed(sel: Array) -> void:
 				cnm = engine.state.discard[ci].card_name
 			if engine.crow_recall(ci):
 				status_text = "乌鸦：%s 从弃牌堆回到手牌" % cnm
+			_clear_selection()
+		"regret":
+			var gi := int(opts[sel[0]])
+			var gnm := "?"
+			if gi >= 0 and gi < engine.state.discard.size():
+				gnm = engine.state.discard[gi].card_name
+			if engine.regret_pick(gi):
+				status_text = "懊悔：弃牌区的「%s」消失" % gnm
 			_clear_selection()
 		"whale":
 			var wi := int(opts[sel[0]])
@@ -7745,6 +7764,10 @@ func _on_right_click() -> void:
 	# 乌鸦的回手面板：必须选一张（不接受取消）
 	if engine.crow_pending:
 		_say("乌鸦：必须从弃牌堆选择一张盟友回到手牌")
+		return
+	# R766 懊悔的消失面板：同样必须选一张（不接受取消）
+	if engine.regret_pending:
+		_say("懊悔：必须从弃牌区选择一张其他职业卡")
 		return
 	# 鲸鱼之怒的取牌面板：右键 = 放弃剩余的取牌（本效果可选）
 	if engine.whale_pending:
@@ -9619,6 +9642,10 @@ func _on_end_turn() -> void:
 	if engine.crow_pending:
 		_ensure_pick_visible("crow")
 		_say("乌鸦：请先选择一张要回到手牌的盟友")
+		return
+	if engine.regret_pending:
+		_ensure_pick_visible("regret")
+		_say("懊悔：请先选择一张要让它消失的其他职业卡")
 		return
 	if engine.whale_pending:
 		_ensure_pick_visible("whale")
@@ -13479,6 +13506,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				cr_name = (data["card"] as CardData).card_name
 			_say("乌鸦：%s 从弃牌堆回到手牌" % cr_name)
+		"regret_pick":
+			sfx.play("place")
+			var rp_name := "?"
+			if data.get("card") is CardData:
+				rp_name = (data["card"] as CardData).card_name
+			_say("懊悔：弃牌区的「%s」消失" % rp_name)
 		"whale_pick":
 			sfx.play("place")
 			var wp_name := "?"
@@ -16891,7 +16924,7 @@ func _end_turn_ready() -> bool:
 	if engine.current_side != GameEngine.SIDE_SELF:
 		return false
 	if engine.crow_pending or engine.whale_pending or engine.endless_pending \
-			or engine.rebirth_pending or _recall_pending():
+			or engine.rebirth_pending or engine.regret_pending or _recall_pending():
 		return false
 	if engine.foresight_mode or engine.foresight_pick:
 		return false

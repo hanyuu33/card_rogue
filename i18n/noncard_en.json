@@ -243,6 +243,10 @@
       "name": "Mechanical Arm",
       "desc": "At the start of each battle, add a random Ally from the current class's reward pool to your Hand; it has Cost -1 during your first turn."
     },
+    "6066": {
+      "name": "Monkey's Paw",
+      "desc": "At the start of each of the first three turns of every battle: add a random card of another class to your Hand, and add a Regret to your Deck."
+    },
     "6067": {
       "name": "Memory Potion",
       "desc": "At the start of each battle, play a random Effect card directly from your Draw Pile, bypassing your Hand and paying no Cost. If your Draw Pile has no Effect cards, skip this effect."
