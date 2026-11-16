@@ -61516,22 +61516,36 @@ func _init() -> void:
 			"R770c 图案：嘲讽 → 感叹号")
 	check(StatusBadge.glyph_of("接下 5") == StatusBadge.GLYPH_NONE,
 			"R770c 图案：没关键词就 NONE（乱配图案比不配更糟，玩家会读出机制）")
-	# 圆盘尺寸：16px 字下半径 9~12 —— 5px 时六角雪晶会糊成白团（实测）
-	var r770_er := StatusBadge.emblem_radius(16)
-	check(r770_er >= 9.0 and r770_er <= 12.0,
-			"R770c 徽章：16px 字下圆盘半径 %.1f 要在 9~12" % r770_er)
-	check(StatusBadge.emblem_gap(16) >= 3.0 and StatusBadge.emblem_gap(16) <= 6.0,
-			"R770c 徽章：圆盘与文字间距 3~6px")
-	# 每种图形都要真有绘制分支 —— 防「登记了关键词但没画」的静默失败
-	var r770_sb := FileAccess.get_file_as_string("res://scripts/status_badge.gd")
-	var r770_missing := ""
-	for gname: String in ["ICE", "FLAME", "POISON", "BOLT", "SHIELD", "HEAL", "SWORD",
-			"ENERGY", "SKULL", "STAR", "TAUNT"]:
-		if r770_sb.find("GLYPH_" + gname + ":") < 0:
-			r770_missing += gname + " "
-	check_src(r770_missing == "", "R770c 图案：每个图形都有绘制分支（缺 %s）" % r770_missing)
+	# R774：状态特效文字 —— AI 素材 + 数字拼接（取代 R770c 的矢量徽标）
+	# 每个主题都要有对应的状态词素材图，防「登记了关键词但缺图」的静默失败
+	var r774_glyphs: Array = [StatusBadge.GLYPH_ICE, StatusBadge.GLYPH_FLAME,
+			StatusBadge.GLYPH_POISON, StatusBadge.GLYPH_BOLT, StatusBadge.GLYPH_SHIELD,
+			StatusBadge.GLYPH_HEAL, StatusBadge.GLYPH_SWORD, StatusBadge.GLYPH_ENERGY,
+			StatusBadge.GLYPH_SKULL, StatusBadge.GLYPH_STAR, StatusBadge.GLYPH_TAUNT]
+	var r774_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not StatusBadge.WORD_TEX.has(r774_g):
+			r774_missing += str(r774_g) + " "
+	check(r774_missing == "", "R774 素材：每个主题都有状态词图（缺 %s）" % r774_missing)
+	# 数字 0-9 + 符号 + - 都要有素材
+	var r774_dig := ""
+	for r774_c: String in "0123456789+-":
+		if not StatusBadge.DIGIT_TEX.has(r774_c):
+			r774_dig += r774_c + " "
+	check(r774_dig == "", "R774 素材：数字/符号素材齐全（缺 %s）" % r774_dig)
+	# 解析：中毒 -3 → word(中毒) + gap + digit(-) + digit(3)
+	var r774_seg := StatusBadge._segments("中毒 -3")
+	check(r774_seg.size() == 4 and str(r774_seg[0]["kind"]) == "word"
+			and int(r774_seg[0]["glyph"]) == StatusBadge.GLYPH_POISON,
+			"R774 解析：中毒 -3 首段是「中毒」状态词")
+	check(str(r774_seg[2]["kind"]) == "digit" and str(r774_seg[2]["text"]) == "-"
+			and str(r774_seg[3]["kind"]) == "digit" and str(r774_seg[3]["text"]) == "3",
+			"R774 解析：-3 拆成符号与数字两张图")
+	var r774_seg2 := StatusBadge._segments("接下 5")
+	check(str(r774_seg2[0]["kind"]) == "text" and str(r774_seg2[0]["text"]) == "接下",
+			"R774 解析：没关键词的中文走 font 兜底，不硬套图案")
 	check_src(r770_bs.find("StatusBadge.paint(") >= 0,
-			"R770c 源码：说明类飘字委托给 StatusBadge（battle_scene 只留一行）")
+			"R774 源码：说明类飘字委托给 StatusBadge（battle_scene 只留一行）")
 
 
 
