@@ -11706,6 +11706,16 @@ func _fx_unqueue_hit(cell: Vector2i) -> void:
 			continue
 		var d: Dictionary = ev.get("data", {})
 		if d.get("cell") == cell:
+			# R763b：撤掉这条演出的同时，**必须把它冻的那笔待扣一起放掉**。
+			# `_freeze_hp()` 是「一冻一掉」配对：这条 fx_hit 的 `_drop_hp` 就在
+			# `_apply_delayed("fx_hit")` 里，事件被删掉 = 配对断掉，于是卡面数字
+			# 永远停在扣血前 —— 单位顶着几十上百血被下一刀打死（2026-11-16 反馈
+			# 「敌人几十上百血一碰就死」，探针 `_probe_hp.gd` 可复现）。
+			# 只放 `hold == true` 的：那才是 `_freeze_hp` 过、等着这一下掉血的那笔
+			# （`_fx_retime_hit` 补冻的也会把 hold 置 true）。
+			var rp: Variant = d.get("pl")
+			if bool(d.get("hold", false)) and rp != null and is_instance_valid(rp):
+				_drop_hp(rp)
 			_delayed.remove_at(i)
 
 
