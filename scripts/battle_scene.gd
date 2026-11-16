@@ -675,6 +675,9 @@ var _ai_stall_n := 0                     # R400：同一格连续排在队首的
 var _ghosts: Array = []         # {center, name, start, dur}                  击破淡出
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
+## R770：伤害数字底板（只有拖卡预览用）。每帧 new 一个 StyleBoxFlat 太浪费 →
+## 复用同一实例，只改颜色 / 圆角。
+var _dmg_plate_box: StyleBoxFlat = null
 ## R386：战场对话气泡（`SpeechBubble` 实例）。台词由关卡 / 道具 / 引擎播报通过
 ## `say_bubble()` 排进来；本层只负责按格锚点绘制、排队推进与回收。
 ## 同时最多 3 句 —— 再多就互相盖住；同一张卡连说两句走**队列**（一句接一句），
@@ -16613,18 +16616,78 @@ func _draw_floaters() -> void:
 		var t := clampf(float(n - int(f.start)) / int(f.dur), 0.0, 1.0)
 		if t <= 0.0:
 			continue  # 延迟启动的飘字
-		var alpha := 1.0 - t * t
-		var pos: Vector2 = _fx_pos(f) + Vector2(0, -30.0 * t)  # R171：格锚飘字随棋盘滚动补正
+		# R171：格锚飘字随棋盘滚动补正
+		var base_pos: Vector2 = _fx_pos(f)
 		# R117：棋盘上沿从 136 移到 52，`GRID_Y - 36 / -62` 这类飘字起点会钻到顶栏
 		# 底下（顶栏 36px，且是子节点、画在本层之上）→ 统一压在顶栏之下。
-		pos.y = maxf(pos.y, 44.0)
+		base_pos.y = maxf(base_pos.y, 44.0)
 		var col: Color = f.col
-		# 伤害数字更大更醒目；文字类（法术/击破）保持原字号
-		var size := int(f.get("size", 20 if str(f.text).begins_with("-") else 15))
-		# R140：飘字也改成**带背景条**（R138 的暗描边在地图底图上仍不够清晰，用户实测）。
-		col.a = alpha
-		_draw_string_box_center(_font_bold, size, str(f.text), pos, col,
-				Color(TEXT_BG.r, TEXT_BG.g, TEXT_BG.b, TEXT_BG.a * alpha))
+		var txt := str(f.text)
+		# R770：数字与说明文字**分两套画法** —— 数字走 GBF 风弹字，说明保持带底条。
+		# ⚠️ 形状判据只认「整串带符号整数」；**别拿正负当判据** —— 伤害数字本身是负数。
+		var is_num := DmgNumber.is_number_text(txt)
+		# 每轮都先把变换钉回屏幕空间的震动 —— 上一轮的数字改过 transform，
+		# 说明类分支不改 → 不钉回来就会被上一张数字的缩放 / 旋转带歪。
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+		if not is_num:
+			# R770：说明类飘字（法术名 / 「接下 5」/「冰封」）保持 R140 的带底条样式 ——
+			# 它们要**读**，不是要感受分量；换成大字反而挤掉信息。
+			var alpha := 1.0 - t * t
+			var size := int(f.get("size", 15))
+			col.a = alpha
+			_draw_string_box_center(_font_bold, size, txt,
+					base_pos + Vector2(0, -30.0 * t), col,
+					Color(TEXT_BG.r, TEXT_BG.g, TEXT_BG.b, TEXT_BG.a * alpha))
+			continue
+		# R770：伤害 / 治疗数字 —— 弹性 pop + 双层描边 + 厚度层 + 顶高光。
+		# 字号仍以调用方给的 `size`（历史默认 20）为基准，按分级再放大一档。
+		var tier := DmgNumber.tier_of_amount(DmgNumber.amount_of_text(txt))
+		var an := DmgNumber.anim(t)
+		var px := int(round(float(f.get("size", 20)) * DmgNumber.size_scale(tier)))
+		var sc := float(an["scale"])
+		var center := base_pos + Vector2(float(an["dx"]), float(an["dy"]))
+		# 变换叠在**屏幕空间的震动**上（此刻棋盘变换已在 _draw() 里复位）
+		draw_set_transform(_shake_cur + center, float(an["rot"]), Vector2(sc, sc))
+		_paint_dmg_number(_font_bold, Vector2.ZERO, px, txt, float(an["alpha"]),
+				DmgNumber.palette(tier, col), tier)
+	draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+
+
+func _paint_dmg_number(font: Font, center: Vector2, px: int, text: String, alpha: float,
+		pal: Dictionary, tier: int) -> void:
+	## R770：GBF 风伤害数字的笔法（**不加变换**：调用方负责，`center` 就是它那套空间的坐标）。
+	## 为什么不做成自带变换：飘字在屏幕空间（要叠震动）、拖卡预览在棋盘空间
+	## （缩放 + 滚动都还没复位），两套调用方坐标语义不同，硬塞进来必然错位。
+	##
+	## 从下往上五层：
+	##   ① 柔和辉光 —— 重击以上才开（普通伤害加光会糊，反而看不清数值）
+	##   ② 外描边（暗）—— 把数字从任何底图上「抠」出来，这是 GBF 观感的地基
+	##   ③ 厚度层 —— 往下错开半个笔宽，露出下缘的实体感
+	##   ④ 字面
+	##   ⑤ 顶高光 —— 整字上移一小截 + 半透白，上缘最亮、下缘仍是 core，形成伪渐变
+	if px < 8:
+		px = 8
+	var core: Color = pal["core"]
+	var depth: Color = pal["depth"]
+	var edge: Color = pal["edge"]
+	var hi: Color = pal["hi"]
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	var origin := center + Vector2(-w * 0.5, float(px) * 0.36)
+	var ow := DmgNumber.outline_width(px)
+	if tier >= DmgNumber.TIER_HEAVY and alpha > 0.2:
+		var gr := float(px) * 1.35
+		for i in 3:
+			var k := 1.0 - 0.26 * float(i)
+			draw_circle(origin + Vector2(0.0, -float(px) * 0.06), gr * k,
+					Color(core.r, core.g, core.b, 0.042 * alpha))
+	draw_string_outline(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, ow,
+			Color(edge.r, edge.g, edge.b, alpha * 0.95))
+	draw_string(font, origin + Vector2(0.0, float(ow) * 0.45), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(depth.r, depth.g, depth.b, alpha))
+	draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px,
+			Color(core.r, core.g, core.b, alpha))
+	draw_string(font, origin - Vector2(0.0, float(ow) * 0.28), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(hi.r, hi.g, hi.b, hi.a * alpha))
 
 
 func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
@@ -16634,15 +16697,46 @@ func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
 	## `preview_spell_damage`）；`dmg < 0` = 引擎自己都拿不准 → **什么都不画**。
 	## ⚠️ 0 也要画：玩家得知道「这一下打不穿护甲 / 被挡掉了」，不画会被读成「没生效」。
 	## 位置挑右下角：卡面主体居中、血条在底部正中、状态徽标在顶部 —— 只剩这里不挡东西。
+	##
+	## R770：深红硬方块底板 → 粗描边数字。方块压在卡图上像贴纸、还挡掉一块画面；
+	## 描边能同样地把数字抠出来却不挡内容。字号跟最终伤害分级（重击更大更金），
+	## 扫一眼就知道这一下值不值得打。
 	var d := int(info.get("dmg", -1))
 	if d < 0:
 		return
 	var r := _cell_rect(cell)
-	var text := ("-%d" % d) if d > 0 else "0"
-	var fg := Color("fff1e0") if d > 0 else Color("ddd6c8")
-	var bg := Color(0.42, 0.09, 0.07, 0.92) if d > 0 else Color(0.17, 0.16, 0.15, 0.86)
-	_draw_string_box_center(_font_bold, UI_FS_LABEL, text,
-			Vector2(r.position.x + r.size.x - 22.0, r.position.y + r.size.y - 13.0), fg, bg)
+	var txt := ("-%d" % d) if d > 0 else "0"
+	var tier := DmgNumber.TIER_NORMAL
+	var pal := {}
+	if d > 0:
+		tier = DmgNumber.tier_of_amount(d)
+		pal = DmgNumber.palette(tier, UiTheme.SIDE_FOE)
+	else:
+		# 打不穿：灰调 —— 不是「没生效」，是「生效了但被吃掉了」，颜色要区别于普通伤害
+		pal = {"core": Color("d9d3c6"), "depth": Color("5c564c"),
+				"edge": Color("14120f"), "hi": Color(1.0, 1.0, 1.0, 0.26)}
+	var px := DmgNumber.preview_size(tier)
+	var w := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	# 右对齐、贴着格子右下角（字的下缘离格线只留 4px）—— 那里是卡面唯一没有
+	# 正文 / 血条的区域；再往上就会被卡面自己的数值行吃掉。
+	var center := Vector2(r.end.x - 10.0 - w * 0.5, r.end.y - 6.0 - float(px) * 0.45)
+	# R770：卡图是亮的 —— 只靠描边，浅色卡面上根本读不出「-10」。垫一块**小圆角暗底**：
+	# 比旧版那个硬方块窄一大圈，但压得够实（不然会和卡面数值糊成一片）。
+	var plate := Rect2(center.x - w * 0.5 - 8.0, center.y - float(px) * 0.52 - 3.0,
+			w + 16.0, float(px) + 6.0)
+	_dmg_plate(plate, Color(0.045, 0.034, 0.027, 0.82), 7)
+	_paint_dmg_number(_font_bold, center, px, txt, 1.0, pal, tier)
+
+
+func _dmg_plate(rect: Rect2, col: Color, rad: int) -> void:
+	## R770：伤害数字的**唯一底板**（圆角暗块）。复用同一个 StyleBoxFlat 实例 ——
+	## 预览一次最多 5 格、每帧重画，逐帧 new 属于白给的分配。
+	if _dmg_plate_box == null:
+		_dmg_plate_box = StyleBoxFlat.new()
+		_dmg_plate_box.anti_aliasing = true
+	_dmg_plate_box.bg_color = col
+	_dmg_plate_box.set_corner_radius_all(rad)
+	draw_style_box(_dmg_plate_box, rect)
 
 
 func _draw_highlights() -> void:
