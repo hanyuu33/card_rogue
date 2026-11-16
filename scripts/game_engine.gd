@@ -7,9 +7,13 @@ signal action(kind: String, data: Dictionary)
 
 const SIDE_SELF:= "self"
 const SIDE_OPPONENT:= "opponent"
-## R663：陷阱默认只布在自己半场（row 3~4）。改 false = 全盘除「敌人进不去的后排」。
-## 单独一个常量而不是散在判据里：店长要放宽时只动这一行，界面高亮自动跟着变。
-const TRAP_SELF_HALF_ONLY := true
+## R663：陷阱（放置型工具）的可布范围。
+## **R763c 起 = false** —— 用户口径「陷阱类工具，需要可以放到对方场地上」：
+## 我方与敌方场地都能埋，界面高亮 / 松手判定自动跟着变（都走 `trap_legal_cells`）。
+## 仍然排除「敌人进不去的后排」= `forbidden_row_for(SIDE_OPPONENT)`（我方 row5）：
+## 埋在那儿敌人永远踩不到，等于白丢一个消耗品。
+## 单独一个常量而不是散在判据里：要收回去只动这一行。
+const TRAP_SELF_HALF_ONLY := false
 
 const GROW_CAP:= 4
 
@@ -17227,6 +17231,7 @@ func trap_legal_cells() -> Array[Vector2i]:
 	## 排除三类：① 有单位；② 已有场地卡（沿用「不覆盖」口径）；③ 已有陷阱。
 	## 再排除「敌人进不去的那一行」（forbidden_row_for(SIDE_OPPONENT)）——
 	## 埋在那儿永远踩不到，等于白丢一个消耗品。
+	## R763c：`TRAP_SELF_HALF_ONLY` 已置 false → **敌方半场 row0~2 同样合法**。
 	var out: Array[Vector2i] = []
 	if state == null:
 		return out

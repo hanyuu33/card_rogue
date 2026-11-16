@@ -176,8 +176,14 @@ func _init() -> void:
 	var e1 := _engine()
 	var c31 := Vector2i(3, 1)
 	var legal := e1.trap_legal_cells()
-	check(legal.has(c31) and not legal.has(Vector2i(5, 1)) and not legal.has(Vector2i(1, 1)),
-			"合法格 = 自己半场 row3~4（排除敌方半场与敌人进不去的 row5）")
+	# R763c（用户口径「陷阱类工具，需要可以放到对方场地上」）：
+	# 敌方半场 row0~2 也合法，只剩「敌人永远踩不到的我方 row5」被排除。
+	check(legal.has(c31) and not legal.has(Vector2i(5, 1)) and legal.has(Vector2i(1, 1)),
+			"R763c 合法格 = 全盘（含敌方半场 row0~2），只排除敌人进不去的 row5")
+	check(legal.has(Vector2i(0, 2)) and legal.has(Vector2i(1, 0))
+			and legal.has(Vector2i(2, 1)),
+			"R763c 敌方半场三行（后排/中排/前排）都可放")
+	check(legal.size() == 15, "R763c 6×3 = 18 格减我方后排 3 格 = 15 个合法格（%d）" % legal.size())
 	check(e1.place_trap(7001, c31) and int(e1.state.trap_fields.get(c31, -1)) == 7001,
 			"place_trap 写进独立场地表 trap_fields")
 	check(legal.has(c31), "放置前 c31 是合法格")
@@ -192,6 +198,19 @@ func _init() -> void:
 	e1b.state.apply_dict(ck)
 	check(int(e1b.state.trap_fields.get(c31, -1)) == 7001,
 			"战斗检查点还原陷阱")
+
+	# ---- ④b R763c：敌方半场埋得下，敌人经过照常触发 ----
+	var e1c := _engine()
+	var foe_cell := Vector2i(1, 2)
+	check(e1c.trap_legal_cells().has(foe_cell), "R763c 敌方半场 (1,2) 是合法落点")
+	check(e1c.place_trap(7001, foe_cell), "R763c place_trap 接受敌方半场")
+	check(int(e1c.state.trap_fields.get(foe_cell, -1)) == 7001,
+			"R763c 敌方半场格写进了 trap_fields")
+	var foe_in_half: Placement = _unit(9003, 60, GameEngine.SIDE_OPPONENT)
+	e1c.state.board[foe_cell] = foe_in_half
+	e1c._trap_path_check([Vector2i(1, 0), foe_cell], GameEngine.SIDE_OPPONENT)
+	check(foe_in_half.health == 42, "R763c 敌人踩到敌方半场的陷阱：18 点伤害")
+	check(not e1c.state.trap_fields.has(foe_cell), "R763c 敌方半场陷阱触发后消失")
 
 	# ---- ⑤ 炼金炸弹：敌方踩 → 18 伤 + 消失；我方踩 → 不触发 ----
 	var e2 := _engine()

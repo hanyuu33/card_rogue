@@ -1,3 +1,45 @@
+## 2026-11-16 R763c 陷阱（放置型工具）可以埋到敌方场地
+
+**口径（店长）**：「陷阱类工具，需要可以放到对方场地上。」
+
+### 一、改动（3 个文件，35 增 5 删）
+
+| 文件 | 改动 |
+|---|---|
+| `scripts/game_engine.gd` | `TRAP_SELF_HALF_ONLY: true → false`（第 12 行）；`trap_legal_cells()` 注释同步 |
+| `scripts/test_traps.gd` | 合法格断言改新口径 + 新增 ④b 段 8 条（敌方半场可放 / 写表 / 敌人踩到 18 伤 / 触发后消失）|
+| `scripts/battle_scene.gd` | `_start_trap_drag()` 拖放提示：「拖到绿色格子放置（我方或敌方场地都可以）」；石头仍走「拖到敌方单位身上」|
+
+### 二、为什么只动一个常量就够
+
+- **唯一判据**：`trap_legal_cells()` 里的 `if TRAP_SELF_HALF_ONLY and x < OPPONENT_ROWS: continue`。
+- **界面**（拖拽高亮 `_draw_trap_drag` + 松手判定）走 `engine.trap_drop_cells()` → 同一个口，自动跟随；
+  它自己不算半场（R78 起就是这条纪律）。
+- **渲染** `_draw_trap_markers()` 遍历整个 `trap_fields`，本来就无半场过滤 —— 敌方半场的陷阱照常画。
+- **触发** `_trap_path_check()` 只认 `side == SIDE_OPPONENT`，与陷阱埋在哪半边无关；敌方移动
+  `path[1..]` 经过即结算（起点不算）。
+- 仍排除「敌人进不去的我方 row5」（`forbidden_row_for(SIDE_OPPONENT)`）—— 埋那儿永远踩不到，
+  等于白丢一个消耗品。
+
+### 三、新口径
+
+合法格 = 6×3 全盘 **减我方 row5 三格** = **15 格**（再减已被单位 / 场地 / 陷阱占用的）。
+
+### 四、验证
+
+- traps **183 通过 / 0 失败**（原 176，+7 条 R763c 断言）
+- trapinput 70 / 0；smoke 75 / 0；engine「结果：全部通过」；assemble 0 failures；
+  mana `MANA HUD PASS`；reward 26；bgm 39
+- `git diff --stat` 35 增 5 删，`git diff --check` rc=0
+
+### 五、留给下次
+
+- `玩法说明.txt` 至今**没有「工具栏 / 工具」这一节**（R663 起就没写），本次只在 UI 提示里
+  说明了「可放敌方场地」。要补玩家文档得单开一轮。
+- 炼金炸弹 / 毒瓶埋进敌方 **row0**（敌人起始行）几乎踩不到 —— 那是玩家自己的判断，没加限制。
+- `traps.json` 的 desc 原文是「拖到战场空格上放置」，本来就不排斥敌方半场，**没有改**；
+  改它会牵扯 `traps_en/ja/es.json` 三份同步。
+
 ## 2026-11-16 R763b 打包：Quackill 测试版 exe + APK（顺带修掉三个发布阻塞）
 
 **口径（店长）**：「打包apk和exe」，构建类型选的是**测试版（全解锁）**。

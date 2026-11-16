@@ -10297,6 +10297,12 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 			_say("场上没有可以砸的敌人")
 		else:
 			_say("没有可以放置工具的空格")
+	elif t0 != null and t0.direct_damage > 0:
+		status_text = "「%s」：拖到高亮的敌方单位身上砸出去" % t0.trap_name
+	else:
+		# R763c（用户口径「陷阱类工具，需要可以放到对方场地上」）：
+		# 提示里必须说出来 —— 否则玩家沿用旧印象，仍然以为只能放自己这半边。
+		status_text = "「%s」：拖到绿色格子放置（我方或敌方场地都可以）" % t0.trap_name
 	queue_redraw()
 
 
