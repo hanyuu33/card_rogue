@@ -23,18 +23,20 @@ FF = Path(os.environ.get(
     r"\ffmpeg-9.0.2-full_build\bin\ffmpeg.exe",
 ))
 W, H, FPS = 1280, 720, 30
-SEG = 2.6
+SEG = 2.2
 XF = 0.25
 CROP_TOP = 74
 
 # 顺序：人类四职业（暗 → 机械 → 自然 → 吟游）→ 鸭子骑士 → 鸭子弓手
 SHOTS = [
-    ("2D_anime_cel_shaded_animation__2026-11-17T09-26-53.mp4", 0.35, "01_rogue"),
-    ("2D_anime_cel_shaded_animation__2026-11-17T09-23-11.mp4", 0.45, "02_mech"),
-    ("2D_anime_cel_shaded_animation__2026-11-17T09-18-59.mp4", 0.40, "03_forest"),
-    ("2D_anime_cel_shaded_animation__2026-11-17T09-21-11.mp4", 0.40, "04_bard"),
-    ("2D_anime_cel_shaded_animation__2026-11-17T09-09-07.mp4", 0.55, "05_knight"),
-    ("2D_anime_cel_shaded_animation__2026-11-17T09-11-35.mp4", 0.35, "06_archer"),
+    ("2D_anime_cel_shaded_animation__2026-11-17T09-59-59.mp4", 0.55, "01_rogue"),
+    ("FLAT_2D_anime_cel_shaded_anima_2026-11-17T10-15-50.mp4", 0.60, "02_mech"),
+    ("2D_anime_cel_shaded_animation__2026-11-17T10-05-53.mp4", 0.50, "03_forest"),
+    ("2D_anime_cel_shaded_animation__2026-11-17T10-07-50.mp4", 0.50, "04_bard"),
+    ("FLAT_2D_anime_cel_shaded_anima_2026-11-17T10-18-54.mp4", 1.15, "05_water"),
+    ("2D_anime_cel_shaded_animation__2026-11-17T10-13-07.mp4", 0.50, "06_wind"),
+    ("2D_anime_cel_shaded_animation__2026-11-17T09-57-24.mp4", 0.60, "07_knight"),
+    ("2D_anime_cel_shaded_animation__2026-11-17T10-03-52.mp4", 0.50, "08_archer"),
 ]
 
 
@@ -101,7 +103,7 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "release" / "trailer" / "work_v9" / "chars_demo.mp4"))
     ap.add_argument("--bgm", default=str(ROOT / "assets" / "audio" / "bgm" / "title.ogg"))
     args = ap.parse_args()
-    out = Path(args.out)
+    out = Path(args.out).resolve()
     work = out.parent
     work.mkdir(parents=True, exist_ok=True)
 
