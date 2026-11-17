@@ -502,6 +502,10 @@ var _tool_use_until := 0
 ## R752：选卡型工具（万能牌 / 神秘牌）是从哪个槽点出来的 ——
 ## 只有「确认」那一刻才该摘槽，所以要记着它（引擎不知道槽号，槽是界面的事）。
 var _tool_pick_slot := -1
+## R782：鼠标此刻压着的工具槽（-1 = 没压）——电脑端悬浮就靠它弹出完整效果说明。
+## 安卓没有 MouseMotion 事件：点一下上膛（`_tool_use_arm`）走同一条绘制。
+## 两条路合成一个判据 `_tool_tip_anchor_slot()`，别在绘制处各写一份。
+var _tool_tip_slot := -1
 
 
 func _say(text: String) -> void:
@@ -1176,6 +1180,16 @@ func _ready() -> void:
 			RunState.traps = [7012, 7005, 7001]
 			RunState.run_active = true
 			# 出图直接上膛（`--toolarm` 在截图模式下要等第 60 帧，这里更稳）
+			_tool_use_arm = 0
+			_tool_use_until = Time.get_ticks_msec() + 600000
+		if args[i] == "--totemtip":
+			# R782 出图：工具栏塞野性图腾并**直接上膛**，核验「使用 / 丢弃」双按钮
+			# 与槽左侧的完整效果说明面板（图腾描述较长 → 折两行）。
+			# 出图：`battle.tscn -- --screenshot --totemtip --level 0 --shotframe 200`
+			# ⚠️ 不能挂在 `--tooldemo` 下面：那个参数被 `reward_panel` 认领，
+			#    会弹出「获得奖励」面板把工具栏整个盖住（R754 踩过，R782 复现一次）。
+			RunState.traps = [7008, 7005, 7006]
+			RunState.run_active = true
 			_tool_use_arm = 0
 			_tool_use_until = Time.get_ticks_msec() + 600000
 		if args[i] == "--shotms" and i + 1 < args.size():
@@ -7840,6 +7854,12 @@ func _clear_hover_state() -> void:
 	_hover_hand = -1
 	_hover_zone_rect = Rect2()   # R614：跟着一起清，否则浮窗会留在屏幕上
 	_hover_relic_tip = ""
+	# R782：工具说明跟着一起收；只在「本来挂着」时重绘一次 ——
+	# 本函数每次鼠标移动都会走，无条件 queue_redraw 会把安卓的节流重绘打回每帧。
+	var had_tool_tip: bool = _tool_tip_slot >= 0
+	_tool_tip_slot = -1
+	if had_tool_tip:
+		queue_redraw()
 	_hover_mention = {}          # R302：提及浮窗跟着一起收
 
 
@@ -7888,6 +7908,7 @@ func _on_hover(pos: Vector2) -> void:
 	# 「提及」那两个字的一瞬间左栏已经空了，根本没东西可悬停。提及判定排在最前。
 	if _info_panel_rect().has_point(pos):
 		_hover_mention = {}
+		_tool_tip_slot = -1   # R782：进左栏 = 离开工具槽，说明面板跟着收（这里没走 _clear_hover_state）
 		for h: Dictionary in _mention_hits:
 			if (h["rect"] as Rect2).has_point(pos):
 				_hover_mention = h
@@ -8053,6 +8074,21 @@ func _on_hover(pos: Vector2) -> void:
 			tip = "敌方效果区（空）"
 		else:
 			tip = "敌方效果 %d 张，持续生效中" % engine.state.enemy_effects.size()
+	# ③''' R782：工具槽悬停 → 弹出完整效果说明（电脑端）。
+	# 用户口径「工具栏看不到工具的效果描述」：描述有四五十字，状态栏一行读不完，
+	# 所以走与道具说明同一套浮动折行面板。安卓没有 MouseMotion，
+	# 点一下槽上膛（`_tool_use_arm`）时同一个面板照样弹（见 `_tool_tip_anchor_slot`）。
+	if _hover_card == null:
+		var want_tool_tip := -1
+		for ti in RunState.TRAP_SLOTS:
+			if RunState.trap_at(ti) > 0 and _trap_slot_rect(ti).has_point(pos):
+				want_tool_tip = ti
+				break
+		if want_tool_tip != _tool_tip_slot:
+			_tool_tip_slot = want_tool_tip
+			# 进/出槽这一下立刻重绘：敌方回合画面是静止的，脉冲节流不一定在跑，
+			# 只改状态不重绘会出现「鼠标压上去半天才弹」。
+			queue_redraw()
 	# ③'' 右栏道具栏：悬停看道具描述（装不下时悬停「+N」摘要 → 提示点开看全部）
 	if _hover_card == null:
 		var rel_hit := false
@@ -9904,6 +9940,7 @@ func _draw() -> void:
 	if _relics_visible:
 		_draw_relic_panel()
 	_draw_relic_tip_panel()
+	_draw_tool_tip_panel()   # R782：工具槽的完整效果说明（电脑悬浮 / 安卓点一下上膛）
 	_draw_tutorial_cue()
 	_draw_confetti()
 	_draw_banner()
@@ -19315,6 +19352,70 @@ func _draw_relic_tip_panel() -> void:
 		var by: float = y + RELIC_TIP_PAD + lh * (float(li) + 0.5) + fs * 0.36
 		draw_string(_font, Vector2(x + RELIC_TIP_PAD, by), lines[li],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("f0ead8"))
+
+
+func _tool_tip_anchor_slot() -> int:
+	## R782：工具说明面板**此刻该显示哪个槽**（-1 = 不显示）——绘制与回归共用的唯一判据。
+	## ① 上膛期优先：安卓没有 hover 事件，「点一下」就是「我要看这个工具」；
+	##    电脑端上膛后同样一直显示，直到用掉 / 丢掉 / 2.6 秒过期。
+	## ② 否则看鼠标悬停的槽（电脑端）。
+	if _tool_use_arm >= 0 and _tool_use_arm < RunState.TRAP_SLOTS \
+			and Time.get_ticks_msec() <= _tool_use_until:
+		return _tool_use_arm
+	if _tool_tip_slot >= 0 and _tool_tip_slot < RunState.TRAP_SLOTS:
+		return _tool_tip_slot
+	return -1
+
+
+func _draw_tool_tip_panel() -> void:
+	## R782：工具槽的完整效果说明（用户口径「工具栏看不到工具的效果描述」）。
+	## 版式与 `_draw_relic_tip_panel()` 共用同一套常量与折行，锚点换成**槽左侧**，
+	## 并且让开按钮栏 —— 按钮栏画在独立高层 CanvasLayer 上，压在它下面会被整块盖住。
+	var slot := _tool_tip_anchor_slot()
+	if slot < 0:
+		return
+	var tid := RunState.trap_at(slot)
+	if tid <= 0:
+		return
+	var td: TrapData = TrapRepo.load_json().get_trap(tid)
+	if td == null:
+		return
+	var sr := _trap_slot_rect(slot)
+	var w := 400.0
+	var inner := w - RELIC_TIP_PAD * 2.0
+	# 右缘：上膛时让开按钮栏（它开在槽左侧），否则只让开槽本身。
+	var armed: bool = _tool_use_arm >= 0 and slot == _tool_use_arm \
+			and Time.get_ticks_msec() <= _tool_use_until
+	var right: float = sr.position.x - TOOL_BAR_OFFSET
+	if armed:
+		var bar: Rect2 = _tool_bar_layout(slot)["bar"]
+		right = bar.position.x - TOOL_BAR_GAP
+	var x: float = clampf(right - w, 8.0, maxf(8.0, WINDOW_W - w - 8.0))
+	var fs := RELIC_TIP_SIZE
+	var lines: Array[String] = ["「%s」" % td.trap_name]
+	for ln in CardFace.wrap_text(_font, td.desc, inner, fs):
+		lines.append(ln)
+	var lh: float = maxf(_font.get_height(fs), float(fs))
+	var max_h: float = WINDOW_H - 16.0
+	while fs > RELIC_TIP_SIZE_MIN \
+			and RELIC_TIP_PAD * 2.0 + float(lines.size()) * lh > max_h:
+		fs -= 1
+		lines = ["「%s」" % td.trap_name]
+		for ln in CardFace.wrap_text(_font, td.desc, inner, fs):
+			lines.append(ln)
+		lh = maxf(_font.get_height(fs), float(fs))
+	var h: float = RELIC_TIP_PAD * 2.0 + float(lines.size()) * lh
+	var y: float = clampf(sr.position.y, 8.0, maxf(8.0, WINDOW_H - h - 8.0))
+	draw_rect(Rect2(x, y, w, h), Color(0.06, 0.07, 0.10, 0.96), true)
+	draw_rect(Rect2(x, y, w, h), Color("ffd76a"), false, 1.6)
+	for li in lines.size():
+		var by: float = y + RELIC_TIP_PAD + lh * (float(li) + 0.5) + fs * 0.36
+		if li == 0:
+			draw_string(_font_bold, Vector2(x + RELIC_TIP_PAD, by), lines[li],
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("ffe6a2"))
+		else:
+			draw_string(_font, Vector2(x + RELIC_TIP_PAD, by), lines[li],
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("f0ead8"))
 
 
 func _draw_log_panel() -> void:

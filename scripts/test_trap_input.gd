@@ -88,6 +88,7 @@ func _reset_case() -> void:
 	_sc._tool_use_arm = -1
 	_sc._tool_use_until = 0
 	_sc._tool_pick_slot = -1
+	_sc._tool_tip_slot = -1     # R782：工具说明面板的悬停态
 	if _sc.engine != null:
 		_sc.engine.tool_pick_cancel()
 
@@ -354,6 +355,38 @@ func _initialize() -> void:
 	_feed(_mb((lay_bomb["drop"] as Rect2).get_center(), true))
 	check(RunState.trap_at(0) == -1, "按钮栏：放置型也能一键丢掉")
 	check(_sc.engine.state.trap_fields.is_empty(), "按钮栏：丢弃放置型不会顺手把它埋下去")
+
+	# ---- ⑧f R782：工具栏能**看到效果描述**（电脑悬浮 / 安卓点一下上膛） ----
+	# 用户口径：「工具栏看不到工具的效果描述」→ 电脑端悬浮、安卓端点击都要能看到。
+	RunState.traps = [-1, -1, -1]
+	RunState.gain_trap(7008)          # 野性图腾：使用型（ally_atk）
+	_sc._tool_use_arm = -1
+	_sc._tool_use_until = 0
+	_sc._tool_tip_slot = -1
+	_sc._on_hover(s0)
+	check(_sc._tool_tip_slot == 0, "工具说明：鼠标悬停在槽上就认得这个槽（野性图腾）")
+	check(_sc._tool_tip_anchor_slot() == 0, "工具说明：电脑端悬浮即可显示（不必先点）")
+	var tip_td: TrapData = TrapRepo.load_json().get_trap(7008)
+	check(tip_td != null and tip_td.trap_name != "" and tip_td.desc != "",
+			"工具说明：图腾有可显示的名字与效果描述")
+	_sc._on_hover(Vector2(640.0, 40.0))
+	check(_sc._tool_tip_slot == -1 and _sc._tool_tip_anchor_slot() == -1,
+			"工具说明：鼠标移开就收起")
+	# 安卓：没有 MouseMotion，点一下（上膛）也必须看得到。
+	# 真机顺序与 ⑧ 用例一致：原生 ScreenTouch 先到，模拟出来的左键随后到。
+	_feed(_touch(s0, true))
+	_feed(_mb(s0, true))
+	_feed(_touch(s0, false))
+	_feed(_mb(s0, false))
+	check(_sc._tool_use_arm == 0, "工具说明：点一下照样上膛（安卓路径）")
+	check(_sc._tool_tip_slot == -1 and _sc._tool_tip_anchor_slot() == 0,
+			"工具说明：安卓点一下也能看到（上膛即显示，不靠 hover）")
+	# 上膛过期 → 面板跟着收起，不留残影。
+	_sc._tool_use_until = Time.get_ticks_msec() - 1
+	check(_sc._tool_tip_anchor_slot() == -1, "工具说明：上膛过期后面板收起")
+	_sc._tool_use_arm = -1
+	_sc._tool_use_until = 0
+	_sc._tool_tip_slot = -1
 
 	# ---- ⑧e R754：石头（7012）要拖到**敌方单位**身上才砸得下去 ----
 	RunState.traps = [-1, -1, -1]
