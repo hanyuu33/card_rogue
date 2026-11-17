@@ -616,6 +616,20 @@ var _fx_wave_tex: Texture2D = null     # 冲击波环（清场）
 var _fx_lone_col_tex: Texture2D = null   # 竖直吸取光柱（底端在图的底部，顶端在顶部）
 var _fx_lone_maw_tex: Texture2D = null   # 虚空漩涡（圆形，吞噬点）
 var _fx_lone_ring_tex: Texture2D = null  # 收束光环（圆形，空心）
+## R785：免伤力场的环形素材（codex 纯文生图 → 黑底亮度转 alpha，
+## 管线见 art_src/2026-11-17_免伤力场素材_R785/，三版候选可切换）。
+##   1 = 金色六角晶格结界 / 2 = 琥珀符文结界 / 3 = 白金色棱镜力场
+const CAP_AURA_VARIANT := 1
+## 环带厚度（屏幕像素）：从卡边向外 11.5px。**不能用圆环**（R785 首版实拍）：
+## 圆环直径必须 ≥ 卡牌对角线 120，而格子宽只有 124 —— 相邻两个满额度单位的
+## 光环会咬在一起，还会在卡边外留一圈空气。贴卡框总宽 ≈ 111.5 < 124，相邻不咬。
+## 素材画布 = 卡宽高各加 2×(CAP_AURA_GAP + CAP_AURA_BAND + CAP_AURA_PAD_PX)，见 _finish_fx.py。
+const CAP_AURA_BAND := 11.5
+## 环带内缘与卡边之间的空气（屏幕像素）：严丝合缝压上去会被读成「边框加粗」。
+const CAP_AURA_GAP := 3.0
+const CAP_AURA_PAD_PX := 6.0
+var _cap_aura_tex: Texture2D = null
+
 var _flames: Array = []                # {pos, sc, start, dur, size, seed[, tint]}   正在烧的火
 var _breaths: Array = []         # R645：{from, to, sc, start, dur} 龙息喷流（格锚像素中心）
 var _breath_src: Dictionary = {} # R645：{"cell", "at"} 最近一次「龙息」的发动者 ——
@@ -1039,6 +1053,11 @@ func _ready() -> void:
 	_fx_lone_col_tex = load("res://assets/fx/fx_lone_column.png")
 	_fx_lone_maw_tex = load("res://assets/fx/fx_lone_maw.png")
 	_fx_lone_ring_tex = load("res://assets/fx/fx_lone_ring.png")
+	# R785：免伤力场素材（三版里挑 CAP_AURA_VARIANT 那一张）
+	var _cap_aura_path := "res://assets/fx/fx_cap_aura_%02d_card.png" % CAP_AURA_VARIANT
+	if ResourceLoader.exists(_cap_aura_path):
+		_cap_aura_tex = load(_cap_aura_path)
+
 	_discard_tex = load("res://assets/ui/discard_icon.png")
 	_void_tex = load("res://assets/ui/void_icon.png")
 	_hp_icon = load("res://assets/ui/icon_health.png")
@@ -10787,16 +10806,27 @@ func _draw_damage_cap_aura(center: Vector2, w: float, h: float) -> void:
 	## 免伤力场（`GameEngine.damage_cap_left(p) == 0` 的唯一表现口，R780b）。
 	## 赫尔墨斯 9140 / 量产型赫尔墨斯 9188 本回合的 20 点伤害额度已经吃满，
 	## 接下来所有伤害都被上限吃掉、一点血也扣不动。
-	## ⚠️ 形状必须和现有那几个环分开：实线圆环已被嘲讽（橙）/ 冰封（冷蓝）/ 沉睡（紫）/
-	##    屏障（青）/ 可发动（黄绿）用满，虚线圆环是眩晕（金）。这里用**贴卡框的六边形** ——
-	##    力场 / 结界是硬的、有棱角的语义，形状上一眼就能和「状态环」分开。
-	## ⚠️ **必须先压一道深色底线，再画亮金**：实战背景是亮青色水面（R780b 实拍），
-	##    单画一条半透明金线在亮背景上几乎看不见；它还会和卡牌自己的金色边框
-	##    糊成一片，看起来像「卡框描边加粗了」而不是「多了个力场」。
-	##    深底 + 亮金是亮底上唯一立得住的画法，顶点方块同样双层。
-	## ⚠️ 六边形**不旋转**：按椭圆参数化转起来会变形（看起来像在抖），
-	##    改成呼吸式缩放 + 顶点亮点明暗，动感够而不晃眼。
-	## ⚠️ 薄金罩只压 6%→11%：再厚就把卡图糊了，玩家会看不清那到底是谁。
+	## ⚠️ R785（店长口径）：R780b 那版程序化六边形金线「不好看」，改成**贴素材** ——
+	##    codex 纯文生图出的环形结界（黑底 → 亮度转 alpha，见
+	##    art_src/2026-11-17_免伤力场素材_R785/）。程序化那版降级为**兜底**：
+	##    素材没导入 / 被裁掉时仍然要有「打不动」的表现，不能静默消失。
+	## ⚠️ 用的是**贴卡框**素材（不是圆环）；且**只套一圈** —— 卡牌自带华丽金框，
+	##    再叠一道高对比金线就读成「描边加粗」而不是「多了个力场」。
+	## ⚠️ 呼吸只动 alpha 和 ±0.8% 缩放：环带是贴着卡边的，缩放大一点就会一进一出
+	##    地啃卡框，看起来像卡在抖。
+	if _cap_aura_tex != null:
+		var ct := float(_now()) / 1000.0
+		var cp := (sin(ct * 2.6) + 1.0) * 0.5
+		# 尺寸口径：卡宽高各加 2×(GAP+BAND+PAD)，与素材画布严格 4x 对应（470x534）。
+		# 缩放只给 0.8%：环带是贴着卡边的，缩放一大就会一进一出地啃卡框。
+		var ext := (CAP_AURA_GAP + CAP_AURA_BAND + CAP_AURA_PAD_PX) * 2.0 * (1.0 + 0.008 * cp)
+		var dw := w + ext
+		var dh := h + ext
+		draw_texture_rect(_cap_aura_tex,
+				Rect2(center - Vector2(dw, dh) * 0.5, Vector2(dw, dh)), false,
+				Color(1.0, 1.0, 1.0, 0.86 + cp * 0.14))
+		return
+	# ---- 以下是 R780b 的程序化兜底：仅在素材缺失时才会走到 ----
 	var dc_t := float(_now()) / 1000.0
 	var dc_pulse := (sin(dc_t * 2.6) + 1.0) * 0.5
 	var dc_col := Color(1.0, 0.90, 0.55)

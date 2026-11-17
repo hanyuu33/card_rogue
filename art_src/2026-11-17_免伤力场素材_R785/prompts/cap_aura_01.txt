@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+A single isolated 2D game UI sprite: a CIRCULAR FRAME OF GOLDEN HEX-LATTICE ENERGY, seen straight on, floating on a PURE BLACK (#000000) FLAT background. This will be converted into a transparent sprite by turning brightness into alpha, so a clean uniform pure black background is CRITICAL and the lattice must GLOW brightly against it.
+
+STYLE: 2D hand-painted anime-fantasy card-game visual effect, the kind of ward overlay used in a high-end Japanese trading card game. Clean crisp geometry, fine glowing hairlines, soft outer bloom, a few pinpoint sparkles at lattice junctions. Absolutely NO 3D render, NO photorealism, NO photo texture, NO noise grain, NO volumetric fog, NO lens flare.
+
+SHAPE: ONE thin CIRCULAR RING BAND, a perfect circle, made of a fine honeycomb / hexagonal lattice mesh. The band is roughly 10% of the frame width thick: a bright outer gold edge line, a hexagonal lattice body of thin gold filaments with small glowing nodes at every junction, and a bright inner edge line. Colours: deep amber #7A4A06 in the shadowed cells, rich gold #F0A81E in the body, near-white warm #FFF0C0 only on the rim lines and junction nodes. The hole in the middle is EMPTY PURE BLACK — nothing inside it, no core, no orb, no object, no fill of any kind. The ring's outer diameter is about 85% of the frame, fully inside the frame, nothing cut off.
+
+COMPOSITION: one ring only, dead center, perfectly round, straight-on view, no perspective tilt, no ellipse, no rotation, no cone, no disc. The light fades into pure black at the outer edges so the sprite blends seamlessly. NO ground, NO floor, NO scenery, NO background objects, NO cast shadow, NO border, NO panel, NO card shape, NO second ring. The ENTIRE background MUST be uniform pure black #000000: NO gradient, NO texture, NO pattern, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any text, letters, words, runes, numbers, digits, labels, watermark, logo or signature anywhere; any human figure, face, hands, eye, creature, animal, skull; any weapon; any solid sphere or ball inside the ring; any second object; any UI element, button, icon or card frame.
+
+NO readable text. NO numbers. NO watermark. Pure black background only.
