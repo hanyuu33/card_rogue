@@ -675,6 +675,9 @@ var _ai_stall_n := 0                     # R400：同一格连续排在队首的
 var _ghosts: Array = []         # {center, name, start, dur}                  击破淡出
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
+## R764：宣传录制模式（`--trailer-clean`）。只压显示，不动规则：状态栏留空、
+## 飘字只画伤害数字、左栏卡牌详情不弹 —— 这三处仍是中文硬编码，英文片里会串味。
+var _trailer_clean := false
 ## R770：伤害数字底板（只有拖卡预览用）。每帧 new 一个 StyleBoxFlat 太浪费 →
 ## 复用同一实例，只改颜色 / 圆角。
 var _dmg_plate_box: StyleBoxFlat = null
@@ -1098,6 +1101,11 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	_demo_args = args
 	_shot_pending = "--screenshot" in args or "--demo" in args
+	# R764：宣传录制专用（`--trailer-clean`）—— 战斗内的说明文字（状态栏提示 / 说明类
+	# 飘字 / 左栏卡牌详情）仍是硬编码中文，英文宣传片里会串味。这个开关**只影响显示**：
+	# 状态栏留空、飘字只画伤害数字、左栏详情不弹，战斗规则与数值一律不动。
+	# 未传该参数时行为与之前完全一致。
+	_trailer_clean = "--trailer-clean" in args
 	_show_scroll_hint = ScrollHint.is_new_player()   # ⚠️ 会读盘 → 只在 _ready 调一次
 	_demo_pending = "--demo" in args
 	if _shot_pending:
@@ -5917,11 +5925,11 @@ func _start_drag(i: int, pos: Vector2) -> void:
 		elif card.is_field():
 			status_text = "%s：拖到高亮格放置（可落在已有单位上）" % card.card_name
 		elif engine.fence_merge_allowed(card):
-			status_text = "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并" % card.card_name
+			status_text = GameI18n.ui("battle", "BATTLE_DRAG_PLACE_MERGE", "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并") % card.card_name
 		elif card.has_affix(GameEngine.AFFIX_SWAP):
 			status_text = "%s：拖到绿色空格放置；也可拖到己方单位上 → 把它顶回手" % card.card_name
 		else:
-			status_text = "%s：拖到绿色格子放置（自己半场空格）" % card.card_name
+			status_text = GameI18n.ui("battle", "BATTLE_DRAG_PLACE_SELF", "%s：拖到绿色格子放置（自己半场空格）") % card.card_name
 		queue_redraw()
 		return
 	if card.id == GameEngine.INFILTRATE_ID:
@@ -8071,7 +8079,7 @@ func _on_hover(pos: Vector2) -> void:
 				break
 		if not rel_hit and tip == "" and _relic_zone_rect().has_point(pos):
 			# 悬浮就能逐个看描述；装不下时才有「点开看全部」这条路
-			tip = "道具 %d 个" % _relic_bar_ids().size()
+			tip = GameI18n.ui("battle", "BATTLE_RELIC_TIP", "道具 %d 个") % _relic_bar_ids().size()
 	# ④ 弃牌区（R140 改图标后不再显示顶牌 → 悬停只报张数，详情进点击面板）
 	if _hover_card == null:
 		var discard_rect := _zone_rect("discard")
@@ -10335,7 +10343,7 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	else:
 		# R763c（用户口径「陷阱类工具，需要可以放到对方场地上」）：
 		# 提示里必须说出来 —— 否则玩家沿用旧印象，仍然以为只能放自己这半边。
-		status_text = "「%s」：拖到绿色格子放置（我方或敌方场地都可以）" % t0.trap_name
+		status_text = GameI18n.ui("battle", "BATTLE_DRAG_PLACE_TRAP", "「%s」：拖到绿色格子放置（我方或敌方场地都可以）") % t0.trap_name
 	queue_redraw()
 
 
@@ -16654,6 +16662,10 @@ func _draw_floaters() -> void:
 		# R770：数字与说明文字**分两套画法** —— 数字走 GBF 风弹字，说明保持带底条。
 		# ⚠️ 形状判据只认「整串带符号整数」；**别拿正负当判据** —— 伤害数字本身是负数。
 		var is_num := DmgNumber.is_number_text(txt)
+		# R764 宣传录制：说明类飘字（「复制入手」「冰封」这类）固定是中文，直接不画；
+		# 伤害 / 治疗数字照旧 —— 宣传片要的正是那套新数字素材。
+		if _trailer_clean and not is_num:
+			continue
 		# 每轮都先把变换钉回屏幕空间的震动 —— 上一轮的数字改过 transform，
 		# 说明类分支不改 → 不钉回来就会被上一张数字的缩放 / 旋转带歪。
 		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
@@ -18683,6 +18695,14 @@ func _draw_info_panel() -> void:
 	##   编号·名字 → 种类·费用·稀有度 → 数值（战场单位带当前/上限）→ 词条 →
 	##   每回合行动数 → 效果正文（按面板宽度自动换行，放不下画省略号）。
 	_hover_purge_stale()   # R294：手牌变了 → 先清掉过期的悬停，别让左栏停在旧卡上
+	# R764 宣传录制：左栏详情（卡名 / 词条 / 效果正文）还没进 i18n，英文片里会露中文。
+	# 走「没有卡」那条分支即可 —— 子节点也一并隐藏，不留残影。
+	if _trailer_clean:
+		_info_scroll_max_v = 0.0
+		if info_clip != null:
+			info_clip.visible = false
+		_mention_hits.clear()
+		return
 	var card: CardData = null
 	var pl: Placement = null
 	if _hover_card != null:
@@ -19514,7 +19534,7 @@ func _process(delta: float) -> void:
 	map_btn.disabled = not _mapview_available()
 	# R602：顶栏状态是「一行 + 固定 180px 宽」，长消息原来直接省略尾部。
 	# 先缩字号（17→11）把整句塞进去，缩到底仍不够才由 Label 的 overrun 省略。
-	var shown_status := GameI18n.source(status_text)
+	var shown_status := "" if _trailer_clean else GameI18n.source(status_text)
 	status_label.tooltip_text = shown_status
 	UiTheme.autoshrink_label(status_label, shown_status, 17, 10, Vector2(180.0, 28.0))
 

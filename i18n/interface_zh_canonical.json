@@ -2258,6 +2258,22 @@
         "source": "scripts/battle_scene.gd:15878",
         "zh": "道具 %d"
       },
+      "BATTLE_RELIC_TIP": {
+        "source": "scripts/battle_scene.gd:8074",
+        "zh": "道具 %d 个"
+      },
+      "BATTLE_DRAG_PLACE_MERGE": {
+        "source": "scripts/battle_scene.gd:5920",
+        "zh": "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并"
+      },
+      "BATTLE_DRAG_PLACE_SELF": {
+        "source": "scripts/battle_scene.gd:5924",
+        "zh": "%s：拖到绿色格子放置（自己半场空格）"
+      },
+      "BATTLE_DRAG_PLACE_TRAP": {
+        "source": "scripts/battle_scene.gd:10338",
+        "zh": "「%s」：拖到绿色格子放置（我方或敌方场地都可以）"
+      },
       "BATTLE_DRAW_PILE": {
         "source": "scripts/battle_scene.gd:16188",
         "zh": "抽牌库"
@@ -3673,7 +3689,7 @@
     "shop": 72,
     "reward": 125,
     "map": 245,
-    "battle": 75,
+    "battle": 79,
     "shell": 216,
     "shared": 92
   }
