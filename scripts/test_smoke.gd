@@ -3352,6 +3352,50 @@ func _hand_card_extent(scene: Variant, i: int) -> Vector2:
 	return Vector2(lo, hi)
 
 
+func _check_hand_alignment(scene: Variant) -> void:
+	## R786（店长要求）：手牌整体**纵向对齐站场**（棋盘中轴 590，不是窗口中线 640），
+	## 手牌数徽标按同一个位移左移；暗影刺客再多一个「本回合用卡数」徽标，摆它左边。
+	var n: int = scene.engine.state.hand.size()
+	if n < 1:
+		_smoke_fail("手牌对齐：手里一张牌都没有，量不出扇形中线")
+		return
+	var want: float = scene.GRID_X + scene.GRID_W / 2.0
+	var mid: float = (scene._hand_rect(0).position.x
+			+ scene._hand_rect(n - 1).position.x + scene.HAND_CARD_W) / 2.0
+	if absf(mid - want) > 0.6:
+		_smoke_fail("手牌对齐：扇形中线 %.1f，棋盘中线 %.1f（差 %.1f，应为 0）"
+				% [mid, want, mid - want])
+	var base_cx: float = scene.HAND_BASE_X + scene.HAND_BASE_W / 2.0
+	if absf(base_cx - want) > 0.6:
+		_smoke_fail("手牌对齐：手牌底板中线 %.1f 没跟着棋盘中线 %.1f（以前按窗口居中）"
+				% [base_cx, want])
+	var hb: Rect2 = scene._hand_badge_rect()
+	if absf((hb.end.x + scene.HAND_BADGE_GAP) - scene.HAND_BASE_X) > 0.6:
+		_smoke_fail("手牌数徽标：右沿 %.1f 与底板左沿 %.1f 之间不是 HAND_BADGE_GAP 的缝"
+				% [hb.end.x, scene.HAND_BASE_X])
+	var pb: Rect2 = scene._plays_badge_rect()
+	if pb.position.x < scene.INFO_X + 4.0:
+		_smoke_fail("本回合用卡徽标：左沿 %.1f 顶出屏幕左侧（信息栏 x=%.0f）"
+				% [pb.position.x, scene.INFO_X])
+	if absf((pb.end.x + scene.PLAYS_BADGE_GAP) - hb.position.x) > 0.6:
+		_smoke_fail("本回合用卡徽标：右沿 %.1f 与手牌数徽标左沿 %.1f 之间不是 PLAYS_BADGE_GAP"
+				% [pb.end.x, hb.position.x])
+	# 只给暗影刺客：换两次职业验「该出现的出现、不该出现的不出现」
+	var keep_cls: String = RunState.player_class
+	RunState.player_class = PlayerClass.ROGUE
+	var rogue_on: bool = scene._shows_plays_badge()
+	RunState.player_class = PlayerClass.DRUID
+	var druid_on: bool = scene._shows_plays_badge()
+	RunState.player_class = keep_cls
+	if not rogue_on:
+		_smoke_fail("本回合用卡徽标：暗影刺客应当显示，实际没显示")
+	elif druid_on:
+		_smoke_fail("本回合用卡徽标：非暗影刺客也显示了（应只给读 self_card_plays 的那个职业）")
+	else:
+		print(("SMOKE OK 手牌对齐：扇形中线 %.1f = 棋盘中线 / 手牌数徽标 %.1f 起 / "
+				+ "暗影刺客用卡徽标 %.1f 起") % [mid, hb.position.x, pb.position.x])
+
+
 func _check_hand_fan(scene: Variant) -> void:
 	## 扇形手牌：绘制时卡是**转着画的**，命中判定必须用同一个角度反向旋转。
 	## 这里先把牌抽到满手（覆盖重叠 + hand_full），再用「旋转后的卡牌中心」回测。
@@ -3670,6 +3714,7 @@ func _check_battle(scene: Variant) -> void:
 	## 战斗场景的所有行为断言：扇形手牌 + 多格移动动画走真实路径 + 效果/道具溢出兜底
 	## + 战斗内地图总览（R64）。
 	_check_hand_fan(scene)
+	_check_hand_alignment(scene)
 	_check_move_path(scene)
 	_check_overflow(scene)
 	_check_map_panel(scene)

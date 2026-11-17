@@ -474,6 +474,7 @@
       "BATTLE_DISCARD_PILE": "Discard",
       "BATTLE_VOID": "Banish",
       "BATTLE_HAND": "Hand %d/%d",
+      "BATTLE_TURN_PLAYS": "Played %d",
       "BATTLE_VICTORY_TITLE": "Victory",
       "BATTLE_ENERGY_AVAILABLE": "Available Cost",
       "BATTLE_ENERGY_CHARGE": "Charge %d · Skills ×%d",

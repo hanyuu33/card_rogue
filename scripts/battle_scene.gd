@@ -220,9 +220,22 @@ const OWN_HAND_Y := WINDOW_H - HAND_CARD_H + HAND_CROP_BOTTOM   # = 619（卡顶
 # 手牌整体可用宽度：卡变宽（98.6）后要留神右边 x=900 起的道具栏 —— 最右那张会绕底部中心
 # 转出去（sin12° × 露出高度 ≈ 21px），356 是「满手也不越界」的上限（见 test_smoke 的越界断言）。
 const HAND_FAN_WIDTH := 356.0     # 手牌整体可用宽度（装不下就靠重叠压缩）
-# R154：手牌羊皮纸底板的几何（扇形居中于 WINDOW_W/2；底板略宽于扇形活动范围）
+
+## R786：手牌扇形 / 手牌底板 / 手牌数徽标的**横向基准** = 站场（棋盘）中轴。
+## 窗口 1280 的中线是 640，棋盘 3 列的中线是 590（GRID_X 404 + GRID_W 372 / 2），
+## 差整整 50px：以前整组按窗口居中，看着比上面对齐的棋盘偏右半个格子。
+## ⚠️ 凡是「跟着手牌走」的横坐标都读 HAND_CX，别再写 WINDOW_W / 2。
+const HAND_CX := GRID_X + GRID_W / 2.0
+## 徽标宽度：128 是按「本回合用卡 10」在 15px 下量出来的（5 个汉字 75 + 数字 9 + 两侧留白）
+## —— 110 装不下，`_draw_string_center_fit` 会降字号，两只徽标字号就不一致了（R786 实拍）。
+const HAND_BADGE_W := 128.0
+const HAND_BADGE_H := 42.0
+const HAND_BADGE_Y := 628.0
+const HAND_BADGE_GAP := 20.0   # 手牌数徽标右沿 ↔ 手牌底板左沿
+const PLAYS_BADGE_GAP := 8.0   # 「本回合用卡」徽标 ↔ 手牌数徽标（并排成一对，留 8px 缝）
+# R154：手牌羊皮纸底板的几何（扇形居中于 HAND_CX；底板略宽于扇形活动范围）
 const HAND_BASE_W := 420.0
-const HAND_BASE_X := (WINDOW_W - HAND_BASE_W) / 2.0
+const HAND_BASE_X := HAND_CX - HAND_BASE_W / 2.0
 const HAND_BASE_Y := 600.0        # 扇形卡顶 619、抬手最高 ~590 —— 板顶压在两者之间
 const HAND_BASE_H := WINDOW_H - HAND_BASE_Y
 const HAND_FAN_MIN_STEP := 0.40   # 最小步进 = 卡宽 × 此比例（即最多 60% 重叠）
@@ -1676,7 +1689,7 @@ func _ready() -> void:
 				play_idx = hi
 				break
 		if play_idx >= 0 and engine.state.unit_at(Vector2i(4, 1)) == null:
-			_place_from = {"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 60),
+			_place_from = {"pos": Vector2(HAND_CX, OWN_HAND_Y - 60),
 					"card_id": (engine.state.hand[play_idx] as CardData).id, "at": hf_n}
 			engine.play_from_hand(play_idx, Vector2i(4, 1))
 			var placed: Placement = engine.state.unit_at(Vector2i(4, 1))
@@ -5462,7 +5475,7 @@ func _hand_rect(i: int) -> Rect2:
 	var n := engine.state.hand.size()
 	var step := _hand_step(n)
 	var total: float = step * (n - 1) + HAND_CARD_W
-	var x: float = (WINDOW_W - total) / 2 + step * i
+	var x: float = HAND_CX - total / 2.0 + step * i
 	var raised := HAND_SELECT_RAISE \
 			if selection != null and selection[0] == "hand" and selection[1] == i else 0.0
 	return Rect2(x, OWN_HAND_Y - raised + _hand_drop(i), HAND_CARD_W, HAND_CARD_H)
@@ -12784,7 +12797,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_say("◆ 回收：%s → 素体 %d 攻 / %d 血（改造 +%d，本场战斗永久）" % [
 							str(data.get("recycled", "?")), rc_n.power, rc_n.health,
 							int(data.get("recycle_hp", 0))])
-					_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+					_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 						"text": "%s → 素体 %d/%d" % [str(data.get("recycled", "?")),
 							rc_n.power, rc_n.health],
 						"col": Color("8ad4f0"), "start": n, "dur": 2000})
@@ -13085,7 +13098,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var sl_name := str(data.get("name", ""))
 			var sl_amt := int(data.get("amount", 1))
 			_say("✦ 雪豹：手牌「%s」本回合费用 -%d" % [sl_name, sl_amt])
-			_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "雪豹 · 「%s」本回合 -%d 费" % [sl_name, sl_amt],
 					"col": Color("7fc8e8"), "size": 17, "start": n, "dur": 2100})
 		"hand_burn":
@@ -13112,14 +13125,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var hburn := int(data.get("burned", 0))
 			if hburn > 0:
 				_say("手牌已满（%d 张）：%d 张抽到的牌已进弃牌区" % [hlim, hburn])
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 						"text": "手牌已满 %d/%d · %d 张进弃牌" % [
 								int(data.get("hand", 0)), hlim, hburn],
 						"col": Color("b26a00"), "size": 17,
 						"start": n, "dur": 2200})
 			else:
 				_say("手牌已满（%d 张）" % hlim)
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 						"text": "手牌已满 %d/%d" % [int(data.get("hand", 0)), hlim],
 						"col": Color("b26a00"), "size": 17,
 						"start": n, "dur": 2200})
@@ -13157,7 +13170,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"crow_token":
 			# 使魔之夜（9062）：使用效果牌 → 一张乌鸦进手卡（本回合 0 费）
 			sfx.play("draw")
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "使魔之夜 · 乌鸦 +1（本回合 0 费）", "col": Color("6a6a9a"), "size": 17,
 					"start": n, "dur": 2100})
 		"aether":
@@ -13614,7 +13627,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("◆ 系统升级：%s → %d 费 / %d 攻 / %d 血（本场战斗永久）" % [
 					su_d.card_name, su_d.cost, su_d.power, su_d.health])
 				# R301：同上 —— 费用与四项数值都由卡面染色 / 数字表达，飘字不重复
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s 改造" % su_d.card_name,
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
@@ -13631,7 +13644,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("spell")
 				_say("◆ 轻量化：%s → %d 费 / 移速 %d（本场战斗永久）" % [
 					li_d.card_name, li_d.cost, li_d.move_speed])
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s -1费 +1移速" % li_d.card_name,
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
@@ -13648,7 +13661,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("◆ 批量传输：%d 张手牌 +1 攻 / +4 血（不加费），抽 %d 张卡" % [bt_n, bt_drw])
 			else:
 				_say("批量传输：手牌里没有盟友或工事（未改造），仍抽 %d 张卡" % bt_drw)
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 				# R394：8031 改名「集体改造」后，这里再写「批量改造」会被读成那张卡
 				"text": "改造 %d 张 · 抽 %d" % [bt_n, bt_drw],
 				"col": Color("8ad4f0"), "start": n, "dur": 2000})
@@ -13663,7 +13676,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("draw")
 				_say("◆ 无限装甲供能：「%s」入手（在手牌里 %d 费）"
 					% [ia_name, GameEngine.INF_ARMOR_FEED_COST])
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s · 0 费入手" % ia_name, "col": Color("8ad4f0"),
 					"start": n, "dur": 2000})
 			else:
@@ -13724,7 +13737,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				oh_name = (data["card"] as CardData).card_name
 			var oh_hp := int(data.get("hp", 0))
 			_say("返修：%s 从弃牌区回到手牌（生命 +%d，本场战斗永久）" % [oh_name, oh_hp])
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s 生命 +%d" % [oh_name, oh_hp],
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"shadow_step_recall":
@@ -13769,7 +13782,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"stoneskin_hit":
 			var sk_left := int(data.get("left", 0))
 			# R466：石肤是「这一下打中时才压成 1」→ 飘字跟着撞击帧（否则比拳头早 ≈930ms）
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "石肤 → 1", "col": Color("6a6a6a"),
 					"start": _hit_cue_at(), "dur": 1600, "size": 18})
 			_say("石肤：这次伤害变为 1（原本 %d，还剩 %d 次）" % [
@@ -13910,7 +13923,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				kg_name = (data["card"] as CardData).card_name
 			var kg_center := _cell_center(data["cell"]) if data.has("cell") \
-					else Vector2(WINDOW_W / 2, OWN_HAND_Y - 30)
+					else Vector2(HAND_CX, OWN_HAND_Y - 30)
 			# R459：`start` 走 `grow_at`（= 命中 + 破灭留帧 + 呼吸），不再是 `_now()`。
 			# 否则这条「+2 攻」比自己的拳头还早 900 多毫秒冒出来，看起来像先加工再打人。
 			_floaters.append({"pos": kg_center + Vector2(0, -24), "sc": _grid_scroll,
@@ -13992,7 +14005,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("关卡成长：敌方 %d 个单位攻击力 %+d" % [
 					int(data.get("count", 0)), int(data.get("stacks", 0))])
 		"self_heal":
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "+%d" % int(data.get("healed", 0)),
 					"col": Color("2a9d55"), "start": n, "dur": 1800, "size": 22})
 			var _sh := int(data.get("healed", 0))
@@ -14002,7 +14015,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("%s：战斗结束回复 %d 点生命（剩余 %d）" % [
 					_src, _sh, int(data.get("hp", 0))])
 			if int(data.get("max_gain", 0)) > 0:
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 54),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 54),
 						"text": "最大生命 +%d" % int(data.get("max_gain", 0)),
 						"col": Color("a9b83c"), "start": n, "dur": 2000, "size": 18})
 				_say("黄桃罐头：最大生命 +%d" % int(data.get("max_gain", 0)))
@@ -14068,7 +14081,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 这里只在手牌上方飘一句「送葬 +N 张」，让玩家知道这张牌是**效果卡**给的。
 			var fn_drawn := int(data.get("drawn", 0))
 			if fn_drawn > 0:
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 62),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 62),
 						"text": "送葬 +%d 张" % fn_drawn,
 						"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1600, "size": 20})
 		"blast":
@@ -14376,7 +14389,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("spell")
 				# 起点固定在屏幕下方中央（手牌区上方）—— 引擎事件不带手卡槽位，
 				# 而卡在事件之前就已经离手了，取不到它原来那格。
-				_lone_fx.append({"from": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 26.0),
+				_lone_fx.append({"from": Vector2(HAND_CX, OWN_HAND_Y - 26.0),
 						"pos": _cell_center(lw_cell2), "sc": _grid_scroll, "start": n,
 						"dur": LONE_BITE_MS + LONE_SWALLOW_MS + 120,
 						"hold": LONE_ABSORB_MS})
@@ -14802,7 +14815,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 飘字只写「拿到了什么」，有时间维度（start + dur → 位移 + 淡出）。
 			var pc_d := int(data.get("draw", 1))
 			_say("◇ 爆米花：没用技能指向敌人 → 下回合多抽 %d 张" % pc_d)
-			_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 30.0),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30.0),
 					"text": "爆米花 · 下回合 +%d 抽" % pc_d,
 					"col": Color("f0d68a"), "size": 15, "start": n, "dur": 1700})
 		"lucky7":
@@ -18085,12 +18098,41 @@ func _draw_hand_base() -> void:
 	draw_style_box(sb, Rect2(HAND_BASE_X, HAND_BASE_Y, HAND_BASE_W, HAND_BASE_H))
 
 
+func _hand_badge_rect() -> Rect2:
+	## R786：手牌数徽标 —— 贴在**手牌底板左沿**外侧（底板跟着棋盘中轴走了，它也一起）。
+	## 坐标全由常量算：以前写死 `Rect2(300, 628, 110, 42)`，手牌一挪就脱节。
+	return Rect2(HAND_BASE_X - HAND_BADGE_GAP - HAND_BADGE_W, HAND_BADGE_Y,
+			HAND_BADGE_W, HAND_BADGE_H)
+
+
+func _plays_badge_rect() -> Rect2:
+	## R786：暗影刺客的「本回合用卡数」徽标 —— 摆在手牌数徽标**左边**，同高同宽成一对。
+	var hb := _hand_badge_rect()
+	return Rect2(hb.position.x - PLAYS_BADGE_GAP - HAND_BADGE_W, HAND_BADGE_Y,
+			HAND_BADGE_W, HAND_BADGE_H)
+
+
+func _shows_plays_badge() -> bool:
+	## 只给暗影刺客：终结 9086 的 4+X / 回转 9089 抽 X / 连环戏法 9093 / 疾风 9091 的 X
+	## 读的都是 `state.self_card_plays`（本回合已用张数），以前玩家只能心里数。
+	return RunState.player_class == PlayerClass.ROGUE
+
+
 func _draw_hand() -> void:
 	var n := engine.state.hand.size()
 	var full: bool = engine.state.hand_full()
-	var hand_badge := Rect2(300, 628, 110, 42)
+	var hand_badge := _hand_badge_rect()
 	BattleHudMaterial.draw(self, hand_badge)
 	_draw_string_center(_font_bold, 15, GameI18n.ui("battle", "BATTLE_HAND", "手牌 %d/%d") % [n, FieldState.HAND_LIMIT], hand_badge.get_center(), Color("9a493e") if full else Color("45654e"), -1)
+	# R786：暗影刺客多一个「本回合用卡数」徽标，摆在手牌数徽标**左边**（同高同宽成一对）。
+	# 计数读 `state.self_card_plays` —— 与终结 9086 的 X 是同一份数（`_note_card_played` 唯一口）。
+	if _shows_plays_badge():
+		var plays_badge := _plays_badge_rect()
+		BattleHudMaterial.draw(self, plays_badge)
+		_draw_string_center_fit(_font_bold, 15,
+				GameI18n.ui("battle", "BATTLE_TURN_PLAYS", "本回合用卡 %d")
+						% engine.state.self_card_plays,
+				plays_badge.get_center(), HAND_BADGE_W - 12.0, Color("5b4276"))
 	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）；被选中的卡（点击 / 拖拽）
 	# 也压到最上层，放大后才不会被相邻卡盖住（R416）。
 	var order: Array[int] = []
@@ -18278,7 +18320,7 @@ func _draw_hand_fly() -> void:
 			_draw_card_back(Rect2(pos - slot.size * sc / 2.0, slot.size * sc))
 		elif mode == "fade":
 			# 耳环合并淡出：手牌区中央一张卡背整体淡掉
-			var r3 := Rect2(Vector2(WINDOW_W / 2.0, OWN_HAND_Y + 40) - Vector2(CARD_W, CARD_H) / 2.0,
+			var r3 := Rect2(Vector2(HAND_CX, OWN_HAND_Y + 40) - Vector2(CARD_W, CARD_H) / 2.0,
 					Vector2(CARD_W, CARD_H))
 			_draw_card_back_fade(r3, 1.0 - t)
 		else:

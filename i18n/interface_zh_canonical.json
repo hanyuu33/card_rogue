@@ -2290,6 +2290,10 @@
         "source": "scripts/battle_scene.gd:16260",
         "zh": "手牌 %d/%d"
       },
+      "BATTLE_TURN_PLAYS": {
+        "source": "scripts/battle_scene.gd:18131",
+        "zh": "本回合用卡 %d"
+      },
       "BATTLE_VICTORY_TITLE": {
         "source": "scripts/battle_scene.gd:7818",
         "zh": "战斗胜利"

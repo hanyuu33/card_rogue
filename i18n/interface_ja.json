@@ -474,6 +474,7 @@
       "BATTLE_DISCARD_PILE": "捨て札",
       "BATTLE_VOID": "消滅",
       "BATTLE_HAND": "手札 %d/%d",
+      "BATTLE_TURN_PLAYS": "今ターン %d枚",
       "BATTLE_VICTORY_TITLE": "戦闘勝利",
       "BATTLE_ENERGY_AVAILABLE": "使用可能コスト",
       "BATTLE_ENERGY_CHARGE": "チャージ%d · スキル×%d",

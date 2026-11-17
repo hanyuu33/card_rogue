@@ -474,6 +474,7 @@
       "BATTLE_DISCARD_PILE": "Descarte",
       "BATTLE_VOID": "Destierro",
       "BATTLE_HAND": "Mano %d/%d",
+      "BATTLE_TURN_PLAYS": "Jugadas %d",
       "BATTLE_VICTORY_TITLE": "Victoria",
       "BATTLE_ENERGY_AVAILABLE": "Coste disponible",
       "BATTLE_ENERGY_CHARGE": "Carga %d · Habilidades ×%d",
