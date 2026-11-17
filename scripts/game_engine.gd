@@ -336,6 +336,8 @@ const DUCKLING_ID:= 9251
 const FUSE_TRAIT:= "铸造"           # 只做标记（与「死亡 / 孵化」同套路），回合数在引擎
 const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/60 程1 速1）
 const HECATE_ARMOR_GAIN:= 10        # R778：每回合给随机一个**其他**友方单位 +10 护甲
+const HERMES_ID:= 9140              # R780：赫尔墨斯（第二层精英·赫尔墨斯的试炼）
+const HERMES_DMG_CAP:= 20           # R780：每回合最多受到 20 点伤害
 const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，嘲讽）
 const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
 # ---- 「赫菲斯托斯工坊」关卡（R150，第二层 Boss；R225 上调）----
@@ -13733,6 +13735,35 @@ func _effect_damage_reduction() -> int:
 	return total
 
 
+func _cap_turn_damage(p: Placement, dmg: int) -> int:
+	## R780 赫尔墨斯（9140）：「每回合最多受到 20 点伤害」。
+	## 位置 = **两个扣血落地口的最后一格**（`p.health -= dmg` 的**前一格**，
+	## 正义背刺倍率乘完之后）：卡面说的是「受到」，也就是**最终真正扣掉的血** ——
+	## 倍率 / 减伤 / 护甲全算完才封顶，顺序反了会被 `dmg *= jb_mult` 突破上限。
+	## ⚠️ 不放进 `_unit_damage_taken()`：那里只是减伤链，护甲还没扣；
+	##    而且 `_op_deal_damage()` 是先过那条链、再自己扣血，两条口共用一个函数
+	##    才能保证「单目标技能」和「普攻 / 多格效果」口径一致。
+	## ⚠️ 累计只记**实际扣掉的血**：护甲吸收掉的、被一次性能量屏障免掉的不占额度，
+	##    否则「有护甲反而更快打满上限」。
+	## 回合口径 = `turn_number`（整轮；只有我方回合开始 +1）—— 换回合后 key 失配，
+	## 额度自动归零，不用扫全场重置。
+	if p == null or p.card == null or dmg <= 0 or p.card.id != HERMES_ID:
+		return dmg
+	if p.turn_dmg_key != turn_number:
+		p.turn_dmg_key = turn_number
+		p.turn_dmg_taken = 0
+	var left:= HERMES_DMG_CAP - p.turn_dmg_taken
+	if left <= 0:
+		_log("%s：本回合已受满 %d 点伤害，这一下全免" % [p.card.card_name, HERMES_DMG_CAP])
+		return 0
+	if dmg > left:
+		_log("%s：本回合伤害上限 %d 点 —— 这一下 %d 封顶到 %d" % [
+			p.card.card_name, HERMES_DMG_CAP, dmg, left])
+		dmg = left
+	p.turn_dmg_taken += dmg
+	return dmg
+
+
 func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 	## `kind`（R152）：""（未分类）/ "attack"（单位普通攻击）/ "spell"（技能卡与效果）。
 	## 「百臂工场」两条减伤要按来源分流 —— 赫卡同克瑞斯只减**攻击**，
@@ -14002,6 +14033,12 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 	# ⑤ 护甲：**只算吸收掉多少**，绝不真的扣（`_unit_damage_taken` 里是会扣的）
 	if dmg > 0 and p.armor > 0:
 		dmg = maxi(0, dmg - p.armor)
+	# ⑤b R780 赫尔墨斯：「每回合最多受到 20 点伤害」——与 `_cap_turn_damage()`
+	#    **同一位置**（护甲之后 = 最终落地值）、同一份累计读数。
+	#    换回合判据同引擎：`turn_dmg_key` 失配就当作 0。
+	if dmg > 0 and p.card.id == HERMES_ID:
+		var taken:= p.turn_dmg_taken if p.turn_dmg_key == turn_number else 0
+		dmg = maxi(0, mini(dmg, HERMES_DMG_CAP - taken))
 	return {"dmg": dmg, "tag": ""}
 
 
@@ -14176,6 +14213,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	# R586：所有易伤 / 加算 / 减伤吃完后才乘（与 R580 猫鼠游戏同款乘算口径）。
 	dmg *= jb_mult
+	dmg = _cap_turn_damage(p, dmg)   # R780 赫尔墨斯：本回合累计上限（倍率之后才封顶）
 	p.health -= dmg
 	if dmg > 0:
 		_assemble_execute(p, _cell_of(p), "damaged")
@@ -15555,6 +15593,7 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		amt_spell = _revelator_split(p, amt_spell, "技能")
 		var amount2:= _unit_damage_taken(p, amt_spell, "spell")
 		amount2 *= jb_mult2
+		amount2 = _cap_turn_damage(p, amount2)   # R780 赫尔墨斯：同 `_hit_unit` 同一条
 		p.health -= amount2
 		if amount2 > 0:
 			_assemble_execute(p, _cell_of(p), "damaged")

@@ -180,6 +180,14 @@ var hecaton_atk: int = 0       # 孤军成立时 = HECATON_ATK_BUFF(2)，否则 
 	## 该单位本回合行动次数 +1（只记 Placement，不写回 CardData）。
 var action_growth_extra: int = 0   # 已累计的额外行动轮数
 var action_growth_turns: int = 0   # 距离下次成长还剩几个回合
+## R780 赫尔墨斯（9140）：「每回合最多受到 20 点伤害」。
+## `turn_dmg_taken` = 本回合**已实际扣掉的血**（护甲吸收 / 被免掉的不计）；
+## `turn_dmg_key` = 记账时的 `GameEngine.turn_number`（整轮口径：只有我方回合开始才 +1）。
+## 换回合后 key 失配 → `GameEngine._cap_turn_damage()` 自动从 0 重算，
+## 所以**不需要在回合开始扫全场清零**（漏扫一只就是静默错账）。
+## 只记 Placement、**绝不烤进 CardData**：敌方关卡单位用的是卡库共享实例。
+var turn_dmg_taken: int = 0
+var turn_dmg_key: int = -1
 ## 「百眼动员」（量产型阿尔戈斯 9142，R174）：被它召唤出来的量产型俄倪厄移速 +1。
 ## ⚠️ 同暗影领主：只记在 Placement、**绝不烤进 CardData** —— 敌方关卡单位用的是卡库
 ## 共享实例，直接改 card.move_speed 会把加成写进卡库、跨局泄漏。单位一离场字段随之消失，
@@ -501,6 +509,7 @@ const _SAVE_FIELDS: Array[String] = [
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",
+	"turn_dmg_taken", "turn_dmg_key",
 	"haste_double", "defector_range", "defector_speed", "defector_hunt",
 	"wanted_dimension",
 ]

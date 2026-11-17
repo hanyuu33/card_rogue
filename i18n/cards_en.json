@@ -876,7 +876,7 @@
   },
   "9140": {
    "name": "Hermes",
-   "effect_text": "May act twice per turn. Every 3 turns, its number of actions increases by 1."
+   "effect_text": "May act twice per turn. Every 3 turns, its number of actions increases by 1. Takes at most 20 damage each turn."
   },
   "9141": {
    "name": "Asclepius",

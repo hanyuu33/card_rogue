@@ -876,7 +876,7 @@
   },
   "9140": {
    "name": "Hermes",
-   "effect_text": "Puede actuar dos veces por turno. Cada 3 turnos, su número de acciones aumenta en 1."
+   "effect_text": "Puede actuar dos veces por turno. Cada 3 turnos, su número de acciones aumenta en 1. No puede recibir más de 20 de daño por turno."
   },
   "9141": {
    "name": "Asclepio",

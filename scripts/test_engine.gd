@@ -36479,6 +36479,118 @@ func _init() -> void:
 
 
 
+	# ---- R780：赫尔墨斯「每回合最多受到 20 点伤害」----
+
+	var r780_card := repo.get_card(9140)
+
+	check(r780_card != null and r780_card.effect_text.contains("每回合最多受到 20 点伤害"),
+
+			"R780 赫尔墨斯卡面：写明「每回合最多受到 20 点伤害」")
+
+	check(GameEngine.HERMES_ID == 9140 and GameEngine.HERMES_DMG_CAP == 20,
+
+			"R780 常量：HERMES_ID = 9140 / HERMES_DMG_CAP = 20")
+
+
+	var engR780 := _new_engine()
+
+	engR780.state.place(r780_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780: Placement = engR780.state.unit_at(Vector2i(2, 1))
+
+	engR780.turn_number = 1
+
+	check(pR780.health == 80 and pR780.turn_dmg_taken == 0 and pR780.turn_dmg_key == -1,
+
+			"R780 赫尔墨斯上场：80 血，本回合累计 0、key 未记账")
+
+	# ① 额度内照常全额
+
+	var r780_d1: int = engR780._hit_unit(pR780, 12, "技能", false)
+
+	check(r780_d1 == 12 and pR780.health == 68 and pR780.turn_dmg_taken == 12,
+
+			"R780 第 1 下 12 点：全额落地（80 → 68），本回合累计 12")
+
+	# ② 单次远超剩余额度 → 只吃剩下的 8 点
+
+	var r780_d2: int = engR780._hit_unit(pR780, 30, "技能", false)
+
+	check(r780_d2 == 8 and pR780.health == 60 and pR780.turn_dmg_taken == 20,
+
+			"R780 第 2 下 30 点：只吃剩余 8 点（封顶 20），68 → 60")
+
+	# ③ 额度打满 → 全免
+
+	var r780_d3: int = engR780._hit_unit(pR780, 25, "技能", false)
+
+	check(r780_d3 == 0 and pR780.health == 60,
+
+			"R780 第 3 下：本回合已满 20 → 全免，血量不变")
+
+	# ④ 换回合（turn_number +1 = 下一个我方回合开始）→ 额度归零，单次最多 20
+
+	engR780.turn_number += 1
+
+	var r780_d4: int = engR780._hit_unit(pR780, 25, "技能", false)
+
+	check(r780_d4 == 20 and pR780.health == 40 and pR780.turn_dmg_taken == 20,
+
+			"R780 换回合后额度归零：单次 25 点封顶到 20，60 → 40")
+
+	# ⑤ 预览镜像：R384 纪律 —— 预览值必须等于实际扣血值
+
+	engR780.turn_number += 1
+
+	var r780_pv: Dictionary = engR780.preview_hit_damage(pR780, 30, false)
+
+	var r780_d5: int = engR780._hit_unit(pR780, 30, "技能", false)
+
+	check(int(r780_pv["dmg"]) == 20 and r780_d5 == int(r780_pv["dmg"]),
+
+			"R780 预览：满额度 30 点报 20，与实际扣血一致")
+
+	var r780_pv2: Dictionary = engR780.preview_hit_damage(pR780, 30, false)
+
+	check(int(r780_pv2["dmg"]) == 0,
+
+			"R780 预览：本回合额度用满后报 0")
+
+	# ⑥ 单目标技能那条落地口（`_op_deal_damage`）同样封顶（另开一局，满血 80 起算）
+
+	var engR780c := _new_engine()
+
+	engR780c.state.place(r780_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780c: Placement = engR780c.state.unit_at(Vector2i(2, 1))
+
+	engR780c.turn_number = 1
+
+	engR780c._op_deal_damage(GameEngine.SIDE_SELF, 30, Vector2i(2, 1))
+
+	check(pR780c.health == 60 and pR780c.turn_dmg_taken == 20,
+
+			"R780 单目标技能口（_op_deal_damage）同样封顶 20：80 → 60")
+
+	# ⑦ 对照：不是赫尔墨斯的单位不吃这条上限
+
+	var r780_other := repo.get_card(9141)
+
+	var engR780b := _new_engine()
+
+	engR780b.state.place(r780_other, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780b: Placement = engR780b.state.unit_at(Vector2i(2, 1))
+
+	engR780b.turn_number = 1
+
+	var r780_o: int = engR780b._hit_unit(pR780b, 30, "技能", false)
+
+	check(r780_o == 30 and pR780b.turn_dmg_taken == 0,
+
+			"R780 对照：阿斯克勒庇厄斯单次 30 点不封顶（上限只属于 9140）")
+
+
 	# ---- R162：阿斯克勒庇厄斯 + 护甲积攒 ----
 
 	var r162_asc := repo.get_card(9141)
@@ -76894,7 +77006,15 @@ func _test_r777() -> void:
 	var r777_got_cls := {}
 	for c5: CardData in r777_got:
 		r777_got_cls[c5.card_class] = true
-		if r777_e.cost_of(c5) != maxi(0, c5.cost - 1):
+		# R780 顺手修：原来写死 `cost_of == cost - 1`，随机抽到两张特例就必红 ——
+		#   * 回响 9102 卡面「费用最低为 1」→ `_cost_floor()` 压住彩虹诗的 -1（1 → 仍是 1）；
+		#   * 魔像术 9079「每回合第一次用技能时，手卡这张本回合 -1」→ 叠加彩虹诗 = -2（4 → 2）。
+		#   前者是卡面写死的下限（优先于彩虹诗）→ 跳过精确比较；
+		#   后者只会更便宜 → 用「不高于期望」判，不该算坏。
+		var r777_expect: int = maxi(0, c5.cost - 1)
+		if r777_e._cost_floor(c5, 0) > r777_expect:
+			continue
+		if r777_e.cost_of(c5) > r777_expect:
 			r777_cost_bad.append("%s %d→%d" % [c5.card_name, c5.cost, r777_e.cost_of(c5)])
 		if c5.card_class == PlayerClass.BARD or c5.card_class == "":
 			r777_cost_bad.append("串职业 %s" % c5.card_name)

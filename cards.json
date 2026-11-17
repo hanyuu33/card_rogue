@@ -4632,7 +4632,7 @@
       "affixes": [
         "疾行"
       ],
-      "effect_text": "每过3回合，行动次数+1。",
+      "effect_text": "每过3回合，行动次数+1。每回合最多受到 20 点伤害。",
       "target_mode": "none",
       "color": "水风",
       "image": ""
