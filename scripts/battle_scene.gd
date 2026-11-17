@@ -3204,6 +3204,20 @@ func _ready() -> void:
 				% [engine.state.energy, maxi(0, dm_demo.health), dm_demo.card.health]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--handbonus" in args and engine != null:
+
+		# 演示（R783）：手牌里「影魔 8007 + 0 费终结 9086」→ 影魔满足
+		# `hand_bonus_ready`（手卡里有 0 费技能）→ 金色额外效果框。
+		# 出图：`battle.tscn -- --screenshot --handbonus --level 0 --shotframe 200`
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(repo.get_card(8007).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(9086).to_dict()))
+		engine.state.energy = 5
+		_demo_hover_idx = 0
+		_hover_hand = 0
+		status_text = "影魔：手卡有 0 费技能 → 现在打出去每张 +生命（金框＝可触发额外效果）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--mapview" in args and engine != null:
 		# 演示（R64）：战斗内地图总览面板。
 		# R128：演示模式默认没有 run（run_active=false → 面板打不开）→ 先开一局假 run。
@@ -18412,18 +18426,74 @@ func _draw_card_back_fade(rect: Rect2, alpha: float) -> void:
 	draw_rect(rect, edge, false, 1.5)
 
 
+func _round_frame(rect: Rect2, rad: float, col: Color, w: float) -> void:
+	## 圆角矩形描边（四条直边 + 四段圆弧）。Godot 没有 draw_round_rect，
+	## 而卡面本身就是圆角金框 —— 直角套上去正是「粗糙」的来源，所以自己拼一个。
+	## 只画线、不填充；`w` 会跟着手牌的选中缩放一起变（调用点在旋转/缩放坐标系里）。
+	var r := clampf(rad, 0.0, minf(rect.size.x, rect.size.y) * 0.5)
+	if r <= 0.5:
+		draw_rect(rect, col, false, w)
+		return
+	var l := rect.position.x
+	var t := rect.position.y
+	var rt := rect.end.x
+	var bt := rect.end.y
+	draw_line(Vector2(l + r, t), Vector2(rt - r, t), col, w, true)
+	draw_line(Vector2(l + r, bt), Vector2(rt - r, bt), col, w, true)
+	draw_line(Vector2(l, t + r), Vector2(l, bt - r), col, w, true)
+	draw_line(Vector2(rt, t + r), Vector2(rt, bt - r), col, w, true)
+	draw_arc(Vector2(l + r, t + r), r, PI, PI * 1.5, 10, col, w, true)
+	draw_arc(Vector2(rt - r, t + r), r, PI * 1.5, TAU, 10, col, w, true)
+	draw_arc(Vector2(rt - r, bt - r), r, 0.0, PI * 0.5, 10, col, w, true)
+	draw_arc(Vector2(l + r, bt - r), r, PI * 0.5, PI, 10, col, w, true)
+
+
 func _draw_hand_bonus_mark(r: Rect2) -> void:
-	## 手卡「额外效果可触发」的金色标记：外框 + 右上角一颗金星。
-	## 只做视觉，判定在 engine.hand_bonus_ready。
+	## 手卡「额外效果可触发」的金色标记（判定在 `engine.hand_bonus_ready`，这里只管画）。
+	## R783（店长口径「效果生效的框比较粗糙」）：旧版是一圈 2.2k 纯金**直角**粗线 + 0.20
+	## 平涂，贴在圆角卡面上像绕了一圈黄胶带。改了两版才收住：
+	##   · 圆角化之后发现"一个颜色一根线"永远像塑料 —— 金属感靠的是**明暗台阶**；
+	##   · 金环还必须**离开卡边**，卡面自带金漆边，贴上去两条金会糊成一条。
+	## 现在的画法（由外向内）：
+	##   ① 外侧发丝线（与主环之间留 ~2.6k 的缝 → 双线）
+	##   ② 主环四层叠出圆管的明暗：暗边 → 金身 → 亮芯 → 高光
+	##   ③ 四角各一段更亮的短弧（角部聚光），是最见精致的一笔
+	##   ④ 慢呼吸：金色分量的 alpha 随 sin 轻微起伏，读作"生效中"而非静态贴纸
+	## 金星徽章画在最外层，压住右上角。
 	var k := r.size.y / CardFace.CARD_H_DESIGN
 	var col := COL_HAND_BONUS
-	draw_rect(r.grow(2.0 * k), Color(col.r, col.g, col.b, 0.20), true)
-	draw_rect(r.grow(2.0 * k), col, false, 2.2 * k)
-	var star := r.position + Vector2(r.size.x - 9.0 * k, 11.0 * k)
-	draw_circle(star, 7.0 * k, Color(0.10, 0.09, 0.12, 0.92))
-	draw_arc(star, 7.0 * k, 0, TAU, 20, col, 1.6 * k, true)
-	_draw_string_center(_font_bold, int(10 * k), "★", star, col, -1)
-
+	var breath := 0.5 + 0.5 * sin(float(_now()) / 1000.0 * 2.2)
+	var cr := 7.0 * k
+	var ring := r.grow(2.4 * k)
+	# ① 外侧发丝线（细、淡，只负责"这圈不是贴纸"）
+	_round_frame(r.grow(5.0 * k), cr + 2.2 * k,
+			Color(col.r, col.g, col.b, 0.34 + 0.22 * breath), 0.8 * k)
+	# ② 主环：四层同心地叠出金属圆管的明暗
+	_round_frame(ring, cr, Color(0.34, 0.22, 0.03, 0.92), 3.3 * k)
+	_round_frame(ring, cr, Color(0.78, 0.55, 0.10, 0.96), 2.2 * k)
+	_round_frame(ring, cr, Color(col.r, col.g, col.b, 0.98), 1.2 * k)
+	_round_frame(ring, cr, Color(1.0, 0.94, 0.74, 0.30 + 0.30 * breath), 0.45 * k)
+	# ③ 环内暖光：整体极淡（0.04）—— 卡面被"照亮"一点点，但不糊住画面
+	draw_rect(ring, Color(col.r, col.g, col.b, 0.030 + 0.025 * breath), true)
+	# ④ 四角聚光：只点亮角尖那一小段，比整圈加亮更"收"
+	var hot := Color(1.0, 0.97, 0.82, 0.55 + 0.32 * breath)
+	draw_arc(Vector2(ring.position.x + cr, ring.position.y + cr), cr, PI * 1.10, PI * 1.40, 8,
+			hot, 2.0 * k, true)
+	draw_arc(Vector2(ring.end.x - cr, ring.position.y + cr), cr, PI * 1.60, PI * 1.90, 8,
+			hot, 2.0 * k, true)
+	draw_arc(Vector2(ring.end.x - cr, ring.end.y - cr), cr, PI * 0.10, PI * 0.40, 8,
+			hot, 2.0 * k, true)
+	draw_arc(Vector2(ring.position.x + cr, ring.end.y - cr), cr, PI * 0.60, PI * 0.90, 8,
+			hot, 2.0 * k, true)
+	# ⑤ 右上金星：双环 + 光晕，压在环角上（读作"盖章"）
+	var star := r.position + Vector2(r.size.x + 0.4 * k, 2.0 * k)
+	var sr := 7.0 * k
+	draw_circle(star, sr * 1.45, Color(col.r, col.g, col.b, 0.10 + 0.07 * breath))
+	draw_circle(star, sr, Color(0.09, 0.08, 0.11, 0.96))
+	draw_arc(star, sr, 0, TAU, 24, Color(0.78, 0.55, 0.10, 0.98), 2.0 * k, true)
+	draw_arc(star, sr - 1.1 * k, 0, TAU, 24,
+			Color(col.r, col.g, col.b, 0.90), 1.0 * k, true)
+	_draw_string_center(_font_bold, int(9 * k), "★", star, col, -1)
 
 func _draw_drag() -> void:
 	## 拖拽释放演出：目标格高亮 + 半透明卡牌跟随光标。
