@@ -10113,18 +10113,35 @@ func foresight_choose(mode: int) -> bool:
 	if mode == 2:
 		var c := _fetch_skill_from_deck(2)
 		_log("预判②：%s" % (("卡组随机非 0 费技能卡「%s」加入手卡" % c.card_name) if c != null else "卡组里没有非 0 费技能卡"))
+		_foresight_void_self()   # R784：② 也吃「次元」，不许停在弃牌区
 		action.emit("foresight", {"mode": 2, "card": c})
 		return true
 	if foresight_options().is_empty():
 		_log("预判①：弃牌区没有 0 费技能卡，效果落空")
+		_foresight_void_self()   # R784：效果落空也算用掉（否则留一张 0 费次元卡在弃牌区）
 		return true
 	if state.hand_full():
 		_log("预判①：手牌已满（%d 张），效果落空" % FieldState.HAND_LIMIT)
+		_foresight_void_self()
 		return true
 	foresight_pick = true
 	foresight_vanish = true
 	_log("预判①：从弃牌区选择一张 0 费技能卡")
 	return true
+
+
+func _foresight_void_self() -> void:
+	## R784：预判（9097）自身的「次元」收尾 —— **唯一口**。
+	## 打出时它先落进弃牌区（① 要拿它当候选池标记），结算完（①选完 / ②抽完 / 效果落空）
+	## 由这里把自己搬进消耗区。R784 之前只有 ① 走这一趟，② 和两条落空分支会把一张
+	## 带「次元」的卡永久留在弃牌区，与字段描述「不会进入弃牌区」正面冲突。
+	for v_i in state.discard.size():
+		if state.discard[v_i].id == FORESIGHT_ID:
+			state.void_cards.append(state.discard[v_i])
+			state.discard.remove_at(v_i)
+			state.void_count += 1   # R140：消耗区计数（预判自身用后消失）
+			_log("预判：用后消失（不进弃牌区，本场不再出现）")
+			return
 
 
 func foresight_pick_card(discard_index: int) -> bool:
@@ -10138,13 +10155,7 @@ func foresight_pick_card(discard_index: int) -> bool:
 	state.discard.remove_at(discard_index)
 	state.hand.append(c)
 	foresight_pick = false
-	for v_i in state.discard.size():
-		if state.discard[v_i].id == FORESIGHT_ID:
-			_log("预判：用后消失（不进弃牌区，本场不再出现）")
-			state.void_cards.append(state.discard[v_i])
-			state.discard.remove_at(v_i)
-			state.void_count += 1   # R140：消耗区计数（预判自身用后消失）
-			break
+	_foresight_void_self()   # R784：与 ② / 落空分支共用一个收口
 	_log("预判：%s 回到手牌" % c.card_name)
 	action.emit("foresight_pick", {"card": c})
 	return true

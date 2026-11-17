@@ -19939,7 +19939,7 @@ func _init() -> void:
 
 
 
-	# 预判（9097）②：卡组随机非 0 费技能卡入手（本卡照常进弃牌区）
+	# 预判（9097）②：卡组随机非 0 费技能卡入手，本卡消失（R784 起 ② 也走「次元」）
 
 	var r45_fs := _new_engine([], 30, 30)
 
@@ -19955,9 +19955,9 @@ func _init() -> void:
 
 	check(r45_fs.state.hand.size() == 1 and r45_fs.state.hand[0].cost == 2
 
-			and r45_fs.state.discard.size() == 1,
+			and r45_fs.state.discard.is_empty() and r45_fs.state.void_count == 1,
 
-			"预判②：卡组非 0 费技能卡入手，本卡进弃牌区")
+			"预判②：卡组非 0 费技能卡入手，本卡消失（弃牌区不留）")
 
 
 
@@ -19984,6 +19984,15 @@ func _init() -> void:
 	check(r45_fs2.state.hand.size() == 1 and r45_fs2.state.discard.is_empty(),
 
 			"预判①：选回 0 费技能卡，本卡消失（弃牌区清空）")
+
+	# R784：① 无候选（效果落空）时本卡同样消失 —— 上一版会在弃牌区留一张 0 费次元卡
+	var r784_fs3 := _new_engine([], 30, 30)
+	r784_fs3.state.hand.append(repo.get_card(GameEngine.FORESIGHT_ID))
+	r784_fs3.use_spell(0, null)
+	r784_fs3.foresight_choose(1)
+	check(r784_fs3.state.discard.is_empty() and r784_fs3.state.void_count == 1,
+			"预判①落空：本卡同样消失（弃牌 %d / 消耗 %d）" % [
+				r784_fs3.state.discard.size(), r784_fs3.state.void_count])
 
 
 

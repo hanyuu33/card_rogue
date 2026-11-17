@@ -6404,10 +6404,10 @@ func _draw_foresight_mode() -> void:
 			rs[0].size.x + 52.0, 168.0)
 	UiTheme.draw_panel_bg(self, box)
 	draw_rect(box, UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UI_FS_LABEL, "预判：选择一个效果",
+	_draw_string_center(_font_bold, UI_FS_LABEL, "预判：选择一个效果（之后本卡消失）",
 			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800, -1)
 	var labels := [
-		"① 从弃牌区选一张费用为 0 的技能卡加入手卡（之后本卡消失）",
+		"① 从弃牌区选一张费用为 0 的技能卡加入手卡",
 		"② 从卡组将一张随机费用不为 0 的技能卡加入手卡",
 	]
 	for k in 2:
