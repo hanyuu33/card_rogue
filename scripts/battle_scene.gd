@@ -18103,13 +18103,17 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 	# 「现在打出能吃到额外效果」→ 金色高亮框 + 顶部金星标（R65）。
 	# 判定走 engine.hand_bonus_ready（唯一口），条件不满足就不画。
 	var bonus := engine.hand_bonus_ready(card)
+	# R783b：金环必须画在卡面**之前** —— 卡牌底部的力量 / 生命徽章圆心压在卡框下沿、
+	# 一半探到卡外，画在之后再亮的环会横穿它们，把数字盖住（店长口径「框把数字挡住了」）。
+	if bonus:
+		_draw_hand_bonus_mark(Rect2(r.position - pivot, r.size))
 	_draw_card_face(card, Rect2(r.position - pivot, r.size), card.health, selected, false,
 			engine.cost_of(card))
 	# R151 P1-7：敌方回合的暗罩（自绘卡面没法整体降饱和，罩子是唯一便宜的等效）
 	if _turn_dim > 0.01:
 		draw_rect(Rect2(r.position - pivot, r.size), Color(0.102, 0.110, 0.133, _turn_dim), true)
 	if bonus:
-		_draw_hand_bonus_mark(Rect2(r.position - pivot, r.size))
+		_draw_hand_bonus_star(Rect2(r.position - pivot, r.size))
 	# R209：原来这里给「可改造 / 可回收」的手牌描青边 —— 系统升级 / 回收改走**全屏
 	# 选卡页**后，选卡期间手牌根本点不到（`_on_left_click` 被 `_pick` 拦下），
 	# 那两块高亮成了死代码，一并删掉（选卡页里每张候选都是可选的，不需要再标）。
@@ -18532,20 +18536,22 @@ func _draw_hand_bonus_mark(r: Rect2) -> void:
 	##   ② 主环四层叠出圆管的明暗：暗边 → 金身 → 亮芯 → 高光
 	##   ③ 四角各一段更亮的短弧（角部聚光），是最见精致的一笔
 	##   ④ 慢呼吸：金色分量的 alpha 随 sin 轻微起伏，读作"生效中"而非静态贴纸
-	## 金星徽章画在最外层，压住右上角。
+	## ⚠️ 只画**环**，调用点在 `_draw_card_face` **之前** —— 卡牌底部的力量 / 生命徽章
+	##    圆心压在卡框下沿、一半探到卡外，环画在之后会横穿它们把数字盖掉（R783b）。
+	##    右上角金星另走 `_draw_hand_bonus_star()`，那个要压在卡面上。
 	var k := r.size.y / CardFace.CARD_H_DESIGN
 	var col := COL_HAND_BONUS
 	var breath := 0.5 + 0.5 * sin(float(_now()) / 1000.0 * 2.2)
-	var cr := 7.0 * k
-	var ring := r.grow(2.4 * k)
+	var cr := 8.4 * k
+	var ring := r.grow(3.6 * k)
 	# ① 外侧发丝线（细、淡，只负责"这圈不是贴纸"）
-	_round_frame(r.grow(5.0 * k), cr + 2.2 * k,
+	_round_frame(r.grow(6.8 * k), cr + 3.2 * k,
 			Color(col.r, col.g, col.b, 0.34 + 0.22 * breath), 0.8 * k)
 	# ② 主环：四层同心地叠出金属圆管的明暗
-	_round_frame(ring, cr, Color(0.34, 0.22, 0.03, 0.92), 3.3 * k)
-	_round_frame(ring, cr, Color(0.78, 0.55, 0.10, 0.96), 2.2 * k)
-	_round_frame(ring, cr, Color(col.r, col.g, col.b, 0.98), 1.2 * k)
-	_round_frame(ring, cr, Color(1.0, 0.94, 0.74, 0.30 + 0.30 * breath), 0.45 * k)
+	_round_frame(ring, cr, Color(0.34, 0.22, 0.03, 0.92), 2.9 * k)
+	_round_frame(ring, cr, Color(0.78, 0.55, 0.10, 0.96), 1.9 * k)
+	_round_frame(ring, cr, Color(col.r, col.g, col.b, 0.98), 1.0 * k)
+	_round_frame(ring, cr, Color(1.0, 0.94, 0.74, 0.30 + 0.30 * breath), 0.40 * k)
 	# ③ 环内暖光：整体极淡（0.04）—— 卡面被"照亮"一点点，但不糊住画面
 	draw_rect(ring, Color(col.r, col.g, col.b, 0.030 + 0.025 * breath), true)
 	# ④ 四角聚光：只点亮角尖那一小段，比整圈加亮更"收"
@@ -18558,8 +18564,14 @@ func _draw_hand_bonus_mark(r: Rect2) -> void:
 			hot, 2.0 * k, true)
 	draw_arc(Vector2(ring.position.x + cr, ring.end.y - cr), cr, PI * 0.60, PI * 0.90, 8,
 			hot, 2.0 * k, true)
-	# ⑤ 右上金星：双环 + 光晕，压在环角上（读作"盖章"）
-	var star := r.position + Vector2(r.size.x + 0.4 * k, 2.0 * k)
+func _draw_hand_bonus_star(r: Rect2) -> void:
+	## 右上角金星（R783b 从 `_draw_hand_bonus_mark` 里拆出来的）。
+	## **必须画在卡面之后**：金环让到卡面底下是为了不压住数值徽章，但星徽是"盖章"，
+	## 得压在卡角上，所以单独留这一个调用点在 `_draw_card_face` 后面。
+	var k := r.size.y / CardFace.CARD_H_DESIGN
+	var col := COL_HAND_BONUS
+	var breath := 0.5 + 0.5 * sin(float(_now()) / 1000.0 * 2.2)
+	var star := r.position + Vector2(r.size.x + 1.8 * k, 0.8 * k)
 	var sr := 7.0 * k
 	draw_circle(star, sr * 1.45, Color(col.r, col.g, col.b, 0.10 + 0.07 * breath))
 	draw_circle(star, sr, Color(0.09, 0.08, 0.11, 0.96))
@@ -18567,6 +18579,7 @@ func _draw_hand_bonus_mark(r: Rect2) -> void:
 	draw_arc(star, sr - 1.1 * k, 0, TAU, 24,
 			Color(col.r, col.g, col.b, 0.90), 1.0 * k, true)
 	_draw_string_center(_font_bold, int(9 * k), "★", star, col, -1)
+
 
 func _draw_drag() -> void:
 	## 拖拽释放演出：目标格高亮 + 半透明卡牌跟随光标。
