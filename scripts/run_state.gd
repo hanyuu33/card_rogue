@@ -172,7 +172,7 @@ static var map_strokes: Array = []
 static var map_flags: Array = []
 static var player_class: String = "森林精魄"   # 本局所选角色（PlayerClass.ids() 之一）
 static var battle_wins := 0                   # 本层已胜利的普通战斗数（前 2 场简单）
-static var elite_wins := 0                   # 本层已胜利的精英战斗数（第 1 场简单，第 2 场起困难）
+static var elite_wins := 0                   # 本层已胜利的精英战斗数（R778 起只作统计，不再切强弱档）
 # R530 通关结算：上面两个是**本层进度**（换层清零，用来切简单/困难档），
 # 结算界面要的是**整局总数** —— 另开三个只增不清的累计量。
 static var total_battle_wins := 0             # 本局累计普通战斗胜场（换层不清）
@@ -260,6 +260,9 @@ const DIFF_MAX_HP_MUL := 0.8       # 9 档起「虚弱」：最大生命 ×80%�
 ##    （「?」房权重表）—— 别在地图生成之外再乘一次，否则会被重复加权。
 const DIFF_ELITE_FROM := 10        # 10 档起「精英出现增多」
 const DIFF_ELITE_MUL := 1.3        # 精英出现概率乘数（≈ +30%，扣除法见 _weighted_far）
+## R778：强弱精英判据 —— 当前巧克力 <= 5 一定进强精英，否则一定进弱精英。
+## 三层精英不参与（第三层固定抽第二层精英困难池，见 next_level）。
+const ELITE_STRONG_CHOCO_MAX := 5
 ## R543（用户口径）：难度 11「上锁」—— 第三层需要凑齐三样信物才能进入。
 ## ⚠️ 只有难度 ≥ 11 才需要信物；难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
 const DIFF_LOCK_FROM := 11         # 11 档起「第三层上锁」
@@ -3597,6 +3600,14 @@ static func mark_boss_beaten() -> void:
 	boss_pending = false
 
 
+static func elite_tier_for_chocolate(choco: int) -> int:
+	## R778：强弱精英的**唯一判据**（纯函数，测试直接传数）——
+	## 当前巧克力 <= ELITE_STRONG_CHOCO_MAX（5）→ 强精英（精英敌人-困难）；
+	## 否则 → 弱精英（精英敌人-简单）。第三层不适用（next_level 里提前固定池）。
+	return GameLevels.TIER_ELITE_HARD if choco <= ELITE_STRONG_CHOCO_MAX \
+			else GameLevels.TIER_ELITE_EASY
+
+
 static func node_layer(node: Dictionary) -> int:
 	## 节点所属的层（节点自带 layer；缺省时按本局地图的层处理）。
 	return int(node.get("layer", current_layer))
@@ -3606,7 +3617,7 @@ static func next_level(node: Dictionary) -> Dictionary:
 	## 进入战斗节点时决定具体关卡 —— 只从「该节点所属层」的关卡池里抽
 	## （第一层的关卡不会跑到别的层，别的层的关卡也不会出现在第一层）：
 	## 前 2 场普通战斗 = 普通敌人-简单，之后 = 普通敌人-困难；
-	## 第 1 场精英 = 精英敌人-简单，之后 = 精英敌人-困难（R506：从「前 2 场」提前到第 2 场起重）；
+	## 精英强弱只看**当前巧克力**：<= 5 强精英，> 5 弱精英（R778 替换原「按 elite_wins 场次」）；
 	## Boss 固定。
 	## 同一分级池内尽量不重复（本局用完一轮后允许循环复用）。
 	var layer := node_layer(node)
@@ -3619,12 +3630,11 @@ static func next_level(node: Dictionary) -> Dictionary:
 			return _pick_level(_layer_tier_pool([tier], layer))
 		"elite":
 			# R506b：第三层固定抽第二层「精英困难」池（3 关）—— 直道那一格是 Boss 前的
-			# 最后一战，不参与 elite_wins 的简单/困难切换。
+			# 最后一战，不参与强弱精英判定（R778 口径不变）。
 			if layer == GameLayers.LAYER_THREE:
 				return _pick_level(GameLevels.third_elite_pool())
-			# R506：第 1 场精英 = 简单，第 2 场起困难（原来是前 2 场简单）。
-			var tier2: int = GameLevels.TIER_ELITE_EASY if elite_wins < 1 \
-					else GameLevels.TIER_ELITE_HARD
+			# R778：强弱精英改由**当前巧克力**判定（原「按 elite_wins 场次切换」废弃）。
+			var tier2: int = elite_tier_for_chocolate(chocolate)
 			return _pick_level(_layer_tier_pool([tier2], layer))
 		"boss":
 			# Boss 可能同层有多个（如第一层：远古虚骨龙 / 恶魔鸭）。

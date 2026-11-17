@@ -15932,23 +15932,51 @@ func _init() -> void:
 
 			== GameLevels.TIER_NORMAL_HARD, "第 3 场普通战斗：普通敌人-困难")
 
-	var ne1 := RunState.next_level({"type": "elite"})
+	# ---- R778：精英强弱按**当前巧克力**（<= 5 强精英 / > 5 弱精英）----
 
-	check(int(ne1["tier"]) == GameLevels.TIER_ELITE_EASY, "第 1 场精英：精英敌人-简单")
+	var r778_choco_backup: int = RunState.chocolate
 
-	RunState.on_battle_won("elite")
+	RunState.chocolate = 12
 
-	check(int(RunState.next_level({"type": "elite"})["tier"])
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_EASY,
+
+			"R778 巧克力 12：弱精英（精英敌人-简单）")
+
+	RunState.chocolate = 6
+
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_EASY,
+
+			"R778 巧克力 6（边界外）：仍为弱精英")
+
+	RunState.chocolate = 5
+
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_HARD,
+
+			"R778 巧克力 5（边界内）：强精英（精英敌人-困难）")
+
+	RunState.chocolate = 0
+
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_HARD,
+
+			"R778 巧克力 0：仍为强精英")
+
+	check(RunState.elite_tier_for_chocolate(5) == GameLevels.TIER_ELITE_HARD
+
+			and RunState.elite_tier_for_chocolate(6) == GameLevels.TIER_ELITE_EASY,
+
+			"R778 判据纯函数：<= 5 → 精英困难，> 5 → 精英简单")
+
+	RunState.chocolate = 12
+
+	check(int(RunState.next_level(
+
+			{"type": "elite", "layer": GameLayers.LAYER_THREE})["tier"])
 
 			== GameLevels.TIER_ELITE_HARD,
 
-			"第 2 场精英：精英敌人-困难（R506 起困难提早在第 2 场登场）")
+			"R778 第三层不变：巧克力 12 也仍走第二层精英困难池")
 
-	RunState.on_battle_won("elite")
-
-	check(int(RunState.next_level({"type": "elite"})["tier"])
-
-			== GameLevels.TIER_ELITE_HARD, "第 3 场精英：仍为精英敌人-困难")
+	RunState.chocolate = r778_choco_backup
 
 	check(int(RunState.next_level({"type": "boss"})["tier"]) == GameLevels.TIER_BOSS,
 
