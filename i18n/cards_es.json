@@ -10,7 +10,7 @@
   },
   "1013": {
    "name": "Dragón de Ceniza",
-   "effect_text": "Al comienzo del primer turno tras entrar al campo: inflige 4 de daño a todas las unidades enemigas."
+   "effect_text": ""
   },
   "1014": {
    "name": "Dragón Joven",
@@ -407,7 +407,7 @@
   },
   "9013": {
    "name": "Poder del Pato",
-   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +1 de Poder (hasta +4 por unidad). Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +1 de Poder (hasta +4 por unidad)."
   },
   "9014": {
    "name": "Dragón de Huesos Huecos Ancestral",
@@ -415,7 +415,7 @@
   },
   "9015": {
    "name": "Cuerno de Pato",
-   "effect_text": "Invoca un Caballero Pato cada 3 turnos. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Invoca un Caballero Pato cada 3 turnos."
   },
   "9016": {
    "name": "Rinoceronte",
@@ -452,7 +452,7 @@
   },
   "9024": {
    "name": "Bufido",
-   "effect_text": "Al comienzo de tus turnos 3.º, 5.º y 7.º, otorga de forma permanente «puede actuar dos veces por turno» a una unidad aliada con la Vida actual más alta que aún no pueda actuar dos veces por turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo de tus turnos 3.º, 5.º y 7.º, otorga de forma permanente «puede actuar dos veces por turno» a una unidad aliada con la Vida actual más alta que aún no pueda actuar dos veces por turno."
   },
   "9025": {
    "name": "Horno de Patos",
@@ -548,7 +548,7 @@
   },
   "9049": {
    "name": "Ascenso de Engranajes",
-   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +2 de Poder (permanente). Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo de cada turno, todas las unidades aliadas obtienen +2 de Poder (permanente)."
   },
   "9050": {
    "name": "Ira de la Ballena",
@@ -788,7 +788,7 @@
   },
   "9115": {
    "name": "Poder Familiar",
-   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente). Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente)."
   },
   "9116": {
    "name": "Pato Demoníaco",
@@ -796,7 +796,7 @@
   },
   "9117": {
    "name": "Familiar Demoníaco",
-   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente); cada 2 turnos, invoca un Pato Familiar en una casilla vacía aleatoria (excepto en la última fila del jugador). Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo de cada turno, todos los Patos Familiares obtienen +1 de Poder (permanente); cada 2 turnos, invoca un Pato Familiar en una casilla vacía aleatoria (excepto en la última fila del jugador)."
   },
   "9118": {
    "name": "Pato Demoníaco (Venganza)",
@@ -828,7 +828,7 @@
   },
   "9125": {
    "name": "Invocación de Sombras",
-   "effect_text": "Al **comienzo de la batalla** y **cada 3 turnos**, invoca un Pato Asesino. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al **comienzo de la batalla** y **cada 3 turnos**, invoca un Pato Asesino."
   },
   "9127": {
    "name": "Reacondicionamiento",
@@ -848,7 +848,7 @@
   },
   "9133": {
    "name": "Hecatonquiro de Producción en Serie",
-   "effect_text": "Forja: al final de tu turno, la cuenta atrás disminuye en 1; al llegar a 0, destruye esta unidad y erige una «Fortaleza de Acero» donde se encontraba."
+   "effect_text": "Al comienzo de cada turno, otorga 10 de Armadura a otra unidad aliada aleatoria."
   },
   "9134": {
    "name": "Fortaleza de Acero",
@@ -872,7 +872,7 @@
   },
   "9139": {
    "name": "Cañón Cargado",
-   "effect_text": "Al comienzo de cada uno de tus turnos, destruye una unidad enemiga aleatoria. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo de cada uno de tus turnos, destruye una unidad enemiga aleatoria."
   },
   "9140": {
    "name": "Hermes",
@@ -904,7 +904,7 @@
   },
   "9147": {
    "name": "Línea de Ensamblaje",
-   "effect_text": "Cada 3 turnos, invoca al azar un Onie de Producción en Serie o un Helios de Producción en Serie en tu mitad del campo. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Cada 3 turnos, invoca al azar un Onie de Producción en Serie o un Helios de Producción en Serie en tu mitad del campo."
   },
   "9148": {
    "name": "Renacimiento",
@@ -1016,7 +1016,7 @@
   },
   "9178": {
    "name": "Noche Eterna",
-   "effect_text": "El Pato Nocturno ya no se debilita: deja de verse afectado por «fotofobia» (su alcance de ataque, velocidad de movimiento y Poder no disminuyen ni siquiera en los turnos impares). Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "El Pato Nocturno ya no se debilita: deja de verse afectado por «fotofobia» (su alcance de ataque, velocidad de movimiento y Poder no disminuyen ni siquiera en los turnos impares)."
   },
   "9179": {
    "name": "Caja Sorpresa",
@@ -1116,11 +1116,11 @@
   },
   "9209": {
    "name": "Incursión Aérea",
-   "effect_text": "Al comienzo del turno del jugador, marca 5 casillas aleatorias. Antes de que actúe el enemigo, las unidades del jugador en las casillas marcadas reciben 5 de daño; este daño aumenta en 1 cada turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo del turno del jugador, marca 5 casillas aleatorias. Antes de que actúe el enemigo, las unidades del jugador en las casillas marcadas reciben 5 de daño; este daño aumenta en 1 cada turno."
   },
   "9210": {
    "name": "Barrera de Escarcha",
-   "effect_text": "Al comienzo de cada 2.º turno, todas las unidades aliadas obtienen +1 de Poder, hasta +4 por unidad. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al comienzo de cada 2.º turno, todas las unidades aliadas obtienen +1 de Poder, hasta +4 por unidad."
   },
   "9211": {
    "name": "Cañón de Refracción",
@@ -1128,7 +1128,7 @@
   },
   "9212": {
    "name": "Ira del Oso Búho",
-   "effect_text": "Mientras la Vida del Oso Búho sea superior a la mitad, recibe -1 de daño; cuando su Vida baja a la mitad o menos, obtiene «Atropellar»: cuando el daño que inflige mata a una unidad, el daño excedente continúa por la misma columna; no se activa si no atacó a ninguna unidad. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Mientras la Vida del Oso Búho sea superior a la mitad, recibe -1 de daño; cuando su Vida baja a la mitad o menos, obtiene «Atropellar»: cuando el daño que inflige mata a una unidad, el daño excedente continúa por la misma columna; no se activa si no atacó a ninguna unidad."
   },
   "9213": {
    "name": "Oso Búho",
@@ -1236,7 +1236,7 @@
   },
   "9240": {
    "name": "Orden de Busca",
-   "effect_text": "Todas las unidades del campo enemigo obtienen «dimensional». Al final de tu 12.º turno, destruye todas las unidades de tu propio campo. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Todas las unidades del campo enemigo obtienen «dimensional». Al final de tu 12.º turno, destruye todas las unidades de tu propio campo."
   },
   "9241": {
    "name": "Cañón Láser",
@@ -1244,18 +1244,18 @@
   },
   "9242": {
    "name": "Sombra de Pronoia",
-   "effect_text": "Al comienzo de cada turno, cambia de forma según el tipo de carta que el oponente más haya usado este turno: Aliado o Estructura -> Autómata de Artillería; Habilidad o Campo -> Autómata de Escudo; cualquier otro tipo -> Autómata Veloz. Si es la única unidad en el campo, pierde 10 de Vida para invocar un Autómata; de lo contrario, el Autómata actual se transforma en la forma correspondiente."
+   "effect_text": "Al comienzo de cada turno, cambia de forma según el tipo de carta que el oponente más haya usado este turno: Aliado o Estructura -> Constructo de Artillería; Habilidad o Campo -> Constructo de Escudo; cualquier otro tipo -> Constructo Veloz. Si es la única unidad en el campo, pierde 10 de Vida para invocar un Constructo; de lo contrario, el Constructo actual se transforma en la forma correspondiente."
   },
   "9243": {
-   "name": "Autómata de Artillería",
+   "name": "Constructo de Artillería",
    "effect_text": "Al comienzo de cada turno, otorga +1 de Poder a otra unidad aliada."
   },
   "9244": {
-   "name": "Autómata de Escudo",
+   "name": "Constructo de Escudo",
    "effect_text": "Mientras esta carta esté en el campo, las demás unidades aliadas reciben la mitad de daño."
   },
   "9245": {
-   "name": "Autómata Veloz",
+   "name": "Constructo Veloz",
    "effect_text": ""
   },
   "9246": {

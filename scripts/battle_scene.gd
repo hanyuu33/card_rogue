@@ -12359,13 +12359,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_transform_fx.append({"zone": "cell", "cell": pb_cell, "start": n, "dur": 520})
 				sfx.play("place")
 		"pronoia_morph":
-			# R541 普罗诺亚之影（9242）：召唤 / 变形构状体。
+			# R541 普罗诺亚之影（9242）：召唤 / 变形构装体。
 			# 召唤那一半另有一条 `place`（带 summon）负责落位动画与「召唤 xxx」播报，
 			# 这里只补「损失了多少生命」；变形那一半走 `_transform_fx`
 			# （与涂装机器人 8080 的「变幻」同一条视觉）。
 			var pm_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var pm_new = data.get("new", null)
-			var pm_name := (pm_new as CardData).card_name if pm_new is CardData else "构状体"
+			var pm_name := (pm_new as CardData).card_name if pm_new is CardData else "构装体"
 			if bool(data.get("summon", false)):
 				var pm_src: Vector2i = data.get("src", Vector2i(-1, -1))
 				if pm_src.x >= 0:

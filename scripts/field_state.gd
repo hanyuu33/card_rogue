@@ -457,10 +457,10 @@ func has_enforcer_minion(side: String) -> bool:
 
 
 func has_shield_construct(side: String) -> bool:
-	## 「护盾构状体」（9244）是否在**该方场上** —— 「除自己以外的己方单位受到的伤害减半」
+	## 「护盾构装体」（9244）是否在**该方场上** —— 「除自己以外的己方单位受到的伤害减半」
 	## 这条光环的**唯一开关**，与 `has_mass_helios` / `has_sun_forge` 同范式：
-	## 每回合实时扫场面、绝不烤进 CardData —— 「构状体被打掉 → 光环立刻断」是免费的。
-	## ⚠️ 按 **trait** 判（`GameEngine.SHIELD_TRAIT`），不判卡 id：三种构状体共用「构状体」，
+	## 每回合实时扫场面、绝不烤进 CardData —— 「构装体被打掉 → 光环立刻断」是免费的。
+	## ⚠️ 按 **trait** 判（`GameEngine.SHIELD_TRAIT`），不判卡 id：三种构装体共用「构装体」，
 	##    只有护盾这一支带「护盾」。
 	## ⚠️ 光环**不含光源自己**（卡面是「其他己方单位」），那条判据在 `_unit_damage_taken` 里补。
 	for p: Placement in board.values():

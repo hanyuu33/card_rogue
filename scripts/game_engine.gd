@@ -334,7 +334,8 @@ const DUCKLING_ID:= 9251
 #    走的是常规 `_destroy`，什么都不留下（卡面 effect_text 已写明这一条），
 #    所以刻意**不进 `_deathrattle`** —— 进那里就变成「怎么死都要塞照出」。
 const FUSE_TRAIT:= "铸造"           # 只做标记（与「死亡 / 孵化」同套路），回合数在引擎
-const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/35 程1 速1）
+const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/60 程1 速1）
+const HECATE_ARMOR_GAIN:= 10        # R778：每回合给随机一个**其他**友方单位 +10 护甲
 const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，嘲讽）
 const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
 # ---- 「赫菲斯托斯工坊」关卡（R150，第二层 Boss；R225 上调）----
@@ -568,8 +569,6 @@ const SPELL_RESIST_CAP:= 3
 ## 只认卡面 trait（与「技能抗性」同一套路，无数值字段）；判定口只有
 ## `_knockback()` 与 `_swap_two_units()` 两处 —— 所有位移效果都必须经过它们。
 const DISPLACE_IMMUNE_TRAIT:= "位移免疫"
-const ASH_DRAGON_ID:= 1013
-const ASH_DRAGON_AOE:= 4
 const WYVERN_ID:= 1014
 const WYVERN_TOKEN_ID:= 9028
 const GHOUL_ID:= 1050
@@ -1511,20 +1510,20 @@ const LASER_TRAIT:= "激光炮"
 # 但也不再是每回合固定漏一次 HP。选列在**玩家回合开始**就定下来（`_laser_aim_mark`），
 # 界面据此画提示线，玩家有整整一个回合可以挪人。
 const LASER_SALVO_COLS:= 2
-# ── R541：普罗诺亚之影（9242）与三种「构状体」（9243 炮击 / 9244 护盾 / 9245 迅捷）──
+# ── R541：普罗诺亚之影（9242）与三种「构装体」（9243 炮击 / 9244 护盾 / 9245 迅捷）──
 # 它本身是个普通单位（8/150/程 1/速 1，走通用 AI 推进 + 攻击）；特色全在**敌方回合开始时**：
 #   * 统计玩家**上一个回合**打出的卡（`FieldState.self_turn_kinds`）：
 #     盟友 + 工事 → 炮击；技能 + 场地 → 护盾；其余 → 迅捷。
 #     **平手按这个顺序取前面的**（`>=`）—— 玩家能预测、也能主动把结果推向某一支。
-#   * 场上还没有构状体（= 它是唯一的己方单位）→ **损失 10 点生命召唤**一个（`summon = true`）；
-#     已有构状体 → 把它**原地变形成**对应形态，**保留已受的伤害**（三档最大生命都是 50）。
+#   * 场上还没有构装体（= 它是唯一的己方单位）→ **损失 10 点生命召唤**一个（`summon = true`）；
+#     已有构装体 → 把它**原地变形成**对应形态，**保留已受的伤害**（三档最大生命都是 50）。
 #   * 一张牌都没用 → 保持当前形态，不召唤也不变形。
 # 判据口：`_pronoia_mode()` / `_pronoia_morph()` / `_pronoia_transform()`；
 # 战力口：`_siege_construct_tick()`（炮击：每回合给一个友军 +1 攻）与
 #        `FieldState.has_shield_construct()`（护盾：其他己方单位受伤减半）；
 # 迅捷那一支**没有引擎代码** —— 卡面 `actions: 2` 走现成的 `FieldState.unit_actions()`。
 const PRONOIA_TRAIT:= "普罗诺亚"
-const CONSTRUCT_TRAIT:= "构状体"
+const CONSTRUCT_TRAIT:= "构装体"
 const SIEGE_TRAIT:= "炮击"
 const SHIELD_TRAIT:= "护盾"
 const SWIFT_TRAIT:= "迅捷"
@@ -2722,6 +2721,7 @@ func _begin_turn(side: String) -> void :
 		_familiar_growth(SIDE_SELF)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_SELF)
 		_asclepius_armor_tick(SIDE_SELF)   # R162：护甲积攒结算
+		_hecaton_armor_tick(SIDE_SELF)     # R778 量产型赫卡同克瑞斯 9133：给其他友军 +10 护甲
 		_mass_asclepius_tick(SIDE_SELF)   # R451 量产型阿斯克勒庇厄斯 9207：已有护甲则 +1 攻，再 +10 护甲
 		# ── ② R122：**召唤**排在成长之后 ──
 		# 「回合开始成长」算的是**这一刻已在场**的单位；刚召唤出来的单位这一回合才上场，
@@ -2798,6 +2798,7 @@ func _begin_turn(side: String) -> void :
 		_familiar_growth(SIDE_OPPONENT)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_OPPONENT)
 		_asclepius_armor_tick(SIDE_OPPONENT)   # R162：护甲积攒结算
+		_hecaton_armor_tick(SIDE_OPPONENT)     # R778 9133 铸甲
 		_mass_asclepius_tick(SIDE_OPPONENT)   # R451 量产型阿斯克勒庇厄斯 9207
 		# ── ② R122：召唤排在成长之后（同我方）──
 		_summon_familiars(SIDE_OPPONENT)
@@ -2823,9 +2824,9 @@ func _begin_turn(side: String) -> void :
 		_naval_gun(SIDE_OPPONENT)     # R356 舰炮 9201：阶段 1，每回合随机轰击一列
 		_air_raid_fire(SIDE_OPPONENT)   # R451 空袭 9209：敌方行动前砸标记格（只打玩家单位）
 		_revelator_phase_tick(SIDE_OPPONENT)   # R356 阶段 1「自身效果」：每个回合力量 +1
-		# R541 普罗诺亚之影：**先**让已在场的炮击构状体给友军 +1 攻，**再**按玩家上回合的
+		# R541 普罗诺亚之影：**先**让已在场的炮击构装体给友军 +1 攻，**再**按玩家上回合的
 		# 出牌类型召唤 / 变形 —— 与「回合开始成长排在召唤之前」同一口径，
-		# 因此刚召唤出来的炮击构状体当回合不吃自己那一口。
+		# 因此刚召唤出来的炮击构装体当回合不吃自己那一口。
 		_siege_construct_tick(SIDE_OPPONENT)
 		_pronoia_morph(SIDE_OPPONENT)
 		_refresh_dark_lord(SIDE_OPPONENT)
@@ -7377,6 +7378,48 @@ func _merge_spell(target, side: String) -> String:
 	action.emit("merge", {"cell": _cell_of(p), "card": p.card, "atk": atk, "hp": hp,
 			"side": side})
 	return "%s 获得改造（+%d 攻 / +%d 血）" % [nm, atk, hp]
+
+func _hecaton_armor_tick(side: String) -> void :
+	## R778：量产型赫卡同克瑞斯（9133）—— `side` 这一方**回合开始时**，每只 9133 给
+	## 「随机一个**其他**友方单位」+10 护甲。
+	## * 原效果「铸造倒计时 → 原地立起钢铁要塞」已废弃（卡面 effect_text 同步换掉，
+	##   traits 里的「铸造」也删了，所以 `Placement.fuse_left` 不再挂表）；
+	## * 目标随机（引擎 rng → 同种子同结果，回放可复现）；没有其他友方单位 → 跳过；
+	## * 护甲写 `Placement.armor`，受击时由 `_unit_damage_taken()` 优先吸收（共用唯一口）；
+	## * 候选格子**先排序再摇**：同一方多只 9133 时 rng 消耗顺序必须稳定（回放）。
+	var casters: Array[Vector2i] = []
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.unit_at(cell)
+		if p != null and p.owner == side and p.card != null and p.card.id == HECATE_ID:
+			casters.append(cell)
+	if casters.is_empty():
+		return
+	casters.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return a.x < b.x if a.x != b.x else a.y < b.y)
+	for cell: Vector2i in casters:
+		var p: Placement = state.unit_at(cell)
+		if p == null:
+			continue
+		var picks: Array[Vector2i] = []
+		for c2: Vector2i in state.board.keys():
+			var q: Placement = state.unit_at(c2)
+			if q != null and q.owner == side and c2 != cell:
+				picks.append(c2)
+		if picks.is_empty():
+			_log("铸甲：场上没有其他友方单位，%s 无处加护甲" % p.card.card_name)
+			continue
+		picks.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			return a.x < b.x if a.x != b.x else a.y < b.y)
+		var tc: Vector2i = picks[rng.randi() % picks.size()]
+		var t: Placement = state.unit_at(tc)
+		if t == null:
+			continue
+		t.armor += HECATE_ARMOR_GAIN
+		_log("铸甲：%s → %s 获得 %d 护甲（现 %d）" % [
+			p.card.card_name, t.card.card_name, HECATE_ARMOR_GAIN, t.armor])
+		action.emit("armor_gain", {"cell": tc, "card": t.card, "side": side,
+				"armor": t.armor, "gained": HECATE_ARMOR_GAIN})
+
 
 func _scavenger_tick(side: String) -> void :
 	## 拾荒者（9151，R228）：**己方回合开始时**，每个拾荒者各挑一个「拾荒者以外」的
@@ -13816,8 +13859,8 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 			and p.boss_phase >= 3 and _revelator_has_escort(p):
 		_log("启示者（阶段 3）：场上还有随从 → 免疫这次非攻击伤害")
 		return 0
-	# ③c2 R541 护盾构状体（9244）：「这张卡在场时，其他己方单位受到的伤害减半」。
-	#     与量产型赫利俄斯（③）同一条「实时扫场面」通道 —— 构状体被打掉，光环立刻断。
+	# ③c2 R541 护盾构装体（9244）：「这张卡在场时，其他己方单位受到的伤害减半」。
+	#     与量产型赫利俄斯（③）同一条「实时扫场面」通道 —— 构装体被打掉，光环立刻断。
 	#     **向上取整、至少 1 点**（与量产型赫利俄斯同口径；向下取整会把 1 点伤害减成 0）。
 	#     ⚠️ 不按来源分流：卡面写的是「受到的伤害」，攻击 / 技能都吃（与执法者 ②b 同理）。
 	#     ⚠️ 排在 ③d **之前**：技能抗性那条是「最终落地值封顶」，必须让各种减半先算完。
@@ -13826,7 +13869,7 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		var scb:= dmg
 		dmg = maxi(1, (dmg + 1) / 2)
 		if dmg != scb:
-			_log("%s：伤害 %d → %d（护盾构状体光环，向上取整）" % [p.card.card_name, scb, dmg])
+			_log("%s：伤害 %d → %d（护盾构装体光环，向上取整）" % [p.card.card_name, scb, dmg])
 	# ③d 技能抗性（熔岩巨人 1071，R427 用户口径「受到技能伤害最多为 3 点」）：
 	#     放在减伤链**最后一格**（启示者阶段 3 之后、道具之前）—— 「最多 3 点」说的是
 	#     **最终落地值**：先让各种减伤算完再封顶；顺序反了会把 10 伤算成 1（减 2 再封顶 3 之前的中间值）。
@@ -13949,7 +13992,7 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		dmg = maxi(1, (dmg + 1) / 2)
 	if dmg > 0 and not is_attack and p.boss_phase == 2:
 		dmg = maxi(1, dmg / 2)
-	# R541 护盾构状体（9244）：与 `_unit_damage_taken()` 的 ③c2 同判据、同位置
+	# R541 护盾构装体（9244）：与 `_unit_damage_taken()` 的 ③c2 同判据、同位置
 	if dmg > 0 and not p.card.traits.has(SHIELD_TRAIT) and state.has_shield_construct(p.owner):
 		dmg = maxi(1, (dmg + 1) / 2)
 	if dmg > SPELL_RESIST_CAP and not is_attack and p.card.traits.has(SPELL_RESIST_TRAIT):
@@ -14759,45 +14802,12 @@ func _run_battlecries(side: String) -> void :
 
 
 func _battlecry(cell: Vector2i, p: Placement) -> void :
+	## R778：灰烬龙（1013）的「登场后首个回合对全场 4 伤」已删除，当前没有任何单位带战吼。
+	## 分派骨架留着：`_run_battlecries()` 每场仍会走一遍，`battlecry_done` 保证每只只判一次，
+	## 以后要加战吼直接在这个 match 里挂分支。
 	match p.card.id:
-		ASH_DRAGON_ID:
-			_battlecry_ash(cell, p)
 		_:
 			pass
-
-
-func _battlecry_ash(cell: Vector2i, p: Placement) -> void :
-	## 灰烬龙（1013）战吼：对**对方所有单位**（含工事）各 4 点，己方 / HP 都不吃这笔。
-	## R363：原来这里只有一行 `_log`，界面侧连 `battlecry` 事件都没接线 ——
-	## 玩家看到的是「自己整排单位同时少了 4 血，谁干的不知道」（用户口径：
-	## 「伤害效果触发时没有动画特效，看起来很诡异」）。现在：
-	##   ① `_fx_pulse()` 先报「这张卡发动了」（卡身脉冲 + 卡名 + 镜头）；
-	##   ② `battlecry` 事件**先于**伤害发出 → 播报写清「N 个单位各 -4」；
-	##   ③ 每一下带 `seq` → 界面逐格错开 90ms 落地（一排数字同帧炸 = 看不出因果）。
-	var foe:= SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
-	var cells: Array[Vector2i] = []
-	for c: Vector2i in state.board.keys().duplicate():
-		var q:= state.unit_at(c)
-		if q != null and q.owner == foe:
-			cells.append(c)
-	# 选人顺序排序：日志 / 演出顺序可复现（不依赖字典迭代顺序）。
-	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		return a.x < b.x if a.x != b.x else a.y < b.y)
-	_fx_pulse(cell, p.card, "灰烬")
-	action.emit("battlecry", {"cell": cell, "card": p.card, "kind": "ash",
-		"amount": ASH_DRAGON_AOE, "hits": cells.size()})
-	var hits:= 0
-	_begin_hp_once()
-	for c2: Vector2i in cells:
-		var q2:= state.unit_at(c2)
-		if q2 == null or q2.owner != foe:
-			continue      # 前面的击杀可能已经把它带走（护盾转发 / 启示者接通代受）
-		_hit_unit(q2, ASH_DRAGON_AOE, "灰烬龙", true, false, hits)
-		hits += 1
-	if hits > 0:
-		_destroy_dead()
-	_end_hp_once()
-	_log("%s 战吼：对 %d 个敌方单位造成 %d 点伤害" % [p.card.card_name, hits, ASH_DRAGON_AOE])
 
 
 func _deathrattle(cell: Vector2i, p: Placement) -> void :
@@ -19741,12 +19751,12 @@ func _assassin_step(src: Vector2i, p: Placement) -> Variant:
 #
 # 它不是「专属 AI」型单位（有程 1 / 速 1，走通用 AI 正常推进 + 攻击）；
 # 全部特色发生在**敌方回合开始时**（`_begin_turn` 的 SIDE_OPPONENT 分支）：
-#   ① `_siege_construct_tick()` —— 已在场的炮击构状体给一个友军 +1 力量；
-#   ② `_pronoia_morph()` —— 按玩家上回合的出牌类型召唤 / 变形构状体。
+#   ① `_siege_construct_tick()` —— 已在场的炮击构装体给一个友军 +1 力量；
+#   ② `_pronoia_morph()` —— 按玩家上回合的出牌类型召唤 / 变形构装体。
 # 顺序不能反：先成长、后召唤（与既有的「回合开始成长排在召唤之前」同口径）。
 
 func _pronoia_find(side: String) -> Array:
-	## 返回 `[普罗诺亚之影的格子, 当前构状体的格子]`，没有的那项是 `Vector2i(-1, -1)`。
+	## 返回 `[普罗诺亚之影的格子, 当前构装体的格子]`，没有的那项是 `Vector2i(-1, -1)`。
 	## 两个都取 `entry_seq` 最小的那个（本关各只有一只，纯粹为了确定性与回放可复现）。
 	var boss := Vector2i(-1, -1)
 	var boss_seq := 1 << 30
@@ -19800,7 +19810,7 @@ func _pronoia_proto(mode: String) -> CardData:
 		return null
 	var base: CardData = repo.get_card(cid)
 	if base == null:
-		push_error("普罗诺亚之影：卡库缺少构状体 %d" % cid)
+		push_error("普罗诺亚之影：卡库缺少构装体 %d" % cid)
 		return null
 	var copy := CardData.from_dict(base.to_dict())
 	copy.traits = (copy.traits as Array).duplicate()
@@ -19811,8 +19821,8 @@ func _pronoia_proto(mode: String) -> CardData:
 func _pronoia_morph(side: String) -> void :
 	## 敌方回合开始时结算一次。三种结果：
 	##   * 没出牌 → 保持（只写一句日志）；
-	##   * 场上没有构状体（= 它是唯一的己方单位）→ 扣 `PRONOIA_MORPH_COST` 生命召唤一个；
-	##   * 已有构状体 → 原地变形，**保留已受伤害**。
+	##   * 场上没有构装体（= 它是唯一的己方单位）→ 扣 `PRONOIA_MORPH_COST` 生命召唤一个；
+	##   * 已有构装体 → 原地变形，**保留已受伤害**。
 	## ⚠️ 生命不足时**不召唤**（不让它把自己扣死）：这关的胜负不该是「对面自爆」。
 	var found := _pronoia_find(side)
 	var boss_cell: Vector2i = found[0]
@@ -19852,16 +19862,16 @@ func _pronoia_morph(side: String) -> void :
 
 
 func _pronoia_transform(cell: Vector2i, proto: CardData, side: String, mode: String) -> void :
-	## 「当前构状体变成对应形态（保留受伤）」—— 原地换卡，**不走 `place`**：
+	## 「当前构装体变成对应形态（保留受伤）」—— 原地换卡，**不走 `place`**：
 	##   * `place` 会把生命重置成满血、重发行动轮、重跑入场（那是「新单位」的语义）；
-	##   * 这里是**同一只构状体换了个形态**：生命按「已损失量」平移，行动轮按新卡重算，
+	##   * 这里是**同一只构装体换了个形态**：生命按「已损失量」平移，行动轮按新卡重算，
 	##     不触发任何入场 / 死亡 / 击杀记账。
 	## 三档最大生命都是 50，所以「保留受伤」不会因为换血上限而被打死；仍夹一个 `maxi(1, …)` 兜底。
 	var old: Placement = state.unit_at(cell)
 	if old == null or old.card == null:
 		return
 	if old.card.id == proto.id:
-		_log("普罗诺亚之影：构状体已经是 %s → 形态不变" % proto.card_name)
+		_log("普罗诺亚之影：构装体已经是 %s → 形态不变" % proto.card_name)
 		return
 	var old_card: CardData = old.card
 	var lost := maxi(0, old_card.health - old.health)
@@ -19877,7 +19887,7 @@ func _pronoia_transform(cell: Vector2i, proto: CardData, side: String, mode: Str
 
 
 func _siege_construct_tick(side: String) -> void :
-	## 炮击构状体（9243）：「每个回合开始时，使一个其他友方单位力量 +1」。
+	## 炮击构装体（9243）：「每个回合开始时，使一个其他友方单位力量 +1」。
 	## 挑谁：**当前力量最高**的那个友方单位（同力量取 `entry_seq` 小的）——
 	## 增益落在最吃力量的人身上，且不带随机，回放天然可复现。
 	## 走 `atk_buff`（与鸭子骑士 / 启示者同一条「永久累计、无上限」通道）：

@@ -10,7 +10,7 @@
   },
   "1013": {
    "name": "Ashen Dragon",
-   "effect_text": "At the start of the first turn after it enters the field: deal 4 damage to all enemy units."
+   "effect_text": ""
   },
   "1014": {
    "name": "Young Dragon",
@@ -407,7 +407,7 @@
   },
   "9013": {
    "name": "Duck Power",
-   "effect_text": "At the start of each turn, all friendly units gain +1 Power (up to +4 per unit). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all friendly units gain +1 Power (up to +4 per unit)."
   },
   "9014": {
    "name": "Ancient Hollowbone Dragon",
@@ -415,7 +415,7 @@
   },
   "9015": {
    "name": "Duck Horn",
-   "effect_text": "Summon a Duck Knight every 3 turns. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Summon a Duck Knight every 3 turns."
   },
   "9016": {
    "name": "Rhino",
@@ -452,7 +452,7 @@
   },
   "9024": {
    "name": "Hiss",
-   "effect_text": "At the start of your 3rd, 5th and 7th turns, give a friendly unit with the highest current Health that does not already have Double Action the Double Action effect (permanent; units that could already act twice are not chosen). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of your 3rd, 5th and 7th turns, give a friendly unit with the highest current Health that does not already have Double Action the Double Action effect (permanent; units that could already act twice are not chosen)."
   },
   "9025": {
    "name": "Duck Kiln",
@@ -548,7 +548,7 @@
   },
   "9049": {
    "name": "Gear Ascension",
-   "effect_text": "At the start of each turn, all friendly units gain +2 Power (permanent). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all friendly units gain +2 Power (permanent)."
   },
   "9050": {
    "name": "Whale's Wrath",
@@ -788,7 +788,7 @@
   },
   "9115": {
    "name": "Familiar Power",
-   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent)."
   },
   "9116": {
    "name": "Demon Duck",
@@ -796,7 +796,7 @@
   },
   "9117": {
    "name": "Demon Familiar",
-   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent); every 2 turns, Summon a Familiar Duck on a random empty tile (except the player's back row). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent); every 2 turns, Summon a Familiar Duck on a random empty tile (except the player's back row)."
   },
   "9118": {
    "name": "Demon Duck (Vengeance)",
@@ -828,7 +828,7 @@
   },
   "9125": {
    "name": "Shadow Summoning",
-   "effect_text": "At the **start of battle** and **every 3 turns**, Summon a Duck Assassin. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the **start of battle** and **every 3 turns**, Summon a Duck Assassin."
   },
   "9127": {
    "name": "Rework",
@@ -848,7 +848,7 @@
   },
   "9133": {
    "name": "Mass-Produced Hecatoncheires",
-   "effect_text": "Casting: at the end of your turn, the countdown decreases by 1; when it reaches 0, Destroy this unit and raise a \"Steel Fortress\" where it stood."
+   "effect_text": "At the start of each turn, give a random other friendly unit 10 Armor."
   },
   "9134": {
    "name": "Steel Fortress",
@@ -872,7 +872,7 @@
   },
   "9139": {
    "name": "Charged Cannon",
-   "effect_text": "At the start of each of your turns, Destroy a random enemy unit. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each of your turns, Destroy a random enemy unit."
   },
   "9140": {
    "name": "Hermes",
@@ -904,7 +904,7 @@
   },
   "9147": {
    "name": "Assembly Line",
-   "effect_text": "Every 3 turns, Summon either a Mass-Produced Onyae or a Mass-Produced Helios at random in your half of the field. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Every 3 turns, Summon either a Mass-Produced Onyae or a Mass-Produced Helios at random in your half of the field."
   },
   "9148": {
    "name": "Rebirth",
@@ -1016,7 +1016,7 @@
   },
   "9178": {
    "name": "Eternal Night",
-   "effect_text": "Night Duck is no longer weakened: it is no longer affected by \"Light Phobia\" (its Attack Range, Move Speed and Power do not drop even on odd-numbered turns). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Night Duck is no longer weakened: it is no longer affected by \"Light Phobia\" (its Attack Range, Move Speed and Power do not drop even on odd-numbered turns)."
   },
   "9179": {
    "name": "Surprise Box",
@@ -1116,11 +1116,11 @@
   },
   "9209": {
    "name": "Air Raid",
-   "effect_text": "At the start of the player's turn, mark 5 random tiles. Before the enemy acts, player units on the marked tiles take 5 damage; this damage increases by 1 each turn. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of the player's turn, mark 5 random tiles. Before the enemy acts, player units on the marked tiles take 5 damage; this damage increases by 1 each turn."
   },
   "9210": {
    "name": "Frost Barrier",
-   "effect_text": "At the start of every 2nd turn, all friendly units gain +1 Power, up to +4 per unit. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of every 2nd turn, all friendly units gain +1 Power, up to +4 per unit."
   },
   "9211": {
    "name": "Refraction Cannon",
@@ -1128,7 +1128,7 @@
   },
   "9212": {
    "name": "Owlbear's Wrath",
-   "effect_text": "While Owlbear's Health is above half, it takes -1 damage; when its Health drops to half or below, it gains \"Trample\" - when its damage kills a unit, the excess damage continues down the same column; it does not trigger if no unit was attacked. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "While Owlbear's Health is above half, it takes -1 damage; when its Health drops to half or below, it gains \"Trample\" - when its damage kills a unit, the excess damage continues down the same column; it does not trigger if no unit was attacked."
   },
   "9213": {
    "name": "Owlbear",
@@ -1236,7 +1236,7 @@
   },
   "9240": {
    "name": "Wanted Notice",
-   "effect_text": "All units on the enemy's field gain \"Dimensional\". At the end of your 12th turn, Destroy all units on your own field. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "All units on the enemy's field gain \"Dimensional\". At the end of your 12th turn, Destroy all units on your own field."
   },
   "9241": {
    "name": "Laser Cannon",
@@ -1244,18 +1244,18 @@
   },
   "9242": {
    "name": "Shade of Pronoia",
-   "effect_text": "At the start of each turn, it changes form according to the card type the opponent has used most this turn: Ally or Structure -> Artillery Automaton; Skill or Field -> Shield Automaton; any other type -> Swift Automaton. If it is the only unit on the field, it loses 10 Health to Summon an Automaton; otherwise, the current Automaton transforms into the corresponding form."
+   "effect_text": "At the start of each turn, it changes form according to the card type the opponent has used most this turn: Ally or Structure -> Artillery Construct; Skill or Field -> Shield Construct; any other type -> Swift Construct. If it is the only unit on the field, it loses 10 Health to Summon a Construct; otherwise, the current Construct transforms into the corresponding form."
   },
   "9243": {
-   "name": "Artillery Automaton",
+   "name": "Artillery Construct",
    "effect_text": "At the start of each turn, give another friendly unit +1 Power."
   },
   "9244": {
-   "name": "Shield Automaton",
+   "name": "Shield Construct",
    "effect_text": "While this card is on the field, other friendly units take half damage."
   },
   "9245": {
-   "name": "Swift Automaton",
+   "name": "Swift Construct",
    "effect_text": "May act twice per turn."
   },
   "9246": {
