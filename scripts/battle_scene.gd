@@ -10714,6 +10714,13 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		# 是看卡面看不出来的隐藏状态 → 必须常驻可见，槽位角标写出**数字**：光有沙漏图标
 		# 等于把「还能拖几回合 / 要不要现在就拆」这个决策藏起来（与「沉睡 N」同一套路）。
 		_draw_fuse_aura(center, w, h)
+	if engine.damage_cap_left(p) == 0:
+		# R780b 赫尔墨斯 9140 / 量产型赫尔墨斯 9188：本回合 20 点伤害额度已经吃满，
+		# 接下来谁打它都进不去。这是**看卡面看不出来**的隐藏状态 ——
+		# 卡面只写「每回合最多受到 20 点伤害」，不写「这一刻已经满了」，
+		# 而玩家恰恰要靠这个决定「还要不要继续砸它」。
+		# 图标由 `_state_slots()` 送进右上角圆槽，环与薄金罩在这里画。
+		_draw_damage_cap_aura(center, w, h)
 	if p.first_hit_shield:
 		# 能量屏障（8033，R87）：**首次受伤免掉**的一次性护盾。
 		# 徽标同样交给字段系统（字段「护盾」），这里只留**呼吸青环**提示「还剩一次」——
@@ -10760,6 +10767,10 @@ func _state_slots(p: Placement, cell: Vector2i) -> Array:
 	var out: Array = []
 	if p == null or p.card == null:
 		return out
+	if engine.damage_cap_left(p) == 0:
+		# R780b：本回合额度吃满 = 现在打它没用。**排在队列最前** —— 冰封 / 眩晕说的是
+		# 「它不能动」，这条说的是「你打不动」，玩家下一步怎么打直接取决于它。
+		out.append({"glyph": "immune", "label": "免伤"})
 	if p.frozen:
 		out.append({"glyph": "frozen", "label": "冰封"})
 	if p.stun_left > 0:
@@ -10771,6 +10782,53 @@ func _state_slots(p: Placement, cell: Vector2i) -> Array:
 	if engine.unit_has_taunt(p) and not p.card.has_affix("嘲讽"):
 		out.append({"glyph": "taunt", "label": "嘲讽"})
 	return out
+
+func _draw_damage_cap_aura(center: Vector2, w: float, h: float) -> void:
+	## 免伤力场（`GameEngine.damage_cap_left(p) == 0` 的唯一表现口，R780b）。
+	## 赫尔墨斯 9140 / 量产型赫尔墨斯 9188 本回合的 20 点伤害额度已经吃满，
+	## 接下来所有伤害都被上限吃掉、一点血也扣不动。
+	## ⚠️ 形状必须和现有那几个环分开：实线圆环已被嘲讽（橙）/ 冰封（冷蓝）/ 沉睡（紫）/
+	##    屏障（青）/ 可发动（黄绿）用满，虚线圆环是眩晕（金）。这里用**贴卡框的六边形** ——
+	##    力场 / 结界是硬的、有棱角的语义，形状上一眼就能和「状态环」分开。
+	## ⚠️ **必须先压一道深色底线，再画亮金**：实战背景是亮青色水面（R780b 实拍），
+	##    单画一条半透明金线在亮背景上几乎看不见；它还会和卡牌自己的金色边框
+	##    糊成一片，看起来像「卡框描边加粗了」而不是「多了个力场」。
+	##    深底 + 亮金是亮底上唯一立得住的画法，顶点方块同样双层。
+	## ⚠️ 六边形**不旋转**：按椭圆参数化转起来会变形（看起来像在抖），
+	##    改成呼吸式缩放 + 顶点亮点明暗，动感够而不晃眼。
+	## ⚠️ 薄金罩只压 6%→11%：再厚就把卡图糊了，玩家会看不清那到底是谁。
+	var dc_t := float(_now()) / 1000.0
+	var dc_pulse := (sin(dc_t * 2.6) + 1.0) * 0.5
+	var dc_col := Color(1.0, 0.90, 0.55)
+	# 罩子与光环**同形**（六边形填充）：卡面会盖住中心，只剩卡框外那圈金色薄雾。
+	# 矩形罩会在卡角露出直角金块，和六边形互相打脸（R780b 实拍）。
+	var wash := PackedVector2Array()
+	for i in 6:
+		var wa: float = -PI * 0.5 + TAU * float(i) / 6.0
+		wash.append(center + Vector2(cos(wa) * (w * 0.5 + 12.0), sin(wa) * (h * 0.5 + 12.0)))
+	draw_colored_polygon(wash, Color(dc_col.r, dc_col.g, dc_col.b, 0.10 + dc_pulse * 0.07))
+	for k in 2:
+		var hw := w * 0.5 + 12.0 + float(k) * 8.0 + dc_pulse * 1.8
+		var hh := h * 0.5 + 12.0 + float(k) * 8.0 + dc_pulse * 1.8
+		var pts := PackedVector2Array()
+		for i in 6:
+			var a: float = -PI * 0.5 + TAU * float(i) / 6.0
+			pts.append(center + Vector2(cos(a) * hw, sin(a) * hh))
+		pts.append(pts[0])
+		# 深底必须比亮金**宽一倍**：亮水面上细半透线会被背景吃掉（实拍调出来的）
+		draw_polyline(pts, Color(0.06, 0.05, 0.02, 0.80), 6.2 if k == 0 else 4.2, true)
+		draw_polyline(pts, Color(dc_col.r, dc_col.g, dc_col.b,
+				(0.94 if k == 0 else 0.60) + dc_pulse * 0.06), 3.4 if k == 0 else 1.9, true)
+	# 六个顶点各点一颗小方块（深底 + 亮金）：呼吸时跟着亮，远看也认得出「有东西罩着」
+	for i in 6:
+		var a2: float = -PI * 0.5 + TAU * float(i) / 6.0
+		var vp := center + Vector2(cos(a2) * (w * 0.5 + 12.0 + dc_pulse * 1.8),
+				sin(a2) * (h * 0.5 + 12.0 + dc_pulse * 1.8))
+		var sq := 2.6 + dc_pulse * 1.2
+		draw_rect(Rect2(vp - Vector2(sq, sq) * 1.6, Vector2(sq, sq) * 3.2),
+				Color(0.06, 0.05, 0.02, 0.80), true)
+		draw_rect(Rect2(vp - Vector2(sq, sq), Vector2(sq, sq) * 2.0),
+				Color(dc_col.r, dc_col.g, dc_col.b, 0.84 + dc_pulse * 0.16), true)
 
 func _draw_stun_aura(center: Vector2, w: float, h: float) -> void:
 	## 眩晕特效（`Placement.stun_left` 的唯一表现口，R654）：**金色虚线环**旋转 +
@@ -13227,6 +13285,21 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				# R697：这两条是「把库里的卡**改了**」（屏障 / 双动），不是「加了 1 张」——
 				#       金环 + 「+1」只认入库（`_on_deck_added`），这里只留紫环（变幻）。
 				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
+		"damage_capped":
+			# R780b：赫尔墨斯 / 量产型赫尔墨斯本回合的 20 点伤害额度吃掉了多少。
+			# 额度满时引擎把扣血压到 0，`fx_impact` 判的是 `dmg > 0` → 不会发，
+			# 于是敌人一拳打上去**画面一动不动**，看着像卡死了。这条就是补那个反馈。
+			# 文案写「免伤 N」而不是「0 伤」：N 是**被上限吃掉**的量，玩家据此判断
+			# 「这回合还吃不吃得动」；与能量屏障的「护盾 · 0 伤」（护盾碎掉，另一种事）区分开。
+			var dcap_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var dcap_blocked := int(data.get("blocked", 0))
+			if dcap_cell.x >= 0 and dcap_blocked > 0:
+				var dcap_at := _hit_cue_at(dcap_cell)
+				_bursts.append({"pos": _cell_center(dcap_cell), "sc": _grid_scroll,
+						"start": dcap_at, "dur": 460, "col": Color("ffd863"), "big": false})
+				_floaters.append({"pos": _cell_center(dcap_cell) + Vector2(0, -14),
+						"sc": _grid_scroll, "text": "免伤 %d" % dcap_blocked,
+						"col": Color("ffd863"), "start": dcap_at, "dur": 1400, "size": 17})
 		"barrier":
 			# 护盾**挡下**伤害的瞬间（R87）：这是玩家最需要看到的反馈 —— 护盾消失且不扣血。
 			sfx.play("heal")

@@ -909,6 +909,8 @@ static func _state_style(glyph: String) -> Array:
 			return [Color(0.08, 0.20, 0.06), Color(0.94, 1.0, 0.82)]
 		"taunt":
 			return [Color(0.20, 0.11, 0.02), Color(1.0, 0.84, 0.40)]
+		"immune":
+			return [Color(0.24, 0.17, 0.03), Color(1.0, 0.90, 0.56)]
 		_:
 			return [Color(0.17, 0.16, 0.19), Color(0.94, 0.94, 0.96)]
 

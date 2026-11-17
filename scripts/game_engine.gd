@@ -338,6 +338,7 @@ const HECATE_ID:= 9133              # 量产型赫卡同克瑞斯（盟友 3/60 
 const HECATE_ARMOR_GAIN:= 10        # R778：每回合给随机一个**其他**友方单位 +10 护甲
 const HERMES_ID:= 9140              # R780：赫尔墨斯（第二层精英·赫尔墨斯的试炼）
 const HERMES_DMG_CAP:= 20           # R780：每回合最多受到 20 点伤害
+const HERMES_MASS_ID:= 9188         # R780b：量产型赫尔墨斯（同一条上限）
 const STEEL_FORTRESS_ID:= 9134      # 钢铁要塞（工事 5/100 程2 速0，嘲讽）
 const FUSE_TURNS:= 5                # 铸造倒计时的初始回合数（与卡面 effect_text 同源）
 # ---- 「赫菲斯托斯工坊」关卡（R150，第二层 Boss；R225 上调）----
@@ -13737,8 +13738,27 @@ func _effect_damage_reduction() -> int:
 	return total
 
 
+static func is_damage_capped(id: int) -> bool:
+	## R780b：吃「每回合最多受到 20 点伤害」这条上限的卡 —— 赫尔墨斯 9140 + 量产型 9188。
+	## **名单只此一处**：引擎两个扣血口、界面 `damage_cap_left()`、测试边界全问这里。
+	## 抽成静态判据（同 `GameBuild.is_release()` 的做法）：测试可以只传 id 验边界，
+	## 不用每验一张就造一个引擎；以后再加同类卡也只改这一个函数。
+	return id == HERMES_ID or id == HERMES_MASS_ID
+
+
+func damage_cap_left(p: Placement) -> int:
+	## R780b：这张卡**本回合**还能受多少伤害；返回 -1 = 不吃这条上限（各卡通用）。
+	## 0 就是界面必须表现的那个「现在打它一点也进不去」——
+	## 卡面力场环 / 右上角「免伤」图标 / 命中时「免伤 N」飘字，全部读这一条，
+	## 谁都不许在别处再算一次（否则「环亮着却还在掉血」这种自相矛盾迟早出现）。
+	if p == null or p.card == null or not is_damage_capped(p.card.id):
+		return -1
+	var taken: int = p.turn_dmg_taken if p.turn_dmg_key == turn_number else 0
+	return maxi(0, HERMES_DMG_CAP - taken)
+
+
 func _cap_turn_damage(p: Placement, dmg: int) -> int:
-	## R780 赫尔墨斯（9140）：「每回合最多受到 20 点伤害」。
+	## R780 赫尔墨斯（9140）/ R780b 量产型赫尔墨斯（9188）：「每回合最多受到 20 点伤害」。
 	## 位置 = **两个扣血落地口的最后一格**（`p.health -= dmg` 的**前一格**，
 	## 正义背刺倍率乘完之后）：卡面说的是「受到」，也就是**最终真正扣掉的血** ——
 	## 倍率 / 减伤 / 护甲全算完才封顶，顺序反了会被 `dmg *= jb_mult` 突破上限。
@@ -13749,19 +13769,29 @@ func _cap_turn_damage(p: Placement, dmg: int) -> int:
 	##    否则「有护甲反而更快打满上限」。
 	## 回合口径 = `turn_number`（整轮；只有我方回合开始 +1）—— 换回合后 key 失配，
 	## 额度自动归零，不用扫全场重置。
-	if p == null or p.card == null or dmg <= 0 or p.card.id != HERMES_ID:
+	if p == null or p.card == null or dmg <= 0:
+		return dmg
+	var left:= damage_cap_left(p)
+	if left < 0:
 		return dmg
 	if p.turn_dmg_key != turn_number:
 		p.turn_dmg_key = turn_number
 		p.turn_dmg_taken = 0
-	var left:= HERMES_DMG_CAP - p.turn_dmg_taken
+	# R780b：被挡掉多少也要报出去 —— 额度吃满时 `dmg` 直接归 0，`_hit_unit` 尾部
+	# 那条 `fx_impact` 判的是 `if dmg > 0`，根本不会发。于是敌人一拳打上来
+	# **画面一动不动**，玩家只会以为卡死了。`damage_capped` 就是「这一下被吃掉」
+	# 的唯一表现来源（界面侧见 battle_scene 的同名分支）。
+	var blocked:= maxi(0, dmg - left)
 	if left <= 0:
 		_log("%s：本回合已受满 %d 点伤害，这一下全免" % [p.card.card_name, HERMES_DMG_CAP])
-		return 0
-	if dmg > left:
+	elif blocked > 0:
 		_log("%s：本回合伤害上限 %d 点 —— 这一下 %d 封顶到 %d" % [
 			p.card.card_name, HERMES_DMG_CAP, dmg, left])
+	if blocked > 0:
 		dmg = left
+		action.emit("damage_capped", {"cell": _cell_of(p), "card": p.card,
+				"blocked": blocked, "dealt": dmg, "cap": HERMES_DMG_CAP,
+				"side": p.owner})
 	p.turn_dmg_taken += dmg
 	return dmg
 
@@ -14035,12 +14065,12 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 	# ⑤ 护甲：**只算吸收掉多少**，绝不真的扣（`_unit_damage_taken` 里是会扣的）
 	if dmg > 0 and p.armor > 0:
 		dmg = maxi(0, dmg - p.armor)
-	# ⑤b R780 赫尔墨斯：「每回合最多受到 20 点伤害」——与 `_cap_turn_damage()`
-	#    **同一位置**（护甲之后 = 最终落地值）、同一份累计读数。
-	#    换回合判据同引擎：`turn_dmg_key` 失配就当作 0。
-	if dmg > 0 and p.card.id == HERMES_ID:
-		var taken:= p.turn_dmg_taken if p.turn_dmg_key == turn_number else 0
-		dmg = maxi(0, mini(dmg, HERMES_DMG_CAP - taken))
+	# ⑤b R780 赫尔墨斯 / R780b 量产型赫尔墨斯：「每回合最多受到 20 点伤害」——
+	#    与 `_cap_turn_damage()` **同一位置**（护甲之后 = 最终落地值），
+	#    而且**同一个读数口** `damage_cap_left()`（换回合 key 失配的判定也在里面）。
+	var cap_left:= damage_cap_left(p)
+	if dmg > 0 and cap_left >= 0:
+		dmg = maxi(0, mini(dmg, cap_left))
 	return {"dmg": dmg, "tag": ""}
 
 

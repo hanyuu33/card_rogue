@@ -366,6 +366,12 @@ static func draw_glyph(cv: CanvasItem, c: Vector2, r: float, glyph: String, col:
 			for i in 2:
 				var ay: float = -r * 0.20 + float(i) * r * 0.30
 				cv.draw_line(c + Vector2(-r * 0.26, ay), c + Vector2(r * 0.26, ay), col, 1.2)
+		"immune":                  # 免伤（R780b）：粗圆环 + 中心实心点（被力场罩住）
+			# ⚠️ 只有几 px 的圆槽里，盾形 + 外环那类细节会糊成一个色块（R780b 实拍）——
+			#    这里只留两个最粗的元素：环 + 中心点。形状上仍与「护盾」（盾形轮廓）
+			#    「护甲」（盾形 + 两道横纹）分得开。
+			cv.draw_arc(c, r * 0.76, 0.0, TAU, 20, col, 2.0)
+			cv.draw_circle(c, r * 0.30, col)
 		"portal":                  # 次元：两个同心菱形
 			for k in 2:
 				var s := r * (0.80 - 0.38 * float(k))

@@ -36588,7 +36588,82 @@ func _init() -> void:
 
 	check(r780_o == 30 and pR780b.turn_dmg_taken == 0,
 
-			"R780 对照：阿斯克勒庇厄斯单次 30 点不封顶（上限只属于 9140）")
+			"R780 对照：阿斯克勒庇厄斯单次 30 点不封顶（它不在上限名单里）")
+
+	# ---- R780b：量产型赫尔墨斯 9188 同吃「每回合最多受到 20 点伤害」+ 界面判据 ----
+
+	check(GameEngine.is_damage_capped(9140) and GameEngine.is_damage_capped(9188),
+			"R780b 上限名单：9140 赫尔墨斯与 9188 量产型赫尔墨斯都在内")
+
+	check(not GameEngine.is_damage_capped(9141) and not GameEngine.is_damage_capped(9189),
+			"R780b 上限名单边界：9141 阿斯克勒庇厄斯 / 9189 独行 不在内")
+
+	var r780b_card := repo.get_card(9188)
+
+	check(r780b_card != null and r780b_card.card_name == "量产型赫尔墨斯"
+			and r780b_card.effect_text.contains("每回合最多受到 20 点伤害"),
+			"R780b 9188 卡面：写明「每回合最多受到 20 点伤害」")
+
+	var engR780d := _new_engine()
+
+	engR780d.state.place(r780b_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780d: Placement = engR780d.state.unit_at(Vector2i(2, 1))
+
+	engR780d.turn_number = 1
+
+	# ① 界面判据：开局还剩满额度 → 力场环不亮（亮灯判据是 == 0，不是 > 0）
+
+	check(engR780d.damage_cap_left(pR780d) == 20,
+			"R780b 9188 开局：damage_cap_left = 20（大于 0 就不画环）")
+
+	# ② 一次 30 点只吃 20
+
+	var r780b_d1: int = engR780d._hit_unit(pR780d, 30, "技能", false)
+
+	check(r780b_d1 == 20 and pR780d.health == 35,
+			"R780b 9188 单次 30 点封顶到 20（55 → 35）")
+
+	# ③ 额度吃满 → 判据归 0，卡面力场环 + 「免伤」图标常驻
+
+	check(engR780d.damage_cap_left(pR780d) == 0,
+			"R780b 9188 额度吃满：damage_cap_left = 0 → 力场环与免伤图标常驻")
+
+	# ④ 满额度后再打：一点也进不去（这一下必须发出 damage_capped 让界面有反馈）
+
+	var r780b_hits: Array = []
+
+	engR780d.action.connect(func(kind: String, d: Dictionary):
+			if kind == "damage_capped":
+				r780b_hits.append(int(d.get("blocked", 0))))
+
+	var r780b_d2: int = engR780d._hit_unit(pR780d, 30, "技能", false)
+
+	check(r780b_d2 == 0 and pR780d.health == 35,
+			"R780b 9188 满额度后再挨 30 点：全免、血量不变")
+
+	check(r780b_hits == [30],
+			"R780b 全免时发出 damage_capped(blocked=30) → 界面才有「免伤 30」飘字")
+
+	# ⑤ 换回合：额度回到 20（力场环随之消失）
+
+	engR780d.turn_number += 1
+
+	check(engR780d.damage_cap_left(pR780d) == 20,
+			"R780b 换回合：额度回到 20，力场环跟着灭")
+
+	# ⑥ 部分额度：读数真的按剩余量走（界面不带环，但「还能吃 8 点」是对的）
+
+	var r780b_d3: int = engR780d._hit_unit(pR780d, 12, "技能", false)
+
+	check(r780b_d3 == 12 and engR780d.damage_cap_left(pR780d) == 8,
+			"R780b 9188 吃了 12 点后还剩 8 点额度")
+
+	# ⑦ 对照：名单外的单位返回 -1（不吃上限，也不画力场）
+
+	check(engR780b.damage_cap_left(pR780b) == -1,
+			"R780b 对照：名单外单位 damage_cap_left 返回 -1（不画力场）")
+
 
 
 	# ---- R162：阿斯克勒庇厄斯 + 护甲积攒 ----
@@ -64206,9 +64281,9 @@ func _init() -> void:
 
 		"R397 量产型赫尔墨斯不成长也不疾行（越拖越强只属于本体 9140）")
 
-	check(r397_carrier.effect_text == "",
+	check(r397_carrier.effect_text == "每回合最多受到 20 点伤害。",
 
-		"R483 量产型赫尔墨斯没有效果 → 卡面不写效果文字（effect_text 为空；卡面绘制 `eff != \"\"` 才起笔）")
+		"R780b 9188 卡面只写「每回合最多受到 20 点伤害」一句（R483 那条「卡面为空」已被取代 —— 它现在有被动，仍没有发动式效果）")
 
 	check(CardFace.art_for(9188) != null,
 
