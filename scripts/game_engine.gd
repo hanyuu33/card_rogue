@@ -2688,7 +2688,9 @@ func _begin_turn(side: String) -> void :
 			action.emit("lighten_draw", {"draw": lighten_draw, "side": SIDE_SELF})
 		if turn_number == 1:
 			_ensure_opening_enchanted()      # R229「起手」附魔：同样第 1 回合必定抽到
-		var drawn := _draw_many(FieldState.HAND_DRAW_PER_TURN + extra_draw)
+		# R781：玩家抽卡数走 `RunState.hand_draw_per_turn()`（基础 5 + 每日修饰 `draw`，下限 1）。
+		# 敌方抽卡仍读 `FieldState.HAND_DRAW_PER_TURN`——修饰只针对玩家。
+		var drawn := _draw_many(RunState.hand_draw_per_turn() + extra_draw)
 		var earring_autoplayed := 0
 		if self_relics.has(EARRING_RELIC_ID) and turn_number == 1:
 			# R285：第 1 回合**正常抽牌之后**，再开始自动出牌。

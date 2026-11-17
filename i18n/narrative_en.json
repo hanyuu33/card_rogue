@@ -194,7 +194,8 @@
         "REST_SACRAMENT_DESC": "A serving of Sacrament, still warm, sits beside the Campfire.\nYou shared it before sitting down—reaching the Campfire restored 50% of your Max Health (already resolved);\nyou may still roast a piece of meat to carry with you and eat it in battle with a tap (it takes one tool slot);\nor add a log to the fire to Remove 1 card from your Deck.\n(Choose only 1 of the remaining 2—once chosen, your visit here ends.)",
         "REST_SACRAMENT_RESULT_DESC": "[Sacrament] Restored %d Health (now %d / %d).",
         "REST_BANDAGE_RESULT_DESC": "[Styptic Bandage] Restored %d Health (now %d / %d).",
-        "REST_PIPE_RESULT_DESC": "[Smoking Pipe] The fire flickers—the Smoking Pipe is lit again. On your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1)."
+        "REST_PIPE_RESULT_DESC": "[Smoking Pipe] The fire flickers—the Smoking Pipe is lit again. On your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1).",
+        "REST_WARM_NOTE": "(Pick two of the three — today's fire burns warmer.)"
       }
     },
     "statue": {

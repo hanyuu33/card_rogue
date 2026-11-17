@@ -96,6 +96,11 @@ static var delayed_cards: Array = []
 ##    第二层的 12 号与第一层的 12 号是两间不同的篝火 —— 只比 id 会让第二层的篝火
 ##    因为「上一层同一编号已经结算过」而整层不回血（R661 修）。
 static var sacrament_node: int = -1
+## R781「温暖」：**本间火堆**已经用掉的选项份数（默认三选一 → 1 份；修饰下 → 2 份）。
+## 与圣餐共用同一个房间键（层号 × 10000 + 节点 id）—— 退出重进同一间不会白刷第二份。
+## `rest_pick_node == -1` 表示这一局还没在火堆上记过账。
+static var rest_pick_node: int = -1
+static var rest_pick_used := 0
 ## R234 止血绷带（6029）：本层累计的「下次休息额外回血」点数。换层 / 开新局 / 结束局清零。
 static var bandage_pending := 0
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
@@ -614,6 +619,48 @@ static func energy_per_turn() -> int:
 	## （灵光 +1 / 滞涩 −1），**下限 1** —— 费用被抹到 0 的话第一回合就什么都出不了。
 	## 敌方 `state.opp_energy` 不读它：修饰只针对玩家，敌人不该跟着变强或变弱。
 	return maxi(1, FieldState.ENERGY_PER_TURN + int(daily_fx.get("energy", 0)))
+
+
+static func hand_draw_per_turn() -> int:
+	## R781：我方每回合抽卡数 = `FieldState.HAND_DRAW_PER_TURN` + 每日修饰的 `draw`
+	## （滞涩 −1），**下限 1** —— 抽卡被抹到 0 的话回合开始一张新牌都摸不到，那不是难度是死局。
+	## 敌方回合的抽卡（`_draw_many` 的对侧调用）不读它：修饰只针对玩家。
+	return maxi(1, FieldState.HAND_DRAW_PER_TURN + int(daily_fx.get("draw", 0)))
+
+
+static func rest_extra_pick() -> int:
+	## R781「温暖」：火堆本来是「休息 / 烤肉 / 添加柴火」三选一，这里返回**额外**可选的份数
+	## （+1 → 总共能选两项）。唯一消费点是 `event_scene` 的火堆记账口。
+	return maxi(0, int(daily_fx.get("rest_pick", 0)))
+
+
+static func rest_pick_quota() -> int:
+	## R781：本次进入火堆**总共**能选几份 = 1 + 修饰额度。
+	return 1 + rest_extra_pick()
+
+
+static func rest_pick_used_here() -> int:
+	## R781：这一间火堆已经用掉几份（换一间 / 换一层自动视为 0）。
+	## 与圣餐同一套房间键，所以「退出重进同一间」不会把配额刷回去。
+	return rest_pick_used if rest_pick_node == sacrament_stay_key() else 0
+
+
+static func rest_pick_mark() -> int:
+	## R781：记一份，返回记账后这一间**已经用掉的总份数**。
+	## 唯一写入口 —— `event_scene` 用它判「还能不能再选一项」。
+	var key := sacrament_stay_key()
+	if rest_pick_node != key:
+		rest_pick_node = key
+		rest_pick_used = 0
+	rest_pick_used += 1
+	return rest_pick_used
+
+
+static func rest_to_battle() -> bool:
+	## R781「阴冷」：地图生成时把休息格整体换成战斗格。
+	## 唯一消费点是 `RogueMap.generate()` 里给 `type` 赋值那一处 —— 别在地图之外的
+	## 地方再判一次，否则会出现「图标是火堆、进去是战斗」的两套口径。
+	return bool(daily_fx.get("rest_to_battle", false))
 
 
 static func rest_heal_amount() -> int:
@@ -1352,6 +1399,8 @@ static func end_run(clear_save: bool = true) -> void:
 	reset_run_stats()           # R530：整局统计不跨局
 	delayed_cards = []          # R473：延迟发卡的挂单不跨局（一局结束就作废）
 	sacrament_node = -1         # R473：圣餐的「已结算房间」跟着一局走
+	rest_pick_node = -1         # R781：火堆配额同样不跨局
+	rest_pick_used = 0
 	used_levels = []
 	map_strokes = []              # R177：本局结束 → 标记随之清掉
 	map_flags = []

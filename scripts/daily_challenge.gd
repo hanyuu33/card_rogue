@@ -6,7 +6,7 @@ extends RefCounted
 ## 本模块只拥有「今天是什么局、今天是否已经开过、成绩是多少」三本账。
 ## Steam 上传由 DailyLeaderboard 负责；离线时本地成绩照常保存。
 
-const RULES_VERSION := 2
+const RULES_VERSION := 3
 ## ⚠️ 必须与 `DailyModifiers.RULES_VERSION` 保持一致 —— 两处一起加，别只改一边：
 ## 规则一改，同一天的局就该变，而旧成绩必须留在旧板上（榜名带 V 号）。
 const PATH := "user://daily_challenge.json"

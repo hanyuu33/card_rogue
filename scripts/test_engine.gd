@@ -73722,6 +73722,7 @@ func _init() -> void:
 	_test_r777b()
 	_test_r776()
 	_test_r767()
+	_test_r781()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -78075,3 +78076,102 @@ func _test_r776() -> void:
 	RunState.spent_relics = r776_sv_spent
 	RunState.run_active = r776_sv_active
 	RunState.player_class = r776_sv_class
+
+func _test_r781() -> void:
+	# R781 每日修饰四条改写：巧克力 ±2 / 温暖=火堆选两项 / 阴冷=火堆全换战斗 / 滞涩=抽卡−1。
+	# 改的是**修饰语义**，所以每条都按「fx 汇总 → 唯一取数口 → 实际效果」整链验一遍。
+	check(DailyChallenge.RULES_VERSION == 3 and DailyModifiers.RULES_VERSION == 3,
+			"R781 规则版本：修饰语义变了 → 两处一起升到 3（%d/%d）" % [
+					DailyChallenge.RULES_VERSION, DailyModifiers.RULES_VERSION])
+
+	var r781_rations := DailyModifiers.fx_of(["RATIONS"])
+	var r781_hungry := DailyModifiers.fx_of(["HUNGRY"])
+	check(absf(float(r781_rations.get("choco", 0.0)) - 2.0) < 0.0001
+			and absf(float(r781_hungry.get("choco", 0.0)) + 2.0) < 0.0001,
+			"R781 巧克力：旅粮 +2 / 饥饿 −2（实得 %s / %s）" % [
+					str(r781_rations.get("choco")), str(r781_hungry.get("choco"))])
+
+	var r781_drain := DailyModifiers.fx_of(["DRAINED"])
+	check(absf(float(r781_drain.get("draw", 0.0)) + 1.0) < 0.0001 and not r781_drain.has("energy"),
+			"R781 滞涩：改成每回合抽卡 −1，不再碰费用（fx=%s）" % str(r781_drain))
+
+	var r781_warm := DailyModifiers.fx_of(["WARM"])
+	var r781_cold := DailyModifiers.fx_of(["COLD"])
+	check(int(r781_warm.get("rest_pick", 0)) == 1
+			and bool(r781_cold.get("rest_to_battle", false)),
+			"R781 火堆两条：温暖 = 多选一份，阴冷 = 全换战斗（fx=%s / %s）" % [
+					str(r781_warm), str(r781_cold)])
+	# 布尔键必须走「或」，不能被加进 float 里 —— R781 把 `fatigue` 特例改成通用布尔分支的回归。
+	var r781_both := DailyModifiers.fx_of(["COLD", "COLD"])
+	check(bool(r781_both.get("rest_to_battle", false)),
+			"R781 布尔修饰：叠加两次仍是 true（不是被加成 2.0）")
+
+	# 抽卡取数口：基础 5、滞涩 4、下限 1。敌人侧仍读 `FieldState` 常量，不受影响。
+	var r781_sv_fx: Dictionary = RunState.daily_fx.duplicate(true)
+	RunState.daily_fx = {}
+	var r781_base_draw := RunState.hand_draw_per_turn()
+	RunState.daily_fx = {"draw": -1}
+	var r781_drain_draw := RunState.hand_draw_per_turn()
+	RunState.daily_fx = {"draw": -99}
+	var r781_floor := RunState.hand_draw_per_turn()
+	check(r781_base_draw == FieldState.HAND_DRAW_PER_TURN
+			and r781_drain_draw == r781_base_draw - 1 and r781_floor == 1,
+			"R781 抽卡：%d → %d（滞涩）→ 夹到 %d" % [
+					r781_base_draw, r781_drain_draw, r781_floor])
+
+	# 火堆配额：普通 1 份、温暖 2 份；记账按房间（层 + 节点）走，换一间就重新计数。
+	var r781_sv_layer := RunState.current_layer
+	var r781_sv_node := RunState.current_node_id
+	RunState.daily_fx = {}
+	RunState.rest_pick_node = -1
+	RunState.rest_pick_used = 0
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+	RunState.current_node_id = 7
+	var r781_q1 := RunState.rest_pick_quota()
+	var r781_first := RunState.rest_pick_mark()
+	RunState.daily_fx = {"rest_pick": 1}
+	var r781_q2 := RunState.rest_pick_quota()
+	var r781_second := RunState.rest_pick_mark()
+	var r781_left2 := RunState.rest_pick_quota() - RunState.rest_pick_used_here()
+	RunState.current_node_id = 8
+	var r781_other_room := RunState.rest_pick_used_here()
+	check(r781_q1 == 1 and r781_first == 1,
+			"R781 火堆配额：普通局一间只能选一份（quota=%d used=%d）" % [r781_q1, r781_first])
+	check(r781_q2 == 2 and r781_second == 2 and r781_left2 == 0,
+			"R781 火堆配额：温暖下一间能选两份（quota=%d used=%d）" % [r781_q2, r781_second])
+	check(r781_other_room == 0, "R781 火堆配额：换一间火堆重新计数（实得 %d）" % r781_other_room)
+	RunState.current_layer = r781_sv_layer
+	RunState.current_node_id = r781_sv_node
+	RunState.rest_pick_node = -1
+	RunState.rest_pick_used = 0
+
+	# 阴冷真的改地图：同一颗种子，普通局刷得出休息格，阴冷下一格都不剩。
+	var r781_map_rng := RandomNumberGenerator.new()
+	r781_map_rng.seed = 20261117
+	RunState.daily_fx = {}
+	var r781_map_normal := RogueMap.generate(r781_map_rng, GameLayers.LAYER_DEFAULT)
+	var r781_rest_normal := 0
+	for cell: Variant in r781_map_normal:
+		if str((cell as Dictionary).get("type", "")) == "rest":
+			r781_rest_normal += 1
+	var r781_map_rng2 := RandomNumberGenerator.new()
+	r781_map_rng2.seed = 20261117
+	RunState.daily_fx = {"rest_to_battle": true}
+	var r781_map_cold := RogueMap.generate(r781_map_rng2, GameLayers.LAYER_DEFAULT)
+	var r781_rest_cold := 0
+	for cell: Variant in r781_map_cold:
+		if str((cell as Dictionary).get("type", "")) == "rest":
+			r781_rest_cold += 1
+	check(r781_rest_normal > 0 and r781_rest_cold == 0,
+			"R781 阴冷：休息格全部换成战斗（普通 %d 间 → 阴冷 %d 间）" % [
+					r781_rest_normal, r781_rest_cold])
+	RunState.daily_fx = r781_sv_fx
+
+	# 源码守卫：火堆三条出口必须走同一个收尾口，别再各写一套「选完就收起」。
+	var r781_es := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	var r781_map_src := FileAccess.get_file_as_string("res://scripts/rogue_map.gd")
+	check_src(r781_es.contains("func _rest_after_pick(") and r781_es.contains("RunState.rest_pick_quota()")
+			and r781_es.contains("REST_WARM_NOTE") and r781_map_src.contains("RunState.rest_to_battle()"),
+			"R781 火堆：收尾统一走 _rest_after_pick；地图侧只读 RunState.rest_to_battle()")
+
+

@@ -736,7 +736,10 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 		elif i == mark_shop_i:
 			type = "shop"          # R693：开局随机标记的那一间（每层保底、可见）
 		elif rest_set.has(i):
-			type = "rest"
+			# R781「阴冷」：休息格整体换成战斗格。判据只走 `RunState.rest_to_battle()`
+			# 这一个取数口 —— 于是图标、进房结算、战绩统计天然是同一个「战斗」，
+			# 不会出现「图标是火堆、进去是战斗」的两套口径。
+			type = "battle" if RunState.rest_to_battle() else "rest"
 		elif shop_set.has(i):
 			type = "shop"
 		else:

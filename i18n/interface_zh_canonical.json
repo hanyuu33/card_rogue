@@ -178,7 +178,7 @@
       "scripts/shop_scene.gd": "3161f11e37d1c0ff2aa726c7072b8ae5763a47872908dd6e8aba8ef73f7fe9e8",
       "scripts/assemble_overlay.gd": "bdbe1a7e2338367a1f1b899859f2df843f2c2b62b3b85fe2be0e9fd36bb0afa9",
       "scripts/card_data.gd": "be36dbce66758566b6841505e50f2ee4f9b32ced5d5ff84ef48b6e0664f0b5cf",
-      "scripts/run_state.gd": "0101d902137585791e2153dcf55f1a5f7e0ac0b9b2d9a8327957bf84c2a7c767"
+      "scripts/run_state.gd": "e50ea22431dc25bb72673f2d786866c2cf8c2d6812cbbead6305c735f3896848"
     },
     "reward": {
       "scripts/reward_panel.gd": "dc2bd6893e3dde7e5c0be8483d283b56a448cb4ee927bb9b236311379ed9d486",
@@ -186,9 +186,9 @@
       "scripts/card_reward.gd": "c37251c64fbff151de0a677b52a1a447af6582380c98541b946117cd5a8f1b0f",
       "scripts/relic_pick_scene.gd": "9c8e28c5265287cbbb1d9fabd17b8dd0eda9db502c8d98f8eb9cb526592481af",
       "scripts/ui_card_grant.gd": "55d4a22f3e3086c98931e634ab79ae80eff843af6f6856b20cb1194b1559508c",
-      "scripts/run_state.gd": "0101d902137585791e2153dcf55f1a5f7e0ac0b9b2d9a8327957bf84c2a7c767",
+      "scripts/run_state.gd": "e50ea22431dc25bb72673f2d786866c2cf8c2d6812cbbead6305c735f3896848",
       "scripts/battle_scene.gd": "b9426e1c9f7a77afc4ef8f20bfb43f9fa33a112a6da24b8363fc76ce9808ea8c",
-      "scripts/event_scene.gd": "ed557759355e27bb5ce9afb7142961a48705c855004110209aab7fed203e4003"
+      "scripts/event_scene.gd": "038f8be23e85302cabf740150ae381a114b8d009ab50b2b2ce84e68ad3f07756"
     },
     "map": {
       "scripts/map_scene.gd": "b1af2bdb4b57075bee7f8d0a92da561c47c42dc9b670fa8b525fdccddd358060",
@@ -333,7 +333,7 @@
       },
       "MODDESC_RATIONS": {
         "source": "scripts/daily_modifiers.gd",
-        "zh": "每层巧克力 +3"
+        "zh": "每层巧克力 +2"
       },
       "MODDESC_LUCKY": {
         "source": "scripts/daily_modifiers.gd",
@@ -341,7 +341,7 @@
       },
       "MODDESC_WARM": {
         "source": "scripts/daily_modifiers.gd",
-        "zh": "休息回复 +15% 最大生命"
+        "zh": "火堆可以选两个选项"
       },
       "MODDESC_GIFTED": {
         "source": "scripts/daily_modifiers.gd",
@@ -373,7 +373,7 @@
       },
       "MODDESC_HUNGRY": {
         "source": "scripts/daily_modifiers.gd",
-        "zh": "每层巧克力 −3"
+        "zh": "每层巧克力 −2"
       },
       "MODDESC_UNLUCKY": {
         "source": "scripts/daily_modifiers.gd",
@@ -381,7 +381,7 @@
       },
       "MODDESC_COLD": {
         "source": "scripts/daily_modifiers.gd",
-        "zh": "休息回复 −15% 最大生命"
+        "zh": "火堆全部变为战斗"
       },
       "MODDESC_CURSED": {
         "source": "scripts/daily_modifiers.gd",
@@ -401,7 +401,7 @@
       },
       "MODDESC_DRAINED": {
         "source": "scripts/daily_modifiers.gd",
-        "zh": "每回合费用 −1"
+        "zh": "每回合抽卡 −1"
       },
       "DAILY_MODS": {
         "source": "scripts/daily_modifiers.gd",

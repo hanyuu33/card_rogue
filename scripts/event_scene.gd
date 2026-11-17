@@ -36,6 +36,12 @@ extends Control
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const WHISPER_ID := 6010
+## R781：火堆描述末句的两个「只能挑一样」写法 + 「温暖」修饰下的替代句。
+## `_rest_desc()` 用 `replace()` 换句而不是重新拼整段 —— 叙事底本按整串/逐行对源码校验，
+## 重新拼会让底本与三语译文整批失配。
+const REST_ONCE_NOTE := "（三样只能挑一样——选完这一处就到头了。）"
+const REST_ONCE_NOTE_SACRAMENT := "（剩下两样只能挑一样——选完这一处就到头了。）"
+const REST_WARM_NOTE := "（三样里可以挑两样——今天的火堆格外暖。）"
 const RICE_ID := 6012             # 一袋米抗几楼（鸭之凝视事件道具）
 const PEAR_ID := 6019             # 鸭梨（鸭梨山大事件道具）
 const APPLE_ID := 6027            # 苹果（R244「苹果与医生」事件道具；原奖励道具）
@@ -332,18 +338,27 @@ const CORE_TAKEN_DESC := """石台上只剩一圈浅浅的凹痕，核心已经�
 func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
 	## R307 圣餐（6038）：持有它时休息直接回满，文案要跟着改（不然按钮说回 5 实际回满）。
+	## R781「温暖」：整段**保持原文不动**（叙事底本校验是按整串 / 逐行对源码的），
+	## 只在最后把「只能挑一样」那句换成「可以挑两样」—— 换句而不是重新拼，
+	## 否则中文底本与三语译文会整批失配。
+	var text := ""
 	if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
 		# R473（用户口径）：圣餐改成「到达篝火处回复 50% 最大生命」，进房就结算掉了。
-		return """篝火旁摆着一份还没凉透的圣餐。
+		text = """篝火旁摆着一份还没凉透的圣餐。
 你在坐下之前就把它分掉了——到达篝火处回复 50% 最大生命（已结算）；
 也可以烤一块肉带在身上，战斗里点一下就能吃（占一个工具栏位）；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
 （剩下两样只能挑一样——选完这一处就到头了。）"""
-	return """前路的战斗还在等着你。
+	else:
+		text = """前路的战斗还在等着你。
 在篝火旁休息，恢复 %d%% 最大生命；
 也可以烤一块肉带在身上，战斗里点一下就能吃（占一个工具栏位）；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
 （三样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
+	if RunState.rest_extra_pick() > 0:
+		text = text.replace(REST_ONCE_NOTE, REST_WARM_NOTE)
+		text = text.replace(REST_ONCE_NOTE_SACRAMENT, REST_WARM_NOTE)
+	return text
 
 var _font: Font
 var sfx: Sfx
@@ -380,6 +395,10 @@ var _arcane_charm_taken := false  # 奥秘之泉：**本次访问**是否取走�
                               #   （≠「本来就戴着」—— 后者只是不重复给，不影响喝泉水，见 R71 / R147）
 var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」（选卡去了卡牌奖励界面）
 var _reward_claimed := false  # R147：本次事件访问是否已领过奖励（一次访问只领一份，见 _claim_reward）
+## R781「温暖」：本次访问的火堆**已经点过**哪几个选项（"rest" / "bbq" / "alt"）。
+## 只负责本轮重绘时置灰；「还能不能选」这件事一律问 `RunState.rest_pick_quota() - rest_pick_used_here()`，
+## 因为那个是按房间记账的，退出重进同一间也认账。
+var _rest_used: Dictionary = {}
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
 var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
 var _div_stage := 0           # R308 占卜室：0 = 还没占卜 / 1 = 已占卜待解读 / 2 = 已解读完
@@ -2517,13 +2536,17 @@ func _on_main() -> void:
 	# 只有真正的休息节点才走这里（_is_rest 精确判 pending_node.type == "rest"）；
 	# 未识别的事件类型仍然安全不动。
 	if _is_rest():
-		if _bbq_taken:
+		# R781：不再「点过一次就整处收起」—— 收尾交给 `_rest_after_pick()`，普通局它照样
+		# 立刻收起（剩余 0），「温暖」下才会把第二份留给玩家。
+		# ⚠️ 原先这里是 `if _bbq_taken: return`（烤肉过就不能休息）。温暖下「烤肉 + 休息」
+		# 正是最常见的一组，所以闸门改成只看**剩余配额**，不再看烤肉。
+		if _rest_pick_left() <= 0:
 			return
 		var gain := RunState.rest()
 		# R246 附魔大师（6034）：休息的同一次里随机给一张卡附一个合规附魔。
 		# 结算排在回血之后（回血先落，再谈附魔），结果写进同一行提示。
 		var em := RunState.enchant_master_on_rest()
-		_collapse_to_leave()
+		_rest_after_pick(rest_btn, "rest")
 		var em_txt := ""
 		if bool(em.get("ok", false)):
 			em_txt = "；附魔大师给「%s」附上了「%s」" % [
@@ -2893,19 +2916,28 @@ func _refresh() -> void:
 		return
 	_refresh_bbq()
 	# R178：休息处办完（烤肉）→ 也只留一个「离开」，结果行照写（收起按钮不影响它）。
+	# R781：「温暖」下还剩一份时不收起 —— 只把「烤肉」锁掉，其余选项留给玩家。
 	if _bbq_taken:
+		result_label.text = "「烤肉」已收进工具栏——战斗里轻点它就能吃，回复 25% 最大生命。"
+		result_label.add_theme_color_override("font_color", Color("d89a2e"))
+		if _rest_pick_left() > 0:
+			_apply_rest_lock()
+			leave_btn.visible = true
+			leave_btn.text = "离开（剩下的不要了）"
+			leave_btn.disabled = false
+			_redraw()
+			return
 		bbq_btn.visible = false
 		rest_btn.visible = false
 		leave_btn.visible = true
 		leave_btn.text = "离开"
 		leave_btn.disabled = false
 		_reward_claimed = true
-		result_label.text = "「烤肉」已收进工具栏——战斗里轻点它就能吃，回复 25% 最大生命。"
-		result_label.add_theme_color_override("font_color", Color("d89a2e"))
 		_redraw()
 		return
 	leave_btn.text = "离开（不烤肉）"
 	result_label.text = ""
+	_apply_rest_lock()
 
 
 func _refresh_bbq() -> void:
@@ -2986,15 +3018,54 @@ func _resolve_divination(first: bool) -> void:
 	_redraw()
 
 
+func _rest_pick_left() -> int:
+	## R781：这一间火堆**还剩几份**可选。普通局 = 1（三选一），「温暖」修饰下 = 2。
+	return maxi(0, RunState.rest_pick_quota() - RunState.rest_pick_used_here())
+
+
+func _apply_rest_lock() -> void:
+	## R781：把本次已经点过的火堆选项置灰。`_refresh*` 每次都会重铺文案与 disabled，
+	## 所以只要还在同一间火堆，每次重绘末尾都得再套一遍。
+	if _rest_used.has("rest") and rest_btn != null:
+		rest_btn.disabled = true
+	if _rest_used.has("bbq") and bbq_btn != null:
+		bbq_btn.disabled = true
+	if _rest_used.has("alt") and alt_btn != null:
+		alt_btn.disabled = true
+
+
+func _rest_after_pick(used_btn: Button, key: String) -> void:
+	## R781：火堆三个选项（休息 / 烤肉 / 添加柴火）的**唯一收尾口**。
+	## 还有剩余份数 → 只锁掉刚点过的那个，其余留给玩家（「温暖」）；
+	## 份数用尽 → 沿用 R178 的「办完只留一个离开」。
+	_rest_used[key] = true
+	var used := RunState.rest_pick_mark()
+	if used >= RunState.rest_pick_quota():
+		_claim_reward(used_btn)
+		_collapse_to_leave()
+		return
+	if used_btn != null:
+		used_btn.disabled = true
+	leave_btn.visible = true
+	leave_btn.disabled = false
+	leave_btn.text = "离开（剩下的不要了）"
+	_apply_rest_lock()
+	_redraw()
+
+
 func _claim_rest_firewood() -> void:
 	## R390 休息处 ·「添加柴火」：从卡组删除一张卡（三选一里的一支）。
 	## 选卡 UI 与遗忘之泉共用 `deck_edit.tscn`（`pending_deck_edit = "delete"`），
-	## 不新造一套；节点在这里就算走完 —— 回地图后不会再被送回同一个休息处。
+	## 不新造一套。
 	## ⚠️ 不在这里调 `_collapse_to_leave()`：马上跳场景了，它只会白闪一帧。
+	## R781：这一支要跳场景（`deck_edit` 选完只会回地图），所以**还剩配额时不完成节点** ——
+	## 从地图再进这间火堆，第二份还在；配额用尽才照旧把节点收掉。
 	if _reward_claimed or RunState.deck_ids.is_empty():
 		return
+	var used := RunState.rest_pick_mark()
 	_claim_reward(alt_btn)
-	RunState.complete_current()
+	if used >= RunState.rest_pick_quota():
+		RunState.complete_current()
 	RunState.pending_deck_edit = "delete"
 	SceneFx.goto("res://scenes/deck_edit.tscn")
 
@@ -3199,7 +3270,8 @@ func _on_bbq() -> void:
 		_redraw()
 		return
 	_bbq_taken = true
-	_claim_reward(bbq_btn)
+	# R781：收尾统一走火堆的唯一口 —— 普通局立刻收起；「温暖」下只锁「烤肉」，留第二份。
+	_rest_after_pick(bbq_btn, "bbq")
 	_refresh()
 	_redraw()
 

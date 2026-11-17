@@ -15,7 +15,7 @@ extends RefCounted
 ##   * **池子顺序即抽取顺序**（用 Fisher-Yates 打乱后取前 N）—— 往池子里加条目会改变
 ##     历史日期的结果；真要加，同时把 `RULES_VERSION` 加一，让旧榜留在旧规则下。
 
-const RULES_VERSION := 2
+const RULES_VERSION := 3
 const BUFF_COUNT := 2
 const DEBUFF_COUNT := 2
 
@@ -27,20 +27,22 @@ const FENCE_ID := 8001
 const ATTACK_ID := 8002
 
 ## 修饰池。`fx` 的键就是 `RunState` 取数口的字段名：
-##   gold / choco / rest / tools / deck_extra / deck_curse / enemy_hp / enemy_power / energy
-##   （相加）· hp_mul / rare_mul / elite_mul（相乘）· fatigue（布尔）
+##   gold / choco / tools / deck_extra / deck_curse / enemy_hp / enemy_power / energy / draw / rest_pick
+##   （相加）· hp_mul / rare_mul / elite_mul（相乘）· rest_to_battle / fatigue（布尔「或」）
+## ⚠️ `rest`（休息回复百分比）这个键**仍然被 `RunState.rest_pct()` 读**，但 R781 起没有任何
+##    修饰产出它 —— 留着是给「将来要再加一条回血修饰」的地方，别顺手删掉取数口。
 const POOL: Array = [
 	# ---- 增益 ----
 	{"key": "RICH", "kind": "buff", "zh": "富裕", "desc_zh": "初始金币 +80",
 		"fx": {"gold": 80}},
 	{"key": "STURDY", "kind": "buff", "zh": "强健", "desc_zh": "最大生命 +15%",
 		"fx": {"hp_mul": 1.15}},
-	{"key": "RATIONS", "kind": "buff", "zh": "旅粮", "desc_zh": "每层巧克力 +3",
-		"fx": {"choco": 3}},
+	{"key": "RATIONS", "kind": "buff", "zh": "旅粮", "desc_zh": "每层巧克力 +2",
+		"fx": {"choco": 2}},
 	{"key": "LUCKY", "kind": "buff", "zh": "幸运", "desc_zh": "稀有卡获取概率 ×1.6",
 		"fx": {"rare_mul": 1.6}},
-	{"key": "WARM", "kind": "buff", "zh": "温暖", "desc_zh": "休息回复 +15% 最大生命",
-		"fx": {"rest": 0.15}},
+	{"key": "WARM", "kind": "buff", "zh": "温暖", "desc_zh": "火堆可以选两个选项",
+		"fx": {"rest_pick": 1}},
 	{"key": "GIFTED", "kind": "buff", "zh": "工具箱", "desc_zh": "开局多一件工具",
 		"fx": {"tools": 1}},
 	{"key": "MIXED", "kind": "buff", "zh": "杂牌", "desc_zh": "卡组多 3 张随机卡",
@@ -57,12 +59,12 @@ const POOL: Array = [
 		"fx": {"gold": -50}},
 	{"key": "ANEMIC", "kind": "debuff", "zh": "贫血", "desc_zh": "最大生命 −12%",
 		"fx": {"hp_mul": 0.88}},
-	{"key": "HUNGRY", "kind": "debuff", "zh": "饥饿", "desc_zh": "每层巧克力 −3",
-		"fx": {"choco": -3}},
+	{"key": "HUNGRY", "kind": "debuff", "zh": "饥饿", "desc_zh": "每层巧克力 −2",
+		"fx": {"choco": -2}},
 	{"key": "UNLUCKY", "kind": "debuff", "zh": "倒霉", "desc_zh": "稀有卡获取概率 ×0.5",
 		"fx": {"rare_mul": 0.5}},
-	{"key": "COLD", "kind": "debuff", "zh": "阴冷", "desc_zh": "休息回复 −15% 最大生命",
-		"fx": {"rest": -0.15}},
+	{"key": "COLD", "kind": "debuff", "zh": "阴冷", "desc_zh": "火堆全部变为战斗",
+		"fx": {"rest_to_battle": true}},
 	{"key": "CURSED", "kind": "debuff", "zh": "诅咒", "desc_zh": "卡组塞 2 张木栅栏",
 		"fx": {"deck_curse": 2}},
 	{"key": "TOUGH_FOE", "kind": "debuff", "zh": "敌之顽强", "desc_zh": "敌人生命 +20%",
@@ -71,8 +73,8 @@ const POOL: Array = [
 		"fx": {"enemy_power": 1}},
 	{"key": "CROWDED", "kind": "debuff", "zh": "拥挤", "desc_zh": "精英出现概率 ×1.5",
 		"fx": {"elite_mul": 1.5}},
-	{"key": "DRAINED", "kind": "debuff", "zh": "滞涩", "desc_zh": "每回合费用 −1",
-		"fx": {"energy": -1}},
+	{"key": "DRAINED", "kind": "debuff", "zh": "滞涩", "desc_zh": "每回合抽卡 −1",
+		"fx": {"draw": -1}},
 ]
 
 
@@ -148,7 +150,9 @@ static func _shuffle(arr: Array[String], rng: RandomNumberGenerator) -> void:
 
 
 static func fx_of(keys: Array) -> Dictionary:
-	## 把若干修饰条目合并成一份「效果汇总」。`_mul` 后缀相乘，其余相加（疲劳取或）。
+	## 把若干修饰条目合并成一份「效果汇总」。`_mul` 后缀相乘，布尔取「或」，其余相加。
+	## R781：布尔分支做成通用判断（原先只认 `fatigue` 一个特例）—— 「阴冷」的
+	## `rest_to_battle` 也是开关型，再写一个 key 特例只会让第三条布尔修饰继续漏。
 	var out: Dictionary = {}
 	for k: Variant in keys:
 		var e := entry(str(k))
@@ -157,13 +161,14 @@ static func fx_of(keys: Array) -> Dictionary:
 		var fx: Dictionary = e.get("fx", {})
 		for fk: Variant in fx.keys():
 			var name := str(fk)
-			if name == "fatigue":
-				out["fatigue"] = true
+			var raw: Variant = fx[fk]
+			if raw is bool:
+				out[name] = bool(out.get(name, false)) or bool(raw)
 				continue
 			if name.ends_with("_mul"):
-				out[name] = float(out.get(name, 1.0)) * float(fx[fk])
+				out[name] = float(out.get(name, 1.0)) * float(raw)
 			else:
-				out[name] = float(out.get(name, 0.0)) + float(fx[fk])
+				out[name] = float(out.get(name, 0.0)) + float(raw)
 	return out
 
 
