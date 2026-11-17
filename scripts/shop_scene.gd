@@ -4,8 +4,8 @@ extends Control
 ## 第一行：随机本职业奖励卡（数量自适应货架宽，约 3~6 张，走 Boss 档概率 35/45/20）。
 ## 第二行：3 个随机附魔（从 4 种里抽 3 种不重复）：
 ##   * 费用 -1（只可费用 > 1 且非 X 费卡）价 50
-##   * 伤害 +10（**只可「能直接造成伤害」的技能卡**，R210 限技能卡 / R226 再收紧；
-##     技能卡造成的伤害 +10）价 60
+##   * 伤害 +8（**只可「能直接造成伤害」的技能卡**，R210 限技能卡 / R226 再收紧；
+##     技能卡造成的伤害 +8）价 60
 ##   * 次元之力（赋字段「次元」；盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 80（R210：50 → 80）
 ##   * 保存（回合结束手牌不丢弃，做成字段）价 60
 ## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 80（R295：120 → 80）。
@@ -73,7 +73,7 @@ const ENCHANTS := [
 	# smoke 会逐条比对两处文案，分叉立刻红（R240）。
 	{"id": "costdown", "name": "费用 -1", "desc": "一次性降低 1 点费用，之后一直保持（只能选费用 > 1 且非 X 费的卡）",
 		"price": 50, "icon": "shop_icon_costdown"},
-	{"id": "damage", "name": "伤害 +10", "desc": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）",
+	{"id": "damage", "name": "伤害 +8", "desc": "这张技能卡造成的伤害 +8（只能选能直接造成伤害的技能卡）",
 		"price": 60, "icon": "shop_icon_damage"},
 	{"id": "dimension", "name": "次元之力", "desc": "赋字段「次元」+2力+10血，离场消失",
 		"price": 80, "icon": "shop_icon_dimension"},
@@ -236,7 +236,7 @@ func _ready() -> void:
 		var pos_i := maxi(en, en2)
 		var cand := int(args[pos_i + 1]) if pos_i + 1 < args.size() else 0
 		var commit := en2 >= 0
-		# R210：`--enchid <id>` 指定第二行第一件换成哪张附魔（截图核对「伤害 +10 只能选技能卡」）。
+		# R210：`--enchid <id>` 指定第二行第一件换成哪张附魔（截图核对「伤害 +8 只能选技能卡」）。
 		var ench_id := "save"
 		var eid := args.find("--enchid")
 		if eid >= 0 and eid + 1 < args.size():
@@ -1705,7 +1705,7 @@ func _ench_name(e: Dictionary) -> String:
 func _demo_enchant(cand: int, commit: bool, ench_id := "save") -> void:
 	## R204 演示/回归：把第二行第一件商品换成指定附魔（默认「保存」，任何卡都能吃）→
 	## 打开选卡页 → 按**真实点击路径**点第 cand 张；commit=true 时再点一次同一张（应当成交）。
-	## R210：`ench_id` 可传 "damage" 出「伤害 +10 只能选技能卡」的对比图。
+	## R210：`ench_id` 可传 "damage" 出「伤害 +8 只能选技能卡」的对比图。
 	var save_ench: Dictionary = {}
 	for e: Dictionary in ENCHANTS:
 		if str(e["id"]) == ench_id:

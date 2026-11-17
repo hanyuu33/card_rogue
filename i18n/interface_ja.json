@@ -4,8 +4,8 @@
     "shop": {
       "SHOP_ENCHANT_COSTDOWN_NAME": "コスト-1",
       "SHOP_ENCHANT_COSTDOWN_DESC": "コストを1だけ永続的に下げる（選択できるのはコスト > 1かつXコストでないカードのみ）",
-      "SHOP_ENCHANT_DAMAGE_NAME": "ダメージ+10",
-      "SHOP_ENCHANT_DAMAGE_DESC": "このスキルカードが与えるダメージ+10（直接ダメージを与えられるスキルカードのみ選択可能）",
+      "SHOP_ENCHANT_DAMAGE_NAME": "ダメージ+8",
+      "SHOP_ENCHANT_DAMAGE_DESC": "このスキルカードが与えるダメージ+8（直接ダメージを与えられるスキルカードのみ選択可能）",
       "SHOP_ENCHANT_DIMENSION_NAME": "次元の力",
       "SHOP_ENCHANT_DIMENSION_DESC": "キーワード「次元」を付与：攻撃力+2、HP+10。離場時に消滅。",
       "SHOP_ENCHANT_SAVE_NAME": "保存",

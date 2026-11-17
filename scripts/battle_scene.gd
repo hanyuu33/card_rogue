@@ -1421,9 +1421,9 @@ func _ready() -> void:
 			seed(0x214)
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.ensure_deck_mods()
-		# ⚠️ 按**商店的合法条件**挑卡（不然出图里会出现「工事带伤害 +10」这种玩家
+		# ⚠️ 按**商店的合法条件**挑卡（不然出图里会出现「工事带伤害 +8」这种玩家
 		#    永远做不到的状态，图就没法用来验收）：费用 -1 要 cost>1 且非 X 费 /
-		#    伤害 +10 只给技能卡 / 次元之力只给盟友·工事 / 保存任意。一张卡只吃一个附魔。
+		#    伤害 +8 只给技能卡 / 次元之力只给盟友·工事 / 保存任意。一张卡只吃一个附魔。
 		var em_ids := ["costdown", "damage", "dimension", "save"]
 		var em_used := {}
 		var em_repo := CardRepo.load_json()
@@ -2291,7 +2291,7 @@ func _ready() -> void:
 			bt1.upgrade_stacks = 2
 		engine.state.hand.append(CardData.from_dict(repo.get_card(9162).to_dict()))
 		var fx: CardData = CardData.from_dict(repo.get_card(9003).to_dict())
-		fx.power = 10     # 附魔「伤害 +10」烤进 power
+		fx.power = 8      # 附魔「伤害 +8」烤进 power
 		engine.state.hand.append(fx)
 		var bidx := 0
 		for bi in args.size():
@@ -3509,7 +3509,7 @@ func _ready() -> void:
 			RunState.ensure_deck_mods()
 			for di in RunState.deck_ids.size():
 				if RunState.deck_ids[di] == 8002:
-					RunState.enchant_deck_card(di, {"power": 10})
+					RunState.enchant_deck_card(di, {"power": 8})
 					break
 		_close_zone_panels()
 		_run_deck_visible = true

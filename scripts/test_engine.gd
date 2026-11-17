@@ -19253,11 +19253,11 @@ func _init() -> void:
 
 	var r259_ench := CardData.from_dict(rg_raid.to_dict())
 
-	r259_ench.power = 10   # 附魔「伤害 +10」烤进 power
+	r259_ench.power = 8    # 附魔「伤害 +8」烤进 power
 
-	check(int(r259.spell_now(r259_ench).get("dmg", -1)) == 15,
+	check(int(r259.spell_now(r259_ench).get("dmg", -1)) == 13,
 
-			"R262 终结：附魔 +10 也算进预览（5+10=15）")
+			"R262 终结：附魔 +8 也算进预览（5+8=13）")
 
 	r259.state.hand.clear()
 
@@ -20566,7 +20566,7 @@ func _init() -> void:
 
 			and not RunState.enchant_ok("damage", r224_okrepo.get_card(8003), 9999),
 
-			"R224：enchant_ok —— 伤害 +10 只给技能卡（盟友被拒）")
+			"R224：enchant_ok —— 伤害 +8 只给技能卡（盟友被拒）")
 
 	# R226：再收紧 —— 只给**能直接造成伤害**的技能卡（治疗 / 抽牌 / 加 buff / 防御类被拒）
 
@@ -20594,7 +20594,7 @@ func _init() -> void:
 
 	check(r226_bad_ok,
 
-			"R226：伤害 +10 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
+			"R226：伤害 +8 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
 
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
 
@@ -20634,7 +20634,7 @@ func _init() -> void:
 
 			and RunState.enchant_ok("damage", r224_okrepo.get_card(8002), 9999),
 
-			"R226：伤害 +10 仍给流星雨（随机目标伤害）与「攻击」8002（基础攻击是技能卡）")
+			"R226：伤害 +8 仍给流星雨（随机目标伤害）与「攻击」8002（基础攻击是技能卡）")
 
 	check(not RunState.enchant_ok("costdown", r224_okrepo.get_card(8002), 9999)
 
@@ -38427,7 +38427,7 @@ func _init() -> void:
 
 
 
-	# ---- R210：伤害 +10 附魔只给技能卡 / 无限装甲只认「场上被改造」/ 交付后货物移除 ----
+	# ---- R210：伤害 +8 附魔只给技能卡 / 无限装甲只认「场上被改造」/ 交付后货物移除 ----
 
 	var r210_repo := CardRepo.load_json()
 
@@ -38437,7 +38437,7 @@ func _init() -> void:
 
 	var r210_spell_up := CardData.from_dict(r210_spell.to_dict())
 
-	r210_spell_up.power += 10                             # 模拟商店附魔烤进 power
+	r210_spell_up.power += 8                              # 模拟商店附魔烤进 power
 
 	var r210_e0 := _new_engine([], 30, 30, -1, false)
 
@@ -38447,9 +38447,9 @@ func _init() -> void:
 
 		"R210 附魔：技能卡的 power 恒为 0（火焰箭 %d）" % r210_spell.power)
 
-	check(r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up) == 27,
+	check(r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up) == 25,
 
-		"R210 附魔：被「伤害 +10」附魔的技能卡 → 同一张卡 17 伤变 %d"
+		"R210 附魔：被「伤害 +8」附魔的技能卡 → 同一张卡 17 伤变 %d"
 
 			% r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up))
 
@@ -38475,11 +38475,11 @@ func _init() -> void:
 
 	RunState.deck_ids = r210_fix.duplicate()
 
-	RunState.deck_mods = [{"power": 10}, {}]
+	RunState.deck_mods = [{"power": 8}, {}]
 
 	var r210_built: Array[CardData] = RunState.build_deck(r210_repo)
 
-	check(r210_built.size() == 2 and r210_built[0].power == 10
+	check(r210_built.size() == 2 and r210_built[0].power == 8
 
 			and r210_built[1].power == r210_ally.power and r210_spell.power == 0,
 
@@ -38489,11 +38489,11 @@ func _init() -> void:
 
 	var r210_noted := CardData.from_dict(r210_spell.to_dict())
 
-	RunState._apply_mod(r210_noted, {"power": 10, "note": "伤害 +10"})
+	RunState._apply_mod(r210_noted, {"power": 8, "note": "伤害 +8"})
 
-	check("【附魔】伤害 +10" in r210_noted.effect_text,
+	check("【附魔】伤害 +8" in r210_noted.effect_text,
 
-		"R210 附魔：技能卡的卡面文字补上「【附魔】伤害 +10」（%s）"
+		"R210 附魔：技能卡的卡面文字补上「【附魔】伤害 +8」（%s）"
 
 			% r210_noted.effect_text.replace("\n", " / "))
 
@@ -38684,6 +38684,17 @@ func _init() -> void:
 	check(RunState.enchant_mod("nope").is_empty(),
 
 		"R214 附魔：未知 id → 空 mod（不会凭空造出一张附魔卡）")
+
+	# R787：附魔「伤害 +8」的**数值真源**只有 `enchant_mod()` 一处 ——
+	# 标签（卡面 / 商店 / 左栏都读它）里的数字必须与它逐个对上，
+	# 否则玩家会看到「卡面写 +8、实际打 +10」这种最难查的漂移。
+	var r787_mod: Dictionary = RunState.enchant_mod("damage")
+	var r787_label := str(CardData.ENCHANT_DEFS.get("damage", {}).get("label", ""))
+	check(int(r787_mod.get("power", 0)) == 8
+			and r787_label.ends_with("+8")
+			and str(r787_mod.get("note", "")).ends_with("+8"),
+		"R787 附魔：伤害 +8 的数值与标签同源（power %d / 标签「%s」/ note「%s」）"
+			% [int(r787_mod.get("power", 0)), r787_label, str(r787_mod.get("note", ""))])
 
 	# ② build_deck 把种类写进卡（数值照旧烤）
 
@@ -38881,6 +38892,8 @@ func _init() -> void:
 
 			and RunState.enchant_id_of({"affix": "保存"}) == "save"
 
+			# ⚠️ 这里**故意**写 R787 之前的 +10：反推只认「有没有增量」，
+			#    不认具体数值，老存档必须仍然认成 damage。
 			and RunState.enchant_id_of({"power": 10, "note": "伤害 +10"}) == "damage"
 
 			and RunState.enchant_id_of({}) == "",
@@ -40082,7 +40095,7 @@ func _init() -> void:
 
 	check(r306_fs != null and r306_fs.cost == 2 and r306_fs.is_damage_spell(),
 
-			"R306 烈火之剑：2 费技能，且被 is_damage_spell 认成伤害技能（可吃「伤害 +10」附魔）")
+			"R306 烈火之剑：2 费技能，且被 is_damage_spell 认成伤害技能（可吃「伤害 +8」附魔）")
 
 	# 烈火之剑：每列只打**最靠前**的一只（同列后排不掉血）
 
@@ -53418,7 +53431,7 @@ func _init() -> void:
 
 	check(r316_laser.is_damage_spell() and not r316_rapid.is_damage_spell(),
 
-			"R316：激光扫射能直接造成伤害（吃「伤害 +10」附魔），极速不能")
+			"R316：激光扫射能直接造成伤害（吃「伤害 +8」附魔），极速不能")
 
 
 
@@ -53500,7 +53513,7 @@ func _init() -> void:
 
 	r316_e.state.energy = 20
 
-	# ⚠️ 技能卡的 `power` 会被 `_spell_dmg` 并进伤害（附魔「伤害 +10」走这条路）——
+	# ⚠️ 技能卡的 `power` 会被 `_spell_dmg` 并进伤害（附魔「伤害 +8」走这条路）——
 
 	#    假卡必须写 power=0，否则 4 点会变成 8 点，断言看起来像「易伤加了 6」。
 
@@ -53652,7 +53665,7 @@ func _init() -> void:
 
 	check(not r317_reflex.is_damage_spell() and not r317_elim.is_damage_spell(),
 
-			"R317：两张都不直接造成伤害（不吃「伤害 +10」附魔）")
+			"R317：两张都不直接造成伤害（不吃「伤害 +8」附魔）")
 
 
 
@@ -56629,11 +56642,11 @@ func _init() -> void:
 
 			"R348 固定卡：火焰箭没加成 → 不画（卡面已写 17）")
 
-	r348_fx_card.power = 10      # 附魔「伤害 +10」烤进 power
+	r348_fx_card.power = 8       # 附魔「伤害 +8」烤进 power
 
-	check(int(r348_fx.spell_now(r348_fx_card).get("dmg", -1)) == 27,
+	check(int(r348_fx.spell_now(r348_fx_card).get("dmg", -1)) == 25,
 
-			"R348 固定卡：附魔 +10 → 预览 27 伤")
+			"R348 固定卡：附魔 +8 → 预览 25 伤")
 
 	# ---- ⑧ 只要报数就必须有 note（界面第二行小字）----
 
@@ -56797,13 +56810,13 @@ func _init() -> void:
 
 	var r349_fx_card := _card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0)
 
-	r349_fx_card.power = 10
+	r349_fx_card.power = 8
 
 	var r349_fn := r349_fx.spell_now(r349_fx_card)
 
-	check(int(r349_fn.get("base", -1)) == 17 and str(r349_fn.get("expr", "")) == "17＋10",
+	check(int(r349_fn.get("base", -1)) == 17 and str(r349_fn.get("expr", "")) == "17＋8",
 
-			"R349 引擎：火焰箭附魔 → base=17 / expr=17＋10")
+			"R349 引擎：火焰箭附魔 → base=17 / expr=17＋8")
 
 	# ---- ⑥ 源码守卫：左栏不再画「现在打出」那一行；每处文字都不描边 ----
 
@@ -62169,7 +62182,7 @@ func _init() -> void:
 
 
 
-	# ---- ③ 火墙术：单位上限跟着纸面伤害走（R510 后附魔 +10 → 即时 24 / 经过 17 / 上限 24）----
+	# ---- ③ 火墙术：单位上限跟着纸面伤害走（R787 后附魔 +8 → 即时 22 / 经过 15 / 上限 22）----
 
 	var r387_fw := _new_engine([], 30, 30, -1, false)
 
@@ -62193,7 +62206,7 @@ func _init() -> void:
 
 	var r387_spell := CardData.from_dict(repo.get_card(9084).to_dict())
 
-	r387_spell.power = 10   # 商店附魔「技能伤害 +10」：纸面 14 → 24
+	r387_spell.power = 8    # 商店附魔「技能伤害 +8」：纸面 14 → 22
 
 	r387_fw.state.hand = [r387_spell]
 
@@ -62201,9 +62214,9 @@ func _init() -> void:
 
 	r387_fw.use_spell(0, Vector2i(1, 2))
 
-	check(r387_tank.health == r387_tank_hp - 24,
+	check(r387_tank.health == r387_tank_hp - 22,
 
-			"R387 火墙术：附魔 +10 → 即时 24（%d→%d）" % [r387_tank_hp, r387_tank.health])
+			"R387 火墙术：附魔 +8 → 即时 22（%d→%d）" % [r387_tank_hp, r387_tank.health])
 
 	check(r387_walk.health == r387_walk_hp,
 
@@ -62215,9 +62228,9 @@ func _init() -> void:
 
 	r387_fw.move(Vector2i(2, 0), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r387_walk.health == r387_walk_hp - 17,
+	check(r387_walk.health == r387_walk_hp - 15,
 
-			"R387 火墙术：附魔 +10 → 经过灼烧 17（%d→%d）" % [r387_walk_hp, r387_walk.health])
+			"R387 火墙术：附魔 +8 → 经过灼烧 15（%d→%d）" % [r387_walk_hp, r387_walk.health])
 
 	r387_walk.moved = false
 
@@ -62231,9 +62244,9 @@ func _init() -> void:
 
 	r387_fw.move(Vector2i(2, 1), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r387_walk.health == r387_walk_hp - 24,
+	check(r387_walk.health == r387_walk_hp - 22,
 
-			"R387 火墙术：上限 24（14+10）→ 第二次只补 7，合计 -%d（旧版会卡在 14）"
+			"R387 火墙术：上限 22（14+8）→ 第二次只补 7，合计 -%d（旧版会卡在 14）"
 
 			% [r387_walk_hp - r387_walk.health])
 
@@ -65192,7 +65205,7 @@ func _init() -> void:
 
 	check(r406_c != null and r406_c.is_damage_spell(),
 
-			"R406 独行：算伤害技能（吃「伤害 +10」附魔资格 —— 文案含「造成」「伤害」）")
+			"R406 独行：算伤害技能（吃「伤害 +8」附魔资格 —— 文案含「造成」「伤害」）")
 
 
 
@@ -65322,11 +65335,11 @@ func _init() -> void:
 
 			"R406 预览：独行不报「现在打出」的数字（用户口径：有随机性不展示最终伤害）")
 
-	r406_lone.power = 10      # 附魔「伤害 +10」烤进 power（确定加成）
+	r406_lone.power = 8       # 附魔「伤害 +8」烤进 power（确定加成）
 
 	check(r406_e.spell_now(r406_lone).is_empty(),
 
-			"R406 预览：哪怕有确定加成（附魔 +10）也不报数 —— 报了就会被当成总伤害")
+			"R406 预览：哪怕有确定加成（附魔 +8）也不报数 —— 报了就会被当成总伤害")
 
 	r406_lone.power = 0
 
@@ -66796,7 +66809,7 @@ func _init() -> void:
 
 			"R458 资格：已经附过魔的卡不能再吃第二个附魔")
 
-	# 数值真的进伤害结算（`_spell_dmg` 是「伤害 +10」与契约核心共用的消费点）
+	# 数值真的进伤害结算（`_spell_dmg` 是「伤害 +8」与契约核心共用的消费点）
 
 	var r458_dmg_e := _new_engine([], 20, 20)
 
@@ -72874,7 +72887,7 @@ func _init() -> void:
 
 	var r580_fb := CardData.from_dict(r580_df.to_dict())
 
-	r580_fb.power = 10   # 商店附魔「伤害 +10」烤进技能卡的 power（R210 口径）
+	r580_fb.power = 8    # 商店附魔「伤害 +8」烤进技能卡的 power（R210 口径）
 
 	var r580_fret := r580_fe._dark_fusion_spell(GameEngine.SIDE_SELF, r580_fb)
 
@@ -72908,9 +72921,9 @@ func _init() -> void:
 
 				"R580 黑暗嵌合：组合产物获得「保存」")
 
-		check(r580_foe.health == r580_hp0 - r580_prev.power - 10,
+		check(r580_foe.health == r580_hp0 - r580_prev.power - 8,
 
-				"R580 黑暗嵌合：对所有敌人造成产物力量值 %d + 附魔 10 点伤害" % r580_prev.power)
+				"R580 黑暗嵌合：对所有敌人造成产物力量值 %d + 附魔 8 点伤害" % r580_prev.power)
 
 		check(r580_df.is_damage_spell(),
 
@@ -75496,7 +75509,7 @@ func _test_r592b() -> void:
 
 			"R638：带「保存」附魔的复制品回合结束照旧消失（衍生物优先于留手）")
 
-	# ④ 复制术 9165：复制场上带「伤害 +10」附魔的盟友 → 复制品回到原攻击力
+	# ④ 复制术 9165：复制场上带「伤害 +8」附魔的盟友 → 复制品回到原攻击力
 
 	var r621_dup_e := _new_engine([], 20, 20)
 
@@ -75506,11 +75519,11 @@ func _test_r592b() -> void:
 
 	var r621_base_power := r621_dp.power
 
-	r621_dp.power += 10
+	r621_dp.power += 8
 
 	r621_dp.enchant = "damage"
 
-	r621_dp.effect_text += "\n【附魔】伤害 +10"
+	r621_dp.effect_text += "\n【附魔】伤害 +8"
 
 	r621_dup_e.state.place(r621_dp, Vector2i(4, 1), GameEngine.SIDE_SELF)
 
@@ -75589,8 +75602,8 @@ func _test_r592b() -> void:
 	var r633_res := RunState.duplicate_deck_cards(r621_repo, [0])
 	check(r633_res["ok"] and RunState.deck_ids.size() == r633_before + 1
 			and RunState.enchant_id_of(RunState.deck_mods[3]) == "damage"
-			and int((RunState.deck_mods[3] as Dictionary).get("power", 0)) == 10,
-			"R636 鸭血：复制品完整继承附魔（damage → 副本也 +10 攻）")
+			and int((RunState.deck_mods[3] as Dictionary).get("power", 0)) == 8,
+			"R636 鸭血：复制品完整继承附魔（damage → 副本也 +8 攻）")
 	# ② 卡组实例化后，原卡与副本的附魔数值 / 标记必须一致（展示层同一个口）
 	var r633_a: CardData = RunState.card_with_mod(r621_repo, 0)
 	var r633_b: CardData = RunState.card_with_mod(r621_repo, 3)
@@ -75600,9 +75613,9 @@ func _test_r592b() -> void:
 			"R636 鸭血：原卡与副本的附魔数值 / 标记一致")
 	# ③ deep 拷贝：改副本的 mod 不许污染原卡
 	(RunState.deck_mods[3] as Dictionary)["power"] = 99
-	check(int((RunState.deck_mods[0] as Dictionary).get("power", 0)) == 10,
+	check(int((RunState.deck_mods[0] as Dictionary).get("power", 0)) == 8,
 			"R636 鸭血：副本附魔是 deep 拷贝（改副本不污染原卡）")
-	(RunState.deck_mods[3] as Dictionary)["power"] = 10
+	(RunState.deck_mods[3] as Dictionary)["power"] = 8
 	# ④ deck_mods 与 deck_ids 不等长（读档 / 演示路径）→ 先对齐再取附魔，不许崩 / 错位
 	RunState.deck_ids = [8001]
 	RunState.deck_mods = []

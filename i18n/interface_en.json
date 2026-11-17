@@ -4,8 +4,8 @@
     "shop": {
       "SHOP_ENCHANT_COSTDOWN_NAME": "Cost -1",
       "SHOP_ENCHANT_COSTDOWN_DESC": "Permanently reduce Cost by 1 (only cards with Cost > 1 and non-X Cost can be chosen)",
-      "SHOP_ENCHANT_DAMAGE_NAME": "Damage +10",
-      "SHOP_ENCHANT_DAMAGE_DESC": "Damage dealt by this Skill card +10 (only Skill cards that can directly deal damage can be chosen)",
+      "SHOP_ENCHANT_DAMAGE_NAME": "Damage +8",
+      "SHOP_ENCHANT_DAMAGE_DESC": "Damage dealt by this Skill card +8 (only Skill cards that can directly deal damage can be chosen)",
       "SHOP_ENCHANT_DIMENSION_NAME": "Dimensional Power",
       "SHOP_ENCHANT_DIMENSION_DESC": "Grant the Keyword \"Dimensional\": +2 Power, +10 Health; Banished on leaving the field",
       "SHOP_ENCHANT_SAVE_NAME": "Preserve",

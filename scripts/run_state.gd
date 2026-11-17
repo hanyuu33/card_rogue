@@ -3833,7 +3833,7 @@ static func delivery_override_kind() -> String:
 static func build_deck(repo: CardRepo) -> Array[CardData]:
 	## 按 deck_ids 构建实际牌库（缺定义的 id 跳过）。
 	## 一律用卡库**共享实例**，**除非**这一张带商店附魔（R181）—— 附魔要烤进卡
-	## （费用 -1 / 伤害 +10 / 次元 +2力+10血 / 保存），不能污染卡库共享实例，
+	## （费用 -1 / 伤害 +8 / 次元 +2力+10血 / 保存），不能污染卡库共享实例，
 	## 于是对带附魔的那张用 `from_dict(to_dict())` 生成**独立副本**再应用。
 	## R214：单卡口径统一收进 `card_with_mod()`（展示层也调它，别再各写一遍复制逻辑）。
 	var cards: Array[CardData] = []
@@ -3982,12 +3982,12 @@ static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 		"costdown":
 			return c.cost > 1 and not c.x_cost
 		"damage":
-			# R210：**只给技能卡**（用户口径「伤害 +10 限制只能附魔给技能卡」）。
+			# R210：**只给技能卡**（用户口径「伤害附魔只能给技能卡」—— 引述原话，不写具体数值）。
 			# R226：再收紧 —— 只给**能直接造成伤害**的技能卡（用户口径「要限制能直接造成
 			# 伤害的技能卡」）：治疗 / 抽牌 / 加 buff / 防御类技能本来就不吃这个 +10，
 			# 附了也是白花 60 金。判据唯一口 = `CardData.is_damage_spell()`。
 			# 技能卡的 `power` 在卡面上**恒为 0**（伤害写死在引擎结算里），附魔把 +10 烤进
-			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +10。
+			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +8。
 			# 以前判 `power > 0`（= 只给盟友 / 工事），技能卡永远选不中、单位却能白拿 10 攻。
 			return c.is_damage_spell()
 		"core":
@@ -4021,7 +4021,7 @@ static func enchant_mod(ench_id: String) -> Dictionary:
 	var m: Dictionary = {}
 	match ench_id:
 		"costdown": m = {"cost": -1}
-		"damage": m = {"power": 10, "note": "伤害 +10"}
+		"damage": m = {"power": 8, "note": "伤害 +8"}
 		"dimension": m = {"affix": "次元", "power": 2, "health": 10}
 		"save": m = {"affix": "保存"}
 		# R229「起手」：**不改任何数值**，只记 id —— 抽牌时引擎按 `card.enchant` 认它。
@@ -4038,7 +4038,9 @@ static func enchant_mod(ench_id: String) -> Dictionary:
 static func enchant_id_of(mod: Dictionary) -> String:
 	## 一份 mod 是哪种附魔（`enchant_mod()` 写的 `"id"` 优先）。
 	## R181~R213 的老存档 / 老 mod **没有 id** → 按内容反推（附魔效果互不重叠，能反推）：
-	## 费用 -1 / 次元(+2力+10血) / 保存 / 伤害 +10（带 note）。
+	## 费用 -1 / 次元(+2力+10血) / 保存 / 伤害 +N（带 note）。
+	## ⚠️ 数值本身**不**参与反推（R787 把 +10 下调成 +8 之后，老存档里那批
+	##    `{"power": 10, "note": "伤害 +10"}` 仍然要认成 damage）—— 只认「有没有增量」。
 	## 反推不出来（未知形态）→ ""（卡面不画标记，但数值照旧生效）。
 	if mod.is_empty():
 		return ""
@@ -4073,7 +4075,7 @@ static func _apply_mod(c: CardData, mod: Dictionary) -> void:
 	# R458：可变数值附魔（契约核心「伤害 +N」）的**逐卡显示名** —— 空串 = 用固定名。
 	c.enchant_label = str(mod.get("label", ""))
 	# R210：技能卡的具体伤害是写在 `effect_text` 里的死文字（「造成 17 点伤害」），
-	# 「伤害 +10」附魔改的是**结算值** → 卡面文字会跟实际伤害对不上。补一行标注，
+	# 「伤害 +8」附魔改的是**结算值** → 卡面文字会跟实际伤害对不上。补一行标注，
 	# 详情条 / 图鉴 / 牌库都读 `effect_text`，玩家一眼能看到这张卡被附魔过。
 	var note: String = str(mod.get("note", ""))
 	if note != "" and c.effect_text.find(note) < 0:
@@ -4137,7 +4139,7 @@ static func enchant_deck_card(index: int, mod: Dictionary) -> bool:
 
 # ── R458「契约的核心」（第二层事件）：可变的伤害附魔 ──────────────────
 ## 契约核心 = +N 伤害，N 取自被献祭那张技能卡的**第一段伤害**
-## （`GameEngine.spell_first_hit()` 唯一口）。消费点与商店的「伤害 +10」完全同源
+## （`GameEngine.spell_first_hit()` 唯一口）。消费点与商店的「伤害 +8」完全同源
 ## （`_spell_dmg()` 把 `card.power` 并进每一段），区别只在这个数不固定 ——
 ## 所以名字也逐卡携带（`CardData.enchant_title()`），不能用固定标签。
 const CORE_ENCHANT_ID := "core"

@@ -12640,7 +12640,7 @@ func _bounce_knife(side: String, target, card: CardData) -> String:
 	##   ② 抽走即从池里删 → 两个弹跳一定落在**不同**单位上（不会对同一只重复）；
 	##   ③ 池子先按格坐标 sort 再抽 → 与 `state.board` 的遍历顺序无关，随机只由 `rng` 决定
 	##      （回放 / 联机重放的确定性靠这一条）。
-	## 两段伤害都过 `_spell_dmg()` —— 荧光草 / 魔法塔 / 附魔「伤害 +10」对主刀与弹跳**都**生效。
+	## 两段伤害都过 `_spell_dmg()` —— 荧光草 / 魔法塔 / 附魔「伤害 +8」对主刀与弹跳**都**生效。
 	var foe:= SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var main_cell: Vector2i = target if target is Vector2i else Vector2i(-1, -1)
 	var msg:= str(_op_deal_damage(side, _spell_dmg(side, BOUNCE_KNIFE_DMG, card), target))
@@ -14465,7 +14465,7 @@ func _spell_dmg(side: String, base: int, card: CardData = null,
 	## card 传正在结算的技能卡：鸭之眼（6009）与魔法塔（9075）都按这张卡的**原始费用**加成
 	## （刻意用 card.cost 而不是 cost_of()，各类临时减费不会把加成一起吃掉）。
 	var out:= base
-	# R210：商店附魔「伤害 +10」的**唯一消费点** —— 技能卡的 `power` 在卡面上**恒为 0**
+	# R210：商店附魔「伤害 +8」的**唯一消费点** —— 技能卡的 `power` 在卡面上**恒为 0**
 	# （每张技能的具体伤害写死在下面的结算分支里），附魔把 +10 烤进 `power`，在这里并进
 	# 每一段伤害。非技能卡（盟友 / 工事 / 场地 / 效果）的 `power` 是它自己的攻击力，
 	# 绝不能并进技能伤害 —— 所以判据必须带 `kind == "技能"`，不能只看 `power > 0`。
@@ -20224,7 +20224,7 @@ var assemble_combo_pending := false   # R559 组合（传授 8084）：等玩家
 ## R580 黑暗嵌合：当前这次组合由它发起（确认时给产物加「保存」+ 按力量值扫全场）。
 ## 排队中的机会把标记存在 `_combo_queue` 的 `fusion` 键里，弹出时再灌回这里。
 var _dark_fusion_active := false
-## 打出时那张技能卡被附魔烤进去的 `power`（伤害 +10）—— 只补进 AOE，不吃其它技能加成。
+## 打出时那张技能卡被附魔烤进去的 `power`（伤害 +8）—— 只补进 AOE，不吃其它技能加成。
 var _dark_fusion_power_bonus := 0
 ## R582 技术结合：第①槽被强制底座占用，玩家不能换、不能撤回。
 var combo_force_attr := false

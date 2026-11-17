@@ -1963,7 +1963,7 @@ func _check_shop_enchant(scene: Variant) -> void:
 		_smoke_fail("商店附魔：deck_mods 应与 deck_ids 等长（%d vs %d）"
 				% [RunState.deck_mods.size(), RunState.deck_ids.size()])
 		return
-	# ②b R210：附魔表的条件与价格（次元 50 → 80；伤害 +10 只认技能卡）
+	# ②b R210：附魔表的条件与价格（次元 50 → 80；伤害 +8 只认技能卡）
 	var cmap: Dictionary = (scene.get_script() as GDScript).get_script_constant_map()
 	var enchs: Array = cmap.get("ENCHANTS", [])
 	var price := {}
@@ -1973,7 +1973,7 @@ func _check_shop_enchant(scene: Variant) -> void:
 		_smoke_fail("商店附魔：次元应 80 金（实际 %s）" % str(price.get("dimension", -1)))
 		return
 	if int(price.get("damage", -1)) != 60:
-		_smoke_fail("商店附魔：伤害 +10 应 60 金（实际 %s）" % str(price.get("damage", -1)))
+		_smoke_fail("商店附魔：伤害 +8 应 60 金（实际 %s）" % str(price.get("damage", -1)))
 		return
 	# R240：附魔显示名的**真源 = CardData.ENCHANT_DEFS** —— ENCHANTS 里的 name 必须与它逐条一致，
 	# 且附魔名**不许与「字段」同名**（原来附魔「次元」/ 字段「次元」撞了命名空间）。
@@ -1990,21 +1990,21 @@ func _check_shop_enchant(scene: Variant) -> void:
 	if int(price.get("opening", -1)) != 30:
 		_smoke_fail("R246 商店附魔：起手应 30 金（实际 %s）" % str(price.get("opening", -1)))
 		return
-	# 「伤害 +10」**只认技能卡**：有攻击力的盟友也必须被拒；技能卡必须能选。
+	# 「伤害 +8」**只认技能卡**：有攻击力的盟友也必须被拒；技能卡必须能选。
 	# deck_idx 传 9999 → `_mod_at` 越界返回 {} → 「未附魔」这一关不会挡路。
 	var repo2 := CardRepo.load_json()
 	if scene._enchant_ok("damage", repo2.get_card(8003), 9999):
-		_smoke_fail("商店附魔：伤害 +10 不能再附给盟友（树人被放行）")
+		_smoke_fail("商店附魔：伤害 +8 不能再附给盟友（树人被放行）")
 		return
 	if not scene._enchant_ok("damage", repo2.get_card(9003), 9999):
-		_smoke_fail("商店附魔：伤害 +10 应能附给技能卡（火焰箭被拒）")
+		_smoke_fail("商店附魔：伤害 +8 应能附给技能卡（火焰箭被拒）")
 		return
 	# R226：只认「能直接造成伤害」的技能卡 —— 治疗 / 抽牌 / 防御类技能必须被拒
 	if scene._enchant_ok("damage", repo2.get_card(9051), 9999):
-		_smoke_fail("R226 商店附魔：伤害 +10 不应再附给「自然之力」（不能直接造成伤害）")
+		_smoke_fail("R226 商店附魔：伤害 +8 不应再附给「自然之力」（不能直接造成伤害）")
 		return
 	if scene._enchant_ok("damage", repo2.get_card(9103), 9999):
-		_smoke_fail("R226 商店附魔：伤害 +10 不应再附给「闪躲」（只提承受伤害）")
+		_smoke_fail("R226 商店附魔：伤害 +8 不应再附给「闪躲」（只提承受伤害）")
 		return
 	# 换成「保存」附魔 —— 任何卡都能吃，保证一定有候选。
 	scene._row2.clear()
@@ -2073,7 +2073,7 @@ func _check_shop_enchant(scene: Variant) -> void:
 			break
 	scene._deleting = false
 	scene._start_enchant(0)
-	scene._row2[0]["ench"] = {"id": "damage", "name": "伤害 +10", "desc": "", "price": 60, "icon": ""}
+	scene._row2[0]["ench"] = {"id": "damage", "name": "伤害 +8", "desc": "", "price": 60, "icon": ""}
 	scene._build_deck_cards()
 	grey_pos = Vector2(-9999, -9999)
 	for i in (scene._deck_cards as Array).size():
@@ -4136,7 +4136,7 @@ func _check_enchant_mark(scene: Variant) -> void:
 		_smoke_fail("R214 附魔标记：应在费用徽章**正下方**（同 x、间距 2R）—— %s" % geo_bad)
 		return
 	# ② 种类表：显示名 / 种类色 / 图标名都在 CardData.ENCHANT_DEFS 里（绘制与左栏的唯一口）
-	if CardData.enchant_name("damage") != "伤害 +10" \
+	if CardData.enchant_name("damage") != "伤害 +8" \
 			or not CardData.enchant_color("costdown").is_equal_approx(Color("6db2f0")) \
 			or CardData.enchant_icon_name("dimension") != "shop_icon_dimension" \
 			or CardData.enchant_name("opening") != "起手" \
@@ -4374,8 +4374,10 @@ func _check_run_deck_panel(scene: Variant) -> void:
 	if atk_groups != 2:
 		_smoke_fail("完整卡组：带附魔的攻击必须与原卡分开列（攻击组数 %d，期望 2）" % atk_groups)
 		return
-	# R214：那张附魔是**没有 id 的老形态** mod（`{"power": 10}`）→ 按内容反推成 damage，
-	# 卡面才能画出「伤害 +10」的附魔标记（老存档不能因为没有 id 就变成没标记）。
+	# R214：那张附魔是**没有 id 的老形态** mod（`{"power": 10}`，R787 之前的数值）
+	# → 按内容反推成 damage，卡面才能画出附魔标记（老存档不能因为没有 id 就变成没标记）。
+	# ⚠️ 标记上的**名字**永远读当前附魔表（现在是「伤害 +8」），老存档烤着的 +10 是数值、
+	#    不是标签 —— 这两件事本来就该分开。
 	var got_ench := ""
 	for c: CardData in run_cards:
 		if c.id == 8002 and c.enchant != "":

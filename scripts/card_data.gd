@@ -115,7 +115,7 @@ static func word_def(name: String) -> Dictionary:
 ## ── 【商店附魔】（R214）`enchant` = 这张卡吃过的商店附魔 id（"" = 没附魔）──
 ##
 ## **为什么不能只靠「数值变了」推断**：附魔本体在 `RunState._apply_mod` 里就被**烤进**了
-## 副本的 cost / power / health / affixes（费用 -1、伤害 +10、次元 +2力+10血、保存），
+## 副本的 cost / power / health / affixes（费用 -1、伤害 +8、次元 +2力+10血、保存），
 ## 烤完之后这张卡和「一张原生就长这样的卡」**完全一样** —— 卡面无从知道「它被附魔过」。
 ## 于是另记一个 id：玩家花了钱，就必须在**任何看到这张卡的地方**都能认出它（用户口径
 ## R214「带有附魔效果的卡片，应该在任何地方，都显示附魔标记」）。
@@ -129,8 +129,8 @@ static func word_def(name: String) -> Dictionary:
 const ENCHANT_DEFS: Dictionary = {
 	"costdown": {"label": "费用 -1", "icon": "shop_icon_costdown", "col": "6db2f0",
 			"desc": "这张卡的打出费用一次性降低 1 点（最低 0），之后一直保持；同一张卡不能重复附魔。"},
-	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a",
-			"desc": "这张技能卡造成的伤害 +10。"},
+	"damage": {"label": "伤害 +8", "icon": "shop_icon_damage", "col": "f08a5a",
+			"desc": "这张技能卡造成的伤害 +8。"},
 	"dimension": {"label": "次元之力", "icon": "shop_icon_dimension", "col": "c08cf0",
 			"desc": "获得「次元」字段，并 +2 力量 / +10 生命。"},
 	"save": {"label": "保存", "icon": "shop_icon_save", "col": "8fdc9f",
@@ -143,7 +143,7 @@ const ENCHANT_DEFS: Dictionary = {
 	"draw": {"label": "抽牌 +1", "icon": "shop_icon_draw", "col": "5fd8c8",
 			"desc": "打出这张卡后抽一张卡。"},
 	# R458「契约的核心」：把一张伤害技能卡的**第一段伤害**献祭过来，加到另一张上。
-	# 与「伤害 +10」共用同一套消费点（`GameEngine._spell_dmg()` 把 `card.power`
+	# 与「伤害 +8」共用同一套消费点（`GameEngine._spell_dmg()` 把 `card.power`
 	# 并进每一段），区别只在**数值不固定** —— 所以标签不写死在这里，
 	# 由 `enchant_label` 逐卡携带、经 `enchant_title()` 读（见下）。
 	"core": {"label": "契约核心", "icon": "shop_icon_damage", "col": "d06be0",
@@ -251,7 +251,7 @@ var affixes: Array[String] = []
 ## 必须随 `to_dict` 走（复制 / 离场还原 / 联机都是同一条通道），否则标记会静默消失。
 var enchant: String = ""
 ## R458 契约核心：**可变数值**附魔的逐卡显示名（"" = 用 `ENCHANT_DEFS` 的固定名）。
-## 「伤害 +10」那种数值写死的附魔用不到它；契约核心的 +N 每张卡都可能不同，
+## 「伤害 +8」那种数值写死的附魔用不到它；契约核心的 +N 每张卡都可能不同，
 ## 所以名字跟着卡走 —— 显示口统一走 `enchant_title()`，别各处直接读 `enchant_name`。
 var enchant_label: String = ""
 ## **本场战斗内的衍生物**（R82：野兔 9032 复制出来的那些）—— 不进牌库也不进弃牌区。
@@ -675,7 +675,7 @@ func is_curse() -> bool:
 
 
 func is_damage_spell() -> bool:
-	## 这张技能卡能不能**直接造成伤害**（R226：伤害 +10 附魔的资格判据）。
+	## 这张技能卡能不能**直接造成伤害**（R226：伤害 +8 附魔的资格判据）。
 	## * 为什么不能看 `power`：技能卡的 `power` 在卡面上**恒为 0**，伤害写死在引擎结算里；
 	## * 为什么用文案判据：cards.json 没有「是否造成伤害」字段，而当前 68 张玩家技能卡里，
 	##   能直接造成伤害的 25 张都写成「造成 … 伤害」；提「受到 / 承受伤害」的防御卡
@@ -797,7 +797,7 @@ static func affix_colors(name: String) -> Array:
 
 ## ── 附魔（R214）：显示口径的唯一入口（未注册 id 回退到 id 本身 / 中性紫，不空白）──
 
-## 附魔的显示名（「费用 -1」/「伤害 +10」/「次元之力」/「保存」/「起手」）。
+## 附魔的显示名（「费用 -1」/「伤害 +8」/「次元之力」/「保存」/「起手」）。
 ## ⚠️ 与**字段**名（`AFFIX_DEFS`，如「次元」）是两个命名空间，别重名（R240）。
 static func enchant_name(id: String) -> String:
 	if id == "":

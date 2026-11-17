@@ -4,8 +4,8 @@
     "shop": {
       "SHOP_ENCHANT_COSTDOWN_NAME": "Coste -1",
       "SHOP_ENCHANT_COSTDOWN_DESC": "Reduce permanentemente el Coste en 1 (solo cartas con Coste > 1 y que no sean de Coste X)",
-      "SHOP_ENCHANT_DAMAGE_NAME": "Daño +10",
-      "SHOP_ENCHANT_DAMAGE_DESC": "Esta carta de Habilidad inflige +10 de daño (solo Habilidades que infligen daño directo)",
+      "SHOP_ENCHANT_DAMAGE_NAME": "Daño +8",
+      "SHOP_ENCHANT_DAMAGE_DESC": "Esta carta de Habilidad inflige +8 de daño (solo Habilidades que infligen daño directo)",
       "SHOP_ENCHANT_DIMENSION_NAME": "Poder dimensional",
       "SHOP_ENCHANT_DIMENSION_DESC": "Otorga el afijo «Dimensional»: +2 de Poder, +10 de Vida; se destierra al salir del campo",
       "SHOP_ENCHANT_SAVE_NAME": "Conservar",

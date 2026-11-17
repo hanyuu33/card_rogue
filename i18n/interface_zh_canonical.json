@@ -426,12 +426,12 @@
         "zh": "一次性降低 1 点费用，之后一直保持（只能选费用 > 1 且非 X 费的卡）"
       },
       "SHOP_ENCHANT_DAMAGE_NAME": {
-        "source": "scripts/card_data.gd:114",
-        "zh": "伤害 +10"
+        "source": "scripts/card_data.gd:132",
+        "zh": "伤害 +8"
       },
       "SHOP_ENCHANT_DAMAGE_DESC": {
-        "source": "scripts/shop_scene.gd:71",
-        "zh": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）"
+        "source": "scripts/shop_scene.gd:74",
+        "zh": "这张技能卡造成的伤害 +8（只能选能直接造成伤害的技能卡）"
       },
       "SHOP_ENCHANT_DIMENSION_NAME": {
         "source": "scripts/card_data.gd:116",
