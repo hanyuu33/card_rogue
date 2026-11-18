@@ -142,6 +142,12 @@
       "OPEN_CARD_CHEST": "打开宝箱（获得卡牌奖励）",
       "LEAVE_WITHOUT_OPENING": "不打开（转身离开）"
     },
+    "sword": {
+      "TAKE_SWORD": "拔剑（失去 %d 最大生命，获得「大师之剑」）",
+      "MAX_HP_LOW_DISABLED": "最大生命不足（拔剑需失去 %d 点）",
+      "ALREADY_OWNED_DISABLED": "已持有「大师之剑」（不必再拔）",
+      "LEAVE_THE_SWORD": "转身离开（不碰那把剑）"
+    },
     "struggle": {
       "ACCEPT_STRUGGLE": "接受挣扎（失去 %d 生命，获得「金属龙」）",
       "LEAVE_UNCHANGED": "转身离开（保持现状）"
@@ -249,6 +255,9 @@
     },
     "treasure": {
       "TREASURE_CARD_REWARD_PENDING": "开出卡牌奖励（待领：见奖励悬浮窗）"
+    },
+    "sword": {
+      "SWORD_GAINED": "失去 %d 点最大生命（现 %d / %d）——「大师之剑」已收进行囊"
     },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "失去 %d 生命（当前 %d/%d）——「%s」已加入卡组"

@@ -16,6 +16,8 @@ extends Control
 ##   * event + delivery_done 委托完成（R200）：持有货物时**第二层第一个事件房**替换而来，
 ##                     卡组每保有 1 张货物 → 抽奖一次（卡牌奖励 / 80 金币 / 随机道具 / 巧克力 10%）；
 ##   * event + gaze     鸭之凝视（**第二层**）：获得事件道具「一袋米抗几楼」，或放弃；
+##   * event + sword    林中的剑（R793，第一层专属）：拔剑 -13 最大生命 → 道具「大师之剑」，
+##                      或转身离开；
 ##   * event + arcane   奥秘之泉（第一层专属）：获得道具「奥秘护符」（每回合第一张效果牌费用 -1），
 ##                      或「喝下泉水」从随机 3 张效果 / 技能牌中选 1 张加入卡组（也可什么都不拿）；
 ##                      ⚠️ R147：一次访问只领一份 —— 取走护符后就不能再喝泉水，反之亦然。
@@ -176,6 +178,23 @@ const STATUE_PRAY_DESC := """你把手按在它冰凉的爪子上，什么也没
 const STATUE_SMASH_DESC := """你抄起一块石头砸向它的前腿。
 裂纹从爪子一路爬到山羊头上，整尊雕像塌成一堆白渣——
 握得住的那些，正好够塞满你的工具栏。"""
+
+# R793 林中的剑（第一层专属）：两个选项 —— 拔剑（失去 13 点最大生命 → 道具「大师之剑」）/
+# 转身离开。代价与占卜室 5 点是同一条 `RunState.lose_max_hp()`（**至少保留 1 点最大生命**），
+# 所以最大生命 <= 13 时按钮直接置灰 —— 不拦的话玩家会白掉一截上限换一件拿不到的东西。
+# 已持有大师之剑时同样置灰：`gain_relic()` 对重复持有是直接 return，血却是照扣的。
+const SWORD_MASTER_ID := 6075     # 大师之剑（事件道具，不进奖励池）
+const SWORD_LIFE_COST := 13       # 拔剑的代价：失去的最大生命
+
+const SWORD_DESC := """空地上立着一块灰白的长石，石缝里插着一把剑，剑身没入大半。
+苔顺着剑格爬下来，缠了不知多少年——它在这里等得太久了。
+拔剑：失去 13 点最大生命（至少保留 1 点，最大生命不足时无法拔），
+获得道具「大师之剑」：每场战斗使用的第一个盟友 +10 力量；
+也可以什么都不碰，转身走出这片林子。"""
+
+const SWORD_TAKEN_DESC := """石头从中间裂开。剑离地的那一刻轻得不像话，
+像它一直在等你来拿。
+握柄贴上掌心，林子静了一瞬——「大师之剑」已收进行囊。"""
 
 # R573：蓝色大肥鱼事件已删除。只留一句旧存档兜底文案，不发任何奖励。
 const RETIRED_EVENT_DESC := """这里原本有一条蓝色大肥鱼。它已经游走了。"""
@@ -376,6 +395,8 @@ var _fly_done := false          # R555 飞行器：本次是否已选了「使�
 var _fly_result := ""           # R555 飞行器：收尾态那行结果（重绘要能复现）
 var _statue_pick := ""          # R754 奇异雕像：本次选的是 "pray" / "smash" / 空
 var _statue_result := ""        # R754 奇异雕像：收尾那行结果（重绘要能复现）
+var _sword_taken := false       # R793 林中的剑：本次是否已拔剑（拔了就只剩离开）
+var _sword_result := ""         # R793 林中的剑：收尾那行结果（重绘要能复现）
 var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
 var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
@@ -520,6 +541,12 @@ func _is_statue() -> bool:
 	return _is_event_node() and _pending_kind() == "statue"
 
 
+func _is_sword() -> bool:
+	## R793 林中的剑（第一层专属）：拔剑（-13 最大生命 → 道具「大师之剑」）/ 离开。
+	## 与「挣扎」（-21 当前生命 → 卡「金属龙」）是一对：一个扣血、一个扣上限。
+	return _is_event_node() and _pending_kind() == "sword"
+
+
 func _is_cave() -> bool:
 	## R467 洞穴（第二层专属）：两个选项 —— 探索（打一场，赢了拿传说卡）／离开。
 	## ⚠️ 这是**唯一一个会进战斗的事件房**（R128 之后事件房本来不再遭遇战斗）：
@@ -614,7 +641,7 @@ func _is_treasure() -> bool:
 			and not _is_card_merchant() and not _is_lake_lady() \
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
 			and not _is_adventurer() and not _is_furnace() and not _is_core_contract() \
-			and not _is_flyer() and not _is_statue()
+			and not _is_flyer() and not _is_statue() and not _is_sword()
 
 
 func _kind() -> String:
@@ -671,6 +698,8 @@ func _kind() -> String:
 		return "flyer"
 	if _is_statue():
 		return "statue"
+	if _is_sword():
+		return "sword"
 	if _is_treasure():
 		return "treasure"
 	return "rest"
@@ -1248,7 +1277,7 @@ func _kind_tint(kind: String) -> Color:
 			return Color("c8951c")   # 交易 / 匠人：金
 		"whisper", "divination", "moon", "arcane", "hero", "statue":
 			return Color("8a7fd4")   # 神秘 / 预兆：紫
-		"pear", "snow_leopard", "adventurer", "cave", "flyer":
+		"pear", "snow_leopard", "adventurer", "cave", "flyer", "sword":
 			return Color("6faa62")   # 自然 / 探索：绿
 		"treasure", "relic_chest":
 			return Color("d99b3f")   # 收获：橙金
@@ -1388,6 +1417,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "whisper"
+		if args[i] == "--sword":  # R793 演示：伪装 run 林中的剑事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "sword"
 		if args[i] == "--struggle":  # 演示：伪装 run 挣扎事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1915,6 +1948,35 @@ func _ready() -> void:
 			leave_btn.text = "绕过去（什么都不做）"
 			leave_btn.disabled = false
 			result_label.text = ""
+	elif _is_sword():
+		event_name.text = "林 中 的 剑"
+		desc.text = SWORD_TAKEN_DESC if _sword_taken else SWORD_DESC
+		if _sword_taken:
+			_collapse_to_leave()
+			result_label.text = _sword_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			# R793：三态按钮，**顺序不能反** ——
+			#   * 「已持有」优先：`gain_relic()` 对重复持有直接 return，血却照扣，
+			#     不拦就是白掉 13 点上限换一件拿不到的东西；
+			#   * 其次才是「最大生命不足」：`lose_max_hp()` 至少保留 1 点，
+			#     13 点以下拔剑等于把自己削到 1 点上限。
+			rest_btn.visible = true
+			if RunState.has_relic(SWORD_MASTER_ID):
+				rest_btn.text = "已持有「大师之剑」（不必再拔）"
+				rest_btn.disabled = true
+			elif RunState.max_hp <= SWORD_LIFE_COST:
+				rest_btn.text = "最大生命不足（拔剑需失去 %d 点）" % SWORD_LIFE_COST
+				rest_btn.disabled = true
+			else:
+				rest_btn.text = "拔剑（失去 %d 最大生命，获得「大师之剑」）" % SWORD_LIFE_COST
+				rest_btn.disabled = false
+			bbq_btn.visible = false
+			alt_btn.visible = false
+			leave_btn.visible = true
+			leave_btn.text = "转身离开（不碰那把剑）"
+			leave_btn.disabled = false
+			result_label.text = ""
 	elif _is_cave():
 		event_name.text = "洞 穴"
 		desc.text = CAVE_DESC
@@ -2034,7 +2096,14 @@ func _localize_text() -> void:
 	$TopBar/TitleLabel.text = GameI18n.ui("map", "EVENT_TOP_TITLE", "事  件")
 	if GameI18n.language() == "zh":
 		return
-	event_name.text = GameI18n.source(event_name.text)
+	# R793c：事件标题是「林 中 的 剑」这种**用空格撑字距**的排版写法，而 i18n 的 key 是
+	# narrative 里的「林中的剑」（无空格）—— 全串精确匹配必然落空，于是英 / 日 / 西语版的
+	# **每一个事件标题**都还是中文（R793 出 en 图时才发现，struggle 同样中招）。
+	# 唯一出口在这里：去掉排版空格再查表；查不到就保持原样（别把字距也吃掉）。
+	var ev_title := event_name.text.replace(" ", "")
+	var ev_title_tr := GameI18n.source(ev_title)
+	if ev_title_tr != ev_title:
+		event_name.text = ev_title_tr
 	desc.text = GameI18n.source(desc.text)
 	result_label.text = GameI18n.source(result_label.text)
 	for b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
@@ -2532,6 +2601,26 @@ func _on_main() -> void:
 		result_label.add_theme_color_override("font_color", Color("a44ad0"))
 		_redraw()
 		return
+	if _is_sword():
+		if _sword_taken:
+			_on_leave()
+			return
+		# 与界面置灰**同一条判据**（别只在按钮上拦）：已持有 / 最大生命不足都不许再扣。
+		if RunState.has_relic(SWORD_MASTER_ID) or RunState.max_hp <= SWORD_LIFE_COST:
+			return
+		# 拔剑：先掉上限、再给道具 —— `lose_max_hp()` 至少保留 1 点，所以这一步不会致死。
+		var sword_paid := RunState.lose_max_hp(SWORD_LIFE_COST)
+		RunState.gain_relic(SWORD_MASTER_ID)
+		_sword_taken = true
+		_claim_reward(rest_btn)   # R147
+		_collapse_to_leave()
+		desc.text = SWORD_TAKEN_DESC
+		_sword_result = "失去 %d 点最大生命（现 %d / %d）——「大师之剑」已收进行囊" % [
+				sword_paid, RunState.hp, RunState.max_hp]
+		result_label.text = _sword_result
+		result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		_redraw()
+		return
 	# R237：休息处「在这里休息」→ 回复 rest_heal_amount() 点生命（与「烤肉」二选一）。
 	# 只有真正的休息节点才走这里（_is_rest 精确判 pending_node.type == "rest"）；
 	# 未识别的事件类型仍然安全不动。
@@ -2908,7 +2997,7 @@ func _refresh() -> void:
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
 			or _is_moon() or _is_snow_leopard() or _is_furnace() \
-			or _is_core_contract() or _is_flyer() or _is_statue():
+			or _is_core_contract() or _is_flyer() or _is_statue() or _is_sword():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。

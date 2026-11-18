@@ -135,6 +135,12 @@
       "OPEN_CARD_CHEST": "Open the chest (gain a Card Reward)",
       "LEAVE_WITHOUT_OPENING": "Don't open it (turn and leave)"
     },
+    "sword": {
+      "TAKE_SWORD": "Draw the sword (lose %d Max Health and gain \"Master Sword\")",
+      "MAX_HP_LOW_DISABLED": "Not enough Max Health (drawing costs %d)",
+      "ALREADY_OWNED_DISABLED": "You already carry the \"Master Sword\" (no need to draw it again)",
+      "LEAVE_THE_SWORD": "Turn and walk away (do not touch the sword)"
+    },
     "struggle": {
       "ACCEPT_STRUGGLE": "Accept the struggle (lose %d Health and gain \"Metal Dragon\")",
       "LEAVE_UNCHANGED": "Turn and leave (leave things as they are)"
@@ -251,6 +257,9 @@
     },
     "treasure": {
       "TREASURE_CARD_REWARD_PENDING": "Found a Card Reward; choose 1 to add to your Deck (pending: see the reward pop-up)"
+    },
+    "sword": {
+      "SWORD_GAINED": "Lost %d Max Health (current %d/%d)—the \"Master Sword\" is yours"
     },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "Lost %d Health (current %d/%d)—\"%s\" has been added to your Deck"

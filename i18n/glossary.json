@@ -2211,6 +2211,37 @@
       "en": "Monkey's Paw",
       "ja": "猿の手",
       "id": 6066
+    },
+    "板甲": {
+      "en": "Plate Armor",
+      "ja": "板金鎧",
+      "id": 6070
+    },
+    "兵": {
+      "en": "Pawn",
+      "ja": "ポーン",
+      "id": 6071
+    },
+    "墙砖": {
+      "en": "Wall Brick",
+      "ja": "壁のレンガ",
+      "id": 6072
+    },
+    "刺墙": {
+      "en": "Spike Wall",
+      "ja": "トゲの壁",
+      "id": 6073
+    },
+    "应急装甲": {
+      "en": "Emergency Armor",
+      "ja": "緊急装甲",
+      "id": 6074
+    },
+    "大师之剑": {
+      "en": "Master Sword",
+      "ja": "マスターソード",
+      "id": 6075,
+      "note": "《塞尔达传说》专名"
     }
   },
   "levels": {
@@ -2388,6 +2419,12 @@
       "en": "Duck Whispers",
       "ja": "アヒルのささやき",
       "key": "whisper"
+    },
+    "林中的剑": {
+      "en": "Sword in the Woods",
+      "ja": "森の剣",
+      "key": "sword",
+      "note": "拔剑的亚瑟王 / 大师之剑意象"
     },
     "挣扎": {
       "en": "Struggle",

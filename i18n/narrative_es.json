@@ -113,6 +113,13 @@
         "SMITH_DONE_DESC": "El fuego se ha apagado y la pieza forjada ha salido del horno.\nLa carta de tu mano se ha convertido en una Valla de Hierro."
       }
     },
+    "sword": {
+      "name": "La espada del bosque",
+      "texts": {
+        "SWORD_DESC": "En el claro se alza una piedra grisácea, con una espada clavada en su grieta; la hoja está casi enterrada.\nEl musgo ha trepado por la guarda, enroscándose durante años incontables: lleva demasiado tiempo esperando aquí.\nDesenvainar: pierdes 13 de Vida máxima (debes conservar al menos 1; no puedes desenvainar si tu Vida máxima es insuficiente)\ny obtienes el objeto «Espada Maestra»: el primer Aliado que juegas en cada combate obtiene +10 de Poder;\no no toques nada y sal del bosque.",
+        "SWORD_TAKEN_DESC": "La piedra se parte por la mitad. La espada sale con una ligereza imposible,\ncomo si hubiera estado esperando a que la tomaras.\nLa empuñadura se asienta en tu palma y el bosque enmudece un instante: la «Espada Maestra» es tuya."
+      }
+    },
     "struggle": {
       "name": "Lucha",
       "texts": {

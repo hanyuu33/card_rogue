@@ -135,6 +135,12 @@
       "OPEN_CARD_CHEST": "宝箱を開ける（カード報酬を獲得）",
       "LEAVE_WITHOUT_OPENING": "開けない（立ち去る）"
     },
+    "sword": {
+      "TAKE_SWORD": "剣を抜く（最大HPを%d失い、「マスターソード」を獲得）",
+      "MAX_HP_LOW_DISABLED": "最大HPが足りない（剣を抜くには%d必要）",
+      "ALREADY_OWNED_DISABLED": "「マスターソード」を所持している（もう抜く必要はない）",
+      "LEAVE_THE_SWORD": "立ち去る（剣には触れない）"
+    },
     "struggle": {
       "ACCEPT_STRUGGLE": "苦闘を受け入れる（HPを%d失い、「金属竜」を獲得）",
       "LEAVE_UNCHANGED": "立ち去る（現状を維持）"
@@ -251,6 +257,9 @@
     },
     "treasure": {
       "TREASURE_CARD_REWARD_PENDING": "カード報酬が出た。1枚選んでデッキに加える（未受取：報酬ポップアップを参照）"
+    },
+    "sword": {
+      "SWORD_GAINED": "最大HPを%d失った（現在 %d/%d）——「マスターソード」を手に入れた"
     },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "HPを%d失い（現在 %d/%d）——「%s」をデッキに追加した"

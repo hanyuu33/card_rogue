@@ -263,8 +263,8 @@
     "6071": {"name": "Pawn", "desc": "The first Ally you play each combat can act twice (does not stack)."},
     "6072": {"name": "Wall Brick", "desc": "Your Structures have +4 Health (persistent; does not stack)."},
     "6073": {"name": "Spike Wall", "desc": "Whenever one of your Structures is attacked, deal 5 damage to the attacker."},
-    "6074": {"name": "Emergency Armor", "desc": "You take at most 20 damage each turn."}
-  },
+    "6074": {"name": "Emergency Armor", "desc": "You take at most 20 damage each turn."},
+    "6075": {"name": "Master Sword", "desc": "The first Ally you play each combat gains +10 Power (does not stack)."}  },
   "classes": {
     "森林精魄": {
       "name": "Forest Spirit",

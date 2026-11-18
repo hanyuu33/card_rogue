@@ -807,6 +807,14 @@ const EMERGENCY_ARMOR_CAP:= 20
 const POEM_RELIC_ID:= 6069
 const POEM_ATK:= 2
 const POEM_REBATE:= 1
+# R793 大师之剑（6075，事件「林中的剑」拔剑获得，**不进奖励池**）：
+#   每场战斗**使用的第一个盟友** +`MASTER_SWORD_ATK` 力量 —— 与竖琴 6052 / 诗 6069 同一套
+#   持续 buff 写法（只写 `Placement.master_sword_atk`，由 `effective_power()` 出口，
+#   赋值不累加、**绝不写回 `card.power`**）。
+# ⚠️ 为什么单开字段：骑士剑 6053 用的是 `sword_atk`，两件道具可以同时在身上，
+#   共用一个字段会互相覆盖（后落地的那件赢，先落地那件静默失效）。
+const MASTER_SWORD_ID:= 6075
+const MASTER_SWORD_ATK:= 10
 # R761 招募（9264，吟游诗人 0 费技能）：从三个其他职业的盟友里选一张加入手卡。
 # 候选在**开面板那一刻**就摇定并缓存（与神秘牌 7011 同一口径），否则同一份存档读两次
 # 会出现两组不同的候选。随机源走引擎 rng → 同种子同结果、回放可复现。
@@ -2416,6 +2424,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	recruit_pending = false
 	_recruit_cards.clear()
 	_poem_used = false          # R761 诗：每场战斗从「这回合还没回费」开始
+	_master_sword_first_ally_done = false   # R793 大师之剑：第一个盟友的额度每场重置
 	_plate_first_ally_done = false   # R792 板甲：第一个盟友的额度每场重置
 	_pawn_first_ally_done = false    # R792 兵：同上
 	_armor_turn_key = -1             # R793 应急装甲：额度每场战斗从零开始
@@ -4291,6 +4300,8 @@ var earring_pending := false      # 是否处于「自动出牌中」
 ## R761 诗（6069）：**本回合是否已经用掉「第一次使用别职业盟友回费」**。
 ## 每个我方回合开始归零（`_begin_turn`），每场战斗开始也归零（`start_game`）。
 var _poem_used := false
+# R793 大师之剑（6075）：本场「第一个盟友」的额度是否已经发过（每场战斗一次，start_game 重置）。
+var _master_sword_first_ally_done := false
 # R792 板甲 / 兵：本场「第一个盟友」的额度是否已经发过（每场战斗各一次）。
 # 两件道具分开记 —— 只持有一件时另一个标记永远不动，将来加第二件同型道具也不打架。
 var _plate_first_ally_done := false
@@ -13576,6 +13587,18 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		p.card.health += BRICK_HP
 		p.health += BRICK_HP
 		_log("墙砖：%s 获得 +%d 生命（%d）" % [card.card_name, BRICK_HP, p.health])
+	# ── R793 大师之剑（6075）────────────────────────────────────────────
+	# 每场战斗**使用的第一个盟友** +10 力量（本场一次）。「第一个」= 本场第一个落地的
+	# 己方盟友 —— 与板甲 6070 / 兵 6071 同一条判据：手牌打出与涂装机器人 8080「变成」
+	# 出来的单位共用本函数，两条来路必须给同一个结论（竖琴 6052 的老约定）。
+	# 只写 Placement 字段（`effective_power()` 出口）—— `place()` 接管的是卡库共享实例，
+	# 烤进 `card.power` 的话同一张卡再上场会叠成 +20。
+	if (RunState.has_relic(MASTER_SWORD_ID) and p.owner == SIDE_SELF
+			and card.kind == "盟友" and not _master_sword_first_ally_done):
+		_master_sword_first_ally_done = true
+		p.master_sword_atk = MASTER_SWORD_ATK
+		_log("大师之剑：第一个盟友 %s 获得 +%d 力量（%d）"
+				% [card.card_name, MASTER_SWORD_ATK, p.effective_power()])
 	var beast_hp:= _beast_hp_bonus(card)
 	if beast_hp > 0:
 		p.health += beast_hp

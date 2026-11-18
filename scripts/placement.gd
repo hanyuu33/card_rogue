@@ -145,6 +145,11 @@ var first_ally_twice: bool = false
 ## 与竖琴 / 野性图腾**逐字同构**的持续 buff（赋值不累加、绝不写回 `card.power`）。
 ## 与竖琴唯一的差别是判据：只看「这张盟友不是吟游诗人自己的」（杜鹃不算）。
 var poem_atk: int = 0
+## R793 大师之剑（6075）：**每场战斗第一个盟友** +10 力量 —— 与竖琴 / 诗 / 骑士剑
+## 逐字同构的持续 buff（字段 + `effective_power()` 出口，绝不写回 `card.power`）。
+## 「第一个」由引擎判断（`_master_sword_first_ally_done`），这里只负责「在场上就生效」。
+## ⚠️ 与 `sword_atk`（骑士剑 6053）分开：两件道具可同时持有，共用字段会互相覆盖。
+var master_sword_atk: int = 0
 ## R383 骑士剑（6053）：「己方所有盟友 +1 力量」（R634 起）与竖琴是**同一套持续 buff 写法** ——
 ## 只记这个字段、由 `effective_power()` 并进攻击力，**绝不写回 `card.power`**。
 ## 触发条件由引擎记（本场第一次击杀），这里只管「在场上就生效」：
@@ -263,7 +268,7 @@ func effective_power() -> int:
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
 			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk + sword_atk
-			+ totem_atk + poem_atk
+			+ totem_atk + poem_atk + master_sword_atk
 			- debuff - mnemo_down)
 	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
 	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）
@@ -378,6 +383,9 @@ func status_entries() -> Array[Dictionary]:
 				"col": COL_B, "kind": "buff"})
 	if poem_atk > 0:
 		out.append({"label": "诗：力量 +%d（本场，不叠加）" % poem_atk,
+				"col": COL_B, "kind": "buff"})
+	if master_sword_atk > 0:
+		out.append({"label": "大师之剑：力量 +%d（本场第一个盟友）" % master_sword_atk,
 				"col": COL_B, "kind": "buff"})
 	# R792 三件道具的可见来源（数值早已并进 health / effective_speed / unit_actions，
 	# 这里只补「是谁给的」，判据只看字段本身有没有值）。
@@ -534,6 +542,7 @@ const _SAVE_FIELDS: Array[String] = [
 	"upgrade_stacks", "stack_hp_applied", "upgrade_range", "upgrade_speed",
 	"dmg_reduce", "first_hit_shield", "armor", "regen", "upgrade_feed_turn",
 	"mass_mnemo_turn", "sleep_left", "stun_left", "harp_atk", "sword_atk", "poem_atk",
+	"master_sword_atk",
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",

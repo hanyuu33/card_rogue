@@ -18,7 +18,8 @@ CARDS = json.loads((ROOT / "cards.json").read_text(encoding="utf-8-sig"))["cards
 CARDS_EN = json.loads((I18N / "cards_en.json").read_text(encoding="utf-8"))["cards"]
 CARDS_JA = json.loads((I18N / "cards_ja.json").read_text(encoding="utf-8"))["cards"]
 SECTIONS = ("options", "results", "pickers", "rest_dynamic")
-EXPECTED_COUNTS = {"options": 87, "results": 67, "pickers": 5, "rest_dynamic": 3}
+# R793：林中的剑 +4 选项（拔剑 / 上限不足 / 已持有 / 离开）、+1 结果。
+EXPECTED_COUNTS = {"options": 91, "results": 68, "pickers": 5, "rest_dynamic": 3}
 errors = []
 
 

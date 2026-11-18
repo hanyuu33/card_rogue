@@ -113,6 +113,13 @@
         "SMITH_DONE_DESC": "The fire has died down, and the forged piece is out of the furnace.\nThe card in your hand has become an Iron Fence."
       }
     },
+    "sword": {
+      "name": "Sword in the Woods",
+      "texts": {
+        "SWORD_DESC": "A grey-white standing stone rises in the clearing, a sword wedged into its crack, most of the blade buried.\nMoss has crept down over the crossguard, winding there for untold years—it has waited here far too long.\nDraw the sword: lose 13 Max Health (you must retain at least 1; you cannot draw it if your Max Health is too low),\nand gain the relic \"Master Sword\": the first Ally you play each combat gains +10 Power;\nor touch nothing and walk out of the woods.",
+        "SWORD_TAKEN_DESC": "The stone splits down the middle. The sword comes free impossibly light,\nas if it had been waiting for you to take it.\nThe grip settles into your palm and the woods go silent for a moment—the \"Master Sword\" is yours."
+      }
+    },
     "struggle": {
       "name": "Struggle",
       "texts": {

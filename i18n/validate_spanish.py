@@ -194,8 +194,8 @@ for trait in sorted(required_trait_terms):
 # 即时效果只标获得时机，不译成消耗。
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
-check(len(NONCARD_ES["relics"]) == 64 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 64 件道具 + 3 个角色")
+check(len(NONCARD_ES["relics"]) == 70 and len(NONCARD_ES["classes"]) == 3,
+      "noncard 为 70 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / +大师之剑 6075）")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})
@@ -260,7 +260,7 @@ for achievement_id, zh_row in NARRATIVE_ZH["achievements"].items():
 event_zh_rows = flatten_event(EVENT_ZH)
 event_es_rows = flatten_event(EVENT_ES)
 check(set(event_es_rows) == set(event_zh_rows), "event_ui 全部 key 覆盖一致")
-check(len(event_zh_rows) == 162, "event_ui 为 87 选项 + 67 结果 + 5 选货 + 3 动态")
+check(len(event_zh_rows) == 167, "event_ui 为 91 选项 + 68 结果 + 5 选货 + 3 动态（R793 +5）")
 for path, zh_text in event_zh_rows.items():
     check_text("event_ui." + path, zh_text, event_es_rows.get(path))
 dynamic_map = {

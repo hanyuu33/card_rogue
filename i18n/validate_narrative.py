@@ -84,8 +84,8 @@ for aid, source in source_achievement_rows.items():
         if zh.get(field) != source[field]:
             errors.append("%s canonical %s 与 stories.json 漂移" % (aid, field))
 
-check(len(ZH["events"]) == 27, "事件页为 27 组（25 常规 + 篝火 + 旧存档兜底）")
-check(sum(len(x["texts"]) for x in ZH["events"].values()) == 68, "事件正文共 68 段（含 3 条休息处动态追加）")
+check(len(ZH["events"]) == 28, "事件页为 28 组（26 常规 + 篝火 + 旧存档兜底；R793 +林中的剑）")
+check(sum(len(x["texts"]) for x in ZH["events"].values()) == 70, "事件正文共 70 段（含 3 条休息处动态追加；R793 +2）")
 check(len(ZH["stories"]) == 11, "剧情共 11 段")
 check(sum(len(x["text"]) for x in ZH["stories"].values()) == 54, "剧情正文共 54 行")
 check(len(ZH["achievements"]) == 11, "剧情成就提示共 11 条")
@@ -220,4 +220,5 @@ if errors:
     for error in errors:
         print("  -", error)
     sys.exit(1)
-print("\nNARRATIVE I18N OK: 27 events / 68 texts | 11 stories / 54 lines | 11 achievement hints")
+print("\nNARRATIVE I18N OK: %d events / %d texts | 11 stories / 54 lines | 11 achievement hints"
+      % (len(ZH["events"]), sum(len(x["texts"]) for x in ZH["events"].values())))
