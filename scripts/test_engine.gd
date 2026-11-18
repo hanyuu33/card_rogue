@@ -72215,6 +72215,8 @@ func _init() -> void:
 
 	var r543_pending_bak: Array = RunState.pending_rewards.duplicate(true)
 
+	var r543_skipped_bak: Array[int] = RunState.skipped_relics.duplicate()
+
 	# ① 信物记账：与道具分开（gain_key 幂等 / has_key / has_all_keys）
 
 	RunState.key_relics = []
@@ -72289,6 +72291,8 @@ func _init() -> void:
 
 	var r543_idx := RunState.pending_rewards.find(r543_last)
 
+	var r543_cand := int(r543_last.get("relic_id", -1))
+
 	check(RunState.claim_key_choice(r543_idx, true)
 
 			and RunState.has_key(RunState.SEED_RELIC_ID)
@@ -72296,6 +72300,22 @@ func _init() -> void:
 			and str(r543_last.get("state", "")) == RunState.REWARD_CLAIMED,
 
 			"R543 大宝箱：二选一领种子 → 信物入账、条目置 claimed")
+
+	check(r543_cand > 0 and RunState.skipped_relics.has(r543_cand)
+
+			and not RunState.has_relic(r543_cand),
+
+			"R798 二选一没拿道具也算出现过 → 候选道具登记 skipped_relics（本局不再随机出来）、不入道具栏")
+
+	var r543_tier := RelicData.TIER_NORMAL
+
+	if not RelicRepo.load_json().reward_ids(RelicData.TIER_NORMAL).has(r543_cand):
+
+		r543_tier = RelicData.TIER_LEGENDARY
+
+	check(not RunState._reward_pool(r543_tier, []).has(r543_cand),
+
+			"R798 已出现的候选道具从抽取池里剔除（同一件不会第二次摆上二选一）")
 
 	RunState.key_relics = []
 
@@ -72372,6 +72392,8 @@ func _init() -> void:
 	RunState.relics = r543_relics_bak
 
 	RunState.pending_rewards = r543_pending_bak
+
+	RunState.skipped_relics = r543_skipped_bak
 
 	RunState.gold = r543_bak_gold
 

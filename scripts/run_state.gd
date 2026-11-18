@@ -2950,6 +2950,12 @@ static func queue_key_choice(relic_id: int) -> void:
 static func claim_key_choice(idx: int, take_key: bool) -> bool:
 	## R543：二选一领取 —— `take_key = true` 拿「生命之种」信物，否则拿「奖励道具」。
 	## 成功后该条置为 claimed。奖励道具走 gain_relic、信物走 gain_key。
+	## R798（用户口径「道具如果在大宝箱二选一没有拿，也算出现过，后续不会再重复出现」）：
+	## **摆上二选一就算出现过** —— 不论玩家最后拿了哪一边，候选道具都登记进
+	## `skipped_relics`（本局后续不再随机出来）。原来只有「放弃」那条路登记
+	## （`skip_key_choice`），选了种子时落选的那件会留在池子里、过几层又摇出来一次。
+	## ⚠️ 选道具那条分支同样登记：`gain_relic` 之后它已在 `relics` 里、池子本来就摇不到，
+	##    两边都记是为了「失去道具」类效果之后也不会复活（口径只有一句：出现过就不再出现）。
 	if idx < 0 or idx >= pending_rewards.size():
 		return false
 	var e: Dictionary = pending_rewards[idx]
@@ -2957,18 +2963,21 @@ static func claim_key_choice(idx: int, take_key: bool) -> bool:
 		return false
 	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
 		return false
+	var rid := int(e.get("relic_id", -1))
+	if rid > 0 and not skipped_relics.has(rid):
+		skipped_relics.append(rid)
 	if take_key:
 		gain_key(int(e.get("key_id", SEED_RELIC_ID)))
-	else:
-		var rid := int(e.get("relic_id", -1))
-		if rid > 0:
-			gain_relic(rid)
+	elif rid > 0:
+		gain_relic(rid)
 	e["state"] = REWARD_CLAIMED
 	return true
 
 
 static func skip_key_choice(idx: int) -> bool:
 	## R543：二选一放弃 —— 什么都不拿，奖励道具登记进 skipped（本局不再随机出来）。
+	## R798：登记口径与 `claim_key_choice` **完全一致** —— 三条出口（拿道具 / 拿种子 /
+	## 作废放弃）都会把那件候选道具记成「出现过」，本局不再摇到它。
 	if idx < 0 or idx >= pending_rewards.size():
 		return false
 	var e: Dictionary = pending_rewards[idx]
