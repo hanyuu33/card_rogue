@@ -792,6 +792,12 @@ const BRICK_RELIC_ID:= 6072
 const BRICK_HP:= 4
 # R793 刺墙（6073，一般档）：己方**工事被普通攻击**时，攻击者受 SPIKE_WALL_DMG 点伤害。
 #   挂点与启示者「电磁屏障」（9200 二阶段）同一处 —— 见 `attack()` 里那一段。
+# R797 龟壳（6078，一般档）：**上回合没有攻击过的己方单位**受到的伤害 -SHELL_REDUCE
+# （至少仍受 1 点，与犀牛 / 加厚装甲同一条下限口径）。
+#   判据读 `Placement.attacked_prev_turn`（attack / attack_hp 置位、reset_units 复位）
+# —— 「上回合」= 敌方回合里看到的「我方上一个回合打没打过」。
+const SHELL_RELIC_ID:= 6078
+const SHELL_REDUCE:= 2
 const SPIKE_WALL_RELIC_ID:= 6073
 const SPIKE_WALL_DMG:= 5
 # R796 刺墙**扩面**（用户口径「工事和 HP 被攻击时」）：反伤触发面从「工事」加到
@@ -13971,6 +13977,16 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - p.dmg_reduce)
 		if dmg != ab:
 			_log("%s：加厚装甲减伤 %d → 受到的伤害 %d → %d" % [p.card.card_name, p.dmg_reduce, ab, dmg])
+	# ①g R797 龟壳（6078）：**上回合没有攻击过的己方单位**受到的伤害 -SHELL_REDUCE。
+	#    只认己方（`p.owner == SIDE_SELF`）—— 敌人挨打不减，否则等于给对面一件免费道具；
+	#    与上面几条同为 flat 减伤、同一条「至少仍受 1 点」下限。
+	if (p != null and dmg > 0 and p.owner == SIDE_SELF and not p.attacked_prev_turn
+			and RunState.has_relic(SHELL_RELIC_ID)):
+		var sh_before:= dmg
+		dmg = maxi(1, dmg - SHELL_REDUCE)
+		if dmg != sh_before:
+			_log("龟壳：%s（上回合未攻击）受到的伤害 %d → %d" % [
+					p.card.card_name, sh_before, dmg])
 	# ①e 空号：原「土元素（9218）光环 -1 伤」随该卡在 R536 删除，编号不复用 ——
 	#    免得对不上其它地方引用的 ①d / ①f。
 	# ①d 关卡效果卡「枭熊之怒」（9212，R467）：**半血以上**受到的伤害 -1（至少仍受 1 点）。
@@ -17998,14 +18014,20 @@ func _trap_path_check(path: Array[Vector2i], side: String) -> void:
 	if p == null or p.health <= 0:
 		return
 	var hit_cells: Array[Vector2i] = []
+	# R797 河豚：「来这一格之前站在哪」= path[i-1]，与命中格**成对**收集 ——
+	# 回弹方向就是它。⚠️ 别在 `_trigger_trap` 里用 `_cell_of()` 反推：那时
+	# `move_unit` 已经落位，来路信息只剩 path 里有。也别用 `path.find(cell)` 回头找，
+	# 路径重复经过同一格时会取到第一处（虽然正常移动不会重复，但没有理由留这个坑）。
+	var hit_prevs: Array[Vector2i] = []
 	for i in range(1, path.size()):
 		var c: Vector2i = path[i]
 		if state.trap_fields.has(c):
 			hit_cells.append(c)
-	for hc in hit_cells:
+			hit_prevs.append(path[i - 1])
+	for hi in hit_cells.size():
 		if p.health <= 0:
 			break
-		_trigger_trap(hc, p)
+		_trigger_trap(hit_cells[hi], p, hit_prevs[hi])
 	# R733（与漩涡同一条根因）：`_trigger_trap()` 里只 `_hit_unit()` 扣血，
 	# 打死人不收尾 —— 单位会顶着负血留在场上（`move()` 里那句 `if p.health <= 0: return`
 	# 只是「别再往下结算」，不是清理）。循环外收一次，且放在 `_apply_frozen` /
@@ -18013,7 +18035,7 @@ func _trap_path_check(path: Array[Vector2i], side: String) -> void:
 	_destroy_dead()
 
 
-func _trigger_trap(cell: Vector2i, p: Placement) -> void:
+func _trigger_trap(cell: Vector2i, p: Placement, prev_cell:= Vector2i(-1, -1)) -> void:
 	var id := int(state.trap_fields.get(cell, -1))
 	if id <= 0:
 		return
@@ -18042,6 +18064,53 @@ func _trigger_trap(cell: Vector2i, p: Placement) -> void:
 		# _poison_tick，在所属方回合结束结算。踩到时上面已结算 1 次，剩下
 		# poison_turns-1 跳走中毒账本（重复施加取伤害高、只刷新持续时间）。
 		_apply_poison(p, t.damage, t.poison_turns - 1)
+	# R797 河豚（7015）：伤害与附带效果都结算完、人还活着 → 回弹。
+	# 放最后而不是最前：它要改 `board`（搬格子），先搬再结算附带效果就得拿新格子重新定位，
+	# 白白多一处「搬完忘了改 cell」的坑。
+	if t.bounce > 0 and p.health > 0:
+		_bounce_unit(p, prev_cell, t)
+
+
+func _bounce_cell_ok(dst: Vector2i, src: Vector2i, p: Placement) -> bool:
+	## 回弹落点判据（唯一口）：在棋盘内、不是原格、没人占、且这一格**允许这个单位站**
+	## （对方后排 = 我方 HP 行，`unit_slot_allowed()` 会拦）。
+	if dst == src or dst == Vector2i(-1, -1):
+		return false
+	if dst.x < 0 or dst.x >= FieldState.BOARD_ROWS:
+		return false
+	if dst.y < 0 or dst.y >= FieldState.BOARD_COLS:
+		return false
+	if state == null or state.board.has(dst):
+		return false
+	return unit_slot_allowed(dst, p.owner)
+
+
+func _bounce_unit(p: Placement, prev_cell: Vector2i, t: TrapData) -> void :
+	## R797 河豚 7015 的**回弹唯一口**。店长口径：
+	##   「回到来到这一格前的上一格（仅限正常移动到这里的，用效果直接到这一格的
+	##     则往这张卡所属方的方向弹一格）」。
+	##   * 正常移动 → `prev_cell` 就是来路，原样弹回去；
+	##   * 没有来路 / 来路已被占 / 越界 / 落在禁行行 → 改朝**河豚所属方**弹一格。
+	##     河豚是玩家放的 → 己方方向 = 行号 +1（`back_row(SIDE_SELF)` 在 x=5 那一侧）。
+	## ⚠️ 落点必须过 `unit_slot_allowed()`：对方后排（我方 HP 行）不许站人，
+	##    「弹」和「推」一样要守这条，别指望调用方记得。
+	var src:= _cell_of(p)
+	if src == Vector2i(-1, -1):
+		return
+	var dst:= prev_cell
+	var why:= "弹回来时的 %s" % str(dst)
+	if not _bounce_cell_ok(dst, src, p):
+		dst = src + Vector2i(1, 0)
+		why = "朝我方方向弹到 %s" % str(dst)
+		if not _bounce_cell_ok(dst, src, p):
+			_log("河豚：%s 无处可弹，留在原地" % p.card.card_name)
+			action.emit("trap_bounce", {"from": src, "to": src, "card": p.card,
+					"id": t.id, "blocked": true})
+			return
+	state.move_unit(src, dst)
+	_log("河豚：%s 被%s（%s → %s）" % [p.card.card_name, why, src, dst])
+	action.emit("trap_bounce", {"from": src, "to": dst, "card": p.card,
+			"id": t.id, "blocked": false})
 
 
 func _sleep_tick(side: String) -> void :
@@ -18674,6 +18743,9 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		atk_power = maxi(1, atk_power / 2)
 		_log("恐惧之影：标记单位 %s 的攻击 %d → %d（减半）" % [
 			attacker.card.card_name, fs_before, atk_power])
+	# R797 龟壳：普攻落地的**置位口**之一（另一处是 `attack_hp()`）。
+	# 挂在这里而不是函数开头：射程 / 嘲讽 / 组装任何一步提前 return 都不算「攻击过」。
+	attacker.attacked_prev_turn = true
 	var def_dmg:= _hit_unit(defender, atk_power, "战斗", true, true)
 	# R504 厄运的使者（9232）：攻击**被标记的**敌人 → 自己回复 3 点生命。
 	# 判据取在扣血之后、`_reap` 之前：单位一被销毁 `_cell_of()` 就不可靠了（标记本身还在那格）。
@@ -18839,6 +18911,8 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		var tn:= _taunt_targets(src, side, attacker.card)
 		_log("射程内有嘲讽单位（%s），不能直击 HP" % state.unit_at(tn[0]).card.card_name)
 		return
+	# R797 龟壳：直击 HP 也算「攻击过」（置位口之二，与 `attack()` 同一句话术）。
+	attacker.attacked_prev_turn = true
 	var power:= attacker.effective_power() + _turn_dmg_bonus(side)\
 	+ _ally_dmg_bonus(attacker.card, side)
 	# R145：`dealt` = 真正落到 HP 上的伤害（减伤 / 挡下之后）。0 = 被完全挡下。

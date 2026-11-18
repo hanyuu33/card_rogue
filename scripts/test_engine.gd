@@ -9764,9 +9764,9 @@ func _init() -> void:
 
 	var r289_leg := r289_repo.legendary_reward_ids()
 
-	check(r289_all.size() == 29 and r289_nor.size() == 23 and r289_leg.size() == 6,
+	check(r289_all.size() == 30 and r289_nor.size() == 24 and r289_leg.size() == 6,
 
-			"奖励分档：奖励池 29 件 = 一般 23 + 传奇 6（实际 %d / %d / %d）"
+			"奖励分档：奖励池 30 件 = 一般 24 + 传奇 6（实际 %d / %d / %d）"
 
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 
@@ -43973,9 +43973,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 72,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 73,
 
-			"R577b 保真锁：72 件道具的 id 都能在 relics.json 源文本里找到（R793s +大师之剑 6075 / R796 +兔脚 6076 / 钻头 6077）")
+			"R577b 保真锁：73 件道具的 id 都能在 relics.json 源文本里找到（R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -57699,9 +57699,9 @@ func _init() -> void:
 
 			"R745 工具：野性图腾是使用型、且不是休息处专属（能掉落 / 能上架）")
 
-	check(r744_trepo.random_traps().size() == 12,
+	check(r744_trepo.random_traps().size() == 13,
 
-			"R745 工具池：可随机 12 件（烤肉 7007 仍被 rest_only 排除；R796 +卡牌包 / 智慧药剂）")
+			"R745 工具池：可随机 13 件（烤肉 7007 仍被 rest_only 排除；R797 +河豚 7015）")
 
 	# ② 工具箱：获得即给一个工具；满栏不硬塞、转进待领奖励（不吞玩家的东西）。
 	#    ⚠️ 发工具会改全局 RunState，测完逐个还原，别把后面的用例带歪。
@@ -73921,7 +73921,8 @@ func _init() -> void:
 	_test_r792()
 	_test_r793()
 	_test_r793s()
-	_test_r794()
+	_test_r796()
+	_test_r797()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -78529,7 +78530,7 @@ func _test_r792() -> void:
 
 
 
-func _test_r794() -> void:
+func _test_r796() -> void:
 	## R796（用户口径）：刺墙**扩面**（工事 + HP 被攻击）/ 兔脚 6076 / 钻头 6077 /
 	## 卡牌包 7013（随机卡填满手牌）/ 智慧药剂 7014（抽 3 张）。
 	var r796_cards := CardRepo.load_json()
@@ -78642,6 +78643,84 @@ func _test_r794() -> void:
 	RunState.tool_roll_seq = r796_sv_seq
 	RunState.tool_drop_pledge = r796_sv_pledge
 	print("  · R796：刺墙扩面 / 兔脚 / 钻头 / 卡牌包 / 智慧药剂")
+
+
+func _test_r797() -> void:
+	## R797（用户口径）：龟壳 6078 —— **上回合没有攻击过的己方单位**受到的伤害 -2（至少 1）。
+	## 判据 `Placement.attacked_prev_turn`：attack / attack_hp 置位、reset_units 复位。
+	var r797_cards := CardRepo.load_json()
+	var r797_repo := RelicRepo.load_json()
+	var r797_sv: Array[int] = RunState.relics.duplicate()
+
+	# ① 数据层
+	check(r797_repo.get_relic(6078) != null, "R797 数据层：龟壳 6078 在库")
+	check(r797_repo.reward_ids().has(6078) and r797_repo.normal_reward_ids().has(6078),
+			"R797 龟壳进奖励池（一般档）")
+
+	# ② 上回合没攻击过 → 10 点伤害只吃 8
+	RunState.relics = [6078]
+	var r797_e1 := _new_engine([], 40, 40)
+	var r797_a1 := r797_e1.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r797_a1 != null, "R797 龟壳：己方单位就位")
+	var r797_hp0: int = r797_a1.health
+	r797_e1._hit_unit(r797_a1, 10, "测试")
+	check(r797_a1.health == r797_hp0 - 8,
+			"R797 龟壳：上回合没攻击过 → 10 点只受 8（%d → %d）" % [r797_hp0, r797_a1.health])
+	check(not r797_a1.attacked_prev_turn, "R797 龟壳：挨打不算「攻击过」")
+
+	# ③ 普攻落地 → 置位，之后再挨打就不减了
+	var r797_e2 := _new_engine([], 40, 40)
+	var r797_a2 := r797_e2.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r797_f2 := r797_e2.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	check(r797_a2 != null and r797_f2 != null, "R797 龟壳：攻守双方就位")
+	r797_e2.attack(Vector2i(4, 1), Vector2i(4, 2), GameEngine.SIDE_SELF)
+	check(r797_a2.attacked_prev_turn, "R797 龟壳：普攻落地 → 记下「这回合打过」")
+	var r797_hp2: int = r797_a2.health
+	r797_e2._hit_unit(r797_a2, 10, "测试")
+	check(r797_a2.health == r797_hp2 - 10,
+			"R797 龟壳：打过就吃满伤害（%d → %d）" % [r797_hp2, r797_a2.health])
+
+	# ④ 新回合开始复位
+	r797_e2.state.reset_units(GameEngine.SIDE_SELF)
+	check(not r797_a2.attacked_prev_turn, "R797 龟壳：自己的回合开始 → 标记复位")
+
+	# ⑤ 至少仍受 1 点 / 敌人不减 / 没道具不减
+	var r797_e3 := _new_engine([], 40, 40)
+	var r797_a3 := r797_e3.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r797_f3 := r797_e3.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	var r797_hp3: int = r797_a3.health
+	r797_e3._hit_unit(r797_a3, 1, "测试")
+	check(r797_a3.health == r797_hp3 - 1, "R797 龟壳：1 点伤害仍受 1 点（不会减成 0）")
+	var r797_hp4: int = r797_f3.health
+	r797_e3._hit_unit(r797_f3, 10, "测试")
+	check(r797_f3.health == r797_hp4 - 10, "R797 龟壳：只保护己方，敌人照吃满伤害")
+	RunState.relics = []
+	var r797_e4 := _new_engine([], 40, 40)
+	var r797_a4 := r797_e4.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r797_hp5: int = r797_a4.health
+	r797_e4._hit_unit(r797_a4, 10, "测试")
+	check(r797_a4.health == r797_hp5 - 10, "R797 龟壳：没持道具 → 不减伤")
+
+	# ⑥ 源码锁：减伤必须挂在 `_unit_damage_taken()`（两个扣血落地口共用）
+	var r797_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r797_ge.contains("and not p.attacked_prev_turn")
+			and r797_ge.contains("SHELL_RELIC_ID"),
+			"R797 龟壳：减伤在减伤唯一口里，两条扣血落地口都吃得到")
+
+	RunState.relics = r797_sv
+	print("  · R797：龟壳 6078（受伤 -2，上回合未攻击）")
 
 
 func _test_r793() -> void:

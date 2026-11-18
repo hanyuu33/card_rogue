@@ -58,6 +58,10 @@
   "7014": {
    "name": "Potion of Wisdom",
    "desc": "Tap it twice to use it, no dragging needed. Draws 3 cards; the tool is then used up."
+  },
+  "7015": {
+   "name": "Pufferfish",
+   "desc": "Drag it onto an empty battlefield cell. An enemy that steps on it is knocked back one cell and takes 3 damage; the tool is then used up."
   }
  }
 }

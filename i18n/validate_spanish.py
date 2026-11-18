@@ -194,8 +194,8 @@ for trait in sorted(required_trait_terms):
 # 即时效果只标获得时机，不译成消耗。
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
-check(len(NONCARD_ES["relics"]) == 70 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 70 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / +大师之剑 6075）")
+check(len(NONCARD_ES["relics"]) == 73 and len(NONCARD_ES["classes"]) == 3,
+      "noncard 为 73 件道具 + 3 个角色（R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078）")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})
@@ -277,7 +277,7 @@ for dynamic_key, narrative_key in dynamic_map.items():
 interface_zh_rows, interface_entries = flatten_interface(INTERFACE_ZH)
 interface_es_rows, _ = flatten_interface(INTERFACE_ES, translated=True)
 check(set(interface_es_rows) == set(interface_zh_rows), "interface 全部 scope.key 覆盖一致")
-check(len(interface_zh_rows) == 826, "interface 共 826 条")
+check(len(interface_zh_rows) == 827, "interface 共 827 条")
 reuse_locked = set(INTERFACE_ZH.get("l10n_reuse", {})) | set(INTERFACE_ZH.get("glossary_reuse", {}))
 for path, zh_text in interface_zh_rows.items():
     entry = interface_entries[path]

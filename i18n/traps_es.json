@@ -58,6 +58,10 @@
   "7014": {
    "name": "Poción de sabiduría",
    "desc": "Tócala dos veces para usarla, sin arrastrarla. Roba 3 cartas; después, la herramienta se consume."
+  },
+  "7015": {
+   "name": "Pez globo",
+   "desc": "Arrástrala a una casilla vacía del campo. El enemigo que la pise retrocede una casilla y recibe 3 de daño; después, la herramienta se consume."
   }
  }
 }

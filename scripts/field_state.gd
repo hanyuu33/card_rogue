@@ -694,6 +694,8 @@ func reset_units(side: String) -> void:
 			# 「本回合挪过没有」的**唯一复位口** —— 回合开始清零。
 			# ⚠️ R503 起 did_move 没有读取方（陷阱判定已删），保留只为存档兼容。
 			p.did_move = false
+			# R797 龟壳：新回合开始 = 上一回合的「攻击过」作废。
+			p.attacked_prev_turn = false
 			# 哈气 / 太阳熔炉：回合开始时刷新成「行动两次」
 			# （R479 哈气是单点永久标记；原本就双动 → 不叠加，取最大）
 			p.acts_left = unit_actions(p, side)

@@ -1,20 +1,20 @@
 {
   "traps": [
-    { "id": 7001, "name": "炼金炸弹", "price": 30, "damage": 18,
+    { "id": 7001, "name": "炼金炸弹", "price": 25, "damage": 18,
       "desc": "拖到战场空格上放置。敌人踩到时造成 18 点伤害，用掉后从工具栏移除。", "icon": "trap_bomb" },
-    { "id": 7002, "name": "冰冻陷阱", "price": 40, "damage": 2, "freeze": 1,
+    { "id": 7002, "name": "冰冻陷阱", "price": 35, "damage": 2, "freeze": 1,
       "desc": "拖到战场空格上放置。敌人踩到时造成 2 点伤害并冻结一回合，用掉后从工具栏移除。", "icon": "trap_frost" },
-    { "id": 7003, "name": "毒瓶", "price": 30, "damage": 8, "poison_turns": 3,
+    { "id": 7003, "name": "毒瓶", "price": 25, "damage": 8, "poison_turns": 3,
       "desc": "拖到战场空格上放置。敌人踩到时造成 8 点伤害并中毒；之后每个敌人回合结束再受 8 点伤害，共 3 次结算（与毒沼同口径），用掉后从工具栏移除。", "icon": "trap_poison" },
-    { "id": 7004, "name": "穿刺陷阱", "price": 40, "damage": 10, "root": 1,
+    { "id": 7004, "name": "穿刺陷阱", "price": 35, "damage": 10, "root": 1,
       "desc": "拖到战场空格上放置。敌人踩到时造成 10 点伤害并禁足一回合，用掉后从工具栏移除。", "icon": "trap_spike" },
-    { "id": 7005, "name": "小血瓶", "price": 50, "heal_pct": 20,
+    { "id": 7005, "name": "小血瓶", "price": 45, "heal_pct": 20,
       "desc": "轻点两下即可使用，无需拖到战场格子上。立即回复 20% 生命（上限为最大生命），用掉后从工具栏移除。", "icon": "tool_potion_hp" },
-    { "id": 7006, "name": "法力药剂", "price": 35, "energy": 2,
+    { "id": 7006, "name": "法力药剂", "price": 30, "energy": 2,
       "desc": "轻点两下即可使用，无需拖到战场格子上。立即回复 2 点费用，用掉后从工具栏移除。", "icon": "tool_potion_mana" },
     { "id": 7007, "name": "烤肉", "price": 0, "heal_pct": 25, "rest_only": true,
       "desc": "轻点两下即可使用，无需拖到战场格子上。立即回复 25% 最大生命（向上取整，不超过上限），用掉后从工具栏移除。只能在休息处烤制。", "icon": "tool_bbq" },
-    { "id": 7008, "name": "野性图腾", "price": 30, "ally_atk": 2,
+    { "id": 7008, "name": "野性图腾", "price": 25, "ally_atk": 2,
       "desc": "轻点两下即可使用，无需拖到战场格子上。本场战斗中所有己方盟友 +2 力量，用掉后从工具栏移除。", "icon": "tool_totem" },
     { "id": 7009, "name": "万能牌", "pick_kind": "deck_copy",
       "desc": "轻点两下即可使用，无需拖到战场格子上。从你的抽牌库中选择一张卡，将它的幻影复制加入你的手牌（回合结束消失），复制品的费用变为 0。用掉后从工具栏移除。", "icon": "tool_wildcard" },
@@ -24,9 +24,11 @@
       "desc": "轻点两下即可使用，无需拖到战场格子上。从 3 张随机卡牌中选择一张加入你的手牌，本回合它的费用为 0。用掉后从工具栏移除。", "icon": "tool_mystery" },
     { "id": 7012, "name": "石头", "direct_damage": 15, "no_drop": true,
       "desc": "拖到敌方单位身上。对它造成 15 点伤害，用掉后从工具栏移除。", "icon": "tool_stone" },
-    { "id": 7013, "name": "卡牌包", "price": 55, "fill_hand": true,
+    { "id": 7013, "name": "卡牌包", "price": 50, "fill_hand": true,
       "desc": "轻点两下即可使用，无需拖到战场格子上。用随机卡牌填满你的手牌，用掉后从工具栏移除。", "icon": "tool_cardpack" },
-    { "id": 7014, "name": "智慧药剂", "price": 40, "draw_cards": 3,
-      "desc": "轻点两下即可使用，无需拖到战场格子上。立即抽 3 张卡，用掉后从工具栏移除。", "icon": "tool_potion_wisdom" }
+    { "id": 7014, "name": "智慧药剂", "price": 35, "draw_cards": 3,
+      "desc": "轻点两下即可使用，无需拖到战场格子上。立即抽 3 张卡，用掉后从工具栏移除。", "icon": "tool_potion_wisdom" },
+    { "id": 7015, "name": "河豚", "price": 25, "damage": 3, "bounce": 1,
+      "desc": "拖到战场空格上放置。敌人踩到时被弹回一格并受到 3 点伤害，用掉后从工具栏移除。", "icon": "tool_puffer" }
   ]
 }

@@ -26,6 +26,7 @@ static func color_of(id: int) -> Color:
 		7012: return Color(0.68, 0.66, 0.62)   # 石头 · 石灰
 		7013: return Color(0.86, 0.68, 0.42)   # 卡牌包 · 牛皮纸
 		7014: return Color(0.58, 0.72, 0.98)   # 智慧药剂 · 智慧蓝
+		7015: return Color(0.94, 0.62, 0.38)   # 河豚 · 河豚橙
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -94,7 +95,29 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7012: _stone(ci, c, s, ink)
 		7013: _cardpack(ci, c, s, ink)
 		7014: _wisdom(ci, c, s, ink)
+		7015: _puffer(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
+
+
+static func _puffer(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R797 河豚 7015：圆身 + 一圈短刺 + 小尾鳍（程序化兜底；有 png 时整段不走）。
+	var w := maxf(1.2, s * 0.028)
+	var body := c + Vector2(-s * 0.03, s * 0.01)
+	# 刺：12 根放射短线，长度带一点参差（免得像太阳）
+	for k in 12:
+		var a := TAU * float(k) / 12.0
+		var d := Vector2(cos(a), sin(a))
+		var far := s * (0.34 if k % 3 == 0 else 0.29)
+		ci.draw_line(body + d * s * 0.20, body + d * far, col, w, true)
+	ci.draw_circle(body, s * 0.21, col)
+	# 眼睛：白点 + 黑瞳（小尺寸下就是一深一浅两个点）
+	ci.draw_circle(body + Vector2(s * 0.09, -s * 0.05), s * 0.045,
+			Color(1, 1, 1, col.a))
+	ci.draw_circle(body + Vector2(s * 0.10, -s * 0.05), s * 0.022, col)
+	# 尾鳍：两个三角
+	var tail := c + Vector2(s * 0.26, s * 0.02)
+	ci.draw_colored_polygon(PackedVector2Array([tail, tail + Vector2(s * 0.11, -s * 0.10),
+			tail + Vector2(s * 0.11, s * 0.10)]), col)
 
 
 static func _bomb(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:

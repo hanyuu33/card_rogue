@@ -266,7 +266,8 @@
     "6074": {"name": "Armadura de Emergencia", "desc": "No puedes recibir más de 20 de daño por turno."},
     "6075": {"name": "Espada Maestra", "desc": "El primer Aliado que juegas en cada combate obtiene +10 de Poder (no se acumula)."},
     "6076": {"name": "Pata de conejo", "desc": "Ganas 10 de oro extra al vencer en combate y la probabilidad de que caiga una herramienta tras el combate aumenta un 10% (aditivo)."},
-    "6077": {"name": "Taladro", "desc": "Cuando usas una carta cuyo coste es X, si X es 6 o más, X se duplica."}
+    "6077": {"name": "Taladro", "desc": "Cuando usas una carta cuyo coste es X, si X es 6 o más, X se duplica."},
+    "6078": {"name": "Caparazón de tortuga", "desc": "Tus aliados que no atacaron en el turno anterior reciben 2 puntos menos de daño (como mínimo 1)."}
   },
   "classes": {
     "森林精魄": {
