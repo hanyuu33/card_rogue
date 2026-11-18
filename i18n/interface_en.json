@@ -195,12 +195,10 @@
       "REWARD_TOOL_TAG_PLACE": "Battle drop · Placement tool (drag onto a battlefield cell)",
       "REWARD_TOOL_TAG_USE": "Battle drop · Usable tool (tap to use)",
       "REWARD_TOOL_DESC_MISSING": "(This tool's description is missing)",
-      "REWARD_TOOL_FULL_SWAP": "Tool bar is full: tap an old tool to swap it out",
       "REWARD_TOOL_SWAP_TAG": "Discard",
       "REWARD_TOOL_SWAP_HEAD": "Tool bar is full · pick one to replace",
       "REWARD_TOOL_SWAP_CANCEL": "Cancel",
-      "REWARD_TOOL_SWAP_NOTE": "Tapping an old tool above discards it, and the new tool fills that slot right away.",
-      "REWARD_TOOL_FULL_BTN": "Tool bar full"
+      "REWARD_TOOL_SWAP_NOTE": "Tapping an old tool above discards it, and the new tool fills that slot right away."
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "Starting Point",
@@ -418,7 +416,6 @@
       "GALLERY_SUMMARY_RELEASE": "%s · Collected %d / %d",
       "GALLERY_SUMMARY_SHOWN": "(%d shown)",
       "GALLERY_SUMMARY_TEST": "%s · %d card types",
-      "GALLERY_SUMMARY_LOCKED": "(%d locked)",
       "GALLERY_SUMMARY_TEXT_ONLY": "(%d cards' names do not contain the search term)",
       "GALLERY_EMPTY": "(No cards)",
       "GALLERY_EMPTY_UNSEEN": "You have not seen any cards yet",
@@ -546,7 +543,6 @@
       "STORY_RANGE": "Segments %d–%d / %d total",
       "STORY_GRANTS_CARDS": "Unlock: %d cards",
       "STORY_GRANTS_RELICS": "Unlock: %d relics",
-      "STORY_GRANTS_BOTH": "Unlock: %d cards · %d relics",
       "STORY_DETAIL_LOCKED": "This story segment is still locked",
       "STORY_DETAIL_NO_REWARD": "No extra reward for reading this segment.",
       "STORY_DETAIL_REWARDS": "Reading unlocks: %d cards · %d relics (added to the reward pool)",
@@ -619,7 +615,6 @@
       "RECORD_OLD_NO_SNAPSHOT": "This record is from an older version and has no final relic / deck snapshot (only the result and time were saved).",
       "RECORD_FINAL_RELICS": "Final Relics (%d)",
       "RECORD_NO_RELICS": "(No relics acquired this run)",
-      "RECORD_MORE_RELICS": "…%d more",
       "RECORD_FINAL_DECK": "Final Deck (%d cards / %d types)",
       "RECORD_ENCHANT": "Enchant: %s",
       "RECORD_DECK_RANGE": "Deck rows %d–%d / %d total",

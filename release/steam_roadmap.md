@@ -21,7 +21,7 @@
 | 导出预设 | 四个预设均改用 `Quackill*.exe/apk`；产品名 Quackill、厂牌 risusumai、exe 版本资源 1.0.0 | ✅ R763 已收口 |
 | 桌面纹理 | 卡图 `compress/mode=2` + `high_quality=true`，生成 **bptc + astc 双变体** | ⚠️ 纹理 PSNR 仍待重测；R763 已产出真实 260.1MB 包 |
 | 存档 | `run_save.sav`（局内）/ `profile.json`（玩家）/ `run_records.json` / `run_pending.json` / `save_trace.log`（取证，带时间戳、会涨） | ⚠️ 云存档需白名单，`save_trace.log` 不能同步 |
-| 本地化 | 四语界面与卡牌 / 道具翻译并行推进；本轮只清理旧标题页脚键 | ⚠️ 全量卡面排版与旧锚点仍待最终复验 |
+| 本地化 | **英文版已完整（R784 收尾）**：331 卡 / 64 道具 / 868 界面 key / 209 特性全部有英文，卡面四语排版探针 0 溢出，i18n 专项 35 通过 0 失败 | ✅ 英文可用；日文特性仍靠英文回落，西语整体未完成（见 §5 状态块） |
 | 新手引导 | 教程机制代码在（`battle_scene._tutorial` + 7350+ 行引导条），但 **42 个关卡 `tutorial` 全为 `[]`**；且引导条只剩 36..52 共 16px 高度（源码注释明说必须先改版式） | ❌ 休眠态，恢复成本高于「新做一套」 |
 | 每日挑战 | R762 已接模式选择、UTC 日期种子、固定职业/难度/标准初始卡组、每日一次、续档、本地成绩与 Steam 榜桥 | ⚠️ 本地闭环已完成；自有 AppID 的真实建榜/上传/下载待验 |
 | 组合系统 | 唯一入口 `_open_combo()`；候选池 24 张；`combo_trigger` 卡 **仅 2 张**（9246 / 9247）；机械之心可用候选仅 4 张；R588「产物继承 traits / id」**未修** | ⚠️ 保真 bug + 内容面窄 |
@@ -227,6 +227,34 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 
 - 文案还在动：R600 才清过一轮显示层文案、R607 还在改标题页 → 翻早了就是白翻。
 - 只要 E0 四条守住，**延后不会涨价**；反过来，若 E0 不守，延后一个月就是几千条回头账。
+
+### E7 英文版收尾实测（2026-11-18，R784）
+
+店长问「英文本地化还没做完？」——实测主体早已完成，真正缺的是**特性（traits）译名**。
+本轮已补完，英文版可上商店页。
+
+| 层 | 实测结果 | 工具 |
+|---|---|---|
+| 卡牌 | 331/331，`name` 与 `effect_text` 全覆盖、零中文残留 | `tools/_i18n_gap.py` |
+| 道具 / 职业 | 64/64 道具（含新增 6066 猴爪 = Monkey's Paw） | 同上 |
+| 界面 | 源码 629 处 `GameI18n.ui()` 调用全覆盖；7 个「疑似缺」全是动态拼接前缀（`LEVEL_` / `MOD_` 等），en 里完整 key 都在 | 同上 |
+| **特性 traits** | **原本 76 条无英文**（卡面特性栏会露中文）→ 已补 76 条英日译名 | `tools/_probe_traits.gd` |
+| 卡面排版 | 图鉴逐卡四语刷新：**zh/en/ja/es 全部 ISSUES=0**，英文 5 行完整显示不裁切 | `tools/_probe_gallery_text.gd` |
+| 场景排版 | 22 场景仅 1 处溢出 = `Toolbar/StatusLabel`，系 R113 设计好的 `clip_text + 省略号`，非缺陷 | `tools/probe_ui_text.gd -- --lang=en` |
+
+**关键机制**：`GameI18n._lang_chain()` 让 es / ja 都回落到 en，所以**补齐英文即可保证三语都不露中文**。
+日文特性名目前大量走英文回落（日文正文本身含汉字，探针的 CJK 判定对 ja 无效，别拿那个数字当缺口）。
+
+**同步清理的历史欠账**：
+- glossary 补登记 6066 猴爪、statue 奇异雕像（译文早已存在，只是术语表漏登）。
+- 中文底本与三语译文删掉 5 条死 key（`REWARD_TOOL_FULL_*` R755 已换、`GALLERY_SUMMARY_LOCKED` R753 已移除、
+  `STORY_GRANTS_BOTH` / `RECORD_MORE_RELICS` 源码无调用），`expected_counts` 同步为
+  shop72 / reward123 / map244 / battle80 / shell214 / shared92。
+- canonical 术语归一：6027 与 APPLE_DESC 的「最大生命值」→「最大生命」（权威 GDScript / relics.json 原文不动）。
+- 验证脚本锁定数随内容更新：noncard 63→64、narrative 26 事件/64 段→27/68、spanish interface 829→824。
+
+**仍未完成（不阻塞英文版）**：西语整体 41 项（325/331 卡、术语未统一）；日文特性名靠英文回落。
+西语不在本轮范围，未为让它变绿而放宽任何断言。
 
 ---
 

@@ -195,12 +195,10 @@
       "REWARD_TOOL_TAG_PLACE": "Botín de combate · De colocación (arrástrala a una casilla del campo)",
       "REWARD_TOOL_TAG_USE": "Botín de combate · De uso (tócala para usar)",
       "REWARD_TOOL_DESC_MISSING": "(Falta la descripción de esta herramienta)",
-      "REWARD_TOOL_FULL_SWAP": "Barra de herramientas llena: toca una herramienta vieja para sustituirla",
       "REWARD_TOOL_SWAP_TAG": "Descartar",
       "REWARD_TOOL_SWAP_HEAD": "Barra llena · elige una para sustituir",
       "REWARD_TOOL_SWAP_CANCEL": "Cancelar",
-      "REWARD_TOOL_SWAP_NOTE": "Toca una herramienta vieja arriba para descartarla: la nueva ocupa ese espacio al instante.",
-      "REWARD_TOOL_FULL_BTN": "Barra llena"
+      "REWARD_TOOL_SWAP_NOTE": "Toca una herramienta vieja arriba para descartarla: la nueva ocupa ese espacio al instante."
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "Punto de partida",
@@ -418,7 +416,6 @@
       "GALLERY_SUMMARY_RELEASE": "%s · Recopiladas %d / %d",
       "GALLERY_SUMMARY_SHOWN": " (%d mostradas)",
       "GALLERY_SUMMARY_TEST": "%s · %d tipos de carta",
-      "GALLERY_SUMMARY_LOCKED": " (%d bloqueadas)",
       "GALLERY_SUMMARY_TEXT_ONLY": " (%d cartas cuyos nombres no contienen la búsqueda)",
       "GALLERY_EMPTY": "(Sin cartas)",
       "GALLERY_EMPTY_UNSEEN": "Aún no has visto ninguna carta",
@@ -546,7 +543,6 @@
       "STORY_RANGE": "Segmentos %d–%d / %d en total",
       "STORY_GRANTS_CARDS": "Desbloquea: %d cartas",
       "STORY_GRANTS_RELICS": "Desbloquea: %d Reliquias",
-      "STORY_GRANTS_BOTH": "Desbloquea: %d cartas · %d Reliquias",
       "STORY_DETAIL_LOCKED": "Este segmento de historia aún está bloqueado",
       "STORY_DETAIL_NO_REWARD": "Leer este segmento no otorga recompensa adicional.",
       "STORY_DETAIL_REWARDS": "Al leerlo desbloqueas: %d cartas · %d Reliquias (se añaden a la reserva de recompensas)",
@@ -619,7 +615,6 @@
       "RECORD_OLD_NO_SNAPSHOT": "Este registro es de una versión anterior y no tiene una captura de las Reliquias / el mazo final (solo guarda el resultado y el tiempo).",
       "RECORD_FINAL_RELICS": "Reliquias finales (%d)",
       "RECORD_NO_RELICS": "(No se adquirieron Reliquias en esta partida)",
-      "RECORD_MORE_RELICS": "…%d más",
       "RECORD_FINAL_DECK": "Mazo final (%d cartas / %d tipos)",
       "RECORD_ENCHANT": "Encantamiento: %s",
       "RECORD_DECK_RANGE": "Filas del mazo %d–%d / %d en total",

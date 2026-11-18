@@ -195,12 +195,10 @@
       "REWARD_TOOL_TAG_PLACE": "戦闘ドロップ・設置型（戦場のマスへドラッグ）",
       "REWARD_TOOL_TAG_USE": "戦闘ドロップ・使用型（タップで使用）",
       "REWARD_TOOL_DESC_MISSING": "（このツールの説明が見つかりません）",
-      "REWARD_TOOL_FULL_SWAP": "ツールバーが満杯：古いツールをタップして入れ替え",
       "REWARD_TOOL_SWAP_TAG": "捨てる",
       "REWARD_TOOL_SWAP_HEAD": "ツールバー満杯・1つ選んで入れ替え",
       "REWARD_TOOL_SWAP_CANCEL": "キャンセル",
-      "REWARD_TOOL_SWAP_NOTE": "上の古いツールをタップすると捨てられ、新しいツールがその枠にすぐ入る。",
-      "REWARD_TOOL_FULL_BTN": "ツールバー満杯"
+      "REWARD_TOOL_SWAP_NOTE": "上の古いツールをタップすると捨てられ、新しいツールがその枠にすぐ入る。"
     },
     "map": {
       "ROGUE_MAP_TYPE_START": "起点",
@@ -418,7 +416,6 @@
       "GALLERY_SUMMARY_RELEASE": "%s · 収集 %d / %d",
       "GALLERY_SUMMARY_SHOWN": "（%d枚を表示）",
       "GALLERY_SUMMARY_TEST": "%s · 全%d種のカード",
-      "GALLERY_SUMMARY_LOCKED": "（うち%d枚が未解放）",
       "GALLERY_SUMMARY_TEXT_ONLY": "（うち%d枚はカード名に検索語を含まない）",
       "GALLERY_EMPTY": "（カードなし）",
       "GALLERY_EMPTY_UNSEEN": "まだどのカードも見ていない",
@@ -546,7 +543,6 @@
       "STORY_RANGE": "%d–%d 段 / 全 %d 段",
       "STORY_GRANTS_CARDS": "解放：カード %d 枚",
       "STORY_GRANTS_RELICS": "解放：レリック %d 件",
-      "STORY_GRANTS_BOTH": "解放：カード %d 枚 · レリック %d 件",
       "STORY_DETAIL_LOCKED": "このストーリーはまだ解放されていません",
       "STORY_DETAIL_NO_REWARD": "このストーリーを読んでも追加報酬はありません。",
       "STORY_DETAIL_REWARDS": "読了後に解放：カード %d 枚 · レリック %d 件（報酬プールに追加）",
@@ -619,7 +615,6 @@
       "RECORD_OLD_NO_SNAPSHOT": "この記録は旧バージョンのもので、最終レリック / デッキは保存されていません（結果と時間のみ記録）。",
       "RECORD_FINAL_RELICS": "最終レリック（%d）",
       "RECORD_NO_RELICS": "（この冒険ではレリックを獲得していません）",
-      "RECORD_MORE_RELICS": "…ほか %d 件",
       "RECORD_FINAL_DECK": "最終デッキ（%d 枚 / %d 種）",
       "RECORD_ENCHANT": "付呪：%s",
       "RECORD_DECK_RANGE": "デッキ %d–%d 行 / 全 %d 行",

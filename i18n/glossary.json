@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-11-13",
+  "updated": "2026-11-18",
   "source_lang": "zh-CN",
   "targets": [
     "en",
@@ -655,6 +655,310 @@
     "忒修斯奇械": {
       "en": "Theseus Engine",
       "ja": "テセウスの機械"
+    },
+    "传承": {
+      "en": "Legacy",
+      "ja": "伝承"
+    },
+    "伤害转移": {
+      "en": "Damage Transfer",
+      "ja": "ダメージ転移"
+    },
+    "兔": {
+      "en": "Rabbit",
+      "ja": "兎"
+    },
+    "冰霜": {
+      "en": "Frost",
+      "ja": "氷霜"
+    },
+    "加护": {
+      "en": "Blessing",
+      "ja": "加護"
+    },
+    "协同": {
+      "en": "Synergy",
+      "ja": "シナジー"
+    },
+    "发条": {
+      "en": "Clockwork",
+      "ja": "発条"
+    },
+    "号令": {
+      "en": "Command",
+      "ja": "号令"
+    },
+    "咏唱者": {
+      "en": "Chanter",
+      "ja": "詠唱者"
+    },
+    "增量": {
+      "en": "Increment",
+      "ja": "増量"
+    },
+    "复仇": {
+      "en": "Revenge",
+      "ja": "復讐"
+    },
+    "奥术": {
+      "en": "Arcane",
+      "ja": "奥術"
+    },
+    "奥秘": {
+      "en": "Mystery",
+      "ja": "奥秘"
+    },
+    "寒霜": {
+      "en": "Chill",
+      "ja": "寒霜"
+    },
+    "巨炮": {
+      "en": "Cannon",
+      "ja": "巨砲"
+    },
+    "废铁": {
+      "en": "Scrap",
+      "ja": "スクラップ"
+    },
+    "弓手": {
+      "en": "Archer",
+      "ja": "弓手"
+    },
+    "恶魔召唤": {
+      "en": "Demon Summon",
+      "ja": "悪魔召喚"
+    },
+    "成长": {
+      "en": "Growth",
+      "ja": "成長"
+    },
+    "扑击": {
+      "en": "Pounce",
+      "ja": "飛びかかり"
+    },
+    "执法": {
+      "en": "Enforcement",
+      "ja": "執行"
+    },
+    "折射": {
+      "en": "Refraction",
+      "ja": "屈折"
+    },
+    "护甲积攒": {
+      "en": "Armor Gain",
+      "ja": "装甲蓄積"
+    },
+    "拾荒": {
+      "en": "Scavenge",
+      "ja": "スカベンジ"
+    },
+    "持续改造": {
+      "en": "Persistent Upgrade",
+      "ja": "永続改造"
+    },
+    "改造供能": {
+      "en": "Upgrade Charge",
+      "ja": "改造チャージ"
+    },
+    "改造层数": {
+      "en": "Upgrade Stacks",
+      "ja": "改造スタック"
+    },
+    "改造抽牌": {
+      "en": "Upgrade Draw",
+      "ja": "改造ドロー"
+    },
+    "改造攻程": {
+      "en": "Upgrade Range",
+      "ja": "改造射程"
+    },
+    "改造生命层": {
+      "en": "Upgrade Health Stacks",
+      "ja": "改造HPスタック"
+    },
+    "施法者": {
+      "en": "Caster",
+      "ja": "術者"
+    },
+    "暗影领主": {
+      "en": "Shadow Lord",
+      "ja": "暗影の領主"
+    },
+    "暗杀": {
+      "en": "Assassinate",
+      "ja": "暗殺"
+    },
+    "暗杀召唤": {
+      "en": "Assassin Summon",
+      "ja": "暗殺召喚"
+    },
+    "机械成长": {
+      "en": "Mech Growth",
+      "ja": "機械成長"
+    },
+    "枭熊本能": {
+      "en": "Owlbear Instinct",
+      "ja": "オウルベア本能"
+    },
+    "模仿改造": {
+      "en": "Mimic Upgrade",
+      "ja": "模倣改造"
+    },
+    "治疗": {
+      "en": "Healing",
+      "ja": "治療"
+    },
+    "测量": {
+      "en": "Survey",
+      "ja": "測量"
+    },
+    "激光炮": {
+      "en": "Laser Cannon",
+      "ja": "レーザー砲"
+    },
+    "炮击": {
+      "en": "Bombard",
+      "ja": "砲撃"
+    },
+    "爆炎": {
+      "en": "Flame Burst",
+      "ja": "爆炎"
+    },
+    "犬": {
+      "en": "Hound",
+      "ja": "犬"
+    },
+    "狐": {
+      "en": "Fox",
+      "ja": "狐"
+    },
+    "狼": {
+      "en": "Wolf",
+      "ja": "狼"
+    },
+    "猫": {
+      "en": "Cat",
+      "ja": "猫"
+    },
+    "百眼": {
+      "en": "Hundred Eyes",
+      "ja": "百眼"
+    },
+    "祭坛": {
+      "en": "Altar",
+      "ja": "祭壇"
+    },
+    "穿行": {
+      "en": "Phasing",
+      "ja": "すり抜け"
+    },
+    "精进": {
+      "en": "Mastery",
+      "ja": "精進"
+    },
+    "自主改造": {
+      "en": "Self Upgrade",
+      "ja": "自律改造"
+    },
+    "自我复制": {
+      "en": "Self-Copy",
+      "ja": "自己複製"
+    },
+    "范围": {
+      "en": "Area",
+      "ja": "範囲"
+    },
+    "虎": {
+      "en": "Tiger",
+      "ja": "虎"
+    },
+    "行动力成长": {
+      "en": "Mobility Growth",
+      "ja": "行動力成長"
+    },
+    "装配": {
+      "en": "Equip",
+      "ja": "装備"
+    },
+    "计算": {
+      "en": "Compute",
+      "ja": "計算"
+    },
+    "迅捷": {
+      "en": "Swift",
+      "ja": "迅速"
+    },
+    "远程": {
+      "en": "Ranged",
+      "ja": "遠隔"
+    },
+    "通缉": {
+      "en": "Wanted",
+      "ja": "指名手配"
+    },
+    "野性": {
+      "en": "Feral",
+      "ja": "野生"
+    },
+    "量产护甲": {
+      "en": "Mass Armor",
+      "ja": "量産装甲"
+    },
+    "量产锻造": {
+      "en": "Mass Forge",
+      "ja": "量産鍛造"
+    },
+    "闪电": {
+      "en": "Lightning",
+      "ja": "雷"
+    },
+    "队长": {
+      "en": "Captain",
+      "ja": "隊長"
+    },
+    "阵亡双动": {
+      "en": "On-Death: Double Action",
+      "ja": "死亡時二動"
+    },
+    "阵亡机动": {
+      "en": "On-Death: Maneuver",
+      "ja": "死亡時機動"
+    },
+    "阵亡猎杀": {
+      "en": "On-Death: Hunt",
+      "ja": "死亡時狩猟"
+    },
+    "陶瓷": {
+      "en": "Ceramic",
+      "ja": "セラミック"
+    },
+    "集束": {
+      "en": "Cluster",
+      "ja": "クラスター"
+    },
+    "风": {
+      "en": "Wind",
+      "ja": "風"
+    },
+    "风暴": {
+      "en": "Storm",
+      "ja": "嵐"
+    },
+    "骨骼": {
+      "en": "Bone",
+      "ja": "骨格"
+    },
+    "鸦": {
+      "en": "Crow",
+      "ja": "鴉"
+    },
+    "鼠": {
+      "en": "Rat",
+      "ja": "鼠"
+    },
+    "齿轮": {
+      "en": "Gear",
+      "ja": "歯車"
     }
   },
   "names": {
@@ -1873,6 +2177,11 @@
       "en": "Poem",
       "ja": "詩",
       "id": 6069
+    },
+    "猴爪": {
+      "en": "Monkey's Paw",
+      "ja": "猿の手",
+      "id": 6066
     }
   },
   "levels": {
@@ -2162,6 +2471,11 @@
       "en": "Treasure Floor",
       "ja": "宝箱フロア",
       "key": "relic_chest"
+    },
+    "奇异雕像": {
+      "en": "The Strange Statue",
+      "ja": "奇妙な石像",
+      "key": "statue"
     }
   },
   "stories": {

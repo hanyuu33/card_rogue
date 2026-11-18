@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-15",
+  "updated": "2026-11-18",
   "purpose": "R667 界面与共享组件翻译专用规范中文底本。权威 GDScript 中文不改；仅明确审计的规则漂移在 canonical 修正。",
   "rules": [
     "卡组是跨战斗完整构筑，抽牌堆是本场待抽区；删除是跨战斗 Remove，消失是本场 Banish。",
@@ -1186,10 +1186,6 @@
         "source": "scripts/reward_panel.gd:443",
         "zh": "（这件工具的说明缺失）"
       },
-      "REWARD_TOOL_FULL_SWAP": {
-        "source": "scripts/reward_panel.gd",
-        "zh": "工具栏已满：点一个旧工具，把它换下来"
-      },
       "REWARD_TOOL_SWAP_TAG": {
         "source": "scripts/reward_panel.gd",
         "zh": "丢掉它"
@@ -1205,10 +1201,6 @@
       "REWARD_TOOL_SWAP_NOTE": {
         "source": "scripts/reward_panel.gd",
         "zh": "点上面的旧工具 = 丢掉它，新工具立刻补进那个栏位。"
-      },
-      "REWARD_TOOL_FULL_BTN": {
-        "source": "scripts/reward_panel.gd",
-        "zh": "工具栏已满"
       }
     },
     "map": {
@@ -2072,10 +2064,6 @@
         "source": "scripts/gallery_scene.gd:433",
         "zh": "%s · 共 %d 种卡牌"
       },
-      "GALLERY_SUMMARY_LOCKED": {
-        "source": "scripts/gallery_scene.gd:437",
-        "zh": "（其中 %d 张未解锁）"
-      },
       "GALLERY_SUMMARY_TEXT_ONLY": {
         "source": "scripts/gallery_scene.gd:442",
         "zh": "（其中 %d 张的卡名不含搜索词）"
@@ -2572,10 +2560,6 @@
         "source": "scripts/story_scene.gd:794-799",
         "zh": "解锁：道具 %d"
       },
-      "STORY_GRANTS_BOTH": {
-        "source": "scripts/story_scene.gd:794-799",
-        "zh": "解锁：卡牌 %d · 道具 %d"
-      },
       "STORY_DETAIL_LOCKED": {
         "source": "scripts/story_scene.gd:519",
         "zh": "这一段还没有解锁"
@@ -2872,10 +2856,6 @@
       "RECORD_NO_RELICS": {
         "source": "scripts/record_list_scene.gd:393",
         "zh": "（这一局没有获得道具）"
-      },
-      "RECORD_MORE_RELICS": {
-        "source": "scripts/record_list_scene.gd:405",
-        "zh": "…还有 %d 件"
       },
       "RECORD_FINAL_DECK": {
         "source": "scripts/record_list_scene.gd:413",
@@ -3691,10 +3671,10 @@
   },
   "expected_counts": {
     "shop": 72,
-    "reward": 125,
-    "map": 245,
-    "battle": 79,
-    "shell": 216,
+    "reward": 123,
+    "map": 244,
+    "battle": 80,
+    "shell": 214,
     "shared": 92
   }
 }
