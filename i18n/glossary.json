@@ -405,6 +405,30 @@
     "死亡": {
       "en": "Death",
       "ja": "死亡"
+    },
+    "持续场地": {
+      "en": "Persistent Field",
+      "ja": "永続フィールド"
+    },
+    "场地生效·双": {
+      "en": "Field: Both Sides",
+      "ja": "フィールド効果・双方"
+    },
+    "场地生效·友": {
+      "en": "Field: Friendly",
+      "ja": "フィールド効果・味方"
+    },
+    "离场消失": {
+      "en": "Banish on Leave",
+      "ja": "離場時に消滅"
+    },
+    "仅玩家可放置": {
+      "en": "Player Placement Only",
+      "ja": "プレイヤーのみ設置可能"
+    },
+    "跳跃": {
+      "en": "Leap",
+      "ja": "跳躍"
     }
   },
   "kinds": {
@@ -1127,6 +1151,11 @@
       "en": "Common",
       "ja": "一般",
       "note": "道具 tier，与卡牌稀有度普通是不同枚举"
+    },
+    "稀有": {
+      "en": "Rare",
+      "ja": "レア",
+      "note": "与卡牌稀有度「稀有」共用译名"
     },
     "传奇": {
       "en": "Legendary",
@@ -2325,6 +2354,10 @@
       "en": "Mass-Production Line",
       "ja": "量産ライン"
     },
+    "计量工坊": {
+      "en": "Metrology Works",
+      "ja": "計量工房"
+    },
     "量产铁砧": {
       "en": "Mass-Produced Anvils",
       "ja": "量産の金床"
@@ -2630,6 +2663,11 @@
       "en": "Braver with Every Trial",
       "ja": "難しいほど勇ましく",
       "id": "CLEAR_HARD"
+    },
+    "巅峰之上": {
+      "en": "Above the Summit",
+      "ja": "頂点を超えて",
+      "id": "CLEAR_APEX"
     }
   }
 }

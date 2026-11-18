@@ -144,9 +144,9 @@ def flatten_interface(data, translated=False):
     return rows, entries
 
 
-# 卡牌：325 个稳定 ID（R761 加杜鹃 9263 / 招募 9264、R758 加计量工坊三张、R756 加代偿 9252）；名称与效果字段完整，空效果只允许仍为空。
+# 卡牌：331 个稳定 ID（R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
 check(set(CARDS_ES["cards"]) == set(CARDS_ZH["cards"]), "cards ID 覆盖与 canonical 一致")
-check(len(CARDS_ES["cards"]) == 325, "cards 共 325 张")
+check(len(CARDS_ES["cards"]) == 331, "cards 共 331 张")
 raw_cards = {str(row["id"]): row for row in RAW_CARDS}
 for cid, zh_row in CARDS_ZH["cards"].items():
     es_row = CARDS_ES["cards"].get(cid, {})
@@ -190,12 +190,12 @@ check(set(GLOSSARY_ES) == required_trait_terms,
 for trait in sorted(required_trait_terms):
     check_text("glossary_es." + trait, trait, GLOSSARY_ES.get(trait))
 
-# 道具与角色：63 件道具（R743 烤肉改成工具 7007、R745 加回工具箱 6068、R761 加「诗」6069）、3 个角色；
+# 道具与角色：64 件道具（含 R766 猴爪 6066）、3 个角色；
 # 即时效果只标获得时机，不译成消耗。
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
-check(len(NONCARD_ES["relics"]) == 63 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 63 件道具 + 3 个角色")
+check(len(NONCARD_ES["relics"]) == 64 and len(NONCARD_ES["classes"]) == 3,
+      "noncard 为 64 件道具 + 3 个角色")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})
@@ -260,7 +260,7 @@ for achievement_id, zh_row in NARRATIVE_ZH["achievements"].items():
 event_zh_rows = flatten_event(EVENT_ZH)
 event_es_rows = flatten_event(EVENT_ES)
 check(set(event_es_rows) == set(event_zh_rows), "event_ui 全部 key 覆盖一致")
-check(len(event_zh_rows) == 156, "event_ui 为 84 选项 + 64 结果 + 5 选货 + 3 动态")
+check(len(event_zh_rows) == 162, "event_ui 为 87 选项 + 67 结果 + 5 选货 + 3 动态")
 for path, zh_text in event_zh_rows.items():
     check_text("event_ui." + path, zh_text, event_es_rows.get(path))
 dynamic_map = {
@@ -277,7 +277,7 @@ for dynamic_key, narrative_key in dynamic_map.items():
 interface_zh_rows, interface_entries = flatten_interface(INTERFACE_ZH)
 interface_es_rows, _ = flatten_interface(INTERFACE_ES, translated=True)
 check(set(interface_es_rows) == set(interface_zh_rows), "interface 全部 scope.key 覆盖一致")
-check(len(interface_zh_rows) == 824, "interface 共 824 条")
+check(len(interface_zh_rows) == 825, "interface 共 825 条")
 reuse_locked = set(INTERFACE_ZH.get("l10n_reuse", {})) | set(INTERFACE_ZH.get("glossary_reuse", {}))
 for path, zh_text in interface_zh_rows.items():
     entry = interface_entries[path]
@@ -370,5 +370,9 @@ if errors:
         print("  -", error)
     sys.exit(1)
 print("SPANISH I18N OK: %d checks" % checks)
-print("  cards=319 | relics=62 | classes=3 | traps=%d" % len(raw_traps))
-print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=156 | interface=794 | l10n=67")
+print("  cards=%d | relics=%d | classes=%d | traps=%d" % (
+    len(CARDS_ES["cards"]), len(NONCARD_ES["relics"]), len(NONCARD_ES["classes"]), len(raw_traps)))
+print("  events=%d/%d | stories=%d/%d | achievements=%d | event_ui=%d | interface=%d | l10n=%d" % (
+    len(NARRATIVE_ZH["events"]), sum(len(row["texts"]) for row in NARRATIVE_ZH["events"].values()),
+    len(NARRATIVE_ZH["stories"]), sum(len(row["text"]) for row in NARRATIVE_ZH["stories"].values()),
+    len(NARRATIVE_ZH["achievements"]), len(event_zh_rows), len(interface_zh_rows), len(L10N_ES)))

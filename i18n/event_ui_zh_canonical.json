@@ -49,7 +49,7 @@
       "LEAVE_WITHOUT_INVESTING": "离开（不投入）"
     },
     "core_contract": {
-      "SIGN_CONTRACT": "订立契约（获得道具「咒缚」）",
+      "SIGN_CONTRACT": "订立契约（「咒缚」+ 一张「代偿」）",
       "CONTRACT_SIGNED_DISABLED": "契约已经签过了",
       "TAKE_CORE": "获取核心（收下道具「核心」）",
       "CORE_FORMED_DISABLED": "核心已经成形（战斗结束时在奖励页兑换）",
@@ -71,7 +71,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "离开（两个都不要）"
     },
     "divination": {
-      "START_DIVINATION": "进行占卜（失去 5 点最大生命）",
+      "START_DIVINATION": "进行占卜（失去 %d 点最大生命）",
       "LEAVE_WITHOUT_DIVINATION": "离开（不占卜）",
       "LEAVE_WITHOUT_INTERPRETING": "离开（不去解读）",
       "WHALE_FIGHT": "我会为它而战（获得「鲸鱼之怒」）",
@@ -260,7 +260,7 @@
       "FURNACE_REWARDS_PENDING": "「%s」投进炉里，炉子吐出 %d 件道具：%s。请在奖励悬浮窗里收下。"
     },
     "core_contract": {
-      "CORE_CONTRACT_CURSE_GAINED": "「咒缚」已收进道具栏：%s",
+      "CORE_CONTRACT_CURSE_GAINED": "获得道具「咒缚」，一张「%s」已加入你的卡组。（咒缚：%s）",
       "CORE_CONTRACT_CORE_GAINED": "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张尚未附魔的伤害技能牌上。用掉之后失效。"
     },
     "divination": {

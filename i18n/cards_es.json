@@ -279,7 +279,7 @@
   },
   "8066": {
    "name": "Reducción de Carga",
-   "effect_text": "Elige una carta de la pila de robo y **destiérrala**. **Roba una carta adicional al comienzo del próximo turno**."
+   "effect_text": "Elige una carta de tu mazo y **destiérrala**. **Roba una carta adicional al comienzo del próximo turno**."
   },
   "8067": {
    "name": "Sombra Escindida",
@@ -840,11 +840,11 @@
   },
   "9131": {
    "name": "Onie de Producción en Serie",
-   "effect_text": "Al comienzo de tu turno, añade una «Apertura» a la pila de robo del oponente."
+   "effect_text": "Al comienzo de tu turno, añade una «Apertura» al mazo del oponente."
   },
   "9132": {
    "name": "Onie",
-   "effect_text": "Al comienzo de tu turno, añade una «Apertura» a la pila de robo del oponente."
+   "effect_text": "Al comienzo de tu turno, añade una «Apertura» al mazo del oponente."
   },
   "9133": {
    "name": "Hecatonquiro de Producción en Serie",
@@ -972,7 +972,7 @@
   },
   "9167": {
    "name": "Fusión",
-   "effect_text": "Elige un «Chasis» de la pila de robo y **destiérralo**; otorga una mejora a un Aliado o una Estructura aliada en el campo: su Poder y su Vida aumentan, cada uno, en los valores de ese Chasis."
+   "effect_text": "Elige un «Chasis» de tu mazo y **destiérralo**; otorga una mejora a un Aliado o una Estructura aliada en el campo: su Poder y su Vida aumentan, cada uno, en los valores de ese Chasis."
   },
   "9168": {
    "name": "Deseo",
@@ -1296,7 +1296,7 @@
   },
   "9262": {
    "name": "Incrementador de Carga",
-   "effect_text": "Al comienzo de cada turno, añade un «Ataque» y una «Valla de Madera» a la pila de robo del oponente."
+   "effect_text": "Al comienzo de cada turno, añade un «Golpe» y una «Valla de Madera» a la pila de robo del oponente."
   },
   "9263": {
    "name": "Cuco",
@@ -1309,6 +1309,26 @@
   "9265": {
    "name": "Arrepentimiento",
    "effect_text": "Elige una carta de otra clase en la pila de descarte. Se destierra."
+  },
+  "9266": {
+   "name": "Llamada",
+   "effect_text": "Obtienes +1 de Coste por turno durante el resto de este combate. Añade a tu mano un Aliado aleatorio de otra clase que cueste 1 más que esta carta; su Coste pasa a ser 0 durante el resto de este combate."
+  },
+  "9267": {
+   "name": "Himno alentador",
+   "effect_text": "Este turno, todos los Aliados en el campo obtienen +4 de Poder; los Aliados cuya clase original no sea la tuya obtienen +6 en su lugar."
+  },
+  "9268": {
+   "name": "Órgano de tubos",
+   "effect_text": "Al atacar, añade a tu mano una carta de Habilidad aleatoria de tu mazo; su Coste se reduce en 1 este turno. Mientras esté en el campo, cada vez que uses una carta de Habilidad, inflige 3 de daño a todos los enemigos."
+  },
+  "9269": {
+   "name": "Poema arcoíris",
+   "effect_text": "Elige al azar 3 clases distintas que no sean la tuya. Añade a tu mano una carta aleatoria de Aliado o Habilidad de cada una; las cartas añadidas reducen su Coste en 1 durante el resto de este combate."
+  },
+  "9270": {
+   "name": "Himno del vendaval",
+   "effect_text": "Todos los Aliados obtienen +1 de Velocidad de Movimiento; los Aliados de otra clase, en su lugar, actúan dos veces por turno."
   }
  }
 }

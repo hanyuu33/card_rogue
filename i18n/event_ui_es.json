@@ -42,7 +42,7 @@
       "LEAVE_WITHOUT_INVESTING": "Salir (sin ofrecer nada)"
     },
     "core_contract": {
-      "SIGN_CONTRACT": "Firmar el contrato (obtener la Reliquia «Atadura maldita»)",
+      "SIGN_CONTRACT": "Firmar el contrato («Atadura maldita» + 1 «Compensación»)",
       "CONTRACT_SIGNED_DISABLED": "Contrato ya firmado",
       "TAKE_CORE": "Reclamar el Núcleo (tomar la Reliquia «Núcleo»)",
       "CORE_FORMED_DISABLED": "Núcleo ya formado (canjear en la pantalla de recompensas después del combate)",
@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "Salir (sin tomar ninguna)"
     },
     "divination": {
-      "START_DIVINATION": "Realizar una adivinación (pierdes 5 de Vida máxima)",
+      "START_DIVINATION": "Realizar una adivinación (pierdes %d de Vida máxima)",
       "LEAVE_WITHOUT_DIVINATION": "Salir (sin adivinación)",
       "LEAVE_WITHOUT_INTERPRETING": "Salir (sin interpretarla)",
       "WHALE_FIGHT": "Lucharé por ella (obtener «Ira de la Ballena»)",
@@ -262,7 +262,7 @@
       "FURNACE_REWARDS_PENDING": "Has arrojado «%s» al horno y este ha escupido %d Reliquias: %s. Recógelas en la ventana emergente de recompensas."
     },
     "core_contract": {
-      "CORE_CONTRACT_CURSE_GAINED": "«Atadura maldita» se ha añadido a tu inventario de Reliquias: %s",
+      "CORE_CONTRACT_CURSE_GAINED": "Has obtenido la Reliquia «Atadura maldita» y 1 «%s» se ha añadido a tu mazo. (Atadura maldita: %s)",
       "CORE_CONTRACT_CORE_GAINED": "«Núcleo» se ha añadido a tu inventario de Reliquias: tras perder un total acumulado de %d Vida en combate, tomará forma; al terminar este combate, aparecerá un intercambio adicional en la página de recompensas: sacrifica 1 Habilidad de daño, eliminándola permanentemente del mazo, y añade su primera instancia de daño como Encantamiento a otra Habilidad de daño que no tenga Encantamiento. Se vuelve inactivo después de usarlo."
     },
     "divination": {

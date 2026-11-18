@@ -42,7 +42,7 @@
       "LEAVE_WITHOUT_INVESTING": "Leave (don't offer anything)"
     },
     "core_contract": {
-      "SIGN_CONTRACT": "Sign the contract (gain the Relic \"Cursebind\")",
+      "SIGN_CONTRACT": "Sign the contract (gain \"Cursebind\" and 1 \"Compensation\")",
       "CONTRACT_SIGNED_DISABLED": "Contract already signed",
       "TAKE_CORE": "Claim the Core (take the Relic \"Core\")",
       "CORE_FORMED_DISABLED": "Core already formed (redeem on the reward screen after battle)",
@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "Leave (take neither)"
     },
     "divination": {
-      "START_DIVINATION": "Perform a divination (lose 5 Max Health)",
+      "START_DIVINATION": "Perform a divination (lose %d Max Health)",
       "LEAVE_WITHOUT_DIVINATION": "Leave (no divination)",
       "LEAVE_WITHOUT_INTERPRETING": "Leave (skip interpretation)",
       "WHALE_FIGHT": "I will fight for it (gain \"Whale's Wrath\")",
@@ -262,7 +262,7 @@
       "FURNACE_REWARDS_PENDING": "\"%s\" was thrown into the furnace, and it spat out %d Relics: %s. Claim them in the reward pop-up."
     },
     "core_contract": {
-      "CORE_CONTRACT_CURSE_GAINED": "\"Cursebind\" has been added to your Relic inventory: %s",
+      "CORE_CONTRACT_CURSE_GAINED": "Gained the Relic \"Cursebind\" and added 1 \"%s\" to your Deck. (Cursebind: %s)",
       "CORE_CONTRACT_CORE_GAINED": "\"Core\" has been added to your Relic inventory: after you have lost a cumulative total of %d Health in battle, it takes shape; an extra exchange becomes available on the reward page when this battle ends—sacrifice 1 damage Skill, permanently Removing it from your Deck, and attach its first instance of damage as an Enchant to another damage Skill with no Enchant. It becomes inactive after use."
     },
     "divination": {

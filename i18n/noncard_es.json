@@ -185,7 +185,7 @@
     },
     "6048": {
       "name": "Cuerda de caverna",
-      "desc": "Los combates que no sean contra un Jefe tienen un botón adicional de «Huir». Después de huir una vez, pierdes esta Reliquia y no obtienes recompensas, pero recuperas 1 Chocolate (la casilla sigue contando como explorada)."
+      "desc": "Los combates que no sean contra un Jefe tienen un botón adicional de «Huir». Después de huir 1 vez, pierdes esta Reliquia y no obtienes recompensas, pero recuperas 1 Chocolate (la casilla sigue contando como explorada)."
     },
     "6049": {
       "name": "Trofeo de cabeza de ciervo",

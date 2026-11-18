@@ -154,20 +154,23 @@ static func _has_cjk(text: String) -> bool:
 	return false
 
 
-static func _collect_pairs(zh: Variant, tr: Variant, out: Dictionary) -> void:
+static func _collect_pairs(zh: Variant, tr: Variant, out: Dictionary, allow_same := false) -> void:
 	if zh is Dictionary and tr is Dictionary:
 		for key in (zh as Dictionary).keys():
 			if (tr as Dictionary).has(key):
-				_collect_pairs((zh as Dictionary)[key], (tr as Dictionary)[key], out)
+				_collect_pairs((zh as Dictionary)[key], (tr as Dictionary)[key], out, allow_same)
 	elif zh is Array and tr is Array:
 		var za := zh as Array
 		var ta := tr as Array
 		for i in mini(za.size(), ta.size()):
-			_collect_pairs(za[i], ta[i], out)
+			_collect_pairs(za[i], ta[i], out, allow_same)
 	elif zh is String and tr is String:
 		var source_text := zh as String
 		var target_text := tr as String
-		if (source_text != "" and target_text != "" and source_text != target_text
+		# 日文允许与中文同形（魔法塔 / 防御 / 死亡等）。这些字段在 ja 文件里
+		# 显式存在就是有效译文；若因 source == target 跳过，随后 en 回落会
+		# 把正确日文覆盖成英文。en / es 仍拒绝同串，继续识别未翻中文。
+		if (source_text != "" and target_text != "" and (source_text != target_text or allow_same)
 				and _has_cjk(source_text) and not out.has(source_text)):
 			out[source_text] = target_text
 
@@ -180,7 +183,7 @@ static func _collect_domain(domain: String, canonical_path: String, lang: String
 	for code in _lang_chain(lang):
 		var tr := _domain(domain, code)
 		if not tr.is_empty():
-			_collect_pairs(zh, tr, out)
+			_collect_pairs(zh, tr, out, code == "ja")
 
 
 static func _collect_interface(lang: String, out: Dictionary) -> void:

@@ -13,12 +13,24 @@ func _initialize() -> void:
 		GameSettings.language = lang
 		GameI18n.reset_cache()
 		var missing: Array = []
+		var same_form := 0
 		for t in uniq:
 			var loc := GameI18n.source(str(t))
-			if loc == str(t) or GameI18n._has_cjk(loc):
+			if lang == "ja":
+				# 日文汉字不是中文残留；同形词由显式 ja 字段提供，允许保留。
+				# 真正要拦的是 ja 取文被后续 en 回落覆盖。
+				var en_loc := GameI18n._exact(str(t), "en")
+				if loc != str(t) and en_loc != "" and loc == en_loc:
+					missing.append(str(t))
+				elif loc == str(t):
+					same_form += 1
+			elif loc == str(t) or GameI18n._has_cjk(loc):
 				missing.append(str(t))
 		missing.sort()
-		print("LANG=", lang, " 未译特性=", missing.size())
+		if lang == "ja":
+			print("LANG=ja 英文回落=", missing.size(), " 中日同形=", same_form)
+		else:
+			print("LANG=", lang, " 未译特性=", missing.size())
 		for m in missing:
 			print("  ", m)
 	GameSettings.language = "zh"

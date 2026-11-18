@@ -42,7 +42,7 @@
       "LEAVE_WITHOUT_INVESTING": "離れる（投入しない）"
     },
     "core_contract": {
-      "SIGN_CONTRACT": "契約を結ぶ（レリック「呪縛」を獲得）",
+      "SIGN_CONTRACT": "契約を結ぶ（「呪縛」＋「代償」1枚）",
       "CONTRACT_SIGNED_DISABLED": "契約は既に締結済み",
       "TAKE_CORE": "コアを得る（レリック「コア」を受け取る）",
       "CORE_FORMED_DISABLED": "コアは既に成形済み（戦闘終了後の報酬ページで交換）",
@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "離れる（どちらも取らない）"
     },
     "divination": {
-      "START_DIVINATION": "占いを行う（最大HPを5失う）",
+      "START_DIVINATION": "占いを行う（最大HPを%d失う）",
       "LEAVE_WITHOUT_DIVINATION": "離れる（占わない）",
       "LEAVE_WITHOUT_INTERPRETING": "離れる（解釈しない）",
       "WHALE_FIGHT": "それのために戦う（「鯨の怒り」を獲得）",
@@ -262,7 +262,7 @@
       "FURNACE_REWARDS_PENDING": "「%s」を炉に投げ込むと、レリックが%d件出てきた：%s。報酬ポップアップで受け取る。"
     },
     "core_contract": {
-      "CORE_CONTRACT_CURSE_GAINED": "「呪縛」をレリック欄に収めた：%s",
+      "CORE_CONTRACT_CURSE_GAINED": "レリック「呪縛」を獲得し、「%s」1枚をデッキに加えた。（呪縛：%s）",
       "CORE_CONTRACT_CORE_GAINED": "「コア」をレリック欄に収めた：戦闘中にHPを累計%d失うと成形し、この戦闘の終了時の報酬ページに交換が1回追加される——ダメージスキル1枚を犠牲にしてデッキから永続的に削除し、その1段目のダメージを付呪として、まだ付呪されていない別のダメージスキルに付与する。使用後は無効になる。"
     },
     "divination": {

@@ -18,7 +18,7 @@ CARDS = json.loads((ROOT / "cards.json").read_text(encoding="utf-8-sig"))["cards
 CARDS_EN = json.loads((I18N / "cards_en.json").read_text(encoding="utf-8"))["cards"]
 CARDS_JA = json.loads((I18N / "cards_ja.json").read_text(encoding="utf-8"))["cards"]
 SECTIONS = ("options", "results", "pickers", "rest_dynamic")
-EXPECTED_COUNTS = {"options": 84, "results": 64, "pickers": 5, "rest_dynamic": 3}
+EXPECTED_COUNTS = {"options": 87, "results": 67, "pickers": 5, "rest_dynamic": 3}
 errors = []
 
 
@@ -199,4 +199,6 @@ if errors:
     for error in errors:
         print("  -", error)
     sys.exit(1)
-print("\nEVENT UI I18N OK: 84 options / 64 results / 5 picker fields / 3 dynamic lines")
+print("\nEVENT UI I18N OK: %d options / %d results / %d picker fields / %d dynamic lines" % (
+    EXPECTED_COUNTS["options"], EXPECTED_COUNTS["results"],
+    EXPECTED_COUNTS["pickers"], EXPECTED_COUNTS["rest_dynamic"]))

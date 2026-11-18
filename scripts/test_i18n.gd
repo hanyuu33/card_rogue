@@ -191,5 +191,17 @@ func _initialize() -> void:
 	var skill_card := CardRepo.load_json().get_card(8002)
 	_check("卡面数值行访问函数", CardFace.stats_line(skill_card) == interface["scopes"]["shared"]["CARD_FACE_SKILL_STATS"])
 
+	GameSettings.language = "ja"
+	GameI18n.reset_cache()
+	_check("日文同形特性不被英文回落覆盖", GameI18n.source("魔法塔") == "魔法塔"
+			and GameI18n.source("防御") == "防御" and GameI18n.source("死亡") == "死亡",
+			"%s / %s / %s" % [GameI18n.source("魔法塔"), GameI18n.source("防御"), GameI18n.source("死亡")])
+	_check("日文占卜费用模板保留动态数值", GameI18n.source("进行占卜（失去 5 点最大生命）")
+			== "占いを行う（最大HPを5失う）", GameI18n.source("进行占卜（失去 5 点最大生命）"))
+	GameSettings.language = "en"
+	GameI18n.reset_cache()
+	_check("日文同形修正不改变英文译名", GameI18n.source("魔法塔") == "Magic Tower",
+			GameI18n.source("魔法塔"))
+
 	print("I18N === 结束：%d 通过 / %d 失败 ===" % [_ok, _bad])
 	quit(0 if _bad == 0 else 1)
