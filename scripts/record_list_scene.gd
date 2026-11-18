@@ -581,7 +581,7 @@ func _draw_detail() -> void:
 	# 档位数字，看不出是哪一档。旧记录只存了数字，名称现推；越界脏数据由它钳住。
 	draw_string(_font, Vector2(x0 + 250.0, top + 26.0),
 			GameI18n.ui("shell", "RECORD_CLASS_DIFFICULTY_TIME", "角色：%s · 难度 %s · 用时 %s")
-			% [PlayerClass.legacy_id(str(rec.get("class", "?"))),
+			% [PlayerClass.display_name_of(str(rec.get("class", "?"))),
 			RunState.difficulty_label(int(rec.get("difficulty", 2))),
 			RunRecord.fmt_secs(int(rec.get("secs", 0)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 640, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
@@ -703,7 +703,7 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 			RunRecord.fmt_time(str(rec.get("time", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font_bold, r.position + Vector2(246, 22),
-			GameI18n.ui("shell", "RECORD_ROW_CLASS", "角色：%s") % PlayerClass.legacy_id(str(rec.get("class", "?"))),
+			GameI18n.ui("shell", "RECORD_ROW_CLASS", "角色：%s") % PlayerClass.display_name_of(str(rec.get("class", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, UiTheme.PAGE_GREEN)
 	draw_string(_font_bold, r.position + Vector2(446, 22),
 			RunRecord.result_label(res, int(rec.get("layer", -1))),
@@ -723,5 +723,5 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 	# R261：种子码也列在列表行上（不用点进详情就能抄下来复现）
 	var row_seed := int(rec.get("seed", 0))
 	draw_string(_font, r.position + Vector2(430, 38),
-			"种子：%s" % ("—" if row_seed == 0 else RunState.seed_text_of(row_seed)),
+			GameI18n.ui("shell", "RECORD_SEED", "种子：%s") % ("—" if row_seed == 0 else RunState.seed_text_of(row_seed)),
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, Color("b39a5e"))

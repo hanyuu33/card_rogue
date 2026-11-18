@@ -20478,6 +20478,35 @@ func _init() -> void:
 
 	RunState.set_difficulty(0)
 
+
+	# ---- R795c：职业名显示 = 「旧名归一 + 按当前语言翻译」 ----
+	# 记录页原来只调 legacy_id()：中文 id 直接画到 en / ja / es 界面上；旧记录里的
+	# 「德鲁伊」又认不出译名。唯一口 = PlayerClass.display_name_of()。
+	check(PlayerClass.display_name_of(PlayerClass.DRUID) == "森林精魄"
+			and PlayerClass.display_name_of("德鲁伊") == "森林精魄"
+			and PlayerClass.display_name_of(PlayerClass.ROGUE) == "暗影刺客"
+			and PlayerClass.display_name_of("游荡者") == "暗影刺客",
+			"R795c 职业名：现行 id 与旧 id 都归一到「%s」" % PlayerClass.display_name_of("德鲁伊"))
+
+	var r795c_lang := GameSettings.language
+	GameSettings.set_language("en", true)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	check(PlayerClass.display_name_of(PlayerClass.DRUID) == "Forest Spirit"
+			and PlayerClass.display_name_of("德鲁伊") == "Forest Spirit",
+			"R795c 英文界面下职业名译出（%s）" % PlayerClass.display_name_of(PlayerClass.DRUID))
+	GameSettings.set_language(r795c_lang, true)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	check(PlayerClass.display_name_of(PlayerClass.DRUID) == "森林精魄",
+			"R795c 语言切回后职业名仍是中文（%s）" % PlayerClass.display_name_of(PlayerClass.DRUID))
+
+	var r795c_rec := FileAccess.get_file_as_string("res://scripts/record_list_scene.gd").replace("\r\n", "\n")
+	check_src(r795c_rec.find("PlayerClass.legacy_id(") < 0
+			and r795c_rec.count("PlayerClass.display_name_of(") == 2,
+			"R795c 记录页两处职业名都走 display_name_of()（不再裸 legacy_id）")
+	check_src(r795c_rec.count("RECORD_SEED") == 2,
+			"R795c 记录行 / 详情种子标签都走 RECORD_SEED（英文界面不再露中文）")
 	RunState.reset(50)
 
 

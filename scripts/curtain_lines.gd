@@ -52,7 +52,7 @@ static func reply(layer: int, cls: String) -> String:
 
 static func reply_speaker(layer: int, cls: String) -> String:
 	## 回答那一句的名称牌 = 玩家职业名（立绘出场时换牌）。
-	return PlayerClass.name_of(PlayerClass.legacy_id(cls))
+	return PlayerClass.display_name_of(cls)
 
 
 static func skip_label(layer: int) -> String:

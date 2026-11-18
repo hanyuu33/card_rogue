@@ -133,6 +133,15 @@ static func name_of(cid: String) -> String:
 	return GameI18n.class_name_of(cid)
 
 
+static func display_name_of(cid: String) -> String:
+	## 界面上显示职业名的**唯一口**：先把旧名归一到现行 id（德鲁伊 → 森林精魄），
+	## 再按当前语言取译名。
+	## 为什么不能只调其中一个：只做 `legacy_id()` 会把中文原名「森林精魄」直接画到
+	## 英文 / 日文 / 西班牙语界面上（记录页原来的毛病，R795c 修）；只做 `name_of()`
+	## 又认不出旧记录里存的「德鲁伊」（2026-10-03 改名前的老数据）。
+	return name_of(legacy_id(cid))
+
+
 static func subtitle_of(cid: String) -> String:
 	return GameI18n.class_field(cid, "subtitle", _subtitle_zh(cid))
 
