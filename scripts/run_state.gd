@@ -2189,6 +2189,19 @@ static func roll_reward_relic(bigchest := false, exclude: Array = [],
 	return nor[run_rng.randi() % nor.size()]
 
 
+static func roll_legendary_relic(exclude: Array = []) -> int:
+	## R807：**必定传奇**的一件奖励道具（事件「诡异洋房 · 探索」的报酬之一）。
+	## 与 `roll_reward_relic()` 的分工：那个按「5% × 层数」摇档位，这个直接锁死传奇池。
+	## ⚠️ 传奇池空了返回 **-1**，**不回落一般池** —— 悄悄塞一件一般的进去，
+	##    卡面上承诺的「传奇」就成了假话；调用方要自己决定「池子空了怎么办」。
+	## ⚠️ 只消耗**一个** randi（不先摇 randf 判档）：档位已经固定，多摇一个随机数
+	##    只会让同一 seed 下的道具序列凭空错位。
+	var leg := _reward_pool(RelicData.TIER_LEGENDARY, exclude)
+	if leg.is_empty():
+		return -1
+	return leg[run_rng.randi() % leg.size()]
+
+
 static func _drop_settled_batch() -> void:
 	## R138：开始**新一批**奖励之前，把上一批已经处理过的条目扔掉 ——
 	## 悬浮窗列表只显示「当前这一批」（用户反馈：过去的奖励还留在列表里）。

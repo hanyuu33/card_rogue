@@ -219,6 +219,13 @@
         "STATUE_PRAY_DESC": "You lay your hand on its cold paw and say nothing.\nSomething answers from inside the stone — a faint, patient tremor.\nFor the next three battles, every victory will give up a tool from the wreckage.",
         "STATUE_SMASH_DESC": "You pick up a stone and bring it down on the foreleg.\nA crack runs from the paw up to the goat's head, and the whole statue collapses into white rubble —\nthe pieces that still fit your hand are exactly enough to fill your tool bar."
       }
+    },
+    "haunted_house": {
+      "name": "The Haunted House",
+      "texts": {
+        "HAUNTED_DESC": "At the end of the path stands an old two-storey house. Most of the paint has\npeeled off the window frames, yet not a pane is broken, and a dim yellow light glows inside.\nThe door is ajar. There is no wind and no footsteps, yet the light is on.\nA faded wooden sign is nailed above the door: NO ONE LIVES HERE.\nOne window upstairs is curtained, but the light leaks out through the gap.\nIt sways slowly, very steadily.",
+        "HAUNTED_TAKEN_DESC": "The door closes behind you by itself.\nThe fireplace is cold. Several cloth bags and a handful of written cards lie\nscattered on the tea table, as if someone left halfway through packing.\nAs you gather them up, a very light sound comes from upstairs—\nlike someone setting a foot down onto the floor.\nWhen you step back outside and turn around, a cloth doll sits on the windowsill.\nIt faces your way."
+      }
     }
   },
   "stories": {

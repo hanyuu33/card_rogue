@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 333,
+ "count": 337,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1349,6 +1349,10 @@
   "9275": {
    "name": "Note",
    "effect_text": "Gain 2 Cost and draw 2 cards."
+  },
+  "9276": {
+   "name": "Curse Doll",
+   "effect_text": "Cannot be played. At the end of the turn, you take 3 damage. At the start of your turn, if this card is in your Discard Pile, return it to your Hand."
   }
  }
 }

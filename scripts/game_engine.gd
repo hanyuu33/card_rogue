@@ -743,6 +743,11 @@ const JAR_CURSE_ID:= 9157
 # R373 诅咒「麻痹」（9185）：启示者阶段 2 的电磁屏障**每次**受到技能伤害 → 往玩家弃牌库
 # 塞一张。无费用、**不能打出**（`CardData.unplayable`）、回合结束仍在手牌就消失。
 const PARALYSIS_CARD_ID:= 9185
+# R807 诅咒「诅咒娃娃」（9276）：事件「诡异洋房 · 探索」的代价。
+#   带「保存」→ 回合结束不弃、常驻手牌；每回合结束**你受 3 点伤害**；
+#   回合开始时它若在弃牌区 → 自己爬回手牌（丢出去也甩不掉）。
+const CURSE_DOLL_ID:= 9276
+const CURSE_DOLL_DMG:= 3
 # R246 二层起始道具「兼修」（6033）：我方每回合额外 +1 费用（与其它「回合开始加费」并列）。
 const VERSATILE_RELIC_ID:= 6033
 
@@ -2637,6 +2642,7 @@ func _begin_turn(side: String) -> void :
 			_finish("失败", "%d 回合内未击破敌方 HP" % state.turn_limit)
 			return
 
+		_curse_doll_return()    # R807 诅咒娃娃：回合开始若在弃牌区 → 回手（先于抽牌）
 		# R692（店长口径「鸭蛋改为（我方）回合开始时若存活」）：孵化从**回合结束**搬到
 		# **我方回合开始**。排在 `state.reset_units()` 之前 → 刚孵出的宠物鸭这一回合就能行动。
 		_egg_hatch_tick()
@@ -4703,6 +4709,7 @@ func end_turn() -> void :
 					% [POPCORN_DRAW, popcorn_draw])
 		_jar_tick()
 		_paralysis_tick()   # R373 麻痹：回合结束仍在手卡 → 消失（排在弃手牌之前）
+		_curse_doll_tick()  # R807 诅咒娃娃：回合结束仍在手卡 → 你受 3 伤（同样排弃手牌之前）
 		# R314 储物箱（6044）：持有 → 回合结束**不弃手牌**（keep_all）。
 		# 日志分开写：读者要能一眼看出「这次一张都没弃，是因为道具」。
 		var chest_keep:= self_relics.has(STORAGE_RELIC_ID)
@@ -15455,6 +15462,46 @@ func _add_paralysis(p: Placement) -> void:
 			% [p.card.card_name, state.discard.size()])
 	action.emit("paralysis_added", {"card": card, "discard": state.discard.size(),
 			"cell": _cell_of(p), "from": p.card})
+
+
+func _curse_doll_tick() -> void :
+	## R807 诅咒娃娃（9276）：「回合结束时，你受到 3 点伤害」。
+	## 判据只有一个 —— **它此刻在手牌里**（带「保存」所以通常一直在）。同名多张各算一次。
+	## 走 `_damage_player()` 唯一口：lucky7 免疫 / 鸭嘴减伤 / 不锈钢盆 / 死亡判定
+	## 全部照旧生效，所以在它上面再叠一层减伤只会让道具白拿。
+	## ⚠️ 必须排在 `discard_hand()` 之前：手牌先被弃掉这张就永远不在手上，效果白挂。
+	if over:
+		return
+	var count := 0
+	for c: CardData in state.hand:
+		if c != null and c.id == CURSE_DOLL_ID:
+			count += 1
+	if count == 0:
+		return
+	var dmg := CURSE_DOLL_DMG * count
+	_damage_player(SIDE_SELF, dmg, "诅咒娃娃")
+	_log("诅咒娃娃：回合结束，你受到 %d 点伤害（剩余 %d）" % [dmg, state.hp_self])
+	action.emit("curse_doll", {"count": count, "dmg": dmg, "hp": state.hp_self})
+
+
+func _curse_doll_return() -> void :
+	## R807 诅咒娃娃（9276）：「回合开始时，若这张卡在弃牌区，从弃牌区加入你的手牌」。
+	## 这一条才是它甩不掉的原因 —— 玩家把它丢进弃牌区只能躲开**那一次**扣血，
+	## 下个我方回合开始它自己就爬回来了。
+	## 进手走 `_grant_to_hand()` 唯一口：手牌满时它会**被放回弃牌区**（不消失），
+	## 下个回合继续尝试 —— 别在这里自己 append 到 hand，那会突破 HAND_LIMIT。
+	## ⚠️ 就地 `remove_at` 摘牌，不整体重建 discard 数组：别的模块可能持有它的引用。
+	var back := 0
+	var i := state.discard.size() - 1
+	while i >= 0:
+		var c: CardData = state.discard[i]
+		if c != null and c.id == CURSE_DOLL_ID:
+			state.discard.remove_at(i)
+			if _grant_to_hand(c, "诅咒娃娃"):
+				back += 1
+		i -= 1
+	if back > 0:
+		_log("诅咒娃娃：回合开始，从弃牌区回到手牌（%d 张）" % back)
 
 
 func _paralysis_tick() -> void :

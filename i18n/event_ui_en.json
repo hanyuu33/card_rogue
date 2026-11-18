@@ -157,6 +157,10 @@
       "PRAY": "Worship (the next 3 battles are guaranteed to drop a tool)",
       "SMASH": "Smash it (fill your tool bar with Stones)",
       "LEAVE": "Walk past (do nothing)"
+    },
+    "haunted_house": {
+      "EXPLORE": "Push the door open (a Legendary Relic + an Epic card reward; the price is a \"Curse Doll\")",
+      "LEAVE": "Turn around and leave (nobody should be living here)"
     }
   },
   "pickers": {
@@ -295,6 +299,10 @@
       "STATUE_PRAY": "Worshipped: the next %d battles each guarantee one tool drop.",
       "STATUE_SMASH": "The statue collapses: %d Stones stuffed into your tool bar (drag one onto an enemy for 15 damage).",
       "STATUE_SMASH_FULL": "The statue collapses, but your tool bar is already full — the rubble stays where it fell."
+    },
+    "haunted_house": {
+      "EXPLORED": "The \"Curse Doll\" has joined your deck; it will not go away. A Legendary Relic and an Epic card reward are waiting for you above.",
+      "EXPLORED_NO_RELIC": "The \"Curse Doll\" has joined your deck; it will not go away. You have already taken every Legendary Relic, so only an Epic card reward is left above."
     }
   },
   "rest_dynamic": {

@@ -2584,6 +2584,11 @@
       "en": "The Strange Statue",
       "ja": "奇妙な石像",
       "key": "statue"
+    },
+    "诡异洋房": {
+      "en": "The Haunted House",
+      "ja": "不気味な洋館",
+      "key": "haunted_house"
     }
   },
   "stories": {

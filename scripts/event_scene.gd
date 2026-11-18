@@ -217,6 +217,27 @@ const FACTORY_DONE_DESC := """传送带停了下来。最后一份合同已经�
 你的每个回合开始时，获得 1 费用并抽一张卡。
 甜香留在身后，林子重新安静下来。"""
 
+# R807 诡异洋房（haunted_house，第二层专属）：
+#   选项 1 探索 → 当场开一次奖励页（一件随机**传奇**道具 + 一组**史诗**卡牌三选一）
+#   ＋ 一张诅咒「诅咒娃娃」9276 强制进卡组；选项 2 离开。
+#   收益是全场最高那一档，代价是**贯穿整局**的每回合掉血 —— 所以只在第二层登记。
+const HAUNTED_CURSE_ID := 9276   # 诅咒娃娃（诅咒 · 不可打出 · 保存）
+
+const HAUNTED_DESC := """林道尽头立着一栋两层的旧洋房。窗框的漆掉得差不多了，
+玻璃却一块没碎，里面透出昏黄的光。
+门虚掩着，没有风，也没有脚步声——可那盏灯是亮着的。
+门楣上钉着一块掉了色的木牌：此屋无人。
+楼上有扇窗关着窗帘，光却从缝里漏出来，慢慢地、很有规律地晃。
+"""
+
+const HAUNTED_TAKEN_DESC := """门在你身后自己合上了。
+壁炉是冷的，茶几上摊着几只布袋和几张写满字的卡，
+像是有人收拾到一半就匆匆离开了。
+你把东西收进怀里的时候，楼上传来一声很轻的响动——
+像是有谁把一只脚从床上放了下来。
+等你走出门口回头，窗台上多了一只布娃娃，正对着你的方向坐着。
+"""
+
 # R573：蓝色大肥鱼事件已删除。只留一句旧存档兜底文案，不发任何奖励。
 const RETIRED_EVENT_DESC := """这里原本有一条蓝色大肥鱼。它已经游走了。"""
 
@@ -418,6 +439,8 @@ var _statue_pick := ""          # R754 奇异雕像：本次选的是 "pray" / "
 var _statue_result := ""        # R754 奇异雕像：收尾那行结果（重绘要能复现）
 var _sword_taken := false       # R793 林中的剑：本次是否已拔剑（拔了就只剩离开）
 var _sword_result := ""         # R793 林中的剑：收尾那行结果（重绘要能复现）
+var _house_done := false        # R807 诡异洋房：本次是否已探索（探索过就只剩离开）
+var _house_result := ""         # R807 诡异洋房：收尾那行结果（重绘要能复现）
 
 var _factory_stage := 0         # R794 巧克力工厂：下一次试吃的档位（0..3）；4 = 已包下工厂
 var _factory_result := ""       # R794 巧克力工厂：收尾那行结果（重绘要能复现）
@@ -583,6 +606,11 @@ func _is_cave() -> bool:
 	return _is_event_node() and _pending_kind() == "cave"
 
 
+func _is_haunted_house() -> bool:
+	## R807 诡异洋房（第二层专属事件）。
+	return _is_event_node() and _pending_kind() == "haunted_house"
+
+
 func _is_bluefish() -> bool:
 	## R573 已下线：只用来认出旧存档 / 脏数据里的 bluefish，
 	## 让它走「已移除」兜底页，而不是落进 _is_treasure() 误开宝箱发奖励。
@@ -671,7 +699,7 @@ func _is_treasure() -> bool:
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
 			and not _is_adventurer() and not _is_furnace() and not _is_core_contract() \
 			and not _is_flyer() and not _is_statue() and not _is_sword() \
-			and not _is_choco_factory()
+			and not _is_choco_factory() and not _is_haunted_house()
 
 
 func _kind() -> String:
@@ -732,6 +760,8 @@ func _kind() -> String:
 		return "sword"
 	if _is_choco_factory():
 		return "factory"
+	if _is_haunted_house():
+		return "haunted_house"
 	if _is_treasure():
 		return "treasure"
 	return "rest"
@@ -1306,7 +1336,7 @@ func _kind_tint(kind: String) -> Color:
 	## 六类事件的主题色：危险 / 交易 / 神秘 / 自然 / 收获 / 休息。
 	## 只改光晕和纹章的颜色，暗底不变 —— 保证 24 种事件「同一套里各有区别」。
 	match kind:
-		"struggle", "gaze", "oblivion", "furnace", "core_contract":
+		"struggle", "gaze", "oblivion", "furnace", "core_contract", "haunted_house":
 			return Color("b5484a")   # 危险：暗红
 		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial", "factory":
 			return Color("c8951c")   # 交易 / 匠人：金
@@ -1452,6 +1482,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "whisper"
+		if args[i] == "--house":  # R807 演示：伪装 run 诡异洋房事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "haunted_house"
 		if args[i] == "--sword":  # R793 演示：伪装 run 林中的剑事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -2016,6 +2050,23 @@ func _ready() -> void:
 			leave_btn.text = "转身离开（不碰那把剑）"
 			leave_btn.disabled = false
 			result_label.text = ""
+	elif _is_haunted_house():
+		event_name.text = "诡 异 洋 房"
+		desc.text = HAUNTED_TAKEN_DESC if _house_done else HAUNTED_DESC
+		if _house_done:
+			_collapse_to_leave()
+			result_label.text = _house_result
+			result_label.add_theme_color_override("font_color", Color("a98ad4"))
+		else:
+			rest_btn.visible = true
+			rest_btn.text = "推门进去（传奇道具 ＋ 史诗卡牌，代价是「诅咒娃娃」）"
+			rest_btn.disabled = false
+			bbq_btn.visible = false
+			alt_btn.visible = false
+			leave_btn.visible = true
+			leave_btn.text = "掉头离开（这栋房子不该有人住）"
+			leave_btn.disabled = false
+			result_label.text = ""
 	elif _is_choco_factory():
 		event_name.text = "巧 克 力 工 厂"
 		desc.text = FACTORY_DONE_DESC if _factory_stage >= 4 else FACTORY_DESC
@@ -2259,6 +2310,9 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_haunted_house():
+		_explore_haunted_house()
+		return
 	if _is_cave():
 		_cave_explore()
 		return
@@ -2917,6 +2971,43 @@ func _collapse_to_leave() -> void:
 	_redraw()
 
 
+func _explore_haunted_house() -> void:
+	## R807 诡异洋房 · 选项 1「探索」。三件事一次做完：
+	##   ① 一件随机**传奇**道具入队（`roll_legendary_relic()`，池空返回 -1）；
+	##   ② 一组**史诗**卡牌三选一入队（`queue_card_reward("epic")`，100% 史诗档）；
+	##   ③ 一张「诅咒娃娃」**直接进卡组** —— 它不是奖励，是代价，所以**不入队**，
+	##      玩家没有「不领」这个选项。
+	## 然后当场 `_reward_panel.open()`：**这里就是「没有战斗胜利标记的奖励页」**——
+	## 战斗那边的入口是 `battle_scene._present_win_panel()`（金框大字「战斗胜利」+ 金币，
+	## 点「查看奖励」才开窗），事件页直接开窗，那一整块根本不经过。
+	## ⚠️ 必须先入队再 open：`open()` 读的就是 `RunState.pending_rewards`，空队列开出来是空页。
+	## ⚠️ 不在这里替玩家领：关窗时没领的条目跟着地图左上「✦ 待领奖励」走（R695 口径）。
+	if _house_done:
+		_on_leave()
+		return
+	_house_done = true
+	_claim_reward(rest_btn)
+	_collapse_to_leave()
+	var relic_id := RunState.roll_legendary_relic()
+	if relic_id > 0:
+		RunState.queue_relic_reward(relic_id)
+	RunState.queue_card_reward("epic", [] as Array[String], "event")
+	RunState.add_card(HAUNTED_CURSE_ID)
+	desc.text = HAUNTED_TAKEN_DESC
+	# ⚠️ 结果行必须是**固定串**：`GameI18n.source()` 靠「全串精确 / 模板」匹配中文原文，
+	#    这里若插进道具名（%s），英文 / 日文 / 西语的模板就对不上，那一行会一直是中文。
+	#    道具名本来就会在奖励页里出现，不必在结果行再复述一遍。
+	if relic_id > 0:
+		_house_result = "「诅咒娃娃」已加入卡组，它不会走。一件传奇道具和一组史诗卡牌在上面等你挑。"
+	else:
+		_house_result = "「诅咒娃娃」已加入卡组，它不会走。传奇道具已全部拿过，上面只剩一组史诗卡牌。"
+	result_label.text = _house_result
+	result_label.add_theme_color_override("font_color", Color("a98ad4"))
+	if _reward_panel != null:
+		_reward_panel.open()
+	_redraw()
+
+
 func _setup_factory_button() -> void:
 	## R794：按当前档位铺「试吃」按钮的文案与可用态。
 	## 代价表 = FACTORY_STAGE_COST；上限付不起（lose_max_hp 至少保留 1 点）→ 置灰。
@@ -3099,7 +3190,7 @@ func _refresh() -> void:
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
 			or _is_moon() or _is_snow_leopard() or _is_furnace() \
 			or _is_core_contract() or _is_flyer() or _is_statue() or _is_sword() \
-			or _is_choco_factory():
+			or _is_choco_factory() or _is_haunted_house():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。

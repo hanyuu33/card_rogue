@@ -20,7 +20,7 @@ CARDS_JA = json.loads((I18N / "cards_ja.json").read_text(encoding="utf-8"))["car
 SECTIONS = ("options", "results", "pickers", "rest_dynamic")
 # R793：林中的剑 +4 选项（拔剑 / 上限不足 / 已持有 / 离开）、+1 结果。
 # R794：巧克力工厂 +6 选项（四档试吃 / 上限不足 / 离开）、+3 结果（免费 / 换血 / 得卡）。
-EXPECTED_COUNTS = {"options": 97, "results": 71, "pickers": 5, "rest_dynamic": 3}
+EXPECTED_COUNTS = {"options": 99, "results": 73, "pickers": 5, "rest_dynamic": 3}
 errors = []
 
 

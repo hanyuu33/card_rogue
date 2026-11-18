@@ -144,9 +144,9 @@ def flatten_interface(data, translated=False):
     return rows, entries
 
 
-# 卡牌：336 个稳定 ID（R800 加余音 9274 / 音符 9275；R799 加连斩 9272 / 炮火就位 9273；R794 加巧克力工厂 9271；R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
+# 卡牌：337 个稳定 ID（R807 +诅咒娃娃 9276；R800 加余音 9274 / 音符 9275；R799 加连斩 9272 / 炮火就位 9273；R794 加巧克力工厂 9271；R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
 check(set(CARDS_ES["cards"]) == set(CARDS_ZH["cards"]), "cards ID 覆盖与 canonical 一致")
-check(len(CARDS_ES["cards"]) == 336, "cards 共 336 张")
+check(len(CARDS_ES["cards"]) == 337, "cards 共 337 张（R807 +诅咒娃娃 9276）")
 raw_cards = {str(row["id"]): row for row in RAW_CARDS}
 for cid, zh_row in CARDS_ZH["cards"].items():
     es_row = CARDS_ES["cards"].get(cid, {})
@@ -260,7 +260,7 @@ for achievement_id, zh_row in NARRATIVE_ZH["achievements"].items():
 event_zh_rows = flatten_event(EVENT_ZH)
 event_es_rows = flatten_event(EVENT_ES)
 check(set(event_es_rows) == set(event_zh_rows), "event_ui 全部 key 覆盖一致")
-check(len(event_zh_rows) == 176, "event_ui 为 97 选项 + 71 结果 + 5 选货 + 3 动态（R793 +5；R794 +6）")
+check(len(event_zh_rows) == 180, "event_ui 为 99 选项 + 73 结果 + 5 选货 + 3 动态（R793 +5；R794 +6；R807 +2 +2）")
 for path, zh_text in event_zh_rows.items():
     check_text("event_ui." + path, zh_text, event_es_rows.get(path))
 dynamic_map = {

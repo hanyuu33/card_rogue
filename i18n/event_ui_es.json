@@ -157,6 +157,10 @@
       "PRAY": "Rendir culto (las próximas 3 batallas garantizan una herramienta)",
       "SMASH": "Destruirla (llena la barra de herramientas con Piedras)",
       "LEAVE": "Pasar de largo (no hacer nada)"
+    },
+    "haunted_house": {
+      "EXPLORE": "Empujar la puerta (un Relic Legendario + una recompensa de carta Épica; el precio es una «Muñeca maldita»)",
+      "LEAVE": "Dar media vuelta e irse (nadie debería vivir aquí)"
     }
   },
   "pickers": {
@@ -295,6 +299,10 @@
       "STATUE_PRAY": "Culto rendido: las próximas %d batallas garantizan una herramienta cada una.",
       "STATUE_SMASH": "La estatua se derrumba: %d Piedras llenan la barra (arrastra una a un enemigo para 15 de daño).",
       "STATUE_SMASH_FULL": "La estatua se derrumba, pero la barra ya está llena: los escombros se quedan donde cayeron."
+    },
+    "haunted_house": {
+      "EXPLORED": "La «Muñeca maldita» se ha unido a tu mazo; no se irá. Arriba te esperan un Relic Legendario y una recompensa de carta Épica.",
+      "EXPLORED_NO_RELIC": "La «Muñeca maldita» se ha unido a tu mazo; no se irá. Ya has cogido todos los Relics Legendarios, así que arriba solo queda una recompensa de carta Épica."
     }
   },
   "rest_dynamic": {

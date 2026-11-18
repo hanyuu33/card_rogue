@@ -219,6 +219,13 @@
         "STATUE_PRAY_DESC": "Apoyas la mano en su pata fría y no dices nada.\nAlgo responde desde dentro de la piedra: un temblor leve, paciente.\nDurante las próximas 3 batallas, cada victoria entregará una herramienta entre los escombros.",
         "STATUE_SMASH_DESC": "Recoges una piedra y la estrellas contra la pata delantera.\nUna grieta sube de la pata a la cabeza de cabra y la estatua entera se derrumba en cascotes blancos:\nlos trozos que aún caben en tu mano bastan para llenar la barra de herramientas."
       }
+    },
+    "haunted_house": {
+      "name": "La casa embrujada",
+      "texts": {
+        "HAUNTED_DESC": "Al final del sendero se alza una vieja casa de dos plantas. Casi toda la pintura\nse ha caído de los marcos, pero no hay ni un cristal roto, y dentro brilla una luz amarillenta.\nLa puerta está entornada. No hay viento ni pasos, y sin embargo la luz está encendida.\nSobre el dintel hay clavado un cartel de madera descolorido: AQUÍ NO VIVE NADIE.\nUna ventana de arriba tiene la cortina echada, pero la luz se escapa por la rendija.\nSe mece despacio, con mucha regularidad.",
+        "HAUNTED_TAKEN_DESC": "La puerta se cierra sola a tu espalda.\nLa chimenea está fría. Sobre la mesita hay varias bolsas de tela y un puñado de cartas\nescritas, como si alguien se hubiera marchado a medio recoger.\nCuando te lo guardas todo, llega un ruido muy leve desde arriba:\nalguien ha bajado un pie de la cama.\nAl salir y girarte, sobre el alféizar hay una muñeca de tela sentada.\nMira hacia ti."
+      }
     }
   },
   "stories": {

@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 327,
+ "count": 337,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1349,6 +1349,10 @@
   "9275": {
    "name": "Nota",
    "effect_text": "Obtienes 2 de Coste y robas 2 cartas."
+  },
+  "9276": {
+   "name": "Muñeca maldita",
+   "effect_text": "No puede jugarse. Al final del turno, recibes 3 de daño. Al inicio de tu turno, si esta carta está en tu pila de descartes, vuelve a tu mano."
   }
  }
 }
