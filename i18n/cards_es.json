@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 325,
+ "count": 327,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1333,6 +1333,14 @@
   "9270": {
    "name": "Himno del vendaval",
    "effect_text": "Todos los Aliados obtienen +1 de Velocidad de Movimiento; los Aliados de otra clase, en su lugar, actúan dos veces por turno."
+  },
+  "9272": {
+   "name": "Tajo en cadena",
+   "effect_text": "Cuesta X; al jugarlo consume todo el Coste. Inflige 7 de daño a un objetivo, repetido X veces; si el objetivo muere a mitad, los golpes restantes se pierden. Puede usarse incluso sin Coste (en ese caso, X es 0)."
+  },
+  "9273": {
+   "name": "Artillería lista",
+   "effect_text": "Cuesta X; al jugarlo consume todo el Coste. Añade X copias de Bombardeo Cargado a la pila de robo e inflige 3 de daño a todos los enemigos, repetido X veces. Puede usarse incluso sin Coste (en ese caso, X es 0)."
   }
  }
 }

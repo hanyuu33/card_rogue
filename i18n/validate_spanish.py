@@ -144,9 +144,9 @@ def flatten_interface(data, translated=False):
     return rows, entries
 
 
-# 卡牌：332 个稳定 ID（R794 加巧克力工厂 9271；R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
+# 卡牌：334 个稳定 ID（R799 加连斩 9272 / 炮火就位 9273；R794 加巧克力工厂 9271；R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
 check(set(CARDS_ES["cards"]) == set(CARDS_ZH["cards"]), "cards ID 覆盖与 canonical 一致")
-check(len(CARDS_ES["cards"]) == 332, "cards 共 332 张")
+check(len(CARDS_ES["cards"]) == 334, "cards 共 334 张")
 raw_cards = {str(row["id"]): row for row in RAW_CARDS}
 for cid, zh_row in CARDS_ZH["cards"].items():
     es_row = CARDS_ES["cards"].get(cid, {})

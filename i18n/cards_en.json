@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 331,
+ "count": 333,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1333,6 +1333,14 @@
   "9270": {
    "name": "Wind Song",
    "effect_text": "All Allies gain +1 Move Speed. Allies of another class instead act twice each turn."
+  },
+  "9272": {
+   "name": "Chain Slash",
+   "effect_text": "Costs X; playing it consumes all of your Cost. Deal 7 damage to one target, repeated X times; if the target dies partway, the remaining strikes are lost. Can be used even with no Cost (X is 0 in that case)."
+  },
+  "9273": {
+   "name": "Artillery Ready",
+   "effect_text": "Costs X; playing it consumes all of your Cost. Add X copies of Charged Bombardment to your Draw Pile, and deal 3 damage to all enemies, repeated X times. Can be used even with no Cost (X is 0 in that case)."
   }
  }
 }
