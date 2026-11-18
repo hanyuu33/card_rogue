@@ -1,0 +1,29 @@
+R793 道具图标提示词（ImageGen，1024x1024，transparent，quality high）
+
+参考图（两张都用）：assets/ui/relic_icon_6070.png
+input_fidelity: high —— 目的是继承 R792 那套粗深蓝描边 + 温暖高光的绘本感。
+
+------------------------------------------------------------
+6073 刺墙
+------------------------------------------------------------
+A cute hand-drawn cartoon game relic icon of a short defensive wall segment made of
+stone and wood, with sharp iron spikes protruding from its front face, chunky rounded
+shapes, thick dark navy outline, soft cel shading with warm highlight, slightly
+whimsical storybook style like a cozy indie roguelike game icon, centered, flat clean
+silhouette, no text, no frame, transparent background
+
+------------------------------------------------------------
+6074 应急装甲（店长指定「图片为机械装甲」）
+------------------------------------------------------------
+A cute hand-drawn cartoon game relic icon of a compact mechanical armored chest plate
+exoskeleton, brass gears and rivets visible, a small glowing amber core in the middle,
+chunky rounded shapes, thick dark navy outline, soft cel shading with warm highlight,
+slightly whimsical storybook style like a cozy indie roguelike game icon, centered,
+flat clean, no text, no frame, transparent background
+
+------------------------------------------------------------
+已知生成缺陷（每张都会出现，管线里固定处理）
+------------------------------------------------------------
+1. `background: transparent` 有时被画成**棋盘格**（假透明）→ 必须泛洪抠，不能按亮度算 alpha。
+2. 右下角**带水印** → 抠图前把 [0.86w, 0.93h] → 右下 涂白。
+3. 6073 这张出的是纯白底（不是棋盘格），同一个泛洪口两种底都能吃。

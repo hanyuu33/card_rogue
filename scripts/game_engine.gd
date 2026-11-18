@@ -790,6 +790,15 @@ const PAWN_ACTIONS:= 2
 #   与竖琴逐字同构 —— 只写 Placement 字段 + 出口，绝不写回 `card.power` 那种共享基数。
 const BRICK_RELIC_ID:= 6072
 const BRICK_HP:= 4
+# R793 刺墙（6073，一般档）：己方**工事被普通攻击**时，攻击者受 SPIKE_WALL_DMG 点伤害。
+#   挂点与启示者「电磁屏障」（9200 二阶段）同一处 —— 见 `attack()` 里那一段。
+const SPIKE_WALL_RELIC_ID:= 6073
+const SPIKE_WALL_DMG:= 5
+# R793 应急装甲（6074，一般档）：**玩家 HP** 每回合最多受 EMERGENCY_ARMOR_CAP 点伤害。
+#   与赫尔墨斯 `HERMES_DMG_CAP` 数值相同但口径不同：那条管一张**单位卡**（`Placement` 挂字段），
+#   这条管**玩家 HP**（额度只能记在引擎上，见 `_emergency_armor_cap()`）。
+const EMERGENCY_ARMOR_RELIC_ID:= 6074
+const EMERGENCY_ARMOR_CAP:= 20
 # R761 诗（6069，吟游诗人初始道具），两段效果都只住在本组常量里：
 #   ① **每回合第一次**使用「其他职业的盟友」→ 回复 `POEM_REBATE` 点费用（`_poem_tick`）；
 #   ② **其他职业的盟友** +`POEM_ATK` 力量 —— 与竖琴 6052 同一套持续 buff 写法
@@ -2409,6 +2418,8 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	_poem_used = false          # R761 诗：每场战斗从「这回合还没回费」开始
 	_plate_first_ally_done = false   # R792 板甲：第一个盟友的额度每场重置
 	_pawn_first_ally_done = false    # R792 兵：同上
+	_armor_turn_key = -1             # R793 应急装甲：额度每场战斗从零开始
+	_armor_turn_taken = 0
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
 	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
 	_three_bots_destroyed = 0   # R534：三个机器人的计数每场战斗重置
@@ -4284,6 +4295,11 @@ var _poem_used := false
 # 两件道具分开记 —— 只持有一件时另一个标记永远不动，将来加第二件同型道具也不打架。
 var _plate_first_ally_done := false
 var _pawn_first_ally_done := false
+# R793 应急装甲：本回合玩家 HP **已实际受到**的伤害（额度 = EMERGENCY_ARMOR_CAP - 它）。
+# 与赫尔墨斯 `Placement.turn_dmg_key / turn_dmg_taken` 同一套「换回合 key 失配即归零」写法，
+# 只是玩家没有 Placement 可挂，额度记在引擎上；`start_game()` 一并清零。
+var _armor_turn_key := -1
+var _armor_turn_taken := 0
 var earring_played := 0           # 已自动出了几张
 ## R288 失控要塞 9161：最近一次入场**实际释放**的技能卡名（日志 / UI / 回归断言共用）。
 var fort_casts: Array[String] = []
@@ -14468,7 +14484,42 @@ func _hp_damage_taken(amount: int) -> int:
 	var red:= _effect_damage_reduction()
 	if red > 0:
 		dmg = maxi(1, amount - red)
-	return _relic_damage_taken(dmg)
+	# R793 应急装甲（6074）：「每回合最多受到 20 点伤害」—— 排在减伤链**最后一格**，
+	# 与赫尔墨斯 `_cap_turn_damage()` 同一位置口径（卡面说的是「受到」＝最终真正扣掉的血）。
+	return _emergency_armor_cap(_relic_damage_taken(dmg))
+
+
+func _emergency_armor_cap(dmg: int) -> int:
+	## R793 应急装甲（6074，一般档）：「每回合最多受到 20 点伤害」—— **管玩家 HP**。
+	## 位置 = `_hp_damage_taken()` 的最后一格（风暴屏障 / 石肤 / 效果减伤 / 道具减伤全算完），
+	## 理由同赫尔墨斯：卡面写「受到」＝最终真正扣掉的血，封顶放在减伤之前会被后面的减伤再拉回来。
+	## ⚠️ 玩家 HP 伤害有**两条**落地路：`_damage_player()`（技能 / 溢出 / 效果）与
+	##    `attack_hp()` 里的直扣（敌人普攻直击，没有外包一层 `_damage_player`）。
+	##    本函数挂在两者**共同的**上游 `_hp_damage_taken()` —— 挂 `_damage_player()` 会漏掉普攻那一条。
+	## 回合口径 = `turn_number`（整轮）；换回合 key 失配，额度自动归零，不用扫状态重置。
+	## 不锈钢盆（6041）在这条链**之后**吸收，它吃掉的份额仍计入额度：盆有总量上限，
+	## 玩家视角是「装甲已经挡下来了」，与赫尔墨斯「护甲不占额度」不必强行统一。
+	if dmg <= 0 or not RunState.has_relic(EMERGENCY_ARMOR_RELIC_ID):
+		return dmg
+	if _armor_turn_key != turn_number:
+		_armor_turn_key = turn_number
+		_armor_turn_taken = 0
+	var left:= maxi(0, EMERGENCY_ARMOR_CAP - _armor_turn_taken)
+	if left <= 0:
+		_log("应急装甲：本回合已受满 %d 点伤害，这一下全免" % EMERGENCY_ARMOR_CAP)
+		action.emit("armor_capped", {"blocked": dmg, "dealt": 0,
+				"cap": EMERGENCY_ARMOR_CAP})
+		return 0
+	if dmg <= left:
+		_armor_turn_taken += dmg
+		return dmg
+	var blocked:= dmg - left
+	_log("应急装甲：本回合伤害上限 %d 点 —— 这一下 %d 封顶到 %d" % [
+			EMERGENCY_ARMOR_CAP, dmg, left])
+	action.emit("armor_capped", {"blocked": blocked, "dealt": left,
+			"cap": EMERGENCY_ARMOR_CAP})
+	_armor_turn_taken = EMERGENCY_ARMOR_CAP
+	return left
 
 
 func _wild_form_first_hit(attacker: Placement, raw: int) -> int:
@@ -18617,6 +18668,24 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 		_log("电磁屏障：%s 攻击启示者 → 反受 %d 点伤害" % [attacker.card.card_name, eb])
 		action.emit("revelator_shield", {"cell": dst, "src": src, "amount": eb,
 				"atk_name": attacker.card.card_name})
+		if attacker.health <= 0:
+			_destroy_dead()
+	# ── R793 刺墙（6073）：己方**工事被普通攻击**时，攻击者受 SPIKE_WALL_DMG 点伤害 ──
+	# 挂点与上面「电磁屏障」同一处（防守方结算完、`_tap` 之前），三条理由：
+	#   * 排在 `_reap` 之后 —— 工事被一击打穿也照样触发（卡面写「被攻击时」，不是「存活时」）；
+	#   * 反伤走 `_hit_unit`（吃光环 / 护盾 / 减伤，与技能同一口径），击杀走 `_destroy_dead`；
+	#   * 攻击者被打死时下面 `board.has(src)` 为假，自然跳过横置。
+	# ⚠️ 只认**普通攻击**：`attack()` 是普攻唯一的结算口，技能 / 效果打过来不经过这里。
+	var spike_wall_ok: bool = (defender.owner == SIDE_SELF
+			and defender.card.kind == "工事"
+			and RunState.has_relic(SPIKE_WALL_RELIC_ID))
+	if state.board.has(src) and spike_wall_ok:
+		var sw:= _hit_unit(attacker, SPIKE_WALL_DMG, "刺墙", false)
+		_log("刺墙：%s 攻击工事 %s → 反受 %d 点伤害" % [
+				attacker.card.card_name, defender.card.card_name, sw])
+		action.emit("spike_wall", {"cell": dst, "src": src, "amount": sw,
+				"atk_name": attacker.card.card_name,
+				"def_name": defender.card.card_name})
 		if attacker.health <= 0:
 			_destroy_dead()
 	if state.board.has(src):

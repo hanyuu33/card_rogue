@@ -13343,6 +13343,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_floaters.append({"pos": _cell_center(dcap_cell) + Vector2(0, -14),
 						"sc": _grid_scroll, "text": "免伤 %d" % dcap_blocked,
 						"col": Color("ffd863"), "start": dcap_at, "dur": 1400, "size": 17})
+		"armor_capped":
+			# R793 应急装甲（6074）：玩家 HP 每回合最多受 20 点伤害 —— 这里报「被上限吃掉」的量。
+			# 玩家 HP 没有格子可画环（赫尔墨斯那套 aura 用不了），引擎又把这一下压成 0 →
+			# 血条一动不动。不补一句播报，玩家只会以为道具根本没生效。
+			var acap_blocked := int(data.get("blocked", 0))
+			var acap_cap := int(data.get("cap", 0))
+			if acap_blocked > 0:
+				_say("🛡 应急装甲：本回合已受满 %d 点，免伤 %d" % [acap_cap, acap_blocked])
 		"barrier":
 			# 护盾**挡下**伤害的瞬间（R87）：这是玩家最需要看到的反馈 —— 护盾消失且不扣血。
 			sfx.play("heal")
