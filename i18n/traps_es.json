@@ -62,6 +62,10 @@
   "7015": {
    "name": "Pez globo",
    "desc": "Arrástrala a una casilla vacía del campo. El enemigo que la pise retrocede una casilla y recibe 3 de daño; después, la herramienta se consume."
+  },
+  "7016": {
+   "name": "Seta explosiva",
+   "desc": "Arrástrala a una casilla vacía del campo. El enemigo que la pise hace que explote y causa 15 de daño a todas las unidades a una casilla o menos (aliadas o enemigas); después, la herramienta se consume."
   }
  }
 }

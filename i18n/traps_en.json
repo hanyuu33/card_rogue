@@ -62,6 +62,10 @@
   "7015": {
    "name": "Pufferfish",
    "desc": "Drag it onto an empty battlefield cell. An enemy that steps on it is knocked back one cell and takes 3 damage; the tool is then used up."
+  },
+  "7016": {
+   "name": "Explosive Mushroom",
+   "desc": "Drag it onto an empty battlefield cell. An enemy that steps on it sets it off, dealing 15 damage to every unit within one cell, friend or foe; the tool is then used up."
   }
  }
 }

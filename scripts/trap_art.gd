@@ -27,6 +27,7 @@ static func color_of(id: int) -> Color:
 		7013: return Color(0.86, 0.68, 0.42)   # 卡牌包 · 牛皮纸
 		7014: return Color(0.58, 0.72, 0.98)   # 智慧药剂 · 智慧蓝
 		7015: return Color(0.94, 0.62, 0.38)   # 河豚 · 河豚橙
+		7016: return Color(0.86, 0.32, 0.28)   # 爆炸蘑菇 · 蘑菇红
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -96,6 +97,7 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7013: _cardpack(ci, c, s, ink)
 		7014: _wisdom(ci, c, s, ink)
 		7015: _puffer(ci, c, s, ink)
+		7016: _mushroom(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
 
 
@@ -119,6 +121,35 @@ static func _puffer(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 	ci.draw_colored_polygon(PackedVector2Array([tail, tail + Vector2(s * 0.11, -s * 0.10),
 			tail + Vector2(s * 0.11, s * 0.10)]), col)
 
+
+static func _mushroom(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R801 爆炸蘑菇 7016：半圆伞盖 + 短柄 + 弯曲引信 + 火花（程序化兜底；有 png 时整段不走）。
+	## 单色剪影 —— 与 `_bomb` / `_spike` 同一路数：斑点在同色剪影里看不见，索性不画，
+	## 44px 下靠「伞盖 + 柄 + 引信」三件认形状。
+	var w := maxf(1.3, s * 0.028)
+	var ty := c.y + s * 0.04
+	# 柄：上窄下宽的梯形
+	ci.draw_colored_polygon(PackedVector2Array([
+			Vector2(c.x - s * 0.09, ty), Vector2(c.x + s * 0.09, ty),
+			Vector2(c.x + s * 0.13, ty + s * 0.28),
+			Vector2(c.x - s * 0.13, ty + s * 0.28)]), col)
+	# 伞盖：上半圆（PI → TAU 那半圈，底边压在 ty 上）
+	var pts := PackedVector2Array()
+	var steps := 18
+	for k in steps + 1:
+		var a := PI + PI * float(k) / float(steps)
+		pts.append(Vector2(c.x + cos(a) * s * 0.31, ty + sin(a) * s * 0.31))
+	ci.draw_colored_polygon(pts, col)
+	# 引信：从伞盖顶部往右上弯两折
+	var base := Vector2(c.x, ty - s * 0.31)
+	var mid := base + Vector2(s * 0.09, -s * 0.16)
+	var tip := mid + Vector2(-s * 0.05, -s * 0.14)
+	ci.draw_line(base, mid, col, w, true)
+	ci.draw_line(mid, tip, col, w, true)
+	# 火花：端点一个实心点 + 两根射线，和小血瓶那种「一眼能看出是引信」的量级一致
+	ci.draw_circle(tip, s * 0.05, col)
+	ci.draw_line(tip, tip + Vector2(s * 0.10, -s * 0.05), col, w * 0.8, true)
+	ci.draw_line(tip, tip + Vector2(-s * 0.04, -s * 0.10), col, w * 0.8, true)
 
 static func _bomb(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 	var w := maxf(1.5, s * 0.035)

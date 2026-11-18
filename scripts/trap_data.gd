@@ -46,6 +46,12 @@ var fill_hand := false
 ## 回弹方向不走 `_knockback`（那是「朝对方后排直推」）：河豚是「原地弹回」，
 ## 只有「没有来路」（效果直达 / 上一格已被占）时，才改朝**河豚所属方**的方向弹一格。
 var bounce := 0
+## R801：爆炸蘑菇 7016 —— 爆炸半径（**曼哈顿距离**，1 = 正交四邻）。
+## >0 = **范围伤害型**：`_trigger_trap()` **不走**单体那一笔 `_hit_unit(p, damage)`，
+## 改由 `_blast_trap()` 对「距离 ≤ blast」的**所有单位**（不分敌我、含中心格自身）
+## 各结算一次 `damage`。两条判据必须成对理解 —— 漏掉「跳过单体」就是踩上去吃两遍。
+## 与 `bounce` / `fill_hand` 同一条思路：一个工具只说明自己「怎么生效」，判据全在数据里。
+var blast := 0
 ## R796：智慧药剂 7014 —— 使用后**抽这么多张卡**（走 `_draw_many`，手牌满时照常
 ## 进弃牌区，与战斗中一切抽卡同一口径）。
 var draw_cards := 0
@@ -98,6 +104,7 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.fill_hand = bool(d.get("fill_hand", false))
 	t.draw_cards = int(d.get("draw_cards", 0))
 	t.bounce = int(d.get("bounce", 0))
+	t.blast = int(d.get("blast", 0))
 	t.direct_damage = int(d.get("direct_damage", 0))
 	t.no_drop = bool(d.get("no_drop", false))
 	return t

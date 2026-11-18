@@ -18285,7 +18285,12 @@ func _trigger_trap(cell: Vector2i, p: Placement, prev_cell:= Vector2i(-1, -1)) -
 	# 纯视觉事件：不写 state、不掷随机数，回放确定性不受影响。
 	action.emit("trap_hit", {"cell": cell, "victim": _cell_of(p), "id": id,
 			"name": t.trap_name, "damage": t.damage})
-	_hit_unit(p, t.damage, "陷阱")
+	# R801 爆炸蘑菇（7016）：`blast > 0` = **范围伤害型** —— 上面这笔单体伤害必须跳过，
+	# 否则踩上去的单位先吃一次、又落进下面的范围里再吃一次（15 → 30）。
+	if t.blast > 0:
+		_blast_trap(cell, t)
+	else:
+		_hit_unit(p, t.damage, "陷阱")
 	if t.freeze > 0 and p.health > 0:
 		_apply_frozen(p, "陷阱")
 	if t.root > 0 and p.health > 0:
@@ -18304,6 +18309,39 @@ func _trigger_trap(cell: Vector2i, p: Placement, prev_cell:= Vector2i(-1, -1)) -
 	if t.bounce > 0 and p.health > 0:
 		_bounce_unit(p, prev_cell, t)
 
+
+func _blast_trap(cell: Vector2i, t: TrapData) -> void:
+	## R801 爆炸蘑菇 7016 的**范围伤害唯一口**：以触发格为中心、曼哈顿距离 ≤ `t.blast`
+	## 的**所有单位**（不分敌我）各吃一次 `t.damage`。
+	##   * 「距离 1 = 正交四邻」直接走 `manhattan()`（与 `_slam_cells` / 射程同一个尺），
+	##     并且**含中心格自身** —— 踩上去的那位本来就在爆炸范围里，所以
+	##     `_trigger_trap()` 必须跳过单体那一笔，否则他吃两遍。
+	##   * 只收**场上单位**，不碰 HP 行：这是陷阱不是法术（与 `_blast()` 火球的区别 ——
+	##     那个会把半径内最近的 HP 空格也打一格，蘑菇不该越过单位直接掉血）。
+	##   * 格子**先排序**再结算：`state.board` 是 Dictionary，遍历顺序不保证，
+	##     不排序会让回放的伤害顺序漂（与炮火就位 9273 同一条纪律）。
+	##   * 不分敌我 → 己方单位也吃，减伤链照常走 `_hit_unit()`（龟壳 6078 / 能量屏障 /
+	##     护盾生成器都生效）。打死人不在这里收尾：`_trap_path_check()` 循环外统一
+	##     `_destroy_dead()`，和其余陷阱同一条路。
+	var r:= maxi(0, t.blast)
+	if r <= 0:
+		return
+	var cells: Array[Vector2i] = []
+	for c: Vector2i in state.board.keys():
+		if manhattan(c, cell) > r:
+			continue
+		if state.unit_at(c) == null:
+			continue
+		cells.append(c)
+	cells.sort()
+	var hits:= 0
+	for c: Vector2i in cells:
+		var u: Placement = state.unit_at(c)
+		if u == null or u.health <= 0:
+			continue
+		_hit_unit(u, t.damage, "陷阱")
+		hits += 1
+	_log("爆炸蘑菇：%s 爆炸，%d 个单位在范围内（不分敌我）" % [cell, hits])
 
 func _bounce_cell_ok(dst: Vector2i, src: Vector2i, p: Placement) -> bool:
 	## 回弹落点判据（唯一口）：在棋盘内、不是原格、没人占、且这一格**允许这个单位站**

@@ -58,7 +58,8 @@ func _init() -> void:
 	# R752：新增万能牌 7009 / 快送鸭 7010 / 神秘牌 7011（都是使用型、都没有售价）→ 11 件
 	# R754：新增石头 7012（**直接伤害型**：拖到敌方单位身上砸 15；no_drop）→ 12 件
 	# R797：新增河豚 7015（**放置型**：踩到回弹一格 + 3 伤）→ 15 件
-	check(repo.size() == 15, "traps.json 恰好 15 件工具（5 放置 + 1 直接伤害 + 9 使用型）")
+	# R801：新增爆炸蘑菇 7016（**放置型**：踩到炸一圈 15 伤，不分敌我）→ 16 件
+	check(repo.size() == 16, "traps.json 恰好 16 件工具（6 放置 + 1 直接伤害 + 9 使用型）")
 	var bomb: TrapData = repo.get_trap(7001)
 	var frost: TrapData = repo.get_trap(7002)
 	var poison: TrapData = repo.get_trap(7003)
@@ -88,8 +89,8 @@ func _init() -> void:
 	check(bbq != null and bbq.trap_name == "烤肉" and bbq.heal_pct == 25
 			and bbq.is_usable() and bbq.rest_only and bbq.price == 0,
 			"烤肉：回复 25% 最大生命 / 使用型 / rest_only（非卖品）")
-	check(repo.random_traps().size() == 13 and repo.get_trap(7007) != null,
-			"烤肉：`random_traps()` 把它排除（13 件可随机），全量仍是 15 件")
+	check(repo.random_traps().size() == 14 and repo.get_trap(7007) != null,
+			"烤肉：`random_traps()` 把它排除（14 件可随机），全量仍是 16 件")
 	# R752：野性图腾售价按店长口径 45 → 30；R797 全体 -5 → 25
 	check(repo.get_trap(7008).price == 25, "野性图腾：商店售价 25")
 	# R752：三件新工具 —— 都是使用型、都没有售价（= 不进商店）
@@ -110,9 +111,9 @@ func _init() -> void:
 	var shop_ids: Array[int] = []
 	for sp: TrapData in shop_pool:
 		shop_ids.append(int(sp.id))
-	check(shop_pool.size() == 10 and not shop_ids.has(7007)
+	check(shop_pool.size() == 11 and not shop_ids.has(7007)
 			and not shop_ids.has(7009) and not shop_ids.has(7010) and not shop_ids.has(7011),
-			"`shop_traps()` = 10 件有售价的（烤肉与三件非卖品都被排除；R796/R797 新工具都有售价）")
+			"`shop_traps()` = 11 件有售价的（烤肉与三件非卖品都被排除；R796/R797/R801 新工具都有售价）")
 	check(shop_ids.has(7008), "野性图腾售价 25 → 仍在商店货架上")
 	# R754 石头 7012：事件「奇异雕像」的摧毁选项给的，**直接伤害型**
 	var stone: TrapData = repo.get_trap(7012)
@@ -145,6 +146,14 @@ func _init() -> void:
 			"河豚 7015：回弹 1 格 + 3 伤 / 放置型 / 25 金")
 	check(shop_ids.has(7015) and drop_ids.has(7015),
 			"河豚 7015：既进商店货架、也进随机掉落池")
+	# R801：爆炸蘑菇 7016 —— **放置型**（blast 范围伤害，不走使用型），炸一圈 15 伤，30 金
+	var shroom: TrapData = repo.get_trap(7016)
+	check(shroom != null and shroom.trap_name == "爆炸蘑菇" and shroom.blast == 1
+			and shroom.damage == 15 and shroom.price == 30
+			and not shroom.is_usable() and not shroom.no_drop,
+			"爆炸蘑菇 7016：半径 1 / 15 伤 / 放置型 / 30 金")
+	check(shop_ids.has(7016) and drop_ids.has(7016),
+			"爆炸蘑菇 7016：既进商店货架、也进随机掉落池")
 
 	# ---- ①b R690：描述必须写清「怎么发动」—— 放置型拖到格子、使用型轻点 ----
 	# 玩家唯一能读到操作方式的地方就是这条 desc（商店悬浮、战斗里轻点工具栏）。
@@ -157,7 +166,7 @@ func _init() -> void:
 		var raw_rows: Dictionary = {}
 		for row in raw_doc.get("traps", []):
 			raw_rows[str(int(row.get("id", 0)))] = str(row.get("desc", ""))
-		for tid in ["7001", "7002", "7003", "7004", "7015"]:
+		for tid in ["7001", "7002", "7003", "7004", "7015", "7016"]:
 			if not str(raw_rows.get(tid, "")).contains("拖到战场空格上放置"):
 				op_bad += "%s 缺拖放说明 " % tid
 		# R752：交互改成「点两下」（第一下弹出「使用」，第二下才结算），
@@ -359,6 +368,45 @@ func _init() -> void:
 	check(foe12.tapped,
 			"河豚：弹回后身边没有目标 → 按新位置判「放弃攻击」（不出现幽灵攻击）")
 	check(ally12.health == 30, "河豚：盟友没被隔空打到")
+
+	# ---- ⑥e R801：爆炸蘑菇 7016 —— 踩到炸一圈（15 伤，不分敌我）----
+	# 半径 1 = 曼哈顿距离 ≤ 1（含中心格自身）：中心 + 上下左右四格。
+	var e13 := _engine()
+	e13.state.trap_fields[c31] = 7016
+	var foe13: Placement = _unit(9014, 60, GameEngine.SIDE_OPPONENT)     # 踩上去的那位
+	e13.state.board[c31] = foe13
+	var mate13: Placement = _unit(9015, 60, GameEngine.SIDE_OPPONENT)    # 相邻同伴
+	e13.state.board[Vector2i(2, 1)] = mate13
+	var ally13: Placement = _unit(9016, 60, GameEngine.SIDE_SELF)        # 相邻己方
+	e13.state.board[Vector2i(4, 1)] = ally13
+	var far13: Placement = _unit(9017, 60, GameEngine.SIDE_OPPONENT)     # 距离 2，安全
+	e13.state.board[Vector2i(1, 1)] = far13
+	e13._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_OPPONENT)
+	check(foe13.health == 45, "爆炸蘑菇：踩上去那句只吃一次 15（不是单体 + 范围 30）")
+	check(mate13.health == 45, "爆炸蘑菇：相邻的**敌方**同伴也被炸（15）")
+	check(ally13.health == 45, "爆炸蘑菇：**不分敌我** —— 相邻的己方单位同样吃 15")
+	check(far13.health == 60, "爆炸蘑菇：距离 2 的单位不在范围内")
+	check(not e13.state.trap_fields.has(c31), "爆炸蘑菇：触发后从场上摘掉（一次性的）")
+
+	# 波及致死 → 由 `_trap_path_check` 循环外的 `_destroy_dead()` 统一清场
+	var e14 := _engine()
+	e14.state.trap_fields[c31] = 7016
+	var foe14: Placement = _unit(9018, 60, GameEngine.SIDE_OPPONENT)
+	e14.state.board[c31] = foe14
+	var weak14: Placement = _unit(9019, 10, GameEngine.SIDE_SELF)
+	e14.state.board[Vector2i(2, 1)] = weak14
+	e14._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_OPPONENT)
+	check(not e14.state.board.has(Vector2i(2, 1)),
+			"爆炸蘑菇：被波及致死的单位立刻清场（不顶着负血留在棋盘上）")
+
+	# 我方踩自己的爆炸蘑菇：不触发（与其它陷阱同口径）
+	var e15 := _engine()
+	e15.state.trap_fields[c31] = 7016
+	var mine15: Placement = _unit(9020, 60, GameEngine.SIDE_SELF)
+	e15.state.board[c31] = mine15
+	e15._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_SELF)
+	check(mine15.health == 60 and e15.state.trap_fields.has(c31),
+			"爆炸蘑菇：我方踩到不触发、不消耗")
 
 	# ---- ⑥b R690：使用型工具的结算（小血瓶回 20% 上限、法力药剂回 2 费）----
 	var e7 := _engine()
