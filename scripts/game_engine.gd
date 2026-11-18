@@ -16880,6 +16880,12 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 	_trap_path_check(path, side)
 	if p.health <= 0:
 		return
+	# R797 河豚：被弹回去之后，单位已经不在 `dst` 上了 —— 下面「移动后有没有攻击目标」
+	# 必须按**实际落点**算，否则会出现「人站在 2 排、却能打 3 排旁边那个」的幽灵攻击
+	# （`attack()` 自己会按真位置再判一次，于是 AI 白转一圈、单位还留着行动权）。
+	var landed := _cell_of(p)
+	if landed != Vector2i(-1, -1) and landed != dst:
+		dst = landed
 
 	if attack_targets(dst, side, p.card).is_empty()\
 	and hp_targets(dst, side, p.card).is_empty():
@@ -16987,6 +16993,10 @@ func _leap(src: Vector2i, dst: Vector2i, side: String) -> void:
 		_trap_path_check(path, side)
 		if p.health <= 0:
 			return
+		# R797 河豚：跳过去被弹回起点 → 落地重击按「实际落地的那一格」算。
+		var leap_landed := _cell_of(p)
+		if leap_landed != Vector2i(-1, -1):
+			dst = leap_landed
 		_fire_wall_pass(path)
 		if p.health <= 0:
 			return

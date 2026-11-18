@@ -345,6 +345,21 @@ func _init() -> void:
 	check(mine11.health == 60 and e11.state.trap_fields.has(c31),
 			"河豚：我方踩到不触发、不消耗")
 
+	# 河豚被弹回之后，`move()` 里「移动后有没有攻击目标」必须按**实际落点**判 ——
+	# 否则单位站在 2 排还能打到 3 排旁边的盟友（幽灵攻击），AI 白转一圈还留着行动权。
+	var e12 := _engine()
+	e12.state.trap_fields[Vector2i(3, 1)] = 7015
+	var foe12: Placement = _unit(9012, 60, GameEngine.SIDE_OPPONENT)
+	e12.state.board[Vector2i(2, 1)] = foe12
+	var ally12: Placement = _unit(9013, 30, GameEngine.SIDE_SELF)
+	e12.state.board[Vector2i(4, 1)] = ally12
+	e12.move(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	check(e12.state.unit_at(Vector2i(2, 1)) == foe12,
+			"河豚：move() 走完被弹回 (2,1)")
+	check(foe12.tapped,
+			"河豚：弹回后身边没有目标 → 按新位置判「放弃攻击」（不出现幽灵攻击）")
+	check(ally12.health == 30, "河豚：盟友没被隔空打到")
+
 	# ---- ⑥b R690：使用型工具的结算（小血瓶回 20% 上限、法力药剂回 2 费）----
 	var e7 := _engine()
 	e7.state.max_hp_self = 50
