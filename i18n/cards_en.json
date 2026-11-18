@@ -1341,6 +1341,14 @@
   "9273": {
    "name": "Artillery Ready",
    "effect_text": "Costs X; playing it consumes all of your Cost. Add X copies of Charged Bombardment to your Draw Pile, and deal 3 damage to all enemies, repeated X times. Can be used even with no Cost (X is 0 in that case)."
+  },
+  "9274": {
+   "name": "Lingering Note",
+   "effect_text": "Costs X; playing it consumes all of your Cost. Add X copies of Note to your Draw Pile. Can be used even with no Cost (X is 0 in that case)."
+  },
+  "9275": {
+   "name": "Note",
+   "effect_text": "Gain 2 Cost and draw 2 cards."
   }
  }
 }

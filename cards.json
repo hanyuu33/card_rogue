@@ -6962,6 +6962,48 @@
       "x_cost": true,
       "color": "火",
       "image": ""
+    },
+    {
+      "id": 9274,
+      "name": "余音",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "X 费，打出时消耗全部费用。将 X 张「音符」加入抽牌库。没有费用时也能使用（此时 X 为 0）。",
+      "target_mode": "none",
+      "x_cost": true,
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9275,
+      "name": "音符",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "获得 2 点费用，抽 2 张卡。",
+      "target_mode": "none",
+      "event_only": true,
+      "color": "水风",
+      "image": ""
     }
   ]
 }

@@ -1164,6 +1164,15 @@ const LINK_SLASH_DMG:= 7
 const BARRAGE_ID:= 9273
 const BARRAGE_DMG:= 3
 
+# ── 余音（9274 技能，R800，吟游诗人稀有）：X 费；X 张「音符」进抽牌库 ──
+# 音符（9275）是**内部卡**（`event_only`，不进任何获得池）：0 费，「+2 费 + 抽 2 张」，带「次元」。
+# 「次元」在这里不是装饰：没有它，音符打完进弃牌区 → 被洗回牌库 → 又是 +2 费 + 抽 2 张，
+# 一张余音就能把牌库变成永动机。用后进消耗区（`_spell_card_gone` 只认字段）才安全。
+const ENCORE_ID:= 9274
+const NOTE_ID:= 9275
+const NOTE_ENERGY:= 2
+const NOTE_DRAW:= 2
+
 # ── 火墙术（9084 技能，2026-10-01）──
 # 3 费普通技能：对一横行的**所有单位**（R247 起不分敌我）造成 FIRE_WALL_DMG 点伤害；
 # 该横行持续燃烧到**施放方**的下次回合开始，期间任何单位（不分敌我）移动经过该行
@@ -5510,6 +5519,55 @@ func _barrage(side: String, card: CardData) -> String:
 		msg += "；抽牌库 +%d 张「聚能炮击」" % added
 	_log(msg)
 	return msg
+
+
+func _encore(side: String, card: CardData) -> String:
+	## 余音（9274，R800，吟游诗人稀有技能）：X 费 → 将 X 张「音符」(9275) 加入**抽牌库**。
+	## X 走 `_x_spell_value`（`use_spell` 在 `_pay` 之前抓取）→ 钻头 6077 的「X ≥ 6 翻倍」
+	## 与连斩 9272 / 炮火就位 9273 同源，改一处三张一起变。
+	## 音符是 `event_only` 的内部卡：只活在抽牌库里，不进图鉴获得池 / 奖励池 / 商店。
+	## 造卡与「聚能炮击」完全一致（`CardData.from_dict(proto.to_dict())` → traits 另拷一份），
+	## 顺手发 `deck_added`，界面靠它播塞牌动画。
+	var n:= maxi(0, _x_spell_value)
+	if n <= 0:
+		_log("余音：X = 0（没有费用），一张音符都没塞进去")
+		return "余音：X = 0，没有音符加入抽牌库"
+	if side != SIDE_SELF:
+		# 敌方没有真实牌库（只有抽象计数 opp_deck_count）→ 只推进计数，与「镜像」同口径。
+		state.opp_deck_count += n
+		_log("余音（敌方）：敌方牌库 +%d 张" % n)
+		return "将 %d 张「音符」加入抽牌库" % n
+	var repo:= CardRepo.load_json()
+	var proto: CardData = repo.get_card(NOTE_ID) if repo != null else null
+	if proto == null:
+		_log("余音：卡库缺少「音符」(9275)，加卡部分落空")
+		return "余音：卡库缺少「音符」"
+	var added:= 0
+	for _i in n:
+		var c:= CardData.from_dict(proto.to_dict())
+		c.traits = (c.traits as Array).duplicate()
+		state.deck.append(c)
+		action.emit("deck_added", {"card": c, "side": side})
+		added += 1
+	_log("余音：抽牌库 +%d 张「音符」（牌库 %d 张）" % [added, state.deck.size()])
+	return "将 %d 张「音符」加入抽牌库" % added
+
+
+func _note_spell(side: String) -> String:
+	## 音符（9275，R800，吟游诗人内部卡 · 0 费技能 · 次元）：获得 2 点费用，抽 2 张卡。
+	## * 加费直接 `state.energy +=`（与应急电源 9170 / 拆解 8049 同口径：
+	##   不污染 `self_energy_spent`，当回合允许超额）。
+	## * 抽卡只走 `_draw_many` 唯一口：手牌满会 burn 进弃牌区并广播 `hand_full`。
+	## * 带「次元」→ 用后进**消耗区**（本场最多用一次）。这不是装饰：若进弃牌区，
+	##   音符会被洗回牌库，形成「+2 费 + 抽 2 张」的无限循环。
+	if side != SIDE_SELF:
+		state.opp_energy += NOTE_ENERGY
+		_log("音符（敌方）：+%d 费" % NOTE_ENERGY)
+		return "获得 %d 点费用" % NOTE_ENERGY
+	state.energy += NOTE_ENERGY
+	var n:= _draw_many(NOTE_DRAW)
+	_log("音符：+%d 费，抽 %d 张" % [NOTE_ENERGY, n])
+	return "获得 %d 点费用，抽 %d 张卡" % [NOTE_ENERGY, n]
 
 
 func _fire_wall_spell(side: String, target, card: CardData) -> String:
@@ -12533,6 +12591,10 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return _link_slash(side, target, card)
 		BARRAGE_ID:
 			return _barrage(side, card)
+		ENCORE_ID:
+			return _encore(side, card)
+		NOTE_ID:
+			return _note_spell(side)
 		RAID_SPELL_ID:
 			return str(_op_deal_damage(side, _spell_dmg(side, _raid_dmg(side), card),
 					target))

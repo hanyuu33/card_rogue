@@ -1341,6 +1341,14 @@
   "9273": {
    "name": "Artillería lista",
    "effect_text": "Cuesta X; al jugarlo consume todo el Coste. Añade X copias de Bombardeo Cargado a la pila de robo e inflige 3 de daño a todos los enemigos, repetido X veces. Puede usarse incluso sin Coste (en ese caso, X es 0)."
+  },
+  "9274": {
+   "name": "Resonancia",
+   "effect_text": "Cuesta X; al jugarlo consume todo el Coste. Añade X copias de Nota a la pila de robo. Puede usarse incluso sin Coste (en ese caso, X es 0)."
+  },
+  "9275": {
+   "name": "Nota",
+   "effect_text": "Obtienes 2 de Coste y robas 2 cartas."
   }
  }
 }
