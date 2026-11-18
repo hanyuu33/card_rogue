@@ -216,11 +216,13 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 #   9 = 虚弱（最大生命 ×80%，截断取整）
 #   10 = 精英出现增多（R380）：继承 0~9 全部 debuff，另外「?」房不再刷商店（每层商店
 #        固定 2 间 + 右上角 1 间）、明房与「?」房两条途径的精英出现概率统一 ×1.3（约 +30%）。
+#   11 = 第三层上锁（R543）：要凑齐完美螺钉 / 生命之种 / 屠戮匕首三样信物才开门。
+#   12 = 昂贵（R794b）：商店商品售价 +40%，**信物除外**（信物 = 上面那三把钥匙）。
 # 档位只在角色选择界面改，不属于 run 状态（end_run / start_run 都不动它）。
 static var difficulty: int = 0
-const DIFFICULTY_COUNT := 12
+const DIFFICULTY_COUNT := 13
 const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强", "稀缺",
-		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "上锁"]
+		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "上锁", "昂贵"]
 ## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」；第 10 档无新增（空串）。
 ## R224：`difficulty_note()` 只返回**当前档**这一条（用户口径「难度文本没有必要写所有，
 ## 只需要写当前难度新增就行了」）—— 高档继承低档的全部 debuff 由 `difficulty_summary()`
@@ -238,14 +240,15 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"虚弱",
 	"精英出现增多",
 	"第三层上锁，获取三个信物以解锁第三层",
+	"商店商品售价 +40%（信物除外）",
 ]
 ## R224：全局规则「除到达新的一层外不能回复 HP」→ 战斗胜利回血全档位归零。
 ## 表保留 12 长度（回归钉死口径；将来若再加「某档回血」类 debuff 改这张表即可）。
-const DIFFICULTY_BATTLE_HEAL: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
+const DIFFICULTY_BATTLE_HEAL: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
 ## R237：恢复篝火回血 —— 难度 0 = 40%，1 档起 = 25%（即原始设计；R224 曾按用户要求归零，现加回）。
 ## ⚠️ 战斗胜利回血（DIFFICULTY_BATTLE_HEAL）**仍为 0**：用户只要求篝火能回血，不恢复被动自动回血。
 const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
-		0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                                   # 休息回复百分比
+		0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                             # 休息回复百分比
 
 ## 各 debuff 的数值口径（**唯一口** —— 界面 / 引擎 / 测试都读这里，别在各处写死数字）
 const DIFF_GOLD_LOW := 150         # 0~6 档初始金钱（原 100 + 难度 0 的 +50）
@@ -276,6 +279,12 @@ const SCREW_RELIC_ID := 6061       # 完美螺钉（第二层 Boss 掉落，替�
 const SEED_RELIC_ID := 6062        # 生命之种（大宝箱二选一）
 const DAGGER_RELIC_ID := 6063      # 屠戮匕首（商店第三排额外售卖）
 const KEY_RELIC_IDS: Array[int] = [SCREW_RELIC_ID, SEED_RELIC_ID, DAGGER_RELIC_ID]
+## R794b（用户口径）：难度 12「昂贵」—— 商店里卖的东西一律 +40%，**信物除外**。
+## ⚠️ 唯一消费点 = `shop_scene._shelf_price()`：价签 / 悬停详情 / 扣款 / 遥测
+##    四个口共用一个倍率，谁都不许自己乘 1.4。
+##    信物目前只有第三行那条「屠戮匕首」—— 由调用方传 `key_relic = true` 跳过加价。
+const DIFF_SHOP_PRICE_FROM := 12   # 12 档起「商店涨价」
+const DIFF_SHOP_PRICE_MUL := 1.4   # +40%
 ## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
 const FATIGUE_CARD_ID := 9149
 ## R358：疲惫卡的**发放记账** —— 最近一次发放在哪一层（-1 = 本局还没发过）。
@@ -598,7 +607,19 @@ static func difficulty_summary() -> String:
 		bits.append("最大生命 %d%%" % int(round(max_hp_mul() * 100.0)))
 	if d >= DIFF_ELITE_FROM:
 		bits.append("精英 ×%.1f" % elite_weight_mul())
+	if d >= DIFF_SHOP_PRICE_FROM:
+		bits.append("商店 ×%.1f" % shop_price_mul())
 	return " · ".join(bits)
+
+
+static func shop_price_mul(is_key_relic := false) -> float:
+	## R794b：商店成交价的难度倍率（**唯一判据**）。
+	## 信物（`KEY_RELIC_IDS`）恒不打折也不加价 → 跟「+40%」这条 debuff 无关；
+	## 其余商品在难度 ≥12 时 ×1.4，低难度恒 1.0。
+	## ⚠️ 别在 `shop_scene` 里另写一份 `if difficulty >= 12` —— 档位口径只许有这一处。
+	if is_key_relic:
+		return 1.0
+	return DIFF_SHOP_PRICE_MUL if _diff() >= DIFF_SHOP_PRICE_FROM else 1.0
 
 
 static func battle_win_heal() -> int:

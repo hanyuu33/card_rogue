@@ -542,7 +542,7 @@ func _diff_set_to(d: int) -> void:
 func _draw_difficulty_block(x: float, w: float) -> void:
 	## R545：从 _draw_panel 抽出的难度档位 + 当前档文本 + 确认钮（盲选面板与角色面板共用）。
 	## R650：数值摘要整行删除（店长口径），区块里只剩一句 debuff 人话。
-	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~11 共 12 档，钳制不循环）
+	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~12 共 13 档，钳制不循环）
 	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), GameI18n.ui("shell", "CLASS_PICK_DIFFICULTY", "难度档位"),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var cap := _diff_cap()

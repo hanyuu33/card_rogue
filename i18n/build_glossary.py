@@ -111,6 +111,7 @@ g["difficulties"] = named([
     ("凶暴", "Ferocious", "凶暴"), ("贫瘠", "Barren", "不毛"),
     ("匆忙", "Haste", "急ぎ"), ("虚弱", "Weakened", "虚弱"),
     ("噩梦", "Nightmare", "悪夢"), ("上锁", "Locked", "施錠"),
+    ("昂贵", "Pricey", "高値"),
 ])
 g["difficulty_notes"] = named([
     ("无", "None", "なし"),
@@ -127,6 +128,9 @@ g["difficulty_notes"] = named([
     ("第三层上锁，获取三个信物以解锁第三层",
      "Layer 3 Locked: collect three Key Relics to unlock it",
      "第3層が施錠：3つのキーレリックを集めると解除"),
+    ("商店商品售价 +40%（信物除外）",
+     "Shop prices +40% (Key Relics excluded)",
+     "ショップ価格 +40%（キーレリックを除く）"),
 ])
 g["rooms"] = named([
     ("战斗", "Battle", "戦闘"), ("精英战斗", "Elite Battle", "エリート戦"),

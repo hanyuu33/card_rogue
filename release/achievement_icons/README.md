@@ -26,7 +26,7 @@ Steam 的成就列表是一整片图标并排显示，所以判断标准不是�
 |---|---|---|
 | 🥉 铜 | `FIRST_STEP` `FIRST_BOSS` `LAYER2_CLEAR` | 进度型：开始一局 / 见到一层 Boss / 打通二层 —— 玩下去就有 |
 | 🥈 银 | `FULL_CLEAR` `CLEAR_FOREST` `CLEAR_ROGUE` `CLEAR_MECH` | 通关型：任意职业打穿三层，或指定职业通关 |
-| 🥇 金 | `CLEAR_HARD` `CLEAR_APEX` | 高难型：难度 ≥5 通关 / 难度 11 通关（11 档还要凑齐三信物才开第三层） |
+| 🥇 金 | `CLEAR_HARD` `CLEAR_APEX` | 高难型：难度 ≥5 通关 / 难度 12 通关（12 档要凑齐三信物才开三层，商店还要贵 40%） |
 
 改等级只需动 `tools/make_achievement_icons.py` 里 `ACHIEVEMENTS` 的第三列。
 
@@ -89,4 +89,4 @@ release/achievement_icons/
 | `CLEAR_ROGUE` | 影中的圆满 | 🥈 银 | 弯匕横在影子做的月牙前 |
 | `CLEAR_MECH` | 机械的觉醒 | 🥈 银 | 齿轮与铜管拼成的心脏，核心发光 |
 | `CLEAR_HARD` | 越难越勇 | 🥇 金 | 被熔岩裂缝劈开的实心盾（难度 ≥5） |
-| `CLEAR_APEX` | 巅峰之上 | 🥇 金 | 裂开的铁锁板，白光从裂缝里炸出来（难度 11） |
+| `CLEAR_APEX` | 巅峰之上 | 🥇 金 | 裂开的铁锁板，白光从裂缝里炸出来（难度 12） |

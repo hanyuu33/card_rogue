@@ -1232,6 +1232,10 @@
     "上锁": {
       "en": "Locked",
       "ja": "施錠"
+    },
+    "昂贵": {
+      "en": "Pricey",
+      "ja": "高値"
     }
   },
   "difficulty_notes": {
@@ -1282,6 +1286,10 @@
     "第三层上锁，获取三个信物以解锁第三层": {
       "en": "Layer 3 Locked: collect three Key Relics to unlock it",
       "ja": "第3層が施錠：3つのキーレリックを集めると解除"
+    },
+    "商店商品售价 +40%（信物除外）": {
+      "en": "Shop prices +40% (Key Relics excluded)",
+      "ja": "ショップ価格 +40%（キーレリックを除く）"
     }
   },
   "rooms": {

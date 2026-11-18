@@ -620,12 +620,13 @@ func _tele_shelf() -> void:
 	for e2: Dictionary in _row2:
 		if str(e2.get("kind", "")) == "trap":
 			items.append({"k": "trap", "id": int(e2["id"]),
-					"price": int((e2["trap"] as TrapData).price)})
+					"price": _shelf_price(int((e2["trap"] as TrapData).price))})
 		else:
 			items.append({"k": "enchant", "id": 0, "price": 0,
 					"name": str(e2.get("id", ""))})
 	for e3: Dictionary in _row3:
-		items.append({"k": "service", "id": 0, "price": int(e3["price"]),
+		items.append({"k": "service", "id": 0,
+				"price": _shelf_price(int(e3["price"]), str(e3.get("key", "")) == "dagger"),
 				"name": str(e3.get("key", ""))})
 	Telemetry.note_shop_shelf(items, {"layer": RunState.current_layer,
 			"gold": RunState.gold, "hp": RunState.hp, "deck": RunState.deck_ids.size()})
@@ -909,8 +910,20 @@ func _draw_shelf_boards() -> void:
 					visual.size.x, 2.0), Color(0.0, 0.0, 0.0, a), true)
 
 
+func _shelf_price(base: int, key_relic := false) -> int:
+	## 本店**成交价**的唯一口（R794b）。难度 12「昂贵」→ 非信物商品售价 ×1.4
+	## （向上取整：25 → 35 / 50 → 70 / 80 → 112）。
+	## ⚠️ 价签 / 悬停详情 / 触摸端按钮 / 扣款 / 遥测五处**全部**读这里：
+	##    漏一处就是「贴着 35、扣了 25」那种对不上，玩家一眼就看见。
+	var mul := RunState.shop_price_mul(key_relic)
+	if mul <= 1.0:
+		return base
+	return int(ceil(float(base) * mul))
+
+
 func _card_price(card: CardData) -> int:
-	## 基础价（原价）。**不是成交价** —— 第一行要算五折，一律走 `_row1_price()`。
+	## 基础价（原价）。**不是成交价** —— 第一行要先过 `_shelf_price()` 的难度加价、
+	## 再算五折，一律走 `_row1_price()`。
 	match card.rarity:
 		0: return 25
 		1: return 50
@@ -922,7 +935,7 @@ func _row1_price(e: Dictionary) -> int:
 	## 第一行卡牌的**实际成交价**（R432 唯一口）：五折则半价、向上取整。
 	## 绘制价签 / 触摸「购买」按钮 / 购买提示 / 扣款全读这里 ——
 	## 漏一处就是「贴着 -50%，却按原价扣钱」。
-	var base := _card_price(e["card"])
+	var base := _shelf_price(_card_price(e["card"]))   # R794b：难度加价先落在这
 	if not bool(e.get("off", false)):
 		return base
 	return int(ceil(float(base) * OFF_PCT))
@@ -1003,14 +1016,14 @@ func _draw_row2() -> void:
 			var t: TrapData = e["trap"]
 			nm = t.trap_name
 			desc = t.desc
-			price = t.price
+			price = _shelf_price(t.price)                     # R794b：难度加价
 			trap_id = t.id
 		else:
 			var ench: Dictionary = e["ench"]
 			icon_name = str(ench["icon"])
 			nm = _ench_name(ench)
 			desc = GameI18n.source(str(ench["desc"]))
-			price = int(ench["price"])
+			price = _shelf_price(int(ench["price"]))          # R794b：难度加价
 		var hovered := (_sel_goods if _is_touch() else _hover) == _row2_base + i
 		_draw_goods_box(rr, icon_name, nm, desc, price, sold, hovered,
 				_enchanting == i and not sold and not is_trap,
@@ -1057,7 +1070,8 @@ func _draw_row3() -> void:
 		var blocked := str(e["key"]) == "delete" and not RunState.shop_delete_allowed()
 		var rr := _row23_item_rect(2, i)
 		_draw_goods_box(rr, str(e["icon"]), str(e["name"]), str(e["desc"]),
-				int(e["price"]), sold, (_sel_goods if _is_touch() else _hover) == _row3_base + i, false, "service")
+				_shelf_price(int(e["price"]), str(e["key"]) == "dagger"), sold,
+				(_sel_goods if _is_touch() else _hover) == _row3_base + i, false, "service")
 		if blocked:
 			_draw_block_mask(rr, "暗动力")
 		elif sold:
@@ -1111,6 +1125,7 @@ func _draw_goods_popup() -> void:
 	var entry: Dictionary
 	var anchor: Rect2
 	var title: String
+	var price := 0        # R794b：详情板价格也走 `_shelf_price()`，别直读原价
 	if hit >= _row2_base and hit < _row3_base:
 		var re: Dictionary = _row2[hit - _row2_base]
 		anchor = _row2_rect(hit - _row2_base)
@@ -1118,13 +1133,16 @@ func _draw_goods_popup() -> void:
 			var rt: TrapData = re["trap"]
 			entry = {"desc": rt.desc, "price": rt.price}
 			title = rt.trap_name
+			price = _shelf_price(int(rt.price))
 		else:
 			entry = re["ench"]
 			title = _ench_name(entry)
+			price = _shelf_price(int(entry["price"]))
 	elif hit >= _row3_base and hit < _row3_base + _row3.size():
 		entry = _row3[hit - _row3_base]
 		anchor = _row3_rect(hit - _row3_base)
 		title = str(entry["name"])
+		price = _shelf_price(int(entry["price"]), str(entry.get("key", "")) == "dagger")
 	else:
 		return
 	var width := minf(320.0, _vs().x - 24.0)
@@ -1140,7 +1158,7 @@ func _draw_goods_popup() -> void:
 	for i in lines.size():
 		draw_string(_font, rr.position + Vector2(16, 57 + i * 25), lines[i],
 				HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
-	draw_string(_font_bold, Vector2(x + 16, rr.end.y - 15), GameI18n.ui("shop", "SHOP_PRICE_GOLD", "%d 金币") % int(entry["price"]),
+	draw_string(_font_bold, Vector2(x + 16, rr.end.y - 15), GameI18n.ui("shop", "SHOP_PRICE_GOLD", "%d 金币") % price,
 			HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
 
 
@@ -1732,24 +1750,25 @@ func _buy_trap(i: int) -> void:
 	if bool(e["sold"]):
 		return
 	var t: TrapData = e["trap"]
+	var price := _shelf_price(int(t.price))   # R794b：难度加价（陷阱不是信物）
 	if RunState.trap_free_slots() <= 0:
 		_set_hint("工具栏已满（%d/%d），先在对战里用掉一个" % [
 				RunState.TRAP_SLOTS, RunState.TRAP_SLOTS])
 		return
-	if not _pay(int(t.price)):
-		_set_hint("金币不足（需要 %d）" % int(t.price))
+	if not _pay(price):
+		_set_hint("金币不足（需要 %d）" % price)
 		return
 	e["sold"] = true
 	_sync_shop_state()      # R390：售罄位要进货架存档，重进店不重摇
 	RunState.gain_trap(int(t.id))
-	Telemetry.note_shop("trap", int(t.id), int(t.price), true)
-	_set_hint("获得工具「%s」· %s" % [t.trap_name, _paid_tag(int(t.price))])
+	Telemetry.note_shop("trap", int(t.id), price, true)
+	_set_hint("获得工具「%s」· %s" % [t.trap_name, _paid_tag(price)])
 
 
 func _buy_row3(i: int) -> void:
 	var e: Dictionary = _row3[i]
-	var price: int = e["price"]
 	var key: String = e["key"]
+	var price: int = _shelf_price(int(e["price"]), key == "dagger")   # R794b：信物不涨价
 	if key == "delete":
 		# R440 暗动力（6054）：持有它就不能在商店删卡 —— 判据只问 RunState。
 		if not RunState.shop_delete_allowed():
@@ -1831,7 +1850,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	var idx: int = d["idx"]
 	# ---- 删除模式 ----
 	if _deleting:
-		var del_price: int = _row3[0]["price"]
+		var del_price: int = _shelf_price(int(_row3[0]["price"]))   # R794b：难度加价
 		# R311：预检同样要认「有盆就一定付得起」（与 `_can_pay` 同源）
 		if not _can_pay(del_price):
 			_set_hint("金币不足（需要 %d）" % del_price)
@@ -1865,7 +1884,7 @@ func _on_pick_click(pos: Vector2) -> void:
 		return
 	# ---- 附魔模式 ----
 	var ench: Dictionary = _row2[_enchanting]["ench"]
-	var price: int = ench["price"]
+	var price: int = _shelf_price(int(ench["price"]))   # R794b：难度加价
 	if not _can_pay(price):
 		_set_hint("金币不足（需要 %d）" % price)
 		_enchanting = -1

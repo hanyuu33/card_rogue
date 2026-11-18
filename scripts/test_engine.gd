@@ -20383,9 +20383,9 @@ func _init() -> void:
 
 	RunState.set_difficulty(10)
 
-	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 12,
+	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 13,
 
-			"难度 10 = 噩梦；档位名共 12 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+			"难度 10 = 噩梦；档位名共 13 个（%s）" % str(RunState.DIFFICULTY_NAMES))
 
 	RunState.set_difficulty(11)
 
@@ -20394,25 +20394,53 @@ func _init() -> void:
 
 			"难度 11 = 上锁；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
 
+	# ---- R794b：难度 12「昂贵」—— 商店商品售价 +40%（信物除外）----
+	var r794_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
+
+	check(RunState.DIFF_SHOP_PRICE_FROM == 12 and RunState.DIFF_SHOP_PRICE_MUL == 1.4,
+			"R794b 商店涨价的档位与倍率口径（12 档起 ×1.4）")
+
+	RunState.set_difficulty(11)
+
+	check(RunState.shop_price_mul() == 1.0 and RunState.shop_price_mul(true) == 1.0,
+			"R794b 难度 11 及以下商店不加价（信物一律不加）")
+
+	RunState.set_difficulty(12)
+
+	check(RunState.difficulty_name() == "昂贵" and RunState.shop_price_mul() == 1.4
+			and RunState.shop_price_mul(true) == 1.0
+			and RunState.difficulty_note().contains("40%"),
+			"R794b 难度 12 = 昂贵：非信物 ×1.4 / 信物 ×1.0（%s）" % RunState.difficulty_note())
+
+	check(RunState.difficulty_summary().contains("商店 ×1.4"),
+			"R794b 数值摘要列出「商店 ×1.4」（%s）" % RunState.difficulty_summary())
+
+	check_src(r794_shop.find("func _shelf_price(") >= 0
+			and r794_shop.find("_pay(int(t.price))") < 0
+			and r794_shop.find("var price: int = e[\"price\"]") < 0
+			and r794_shop.find("var price: int = ench[\"price\"]") < 0
+			and r794_shop.find("var del_price: int = _row3[0][\"price\"]") < 0,
+			"R794b 商店售价只走 _shelf_price()：陷阱 / 服务 / 附魔 / 删卡都不再直读原价")
+
 	RunState.set_difficulty(99)
 
-	check(RunState.difficulty == 11, "难度档位：越界输入被钳制到 11")
+	check(RunState.difficulty == 12, "难度档位：越界输入被钳制到 12")
 
 	RunState.set_difficulty(-3)
 
 	check(RunState.difficulty == 0, "难度档位：负数被钳制到 0")
 
-	check(RunState.DIFFICULTY_COUNT == 12 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 12
+	check(RunState.DIFFICULTY_COUNT == 13 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 13
 
-			and RunState.DIFFICULTY_REST_PCT.size() == 12
+			and RunState.DIFFICULTY_REST_PCT.size() == 13
 
-			and RunState.DIFFICULTY_TEXTS.size() == 12
+			and RunState.DIFFICULTY_TEXTS.size() == 13
 
 			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 0 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
 
 			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
 
-			"难度档位：共 12 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
+			"难度档位：共 13 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
 
 	RunState.reset(50)
 
@@ -72626,9 +72654,9 @@ func _init() -> void:
 
 			"R577 高难度成就门槛 = 难度 5")
 
-	check(SteamAchievements.APEX_DIFF == 11,
+	check(SteamAchievements.APEX_DIFF == 12,
 
-			"R740 巅峰成就门槛 = 难度 11（0~11 共 12 档的最高档）")
+			"R740 巅峰成就门槛 = 难度 12（0~12 共 13 档的最高档）")
 
 	check(SteamAchievements.APEX_DIFF == RunState.DIFFICULTY_COUNT - 1,
 
