@@ -1,0 +1,53 @@
+你是本项目的插画委托执行者。请用 imagegen 生成 1 张图，生成后立刻复制到：
+E:/work/card_rogue/art_src/2026-11-18_诡异洋房与诅咒娃娃_R807/raw/
+文件名必须完全一致：card_9276_style_v1.png
+
+【画风 —— 第一优先，压倒一切其它要求】
+JAPANESE ANIME CEL-SHADED trading-card illustration：
+2-step cel shading（每一块面只用 2 个色阶，硬边分界）、
+THIN clean black line art（细而干净的黑线描边，整只娃娃都有描边）、
+hand-painted look with REAL VOLUME and depth（有真实块面与体积，不是矢量色块、不是信息图）。
+参考气质：现代轻奇幻手游的卡面插画。
+核心要求：这必须是一张**手绘插画**，不是一只**真实布偶的照片**。
+
+【必须成立的反面清单】
+- NO photorealistic rendering, NO cinematic 3D render, NO ray-traced reflections, NO subsurface scattering
+- NO visible burlap weave / NO individual threads / NO fabric fibers / NO frayed fiber detail
+  （**绝对不许**出现粗麻布的编织纹理、单根线头、真实磨损纤维的细节）
+- NO volumetric god rays / NO dust motes / NO floating particles / NO film grain / NO depth-of-field bokeh
+  （不许体积光柱、不许浮尘颗粒、不许景深虚化）
+- NO realistic wood grain / NO wallpaper pattern detail（地板与墙面只画成大色块与简笔暗纹）
+- NO airbrushed soft gradients, NO pores, NO wrinkles
+- NO flat vector illustration, NO infographic look, NO poster look
+
+【画面主体】一只破旧的布偶娃娃，竖着放在画面正中：
+- 全图**只允许出现一只娃娃**，不要两只、不要镜像、不要倒影、不要第二个影子；
+- 约 20 厘米高的手工布娃娃：陈旧麻布色的身体、深色补丁拼接；
+  布料一律画成**简化的实心色块**，补丁是**平切形状 + 单侧一个硬边阴影**；
+- 缝线画成**加粗的简笔十字针脚与短横线**（插画符号，不是真实针线工艺）；
+- 身上有两三处「线头散开」和一处棉絮从破口露出来 —— 一律画成**扁平的简化形状**，
+  不要画出单根纤维；
+- 头比身体略大，两只眼睛是**不同型号的旧纽扣**（一只四孔黑贝扣、一只两孔褪色棕扣），
+  用深色线缝住，纽扣要画出两个平整的色阶；嘴巴是一条向下弯的粗缝线，没有牙齿；
+- 两条手臂软软垂着，其中一条手臂的缝线开了半截；
+- 娃娃**坐着或半靠着**，姿态松垮，像一个被丢下很久的旧玩具。
+
+【气氛与光】整体是一间洋房阁楼的暗角：
+- 一个明确的强光源从**左上方**打下来，在娃娃半边脸上留一块**硬边光斑**，另一半沉入阴影；
+- 娃娃的影子里爬出几缕**扁平的**紫黑色烟雾形状（像剪纸一样的轮廓），像有东西附着在它身上；
+- 背景只有**两块大暗色**：一块是旧壁纸的墙，一块是地板。不画细节、不画纹理、不画杂物。
+
+【颜色】主体是暗调的陈旧麻布色 / 灰褐 / 暗紫黑；唯一的高光是左上那块冷白，
+以及纽扣瞳孔边缘一点惨绿反光。整体低饱和，但暗部要有明确色阶，不要糊成一团黑。
+
+【构图】主体居中，娃娃占画面高度约 65%；顶部与底部各留约 10% 的纯背景
+（后期会居中裁成 448×404 的横幅，贴边会被切掉）。娃娃的脚不许贴到画面底边。
+
+【绝对禁止】
+- 不要出现第二只娃娃；
+- 任何文字 / 字母 / 数字 / 汉字 / logo / 水印 / 签名 / 边框 / UI 元素；
+- 不要出现真人、活人的脸、手、骷髅、怪物；不要棋盘格伪透明背景；
+- 不要血腥、不要伤口、不要内脏。
+
+【输出】1024×1024 方形 PNG。
+生成完成后，在最终回复里给出：文件完整路径 + 实际像素尺寸。
