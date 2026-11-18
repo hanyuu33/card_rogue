@@ -138,6 +138,11 @@ var relic_bonus_hp: int = 0
 ## 出口 —— 移动、AI 队列、界面全部自动读到，不必在 `_move_bfs` 里另写分支。
 ## 取 `mini` 而不是硬赋值：本来就不动（0 速）的工事不该被板甲**加**成 1 速。
 var speed_cap: int = 0
+## R805 蜂蜜（6079）：友方盟友的移速加成 —— 与竖琴 6052 同构，只写这个字段，
+## 由 `effective_speed()` 唯一出口读；单位离场字段随之消失（不烤进共享 CardData）。
+## ⚠️ 判据在 `_relic_on_enter_buffs()` 里：`owner == SIDE_SELF and kind == "盟友"` ——
+##    工事是 0 速建筑，被 +1 的话栅栏会自己走起来。
+var honey_spd: int = 0
 ## R792 兵（6071）：本场第一个盟友可以行动两次。读在 `FieldState.unit_actions()` ——
 ## 与疾行 / 哈气 / 赫利俄斯同一条「取最大」通道，落地与回合重置自动一致。
 var first_ally_twice: bool = false
@@ -296,7 +301,7 @@ func effective_speed() -> int:
 	# 自然读到 0，不必在 `_move_bfs` 里另写一条分支。
 	if boss_phase >= 3:
 		return 0
-	var sp := card.move_speed + dark_lord_speed + summon_haste + defector_speed - night_owl_weak
+	var sp := card.move_speed + dark_lord_speed + summon_haste + defector_speed + honey_spd - night_owl_weak
 	# R371：启示者阶段 2 起「移动速度 -1」（阶段 3 上面那行已经直接归零）。
 	# 走这个出口 = 移动 / AI 队列全部自然读到，不必在 `_move_bfs` 里另写分支。
 	if boss_phase >= 2:
@@ -401,6 +406,9 @@ func status_entries() -> Array[Dictionary]:
 	if speed_cap > 0:
 		out.append({"label": "板甲：移动速度降为 %d" % speed_cap,
 				"col": COL_B, "kind": "debuff"})
+	if honey_spd > 0:
+		out.append({"label": "蜂蜜：移动速度 +%d（本场）" % honey_spd,
+				"col": COL_B, "kind": "buff"})
 	if first_ally_twice:
 		out.append({"label": "兵：本场可行动两次",
 				"col": COL_B, "kind": "buff"})

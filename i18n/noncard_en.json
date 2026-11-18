@@ -267,7 +267,8 @@
     "6075": {"name": "Holy Sword", "desc": "The first Ally you play each combat gains +10 Power (does not stack)."},
     "6076": {"name": "Rabbit's Foot", "desc": "Battle victories grant 10 extra gold, and the chance for a tool to drop after battle is +10% (additive)."},
     "6077": {"name": "Drill", "desc": "When you play a card whose cost is X, if X is 6 or more, X is doubled."},
-    "6078": {"name": "Turtle Shell", "desc": "Your allies that did not attack last turn take 2 less damage (still at least 1)."}
+    "6078": {"name": "Turtle Shell", "desc": "Your allies that did not attack last turn take 2 less damage (still at least 1)."},
+    "6079": {"name": "Honey", "desc": "All friendly allies gain +1 Move Speed."}
   },
   "classes": {
     "森林精魄": {

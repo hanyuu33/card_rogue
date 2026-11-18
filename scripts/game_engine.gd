@@ -782,6 +782,11 @@ const HARP_ATK:= 2
 const PLATE_RELIC_ID:= 6070
 const PLATE_HP:= 6
 const PLATE_SPEED:= 1
+# R805 蜂蜜（6079，一般档）：**所有己方盟友**移动速度 +1 —— 与板甲 / 兵不同，
+#   不设「第一个盟友」闸门，此后上场的每一个己方盟友都吃。与竖琴 6052 逐字同构：
+#   只写 `Placement.honey_spd`，走 `effective_speed()` 出口，离场自动消失。
+const HONEY_RELIC_ID:= 6079
+const HONEY_SPEED:= 1
 # R792 兵（6071，一般档）：每场战斗**第一个盟友**可以行动两次。
 #   读在 `FieldState.unit_actions()`（唯一口），落地时还要补发一次行动轮数。
 const PAWN_RELIC_ID:= 6071
@@ -13788,6 +13793,13 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		p.harp_atk = HARP_ATK
 		_log("竖琴：%s 获得 +%d 力量（%d）"
 				% [card.card_name, HARP_ATK, p.effective_power()])
+	# R805 蜂蜜（6079）：**所有**己方盟友移动速度 +1 —— 与竖琴逐字同构（只写 Placement 字段）。
+	# ⚠️ 判据里的 `card.kind == "盟友"` 不是多余的：工事是 0 速建筑，
+	#    被 +1 就变成「1 速的栅栏」，会自己走起来。
+	if RunState.has_relic(HONEY_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友":
+		p.honey_spd = HONEY_SPEED
+		_log("蜂蜜：%s 移动速度 +%d（%d）"
+				% [card.card_name, HONEY_SPEED, p.effective_speed()])
 	# R383 骑士剑（6053）：本场第一次击杀之后**才上场**的己方盟友同样 +1 力量。
 	# 与竖琴逐字同构（字段 + effective_power 出口，不烤进共享 CardData）。
 	if _knight_sword_active() and p.owner == SIDE_SELF and card.kind == "盟友":

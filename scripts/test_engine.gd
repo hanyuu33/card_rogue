@@ -9764,9 +9764,9 @@ func _init() -> void:
 
 	var r289_leg := r289_repo.legendary_reward_ids()
 
-	check(r289_all.size() == 30 and r289_nor.size() == 24 and r289_leg.size() == 6,
+	check(r289_all.size() == 31 and r289_nor.size() == 25 and r289_leg.size() == 6,
 
-			"奖励分档：奖励池 30 件 = 一般 24 + 传奇 6（实际 %d / %d / %d）"
+			"奖励分档：奖励池 31 件 = 一般 25 + 传奇 6（实际 %d / %d / %d）"
 
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 
@@ -43973,9 +43973,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 73,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 74,
 
-			"R577b 保真锁：73 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078）")
+			"R577b 保真锁：74 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -73953,6 +73953,7 @@ func _init() -> void:
 	_test_r797()
 	_test_r799()
 	_test_r800()
+	_test_r805()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -79237,6 +79238,92 @@ func _test_r793s() -> void:
 	RunState.spent_relics = r793_sv_spent
 	RunState.max_hp = r793_sv_mhp
 	RunState.hp = r793_sv_hp
+
+
+func _test_r805() -> void:
+	## R805 蜂蜜（6079，一般档）：**所有**己方盟友移动速度 +1。
+	## 与竖琴 6052 逐字同构 —— 只写 `Placement.honey_spd`，由 `effective_speed()` 唯一出口读，
+	## 随单位离场消失；**不烤进共享 CardData**，同一张卡再上场不会叠成 +2。
+	## 判据是 `p.owner == SIDE_SELF and card.kind == "盟友"`：工事是 0 速建筑，
+	## 被 +1 的话栅栏会自己走起来，所以 kind 那一半不是多余的。
+	var r804_repo := RelicRepo.load_json()
+	var r804_r: Variant = r804_repo.get_relic(6079)
+	check(r804_r != null, "R805 数据层：蜂蜜 6079 在库")
+	check(r804_r != null and r804_r.relic_name == "蜂蜜" and r804_r.tier == "一般"
+			and r804_r.source == "奖励" and r804_r.kind == "战斗",
+			"R805 数据层：蜂蜜 = 一般档 · 奖励来源 · 战斗类")
+	check(r804_repo.reward_ids().has(6079), "R805 蜂蜜进奖励池")
+
+	var r804_en := FileAccess.get_file_as_string("res://i18n/noncard_en.json")
+	var r804_ja := FileAccess.get_file_as_string("res://i18n/noncard_ja.json")
+	var r804_es := FileAccess.get_file_as_string("res://i18n/noncard_es.json")
+	check(r804_en.contains('"6079"') and r804_ja.contains('"6079"') and r804_es.contains('"6079"'),
+			"R805 三语条目齐（6079 蜂蜜）")
+
+	check(GameEngine.HONEY_RELIC_ID == 6079 and GameEngine.HONEY_SPEED == 1,
+			"R805 常量：HONEY_RELIC_ID 6079 / HONEY_SPEED 1")
+
+	var r804_cards := CardRepo.load_json()
+	var r804_none: Array[int] = []
+
+	# ① 带蜂蜜：影子猫 8006（速 5）→ 6；龙裔 9028（速 1）→ 2
+	#    **不设「第一个」闸门** —— 第二个盟友照样 +1，这是与板甲 / 兵最大的区别。
+	var r804_honey: Array[int] = [6079]
+	RunState.relics = r804_honey
+	var r804_e := _new_engine([], 40, 40)
+	r804_e.state.energy = 30
+	r804_e.state.hand.clear()
+	r804_e.state.hand.append(CardData.from_dict(r804_cards.get_card(8006).to_dict()))
+	r804_e.state.hand.append(CardData.from_dict(r804_cards.get_card(9028).to_dict()))
+	var r804_p1 := r804_e.play_from_hand(0, Vector2i(5, 1))
+	var r804_p2 := r804_e.play_from_hand(0, Vector2i(4, 1))
+	check(r804_p1 != null and r804_p1.effective_speed() == 6,
+			"R805 蜂蜜：影子猫移速 5 → 6（实得 %d）"
+			% (r804_p1.effective_speed() if r804_p1 != null else -1))
+	check(r804_p2 != null and r804_p2.effective_speed() == 2,
+			"R805 蜂蜜：第二个盟友也 +1（速 1 → 2，不是「只有第一个」）")
+
+	# ② 工事不吃：木栅栏 8001 是 0 速建筑，被加成就会「自己走起来」
+	r804_e.state.hand.clear()
+	r804_e.state.hand.append(CardData.from_dict(r804_cards.get_card(8001).to_dict()))
+	var r804_p3 := r804_e.play_from_hand(0, Vector2i(3, 1))
+	check(r804_p3 != null and r804_p3.effective_speed() == 0 and r804_p3.honey_spd == 0,
+			"R805 蜂蜜：工事（木栅栏 0 速）不被加成（实得 %d）"
+			% (r804_p3.effective_speed() if r804_p3 != null else -1))
+
+	# ③ 没有蜂蜜就不加（同一张卡、同一个位置）
+	RunState.relics = r804_none
+	var r804_e2 := _new_engine([], 40, 40)
+	r804_e2.state.energy = 30
+	r804_e2.state.hand.clear()
+	r804_e2.state.hand.append(CardData.from_dict(r804_cards.get_card(8006).to_dict()))
+	var r804_p4 := r804_e2.play_from_hand(0, Vector2i(5, 1))
+	check(r804_p4 != null and r804_p4.effective_speed() == 5 and r804_p4.honey_spd == 0,
+			"R805 没蜂蜜：移速保持 5（加成不烤进 CardData 留残留）")
+
+	# ④ 与板甲 6070 叠加：板甲的「移速变为 1」是 mini，压在上面 —— 蜂蜜 +1 后仍是 1
+	var r804_plate: Array[int] = [6070, 6079]
+	RunState.relics = r804_plate
+	var r804_e3 := _new_engine([], 40, 40)
+	r804_e3.state.energy = 30
+	r804_e3.state.hand.clear()
+	r804_e3.state.hand.append(CardData.from_dict(r804_cards.get_card(8006).to_dict()))
+	var r804_p5 := r804_e3.play_from_hand(0, Vector2i(5, 1))
+	check(r804_p5 != null and r804_p5.honey_spd == 1 and r804_p5.speed_cap == 1
+			and r804_p5.effective_speed() == 1,
+			"R805 与板甲叠加：蜂蜜 +1 仍被上限压回 1（实得 %d）"
+			% (r804_p5.effective_speed() if r804_p5 != null else -1))
+
+	# ⑤ 卡库不被写脏：加速只发生在 Placement 上
+	check(r804_cards.get_card(8006).move_speed == 5,
+			"R805 卡库里的影子猫仍是 5 速（蜂蜜没烤进共享 CardData）")
+
+	# ⑥ 源码守卫：走唯一出口，别在 `_move_bfs` / AI 里另写分支
+	var r804_src := FileAccess.get_file_as_string("res://scripts/placement.gd")
+	check_src(r804_src.contains("+ honey_spd"), "R805 蜂蜜加成走 effective_speed 唯一出口")
+	check_src(r804_src.contains("蜂蜜：移动速度 +%d"), "R805 蜂蜜在左侧信息栏有可见来源")
+
+	RunState.relics = r804_none
 
 
 func _test_r794() -> void:
