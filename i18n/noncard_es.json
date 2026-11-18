@@ -262,9 +262,9 @@
     "6070": {"name": "Armadura de Placas", "desc": "El primer Aliado que juegas en cada combate obtiene +6 de Vida (no se acumula), pero su Velocidad de Movimiento pasa a ser 1."},
     "6071": {"name": "Peón", "desc": "El primer Aliado que juegas en cada combate puede actuar dos veces (no se acumula)."},
     "6072": {"name": "Ladrillo", "desc": "Tus Estructuras tienen +4 de Vida (efecto persistente; no se acumula)."},
-    "6073": {"name": "Muro de Púas", "desc": "Cuando una de tus Estructuras o tu Salud es atacada, inflige 5 de daño al atacante."},
+    "6073": {"name": "Muro de Púas", "desc": "Cuando una de tus Estructuras es atacada, inflige 5 de daño al atacante."},
     "6074": {"name": "Armadura de Emergencia", "desc": "No puedes recibir más de 20 de daño por turno."},
-    "6075": {"name": "Espada Maestra", "desc": "El primer Aliado que juegas en cada combate obtiene +10 de Poder (no se acumula)."},
+    "6075": {"name": "Espada Sagrada", "desc": "El primer Aliado que juegas en cada combate obtiene +10 de Poder (no se acumula)."},
     "6076": {"name": "Pata de conejo", "desc": "Ganas 10 de oro extra al vencer en combate y la probabilidad de que caiga una herramienta tras el combate aumenta un 10% (aditivo)."},
     "6077": {"name": "Taladro", "desc": "Cuando usas una carta cuyo coste es X, si X es 6 o más, X se duplica."},
     "6078": {"name": "Caparazón de tortuga", "desc": "Tus aliados que no atacaron en el turno anterior reciben 2 puntos menos de daño (como mínimo 1)."}

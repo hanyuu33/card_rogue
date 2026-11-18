@@ -143,10 +143,18 @@
       "LEAVE_WITHOUT_OPENING": "不打开（转身离开）"
     },
     "sword": {
-      "TAKE_SWORD": "拔剑（失去 %d 最大生命，获得「大师之剑」）",
+      "TAKE_SWORD": "拔剑（失去 %d 最大生命，获得「圣剑」）",
       "MAX_HP_LOW_DISABLED": "最大生命不足（拔剑需失去 %d 点）",
-      "ALREADY_OWNED_DISABLED": "已持有「大师之剑」（不必再拔）",
+      "ALREADY_OWNED_DISABLED": "已持有「圣剑」（不必再拔）",
       "LEAVE_THE_SWORD": "转身离开（不碰那把剑）"
+    },
+    "factory": {
+      "FACTORY_STAGE_1": "试吃一块（获得 1 巧克力）",
+      "FACTORY_STAGE_2": "再来一块（失去 %d 最大生命，获得 1 巧克力）",
+      "FACTORY_STAGE_3": "停不下来（失去 %d 最大生命，获得 1 巧克力）",
+      "FACTORY_STAGE_4": "包下整座工厂（失去 %d 最大生命，获得卡片「巧克力工厂」）",
+      "FACTORY_DISABLED": "最大生命不足（这一块要失去 %d 最大生命）",
+      "FACTORY_LEAVE": "离开（闻着就很甜）"
     },
     "struggle": {
       "ACCEPT_STRUGGLE": "接受挣扎（失去 %d 生命，获得「金属龙」）",
@@ -257,7 +265,12 @@
       "TREASURE_CARD_REWARD_PENDING": "开出卡牌奖励（待领：见奖励悬浮窗）"
     },
     "sword": {
-      "SWORD_GAINED": "失去 %d 点最大生命（现 %d / %d）——「大师之剑」已收进行囊"
+      "SWORD_GAINED": "失去 %d 点最大生命（现 %d / %d）——「圣剑」已收进行囊"
+    },
+    "factory": {
+      "FACTORY_FREE": "甜的。巧克力 +1（已有 %d 块）",
+      "FACTORY_PAID": "用 %d 点最大生命换了一块巧克力（上限 %d / %d，已有 %d 块）",
+      "FACTORY_CARD": "失去 %d 点最大生命（现 %d / %d）——「巧克力工厂」已加入卡组"
     },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "失去 %d 生命（当前 %d/%d）——「%s」已加入卡组"

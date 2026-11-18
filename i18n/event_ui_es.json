@@ -136,10 +136,18 @@
       "LEAVE_WITHOUT_OPENING": "No abrirlo (darte la vuelta y marcharte)"
     },
     "sword": {
-      "TAKE_SWORD": "Desenvainar (pierdes %d de Vida máxima y obtienes «Espada Maestra»)",
+      "TAKE_SWORD": "Desenvainar (pierdes %d de Vida máxima y obtienes «Espada Sagrada»)",
       "MAX_HP_LOW_DISABLED": "Vida máxima insuficiente (desenvainar cuesta %d)",
-      "ALREADY_OWNED_DISABLED": "Ya llevas la «Espada Maestra» (no hace falta desenvainar otra vez)",
+      "ALREADY_OWNED_DISABLED": "Ya llevas la «Espada Sagrada» (no hace falta desenvainar otra vez)",
       "LEAVE_THE_SWORD": "Darte la vuelta y marcharte (no toques la espada)"
+    },
+    "factory": {
+      "FACTORY_STAGE_1": "Probar una (obtienes 1 Chocolate)",
+      "FACTORY_STAGE_2": "Otra más (pierdes %d de Vida máxima, obtienes 1 Chocolate)",
+      "FACTORY_STAGE_3": "No puedes parar (pierdes %d de Vida máxima, obtienes 1 Chocolate)",
+      "FACTORY_STAGE_4": "Comprar la fábrica entera (pierdes %d de Vida máxima, obtienes la carta «Fábrica de Chocolate»)",
+      "FACTORY_DISABLED": "Vida máxima insuficiente (esta pieza cuesta %d de Vida máxima)",
+      "FACTORY_LEAVE": "Irte (huele demasiado dulce)"
     },
     "struggle": {
       "ACCEPT_STRUGGLE": "Aceptar la lucha (perder %d Vida y obtener «Dragón Metálico»)",
@@ -259,7 +267,12 @@
       "TREASURE_CARD_REWARD_PENDING": "Has encontrado una recompensa de cartas; elige 1 para añadirla a tu mazo (pendiente: consulta la ventana emergente de recompensas)"
     },
     "sword": {
-      "SWORD_GAINED": "Has perdido %d de Vida máxima (actual: %d/%d); la «Espada Maestra» es tuya"
+      "SWORD_GAINED": "Has perdido %d de Vida máxima (actual: %d/%d); la «Espada Sagrada» es tuya"
+    },
+    "factory": {
+      "FACTORY_FREE": "Dulce. Chocolate +1 (ya tienes %d)",
+      "FACTORY_PAID": "Cambiaste %d de Vida máxima por una pieza de chocolate (Vida máxima %d / %d, ya tienes %d)",
+      "FACTORY_CARD": "Has perdido %d de Vida máxima (actual: %d / %d); «Fábrica de Chocolate» se ha añadido a tu mazo"
     },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "Has perdido %d Vida (actual: %d/%d); «%s» se ha añadido a tu mazo"

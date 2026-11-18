@@ -1232,10 +1232,6 @@
     "上锁": {
       "en": "Locked",
       "ja": "施錠"
-    },
-    "昂贵": {
-      "en": "Pricey",
-      "ja": "高値"
     }
   },
   "difficulty_notes": {
@@ -1286,10 +1282,6 @@
     "第三层上锁，获取三个信物以解锁第三层": {
       "en": "Layer 3 Locked: collect three Key Relics to unlock it",
       "ja": "第3層が施錠：3つのキーレリックを集めると解除"
-    },
-    "商店商品售价 +40%（信物除外）": {
-      "en": "Shop prices +40% (Key Relics excluded)",
-      "ja": "ショップ価格 +40%（キーレリックを除く）"
     }
   },
   "rooms": {
@@ -2245,11 +2237,11 @@
       "ja": "緊急装甲",
       "id": 6074
     },
-    "大师之剑": {
-      "en": "Master Sword",
-      "ja": "マスターソード",
+    "圣剑": {
+      "en": "Holy Sword",
+      "ja": "聖剣",
       "id": 6075,
-      "note": "《塞尔达传说》专名"
+      "note": "亚瑟王式圣剑意象"
     },
     "兔脚": {
       "en": "Rabbit's Foot",
@@ -2447,7 +2439,12 @@
       "en": "Sword in the Woods",
       "ja": "森の剣",
       "key": "sword",
-      "note": "拔剑的亚瑟王 / 大师之剑意象"
+      "note": "拔剑的亚瑟王 / 圣剑意象"
+    },
+    "巧克力工厂": {
+      "en": "Chocolate Factory",
+      "ja": "チョコレート工場",
+      "key": "factory"
     },
     "挣扎": {
       "en": "Struggle",

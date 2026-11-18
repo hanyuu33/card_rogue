@@ -136,10 +136,18 @@
       "LEAVE_WITHOUT_OPENING": "開けない（立ち去る）"
     },
     "sword": {
-      "TAKE_SWORD": "剣を抜く（最大HPを%d失い、「マスターソード」を獲得）",
+      "TAKE_SWORD": "剣を抜く（最大HPを%d失い、「聖剣」を獲得）",
       "MAX_HP_LOW_DISABLED": "最大HPが足りない（剣を抜くには%d必要）",
-      "ALREADY_OWNED_DISABLED": "「マスターソード」を所持している（もう抜く必要はない）",
+      "ALREADY_OWNED_DISABLED": "「聖剣」を所持している（もう抜く必要はない）",
       "LEAVE_THE_SWORD": "立ち去る（剣には触れない）"
+    },
+    "factory": {
+      "FACTORY_STAGE_1": "ひとつ味見する（チョコレート+1）",
+      "FACTORY_STAGE_2": "もうひとつ（最大HPを%d失い、チョコレート+1）",
+      "FACTORY_STAGE_3": "やめられない（最大HPを%d失い、チョコレート+1）",
+      "FACTORY_STAGE_4": "工場をまるごと買う（最大HPを%d失い、カード「チョコレート工場」を獲得）",
+      "FACTORY_DISABLED": "最大HPが足りない（このひとつは最大HP%dと引き換え）",
+      "FACTORY_LEAVE": "立ち去る（甘い匂いがする）"
     },
     "struggle": {
       "ACCEPT_STRUGGLE": "苦闘を受け入れる（HPを%d失い、「金属竜」を獲得）",
@@ -259,7 +267,12 @@
       "TREASURE_CARD_REWARD_PENDING": "カード報酬が出た。1枚選んでデッキに加える（未受取：報酬ポップアップを参照）"
     },
     "sword": {
-      "SWORD_GAINED": "最大HPを%d失った（現在 %d/%d）——「マスターソード」を手に入れた"
+      "SWORD_GAINED": "最大HPを%d失った（現在 %d/%d）——「聖剣」を手に入れた"
+    },
+    "factory": {
+      "FACTORY_FREE": "甘い。チョコレート+1（現在 %d 個）",
+      "FACTORY_PAID": "最大HP%dとチョコレートひとつを交換した（最大HP %d / %d、現在 %d 個）",
+      "FACTORY_CARD": "最大HPを%d失った（現在 %d / %d）——「チョコレート工場」がデッキに加わった"
     },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "HPを%d失い（現在 %d/%d）——「%s」をデッキに追加した"

@@ -84,8 +84,8 @@ for aid, source in source_achievement_rows.items():
         if zh.get(field) != source[field]:
             errors.append("%s canonical %s 与 stories.json 漂移" % (aid, field))
 
-check(len(ZH["events"]) == 28, "事件页为 28 组（26 常规 + 篝火 + 旧存档兜底；R793 +林中的剑）")
-check(sum(len(x["texts"]) for x in ZH["events"].values()) == 70, "事件正文共 70 段（含 3 条休息处动态追加；R793 +2）")
+check(len(ZH["events"]) == 29, "事件页为 29 组（26 常规 + 篝火 + 旧存档兜底；R793 +林中的剑；R794 +巧克力工厂）")
+check(sum(len(x["texts"]) for x in ZH["events"].values()) == 72, "事件正文共 72 段（含 3 条休息处动态追加；R793 +2；R794 +2）")
 check(len(ZH["stories"]) == 11, "剧情共 11 段")
 check(sum(len(x["text"]) for x in ZH["stories"].values()) == 54, "剧情正文共 54 行")
 check(len(ZH["achievements"]) == 11, "剧情成就提示共 11 条")

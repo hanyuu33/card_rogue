@@ -6899,6 +6899,31 @@
       "target_mode": "none",
       "color": "水风",
       "image": ""
+    },
+    {
+      "id": 9271,
+      "name": "巧克力工厂",
+      "kind": "工事",
+      "cost": 2,
+      "power": 0,
+      "health": 30,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "工事",
+        "巧克力工厂",
+        "事件"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "回合开始时，获得 1 费用并抽一张卡。",
+      "target_mode": "none",
+      "color": "火",
+      "image": ""
     }
   ]
 }

@@ -16,7 +16,7 @@ extends Control
 ##   * event + delivery_done 委托完成（R200）：持有货物时**第二层第一个事件房**替换而来，
 ##                     卡组每保有 1 张货物 → 抽奖一次（卡牌奖励 / 80 金币 / 随机道具 / 巧克力 10%）；
 ##   * event + gaze     鸭之凝视（**第二层**）：获得事件道具「一袋米抗几楼」，或放弃；
-##   * event + sword    林中的剑（R793，第一层专属）：拔剑 -13 最大生命 → 道具「大师之剑」，
+##   * event + sword    林中的剑（R793，第一层专属）：拔剑 -13 最大生命 → 道具「圣剑」，
 ##                      或转身离开；
 ##   * event + arcane   奥秘之泉（第一层专属）：获得道具「奥秘护符」（每回合第一张效果牌费用 -1），
 ##                      或「喝下泉水」从随机 3 张效果 / 技能牌中选 1 张加入卡组（也可什么都不拿）；
@@ -33,6 +33,7 @@ extends Control
 ##   event_<事件>.png 插图（标题下方） / bg_<事件>.png 整屏背景；
 ##   事件 = rest / treasure / whisper / struggle / gaze / pear / apple_doctor /
 ##          moon（R351 赏月）/ relic_chest / flyer（R555 飞行器）。
+##          factory（R794 巧克力工厂，第二层专属）：试吃四连点，最后一档给卡。
 ## 缺图时回退内置绘制（所有事件共用的篝火动画 / 深灰底色）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -179,22 +180,42 @@ const STATUE_SMASH_DESC := """你抄起一块石头砸向它的前腿。
 裂纹从爪子一路爬到山羊头上，整尊雕像塌成一堆白渣——
 握得住的那些，正好够塞满你的工具栏。"""
 
-# R793 林中的剑（第一层专属）：两个选项 —— 拔剑（失去 13 点最大生命 → 道具「大师之剑」）/
+# R793 林中的剑（第一层专属）：两个选项 —— 拔剑（失去 13 点最大生命 → 道具「圣剑」）/
 # 转身离开。代价与占卜室 5 点是同一条 `RunState.lose_max_hp()`（**至少保留 1 点最大生命**），
 # 所以最大生命 <= 13 时按钮直接置灰 —— 不拦的话玩家会白掉一截上限换一件拿不到的东西。
-# 已持有大师之剑时同样置灰：`gain_relic()` 对重复持有是直接 return，血却是照扣的。
-const SWORD_MASTER_ID := 6075     # 大师之剑（事件道具，不进奖励池）
+# 已持有圣剑时同样置灰：`gain_relic()` 对重复持有是直接 return，血却是照扣的。
+const SWORD_MASTER_ID := 6075     # 圣剑（事件道具，不进奖励池）
 const SWORD_LIFE_COST := 13       # 拔剑的代价：失去的最大生命
 
 const SWORD_DESC := """空地上立着一块灰白的长石，石缝里插着一把剑，剑身没入大半。
 苔顺着剑格爬下来，缠了不知多少年——它在这里等得太久了。
 拔剑：失去 13 点最大生命（至少保留 1 点，最大生命不足时无法拔），
-获得道具「大师之剑」：每场战斗使用的第一个盟友 +10 力量；
+获得道具「圣剑」：每场战斗使用的第一个盟友 +10 力量；
 也可以什么都不碰，转身走出这片林子。"""
 
 const SWORD_TAKEN_DESC := """石头从中间裂开。剑离地的那一刻轻得不像话，
 像它一直在等你来拿。
-握柄贴上掌心，林子静了一瞬——「大师之剑」已收进行囊。"""
+握柄贴上掌心，林子静了一瞬——「圣剑」已收进行囊。"""
+
+# R794 巧克力工厂（第二层专属）：选项 1 可以连点四次 ——
+#   ① 免费得 1 巧克力；② 失 5 最大生命得 1；③ 失 15 得 1；④ 失 25 得卡片「巧克力工厂」。
+# 「巧克力」= 行动力资源（RunState.chocolate），发放走 `RunState.add_chocolate()`；
+# 上限代价照走 `RunState.lose_max_hp()`（至少保留 1 点，不足则按钮置灰、结算再拦）。
+# ⚠️ 故意不走 `_claim_reward()`：R147 的「一次访问只领一份」会把面板锁成只剩离开，
+#    而这张黑板的本意就是「连吃四次」—— 本事件只有 rest_btn 一个奖励按钮，锁无可锁；
+#    收尾只在第 ④ 次之后 `_collapse_to_leave()`。
+const FACTORY_CARD_ID := 9271
+const FACTORY_STAGE_COST := [0, 5, 15, 25]   # 第 n 次试吃的最大生命代价（0 = 免费）
+
+const FACTORY_DESC := """林子深处飘着甜香。铜门虚掩，里面的传送带载着一排鸭子形状的
+巧克力模具缓缓前行，脚下是一条温热的巧克力河。
+柜台上立着一块小黑板：「试吃，第一块免费——之后每块都要用点什么来换。」
+黑板角落还有一行小字：吃得最舍得下本的客人，可以带走整座工厂。"""
+
+const FACTORY_DONE_DESC := """传送带停了下来。最后一份合同已经揣进怀里——
+「巧克力工厂」已加入卡组：2 费工事，0 攻 / 30 血，次元；
+你的每个回合开始时，获得 1 费用并抽一张卡。
+甜香留在身后，林子重新安静下来。"""
 
 # R573：蓝色大肥鱼事件已删除。只留一句旧存档兜底文案，不发任何奖励。
 const RETIRED_EVENT_DESC := """这里原本有一条蓝色大肥鱼。它已经游走了。"""
@@ -397,6 +418,9 @@ var _statue_pick := ""          # R754 奇异雕像：本次选的是 "pray" / "
 var _statue_result := ""        # R754 奇异雕像：收尾那行结果（重绘要能复现）
 var _sword_taken := false       # R793 林中的剑：本次是否已拔剑（拔了就只剩离开）
 var _sword_result := ""         # R793 林中的剑：收尾那行结果（重绘要能复现）
+
+var _factory_stage := 0         # R794 巧克力工厂：下一次试吃的档位（0..3）；4 = 已包下工厂
+var _factory_result := ""       # R794 巧克力工厂：收尾那行结果（重绘要能复现）
 var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
 var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
@@ -542,9 +566,14 @@ func _is_statue() -> bool:
 
 
 func _is_sword() -> bool:
-	## R793 林中的剑（第一层专属）：拔剑（-13 最大生命 → 道具「大师之剑」）/ 离开。
+	## R793 林中的剑（第一层专属）：拔剑（-13 最大生命 → 道具「圣剑」）/ 离开。
 	## 与「挣扎」（-21 当前生命 → 卡「金属龙」）是一对：一个扣血、一个扣上限。
 	return _is_event_node() and _pending_kind() == "sword"
+
+
+func _is_choco_factory() -> bool:
+	## R794 巧克力工厂（第二层专属）：试吃巧克力，可连点四次，最后一次给卡。
+	return _is_event_node() and _pending_kind() == "factory"
 
 
 func _is_cave() -> bool:
@@ -641,7 +670,8 @@ func _is_treasure() -> bool:
 			and not _is_card_merchant() and not _is_lake_lady() \
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
 			and not _is_adventurer() and not _is_furnace() and not _is_core_contract() \
-			and not _is_flyer() and not _is_statue() and not _is_sword()
+			and not _is_flyer() and not _is_statue() and not _is_sword() \
+			and not _is_choco_factory()
 
 
 func _kind() -> String:
@@ -700,6 +730,8 @@ func _kind() -> String:
 		return "statue"
 	if _is_sword():
 		return "sword"
+	if _is_choco_factory():
+		return "factory"
 	if _is_treasure():
 		return "treasure"
 	return "rest"
@@ -1273,7 +1305,7 @@ func _kind_tint(kind: String) -> Color:
 	match kind:
 		"struggle", "gaze", "oblivion", "furnace", "core_contract":
 			return Color("b5484a")   # 危险：暗红
-		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial":
+		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial", "factory":
 			return Color("c8951c")   # 交易 / 匠人：金
 		"whisper", "divination", "moon", "arcane", "hero", "statue":
 			return Color("8a7fd4")   # 神秘 / 预兆：紫
@@ -1457,6 +1489,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "martial"
+		if args[i] == "--factory":  # R794 演示：伪装 run 巧克力工厂事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "factory"
 		if args[i] == "--rest":  # 演示：伪装 run 休息节点（R519h 篝火背景截图验证）
 			# ⚠️ 休息处不是 event 房：地图节点 type == "rest"，pending_event 为空。
 			# 写成 {"type":"event"} + pending_event="rest" 会被 `_is_treasure()`
@@ -1963,13 +1999,13 @@ func _ready() -> void:
 			#     13 点以下拔剑等于把自己削到 1 点上限。
 			rest_btn.visible = true
 			if RunState.has_relic(SWORD_MASTER_ID):
-				rest_btn.text = "已持有「大师之剑」（不必再拔）"
+				rest_btn.text = "已持有「圣剑」（不必再拔）"
 				rest_btn.disabled = true
 			elif RunState.max_hp <= SWORD_LIFE_COST:
 				rest_btn.text = "最大生命不足（拔剑需失去 %d 点）" % SWORD_LIFE_COST
 				rest_btn.disabled = true
 			else:
-				rest_btn.text = "拔剑（失去 %d 最大生命，获得「大师之剑」）" % SWORD_LIFE_COST
+				rest_btn.text = "拔剑（失去 %d 最大生命，获得「圣剑」）" % SWORD_LIFE_COST
 				rest_btn.disabled = false
 			bbq_btn.visible = false
 			alt_btn.visible = false
@@ -1977,6 +2013,19 @@ func _ready() -> void:
 			leave_btn.text = "转身离开（不碰那把剑）"
 			leave_btn.disabled = false
 			result_label.text = ""
+	elif _is_choco_factory():
+		event_name.text = "巧 克 力 工 厂"
+		desc.text = FACTORY_DONE_DESC if _factory_stage >= 4 else FACTORY_DESC
+		# 四连点事件：rest_btn 是**唯一**的奖励按钮（bbq / alt 收起），每按一次升一档；
+		# 第 ④ 档拿到卡后才 `_collapse_to_leave()`（见 `_on_main` 的 factory 分支）。
+		rest_btn.visible = true
+		_setup_factory_button()
+		bbq_btn.visible = false
+		alt_btn.visible = false
+		leave_btn.visible = true
+		leave_btn.text = "离开（闻着就很甜）"
+		leave_btn.disabled = false
+		result_label.text = ""
 	elif _is_cave():
 		event_name.text = "洞 穴"
 		desc.text = CAVE_DESC
@@ -2615,10 +2664,39 @@ func _on_main() -> void:
 		_claim_reward(rest_btn)   # R147
 		_collapse_to_leave()
 		desc.text = SWORD_TAKEN_DESC
-		_sword_result = "失去 %d 点最大生命（现 %d / %d）——「大师之剑」已收进行囊" % [
+		_sword_result = "失去 %d 点最大生命（现 %d / %d）——「圣剑」已收进行囊" % [
 				sword_paid, RunState.hp, RunState.max_hp]
 		result_label.text = _sword_result
 		result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		_redraw()
+		return
+	if _is_choco_factory():
+		if _factory_stage >= 4:
+			_on_leave()
+			return
+		# 与按钮置灰**同一条判据**（别只在 UI 拦）：上限付不起就不许再吃。
+		var factory_cost: int = FACTORY_STAGE_COST[_factory_stage]
+		if RunState.max_hp <= factory_cost:
+			return
+		var factory_paid := RunState.lose_max_hp(factory_cost) if factory_cost > 0 else 0
+		RunState.add_chocolate(1)
+		_factory_stage += 1
+		if _factory_stage >= 4:
+			# 第 ④ 档：包下整座工厂 → 卡片加入卡组，本页收尾只剩「离开」。
+			RunState.add_card(FACTORY_CARD_ID)
+			_factory_result = "失去 %d 点最大生命（现 %d / %d）——「巧克力工厂」已加入卡组" % [
+					factory_paid, RunState.hp, RunState.max_hp]
+			desc.text = FACTORY_DONE_DESC
+			_collapse_to_leave()
+		elif factory_paid > 0:
+			_factory_result = "用 %d 点最大生命换了一块巧克力（上限 %d / %d，已有 %d 块）" % [
+					factory_paid, RunState.hp, RunState.max_hp, RunState.chocolate]
+			_setup_factory_button()
+		else:
+			_factory_result = "甜的。巧克力 +1（已有 %d 块）" % RunState.chocolate
+			_setup_factory_button()
+		result_label.text = GameI18n.source(_factory_result)
+		result_label.add_theme_color_override("font_color", Color("c8951c"))
 		_redraw()
 		return
 	# R237：休息处「在这里休息」→ 回复 rest_heal_amount() 点生命（与「烤肉」二选一）。
@@ -2836,6 +2914,26 @@ func _collapse_to_leave() -> void:
 	_redraw()
 
 
+func _setup_factory_button() -> void:
+	## R794：按当前档位铺「试吃」按钮的文案与可用态。
+	## 代价表 = FACTORY_STAGE_COST；上限付不起（lose_max_hp 至少保留 1 点）→ 置灰。
+	## 档位 0 免费、永远可点；文案与 `_on_main` 的结算共用同一张表。
+	var factory_cost: int = FACTORY_STAGE_COST[_factory_stage]
+	if RunState.max_hp <= factory_cost:
+		rest_btn.text = "最大生命不足（这一块要失去 %d 最大生命）" % factory_cost
+		rest_btn.disabled = true
+		return
+	if _factory_stage == 0:
+		rest_btn.text = "试吃一块（获得 1 巧克力）"
+	elif _factory_stage == 1:
+		rest_btn.text = "再来一块（失去 %d 最大生命，获得 1 巧克力）" % factory_cost
+	elif _factory_stage == 2:
+		rest_btn.text = "停不下来（失去 %d 最大生命，获得 1 巧克力）" % factory_cost
+	else:
+		rest_btn.text = "包下整座工厂（失去 %d 最大生命，获得卡片「巧克力工厂」）" % factory_cost
+	rest_btn.disabled = false
+
+
 func _arcane_taken() -> bool:
 	## R147：本次访问是否已从泉里领走奖励（护符 / 泉水任一份）。
 	## ⚠️ 只看「本次」的两个旗标，**不能**用 `RunState.has_relic(ARCANE_CHARM_ID)` ——
@@ -2997,7 +3095,8 @@ func _refresh() -> void:
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
 			or _is_moon() or _is_snow_leopard() or _is_furnace() \
-			or _is_core_contract() or _is_flyer() or _is_statue() or _is_sword():
+			or _is_core_contract() or _is_flyer() or _is_statue() or _is_sword() \
+			or _is_choco_factory():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。

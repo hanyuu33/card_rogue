@@ -1266,6 +1266,10 @@
    "name": "Assembly Factory",
    "effect_text": "At the start of your turn, assemble a card."
   },
+  "9271": {
+   "name": "Chocolate Factory",
+   "effect_text": "At the start of your turn, gain 1 Cost and draw a card."
+  },
   "9248": {
    "name": "Seed",
    "effect_text": "At the start of your turn, Destroy this card: randomly gain 1 Cost, or add a random card to your Hand. X is the number of copies of this card in the Effect Zone; each one resolves separately."

@@ -1266,6 +1266,10 @@
    "name": "Fábrica de Ensamblaje",
    "effect_text": "Al comienzo de tu turno, ensambla una carta."
   },
+  "9271": {
+   "name": "Fábrica de Chocolate",
+   "effect_text": "Al comienzo de tu turno, obtén 1 de Coste y roba 1 carta."
+  },
   "9248": {
    "name": "Semilla",
    "effect_text": "Al comienzo de tu turno, destruye esta carta: obtén aleatoriamente 1 de Coste o añade una carta aleatoria a la mano. X es el número de copias de esta carta en la zona de Efectos; cada una se resuelve por separado."

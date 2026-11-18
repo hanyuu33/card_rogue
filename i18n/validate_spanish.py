@@ -144,9 +144,9 @@ def flatten_interface(data, translated=False):
     return rows, entries
 
 
-# 卡牌：331 个稳定 ID（R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
+# 卡牌：332 个稳定 ID（R794 加巧克力工厂 9271；R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
 check(set(CARDS_ES["cards"]) == set(CARDS_ZH["cards"]), "cards ID 覆盖与 canonical 一致")
-check(len(CARDS_ES["cards"]) == 331, "cards 共 331 张")
+check(len(CARDS_ES["cards"]) == 332, "cards 共 332 张")
 raw_cards = {str(row["id"]): row for row in RAW_CARDS}
 for cid, zh_row in CARDS_ZH["cards"].items():
     es_row = CARDS_ES["cards"].get(cid, {})
@@ -195,7 +195,7 @@ for trait in sorted(required_trait_terms):
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
 check(len(NONCARD_ES["relics"]) == 73 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 73 件道具 + 3 个角色（R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078）")
+      "noncard 为 73 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078）")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})
@@ -260,7 +260,7 @@ for achievement_id, zh_row in NARRATIVE_ZH["achievements"].items():
 event_zh_rows = flatten_event(EVENT_ZH)
 event_es_rows = flatten_event(EVENT_ES)
 check(set(event_es_rows) == set(event_zh_rows), "event_ui 全部 key 覆盖一致")
-check(len(event_zh_rows) == 167, "event_ui 为 91 选项 + 68 结果 + 5 选货 + 3 动态（R793 +5）")
+check(len(event_zh_rows) == 176, "event_ui 为 97 选项 + 71 结果 + 5 选货 + 3 动态（R793 +5；R794 +6）")
 for path, zh_text in event_zh_rows.items():
     check_text("event_ui." + path, zh_text, event_es_rows.get(path))
 dynamic_map = {

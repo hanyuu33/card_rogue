@@ -820,7 +820,7 @@ const EMERGENCY_ARMOR_CAP:= 20
 const POEM_RELIC_ID:= 6069
 const POEM_ATK:= 2
 const POEM_REBATE:= 1
-# R793 大师之剑（6075，事件「林中的剑」拔剑获得，**不进奖励池**）：
+# R793 圣剑（6075，事件「林中的剑」拔剑获得，**不进奖励池**）：
 #   每场战斗**使用的第一个盟友** +`MASTER_SWORD_ATK` 力量 —— 与竖琴 6052 / 诗 6069 同一套
 #   持续 buff 写法（只写 `Placement.master_sword_atk`，由 `effective_power()` 出口，
 #   赋值不累加、**绝不写回 `card.power`**）。
@@ -1992,6 +1992,16 @@ const FIELD_BARRIER:= "护盾"
 const SHADOW_SPLIT_ID:= 8067
 const SHADOW_SPLIT_TRAIT:= "分裂之影"
 
+# ---- R794（2026-11-18）巧克力工厂 9271 ----
+# 巧克力工厂（9271 工事，**事件卡** · 第二层事件「巧克力工厂」产出）：2 费 0/0/30，带「次元」。
+#   **自己的回合开始时 +1 费用并抽 1 张**；场上多座叠加（每座各发一份）。
+# * 判据读场上 Placement 的 trait（与分裂之影 8067 同范式）—— 工事离场就没效果。
+# * 费用并入 `_begin_turn(SIDE_SELF)` 的 `state.energy`（与鸭翼 / 鸭语耳环同一发放口），
+#   抽牌排在常规抽牌之后走 `_draw_many` 统一口。
+# * 事件专属（rarity 5 + traits「事件」），敌方拿不到 → 不写对称侧。
+const CHOCO_FACTORY_ID := 9271
+const CHOCO_FACTORY_TRAIT := "巧克力工厂"
+
 
 
 # 活体栅栏（8018 工事，R54）：2 费稀有；2/8/1。可攻击的【栅栏】类工事（带 FENCE_TRAIT，
@@ -2437,7 +2447,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	recruit_pending = false
 	_recruit_cards.clear()
 	_poem_used = false          # R761 诗：每场战斗从「这回合还没回费」开始
-	_master_sword_first_ally_done = false   # R793 大师之剑：第一个盟友的额度每场重置
+	_master_sword_first_ally_done = false   # R793 圣剑：第一个盟友的额度每场重置
 	_plate_first_ally_done = false   # R792 板甲：第一个盟友的额度每场重置
 	_pawn_first_ally_done = false    # R792 兵：同上
 	_armor_turn_key = -1             # R793 应急装甲：额度每场战斗从零开始
@@ -2656,6 +2666,13 @@ func _begin_turn(side: String) -> void :
 			action.emit("icecream", {"text": ICECREAM_LINE, 
 				"energy": ICECREAM_ENERGY, "draw": ICECREAM_DRAW})
 
+		# R794 巧克力工厂（9271）：场上每座「我方回合开始 +1 费用并抽 1 张」。
+		# 费用在这里并入发放（与鸭翼 / 鸭语耳环同一条 state.energy 口），抽牌排在
+		# 常规抽牌之后（`_choco_factory_draw`）。事件专属卡，敌方拿不到 → 不写对称侧。
+		var factory_energy := _choco_factory_energy()
+		if factory_energy > 0:
+			state.energy += factory_energy
+
 		# R446 烟斗（6055）：「下一场战斗的第一回合 +1 费 / 多抽 1 张 / 失去 1 点生命」。
 		# 「点着」状态跨战斗存在 `RunState.pipe_ready`，用掉即熄灭（`pipe_claim()` 取走），
 		# 之后只有路过篝火才重新点着 —— 所以这里**不能**只判 `turn_number == 1`。
@@ -2796,6 +2813,7 @@ func _begin_turn(side: String) -> void :
 		_clockwork_summon(SIDE_SELF)
 		_latent_turn_draw(SIDE_SELF)
 		_shadow_split_draw(SIDE_SELF)   # 分裂之影 8067（R217）
+		_choco_factory_draw()             # 巧克力工厂 9271（R794）：费用在上面发过，这里只管抽
 		_glowgrass_supply(SIDE_SELF)
 		_rebirth_tick(SIDE_SELF)          # 新生 9148（R222）：抽牌之后，选一张手卡消失
 		_creation_tick(SIDE_SELF)         # 创意 8070（R271）：抽牌之后，选一张手卡随机变形
@@ -2807,7 +2825,7 @@ func _begin_turn(side: String) -> void :
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：按改造层数重算敌方力量减益
 		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新「惧光」
 		_run_battlecries(SIDE_SELF)
-		_log("── 我方第 %d 回合：费用重置为 %d%s%s%s%s%s%s%s（共 %d），抽 %d 张" % [
+		_log("── 我方第 %d 回合：费用重置为 %d%s%s%s%s%s%s%s%s（共 %d），抽 %d 张" % [
 			turn_number, FieldState.ENERGY_PER_TURN,
 			"（+%d 鸭翼）" % bonus_energy if bonus_energy > 0 else "",
 			"（+%d 鸭语耳环）" % earring_energy if earring_energy > 0 else "",
@@ -2816,6 +2834,7 @@ func _begin_turn(side: String) -> void :
 			"（无尽黑暗：待选弃牌）" if endless_pending else "",
 			"（鸭之低语：%s）" % whisper_txt if whisper_txt != "" else "",
 			"，耳环自动出 %d 张" % earring_autoplayed if earring_autoplayed > 0 else "",
+			"（+%d 巧克力工厂）" % factory_energy if factory_energy > 0 else "",
 			state.energy, drawn])
 	else:
 		opp_turns += 1
@@ -4313,7 +4332,7 @@ var earring_pending := false      # 是否处于「自动出牌中」
 ## R761 诗（6069）：**本回合是否已经用掉「第一次使用别职业盟友回费」**。
 ## 每个我方回合开始归零（`_begin_turn`），每场战斗开始也归零（`start_game`）。
 var _poem_used := false
-# R793 大师之剑（6075）：本场「第一个盟友」的额度是否已经发过（每场战斗一次，start_game 重置）。
+# R793 圣剑（6075）：本场「第一个盟友」的额度是否已经发过（每场战斗一次，start_game 重置）。
 var _master_sword_first_ally_done := false
 # R792 板甲 / 兵：本场「第一个盟友」的额度是否已经发过（每场战斗各一次）。
 # 两件道具分开记 —— 只持有一件时另一个标记永远不动，将来加第二件同型道具也不打架。
@@ -9935,6 +9954,30 @@ func _shadow_split_draw(side: String) -> void:
 	action.emit("shadow_split", {"draw": got, "count": n})
 
 
+func _choco_factory_energy() -> int:
+	## 巧克力工厂（9271，R794）：场上每座「我方回合开始 +1 费用」的额度。
+	## 判据读场上 Placement 的 trait（与分裂之影 8067 同范式）—— 工事离场就没效果。
+	var n := 0
+	for p: Placement in state.board.values():
+		if p.owner == SIDE_SELF and p.card.traits.has(CHOCO_FACTORY_TRAIT):
+			n += 1
+	return n
+
+
+func _choco_factory_draw() -> void:
+	## 巧克力工厂（9271，R794）：本方回合开始时，场上每座抽 1 张。
+	## 费用部分在 `_begin_turn(SIDE_SELF)` 发放；抽牌走 `_draw_many` 统一口
+	## （手牌满照常 hand_full、牌库 / 弃牌区空照常记日志）。
+	## 事件专属卡（rarity 5 + traits「事件」），敌方拿不到 → 不写对称侧。
+	var n := _choco_factory_energy()
+	if n <= 0:
+		return
+	var got := _draw_many(n)
+	if got > 0:
+		_log("巧克力工厂：回合开始 +%d 费用、多抽 %d 张（场上 %d 座）" % [n, got, n])
+		action.emit("choco_factory", {"energy": n, "draw": got, "count": n})
+
+
 func _glowgrass_supply(side: String) -> void:
 	## 幽光（9099 效果卡）：回合开始时，把一张荧光草 token 加入手卡（手牌满 → 落空）。
 	if not _zone_has_id(side, GLOW_ID):
@@ -13613,7 +13656,7 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		p.card.health += BRICK_HP
 		p.health += BRICK_HP
 		_log("墙砖：%s 获得 +%d 生命（%d）" % [card.card_name, BRICK_HP, p.health])
-	# ── R793 大师之剑（6075）────────────────────────────────────────────
+	# ── R793 圣剑（6075）────────────────────────────────────────────
 	# 每场战斗**使用的第一个盟友** +10 力量（本场一次）。「第一个」= 本场第一个落地的
 	# 己方盟友 —— 与板甲 6070 / 兵 6071 同一条判据：手牌打出与涂装机器人 8080「变成」
 	# 出来的单位共用本函数，两条来路必须给同一个结论（竖琴 6052 的老约定）。
@@ -13623,7 +13666,7 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 			and card.kind == "盟友" and not _master_sword_first_ally_done):
 		_master_sword_first_ally_done = true
 		p.master_sword_atk = MASTER_SWORD_ATK
-		_log("大师之剑：第一个盟友 %s 获得 +%d 力量（%d）"
+		_log("圣剑：第一个盟友 %s 获得 +%d 力量（%d）"
 				% [card.card_name, MASTER_SWORD_ATK, p.effective_power()])
 	var beast_hp:= _beast_hp_bonus(card)
 	if beast_hp > 0:

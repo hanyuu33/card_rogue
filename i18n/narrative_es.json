@@ -113,11 +113,18 @@
         "SMITH_DONE_DESC": "El fuego se ha apagado y la pieza forjada ha salido del horno.\nLa carta de tu mano se ha convertido en una Valla de Hierro."
       }
     },
+    "factory": {
+      "name": "Fábrica de Chocolate",
+      "texts": {
+        "FACTORY_DESC": "Un dulce aroma flota desde el fondo del bosque. La puerta de cobre está entreabierta; dentro, una cinta transportadora lleva una fila de moldes de chocolate con forma de pato,\ny un río tibio de chocolate fluye junto a tus pies.\nEn el mostrador hay una pequeña pizarra: «Degustación gratis: la primera pieza va por nuestra cuenta. Cada pieza después se paga con algo.»\nY en una esquina, una letra más pequeña: el cliente que más esté dispuesto a pagar puede llevarse la fábrica entera.",
+        "FACTORY_DONE_DESC": "La cinta transportadora se detiene. El último contrato ya está guardado en tu abrigo—\n«Fábrica de Chocolate» se ha añadido a tu mazo: Estructura de 2 de Coste, 0 de Poder / 30 de Vida, Dimensional;\nal comienzo de cada uno de tus turnos, obtén 1 de Coste y roba 1 carta.\nEl dulce aroma queda atrás y el bosque vuelve a estar en silencio."
+      }
+    },
     "sword": {
       "name": "La espada del bosque",
       "texts": {
-        "SWORD_DESC": "En el claro se alza una piedra grisácea, con una espada clavada en su grieta; la hoja está casi enterrada.\nEl musgo ha trepado por la guarda, enroscándose durante años incontables: lleva demasiado tiempo esperando aquí.\nDesenvainar: pierdes 13 de Vida máxima (debes conservar al menos 1; no puedes desenvainar si tu Vida máxima es insuficiente)\ny obtienes el objeto «Espada Maestra»: el primer Aliado que juegas en cada combate obtiene +10 de Poder;\no no toques nada y sal del bosque.",
-        "SWORD_TAKEN_DESC": "La piedra se parte por la mitad. La espada sale con una ligereza imposible,\ncomo si hubiera estado esperando a que la tomaras.\nLa empuñadura se asienta en tu palma y el bosque enmudece un instante: la «Espada Maestra» es tuya."
+        "SWORD_DESC": "En el claro se alza una piedra grisácea, con una espada clavada en su grieta; la hoja está casi enterrada.\nEl musgo ha trepado por la guarda, enroscándose durante años incontables: lleva demasiado tiempo esperando aquí.\nDesenvainar: pierdes 13 de Vida máxima (debes conservar al menos 1; no puedes desenvainar si tu Vida máxima es insuficiente)\ny obtienes el objeto «Espada Sagrada»: el primer Aliado que juegas en cada combate obtiene +10 de Poder;\no no toques nada y sal del bosque.",
+        "SWORD_TAKEN_DESC": "La piedra se parte por la mitad. La espada sale con una ligereza imposible,\ncomo si hubiera estado esperando a que la tomaras.\nLa empuñadura se asienta en tu palma y el bosque enmudece un instante: la «Espada Sagrada» es tuya."
       }
     },
     "struggle": {

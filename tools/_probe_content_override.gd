@@ -2,8 +2,8 @@ extends SceneTree
 ## R789 探针：验证 `content/` 覆盖层（热更通道）。
 ##
 ## 覆盖四件事，缺一不可：
-##   1. 没有覆盖目录时，读到的就是 pck 基线（331 张卡，卡名不变）；
-##   2. 放一份改过卡名的 cards.json → 覆盖生效，数量仍为 331（整份替换，不是合并）；
+##   1. 没有覆盖目录时，读到的就是 pck 基线（332 张卡，卡名不变）；
+##   2. 放一份改过卡名的 cards.json → 覆盖生效，数量仍为 332（整份替换，不是合并）；
 ##   3. 覆盖文件坏掉（语法错 / `{"cards": []}`）→ 自动回落基线，不崩；
 ##   4. 译文 JSON 同样走覆盖（改一句文案 = 一个十几 KB 的文件）。
 ##
@@ -30,7 +30,7 @@ func _initialize() -> void:
 	var base_name := ""
 	if base.get_card(CARD_ID) != null:
 		base_name = base.get_card(CARD_ID).card_name
-	_check("基线卡牌 331 张", base_count == 331, str(base_count))
+	_check("基线卡牌 332 张", base_count == 332, str(base_count))
 	_check("基线卡名非空", base_name != "", base_name)
 
 	# ---- 2) 覆盖 cards.json ----
@@ -48,17 +48,17 @@ func _initialize() -> void:
 	if ov.get_card(CARD_ID) != null:
 		ov_name = ov.get_card(CARD_ID).card_name
 	_check("覆盖生效（卡名）", ov_name == MARK_ZH, ov_name)
-	_check("覆盖后仍是 331 张", ov.all_cards().size() == 331, str(ov.all_cards().size()))
+	_check("覆盖后仍是 332 张", ov.all_cards().size() == 332, str(ov.all_cards().size()))
 
 	# ---- 3) 坏文件回落 ----
 	_write(tmp.path_join("cards.json"), "{ this is not json")
 	var broken := CardRepo.load_json()
-	_check("坏 JSON 回落基线", broken.all_cards().size() == 331 and broken.get_card(CARD_ID).card_name == base_name,
+	_check("坏 JSON 回落基线", broken.all_cards().size() == 332 and broken.get_card(CARD_ID).card_name == base_name,
 			"%d / %s" % [broken.all_cards().size(), broken.get_card(CARD_ID).card_name])
 
 	_write(tmp.path_join("cards.json"), "{\"cards\": []}")
 	var empty := CardRepo.load_json()
-	_check("空结构回落基线", empty.all_cards().size() == 331, str(empty.all_cards().size()))
+	_check("空结构回落基线", empty.all_cards().size() == 332, str(empty.all_cards().size()))
 
 	# ---- 4) 译文 JSON 覆盖 ----
 	var en: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://i18n/cards_en.json"))

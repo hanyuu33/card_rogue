@@ -136,10 +136,18 @@
       "LEAVE_WITHOUT_OPENING": "Don't open it (turn and leave)"
     },
     "sword": {
-      "TAKE_SWORD": "Draw the sword (lose %d Max Health and gain \"Master Sword\")",
+      "TAKE_SWORD": "Draw the sword (lose %d Max Health and gain \"Holy Sword\")",
       "MAX_HP_LOW_DISABLED": "Not enough Max Health (drawing costs %d)",
-      "ALREADY_OWNED_DISABLED": "You already carry the \"Master Sword\" (no need to draw it again)",
+      "ALREADY_OWNED_DISABLED": "You already carry the \"Holy Sword\" (no need to draw it again)",
       "LEAVE_THE_SWORD": "Turn and walk away (do not touch the sword)"
+    },
+    "factory": {
+      "FACTORY_STAGE_1": "Taste one (gain 1 Chocolate)",
+      "FACTORY_STAGE_2": "Have another (lose %d Max Health, gain 1 Chocolate)",
+      "FACTORY_STAGE_3": "Cannot stop (lose %d Max Health, gain 1 Chocolate)",
+      "FACTORY_STAGE_4": "Buy the whole factory (lose %d Max Health, gain the card \"Chocolate Factory\")",
+      "FACTORY_DISABLED": "Not enough Max Health (this piece costs %d Max Health)",
+      "FACTORY_LEAVE": "Leave (it smells so sweet)"
     },
     "struggle": {
       "ACCEPT_STRUGGLE": "Accept the struggle (lose %d Health and gain \"Metal Dragon\")",
@@ -259,7 +267,12 @@
       "TREASURE_CARD_REWARD_PENDING": "Found a Card Reward; choose 1 to add to your Deck (pending: see the reward pop-up)"
     },
     "sword": {
-      "SWORD_GAINED": "Lost %d Max Health (current %d/%d)—the \"Master Sword\" is yours"
+      "SWORD_GAINED": "Lost %d Max Health (current %d/%d)—the \"Holy Sword\" is yours"
+    },
+    "factory": {
+      "FACTORY_FREE": "Sweet. Chocolate +1 (you have %d now)",
+      "FACTORY_PAID": "Traded %d Max Health for a piece of chocolate (Max Health %d / %d, you have %d)",
+      "FACTORY_CARD": "Lost %d Max Health (current %d / %d)—\"Chocolate Factory\" has been added to your deck"
     },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "Lost %d Health (current %d/%d)—\"%s\" has been added to your Deck"
