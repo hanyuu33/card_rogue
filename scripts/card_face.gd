@@ -242,7 +242,7 @@ static func art_for(id: int, sleeping := false, phase := 0) -> Texture2D:
 			var pend := PENDING_DIR + "%d%s.png" % [id, suffix]
 			if _pic_exists(pend):
 				path = pend
-		_art_cache[key] = load(path) if _pic_exists(path) else null
+		_art_cache[key] = DataPaths.load_texture(path) if _pic_exists(path) else null
 	return _art_cache[key]
 
 
@@ -275,7 +275,9 @@ static func _draw_pending_mark(canvas: CanvasItem, box: Rect2, k: float) -> void
 ## 见 ui_assets.gd 顶部注释）。正确判存 = FileAccess or ResourceLoader.exists
 ## （编辑器里两者都真；导出包里后者靠 .import 重映射为真）。
 static func _pic_exists(path: String) -> bool:
-	return FileAccess.file_exists(path) or ResourceLoader.exists(path)
+	## R790：再并上覆盖层 —— 新卡图只要丢进 content/assets/pics/ 就算存在，
+	## 不用重导 pck，也不用等编辑器导入。
+	return DataPaths.asset_exists(path)
 
 
 static func fit_rect(src: Vector2, box: Rect2) -> Rect2:

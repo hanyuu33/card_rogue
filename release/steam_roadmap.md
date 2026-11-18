@@ -105,37 +105,60 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 | B2 | **桌面纹理变体重测** | `high_quality=true` → bptc + astc；Windows 走 bptc/S3TC。要重跑 `tools/shot_r596g_tex.gd` + `_psnr_r596g.py`（**关 `content_scale_mode`**） | 桌面 PSNR ≥ 45dB；内存 / 首屏加载不劣化 |
 | B3 | 桌面包体重算 | 桌面不带 v7a/arm64 两份 lib；PCK 走 bptc 体积与 astc 不同 | ✅ R789 实测 `dist/Quackill.exe` **277.1MB = 引擎 80.4MB + 内嵌 PCK 196.7MB**（GDPC 头在 84.28MB）；桌面纹理 PSNR 仍待 B2 |
 | B4 | Windows release 预设核查 | 图标用 `assets/ui/icon.ico`；`config/icon` 现指向 `icon_android_legacy.png`（**桌面也用它**，需确认尺寸观感） | 干净机双击可跑，任务栏图标正确 |
-| B5 | Steam 构建上传 | `steamcmd` + `app_build_<id>.vdf` + `depot_build.vdf`；**两个 depot**：① exe + pck ② `content/`（见 §2.1） | 上传成功、Steam 客户端能下、能启动 |
+| B5 | Steam 构建上传 | `steamcmd` + `app_build_<id>.vdf` + `depot_build.vdf`；**两个 depot**：① exe + pck（引擎+基线素材+脚本）② `content/`（数据 JSON + 覆盖素材，见 §2.1） | 上传成功、Steam 客户端能下、能启动 |
 | B6 | 版本号单一来源 | `GameBrand.VERSION=1.0.0`；Windows exe FileVersion / ProductVersion 已实测 1.0.0；Android versionName 1.0.0 | ✅ 代码与包体完成；Steam depot / build 描述待后台填写 |
-| B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」，并**记录一次真实下载体积** | 改一句文案 → 续档正常，且下载量只有对应 JSON（不是整个 exe） |
+| B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」，并**记录两次真实下载体积** | 改一句文案 → 只下对应 JSON；改一张卡图 → 只下那张 PNG（均非整包） |
 
-### 2.1 内容热更（R789 已落地，避免每次更新全量重下）
+### 2.1 按需更新四层（R789 数据层 + R790 素材层已落地）
 
-**问题**：单文件 exe 里数据与引擎捆在一起，改一张卡的效果文本也会让整个 277MB 的 exe 变化，
-Steam 只能近乎全量重下。而 Steam 的更新粒度是**文件**，不是"包"。
+**问题**：单文件 exe 把数据、美术与引擎捆在一起，改一张卡图也会让整个 277MB 变化，
+Steam 只能近乎全量重下。Steam 的更新粒度是**文件**，所以要么把变更装进独立小文件，
+要么保证它落在不会移动别人偏移的位置。
 
-**实测规模**（真正高频变动的只有 1.04MB）：
+**实测包体结构**（`dist/Quackill.exe` 277.1MB = 引擎 80.4MB + 内嵌 PCK 196.7MB）：
 
-| 文件 | 大小 | 变更频率 |
-|---|---|---|
-| `cards.json` | 177.6KB | 每轮加卡 / 调数值 |
-| `i18n/*.json` | 28 个文件，约 0.83MB | 改文案 / 翻译 |
-| `relics.json` / `stories.json` / `traps.json` | 16.4KB / 9.3KB / 3.0KB | 偶尔 |
-| 其余（PCK 内美术 / 音频 / 引擎） | 196.7MB + 80.4MB | 发版级 |
+| PCK 内区段 | 体积 | 物理位置 | 改动它会让多少字节移动 |
+|---|---|---|---|
+| 素材 `ctex` 739 张 | 147.4MB | 前段 | 其后全部（最多 191MB） |
+| 音频 `oggvorbisstr` 11 个 | 28.5MB | 前段 | 同上 |
+| 字体 `fontdata` 2 个 | 15.2MB | 前段 | 同上 |
+| 脚本 `.gdc` 122 个 | 3.5MB | **尾部**（201–206MB） | 仅 3.3MB |
+| 数据 `json` 47 个 | 1.3MB | **尾部** | 仅 0.6MB |
 
-**做法**：`scripts/data_paths.gd` 给静态数据加了覆盖层，读取顺序
+关键结论：**脚本与数据本来就在 PCK 尾部**，改它们只影响尾部几 MB，不会推动前面 191MB 素材。
+真正的痛点是改图——所以素材单独走覆盖层。
+
+**四层分工**：
+
+| 层 | 变更内容 | 通道 | 单次更新下载量 | 状态 |
+|---|---|---|---|---|
+| L0 引擎 | 引擎本体 80.4MB | 正常发版 | 80.4MB | 不热更 |
+| L1 数据 | 卡牌 / 道具 / 剧情 / 陷阱 / 全语种文本 | `content/**.json` 覆盖 | 改一句 ≈ 8–200KB | ✅ R789 |
+| L2 素材 | 卡图 / 图标 / 事件图 / 背景 / BGM | `content/assets/**.png\|.ogg` 覆盖 | **只下那一张**（1MiB 块对齐，最小 1 块） | ✅ R790 |
+| L3 脚本 | 卡片效果 / 关卡 / 事件 / 商店 / 奖励 / 场景 | PCK 尾部 `.gdc` | ≈3.3MB（4 个 1MiB 块） | 已够小，不拆 |
+
+`scripts/data_paths.gd` 是唯一的覆盖入口，读取顺序
 `CARDROGUE_CONTENT_DIR`（测试）→ **exe 同目录 `content/`** → pck 内 `res://` 基线。
-发布时 `_release.py` 自动把 32 个 JSON 同步到 `content/`，基线仍留在 pck 里当兜底。
+目录结构与 `res://` 完全一致（`content/assets/pics/8001.png`），贴图与 BGM 的人照原路径丢文件即可。
 
-**安全网**（探针 `tools/_probe_content_override.gd`，已并入 `_verify.py` 的 `content` 套件，8 项）：
-- 覆盖生效、数量与基线一致（整份替换，**不是**增量合并）；
-- 语法坏 / 结构空（`{"cards": []}`）→ 打 warning 并回落 pck 基线，不崩；
-- 译文 JSON 同样走覆盖；清掉 `content/` 后自动回到基线。
+**素材覆盖的两个特性**（这是「新增也能热更」的关键）：
+- **替换**：同名文件覆盖基线图，改一张只下那一张。
+- **新增**：基线里没有的图（新卡图、新事件图）也直接可用；`CardFace._pic_exists()` 与
+  `UiAssets._path_exists()` 都并上了覆盖层，不会因为 pck 里没有就判缺图。
+- 覆盖图运行时解 PNG 并生成 mipmap；**没被覆盖的图仍走 pck 里的压缩纹理，零额外代价**。
+
+**安全网**（探针 `tools/_probe_content_override.gd`，已并入 `_verify.py` 的 `content` 套件，15 项）：
+- 数据：覆盖生效、数量与基线一致（整份替换，**不是**增量合并）；
+- 数据：语法坏 / 结构空（`{"cards": []}`）→ 打 warning 并回落 pck 基线，不崩；
+- 素材：覆盖生效（尺寸可辨）、新增图可读、**坏图回落基线不变空白**；
+- 清掉 `content/` 后自动回到基线；临时目录故意带空格 + 中文（Steam 默认装在 `Program Files (x86)`）。
 
 **边界（写清楚，免得误期待）**：
-- 只能热更**静态数据**。美术 / 场景 / 脚本的热修需要"补丁 pck + `load_resource_pack`"（L2，未做）；
-  引擎本体（80.4MB）不热更，走正常发版。
-- 关卡数值目前在 `scripts/game_levels.gd` 里是代码，改关卡仍要发版；要热更得先把关卡数据化。
+- 引擎本体（80.4MB）不热更，走正常发版。
+- 6 张 `preload()` 的图（奖励面板 5 + 原质特效 3）是编译期绑定，不参与覆盖；
+  要热更得先改成运行时加载。
+- 关卡 / 商店池 / 奖励表目前是 `game_levels.gd`、`shop_scene.gd` 里的代码，
+  改动走 L3（约 3.3MB），要压到 KB 级得先把这些配置数据化。
 - 安装目录**只读不写**：补丁一律由 Steam 下发，游戏自己不去改安装目录。
 
 ---

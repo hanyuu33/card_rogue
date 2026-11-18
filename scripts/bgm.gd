@@ -291,9 +291,8 @@ func stream_for(slot: String) -> AudioStream:
 	if _streams.has(slot):
 		return _streams[slot]
 	var path := BGM_DIR + slot + ".ogg"
-	var s: AudioStream = null
-	if ResourceLoader.exists(path):
-		s = load(path)
+	## R790：走 DataPaths —— 覆盖目录里同名 .ogg 优先（换 BGM 不用重导 pck）。
+	var s: AudioStream = DataPaths.load_audio(path)
 	if s is AudioStreamOggVorbis:
 		# 兜底：即使 .import 的 loop 被改回 false，运行时也强制循环
 		(s as AudioStreamOggVorbis).loop = true

@@ -370,7 +370,8 @@ static func battle_bg(key: String, layer: int) -> Texture2D:
 
 
 static func _path_exists(p: String) -> bool:
-	return FileAccess.file_exists(p) or ResourceLoader.exists(p)
+	## R790：覆盖层里的新图也算存在（否则新加的背景图会被判缺、直接走兜底）。
+	return DataPaths.asset_exists(p)
 
 
 static func bridge_icon() -> Texture2D:
@@ -495,13 +496,7 @@ static func clear_cache() -> void:
 
 
 static func _load(path: String) -> Texture2D:
-	if ResourceLoader.exists(path):
-		var res := load(path)
-		if res is Texture2D:
-			return res
-	# 回退：文件刚丢进目录、编辑器还没导入时，直接解 PNG。
-	if FileAccess.file_exists(path):
-		var img := Image.new()
-		if img.load(path) == OK and not img.is_empty():
-			return ImageTexture.create_from_image(img)
-	return null
+	## R790：统一走 DataPaths —— 覆盖目录（content/assets/...）优先直读 PNG，
+	## 其次 pck 里已导入的资源，最后才是「刚落盘、编辑器还没导入」的原文件。
+	## 三种情况都在 `DataPaths.load_texture()` 里，这里只保留一个入口，避免两套判存漂移。
+	return DataPaths.load_texture(path)

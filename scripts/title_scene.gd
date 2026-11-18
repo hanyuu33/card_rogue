@@ -43,7 +43,7 @@ func _ready() -> void:
 	if _bg_tex == null:
 		_bg_tex = UiAssets.title_bg()
 	if _bg_tex == null:
-		_bg_tex = load("res://assets/battle_bg.png")
+		_bg_tex = DataPaths.load_texture("res://assets/battle_bg.png")
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	_apply_brand()

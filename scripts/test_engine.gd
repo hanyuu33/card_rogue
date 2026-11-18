@@ -37575,7 +37575,9 @@ func _init() -> void:
 
 	var r190_face_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-	check_src(r190_face_src.contains("ResourceLoader.exists("),
+	check_src(r190_face_src.contains("DataPaths.asset_exists(")
+
+		and FileAccess.get_file_as_string("res://scripts/data_paths.gd").contains("ResourceLoader.exists("),
 
 		"R190 导出：card_face.art_for 用 ResourceLoader.exists 判存（FileAccess 在包里恒假）")
 

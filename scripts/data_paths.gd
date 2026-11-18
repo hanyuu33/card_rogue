@@ -81,6 +81,76 @@ static func read_json(path: String, required_key: String = "") -> Variant:
 	return JSON.parse_string(FileAccess.get_file_as_string(path))
 
 
+## 素材覆盖：`res://assets/...` → `<root>/assets/...`。
+## 目录结构刻意与 res:// 一致，改图的人只需要照原路径丢文件。
+## 覆盖层既能**替换**（同名）也能**新增**（基线里没有的图），后者不用重导 pck。
+static func asset_path(path: String) -> String:
+	if not path.begins_with("res://assets/"):
+		return path
+	var root := content_root()
+	if root == "":
+		return path
+	var candidate := root.path_join(path.trim_prefix("res://"))
+	return candidate if FileAccess.file_exists(candidate) else path
+
+
+static func has_asset_override(path: String) -> bool:
+	if not path.begins_with("res://assets/"):
+		return false
+	var root := content_root()
+	if root == "":
+		return false
+	return FileAccess.file_exists(root.path_join(path.trim_prefix("res://")))
+
+
+## 判存统一口径：覆盖层 → 源文件 → 已导入资源（导出包里只有 .ctex 时靠后者）。
+static func asset_exists(path: String) -> bool:
+	if has_asset_override(path):
+		return true
+	return FileAccess.file_exists(path) or ResourceLoader.exists(path)
+
+
+## 取贴图：覆盖优先（外部 PNG 直解，可新增可替换），否则回落 pck 的导入资源。
+## 覆盖图带 mipmap，否则卡面缩到小尺寸会有锯齿/闪烁。
+static func load_texture(path: String) -> Texture2D:
+	if has_asset_override(path):
+		var abs := asset_path(path)
+		var img := Image.new()
+		if img.load(abs) == OK and not img.is_empty():
+			if not img.has_mipmaps():
+				img.generate_mipmaps()
+			return ImageTexture.create_from_image(img)
+		push_warning("[DataPaths] 覆盖贴图读取失败，回落基线：" + abs)
+	if ResourceLoader.exists(path):
+		var res: Variant = load(path)
+		if res is Texture2D:
+			return res
+	if FileAccess.file_exists(path):
+		var img2 := Image.new()
+		if img2.load(path) == OK and not img2.is_empty():
+			return ImageTexture.create_from_image(img2)
+	return null
+
+
+## 取音频：覆盖层里的 .ogg/.wav 直接读缓冲，其余回落 pck。
+static func load_audio(path: String) -> AudioStream:
+	if has_asset_override(path):
+		var abs := asset_path(path)
+		if abs.get_extension().to_lower() == "ogg":
+			## 项目音频全是 ogg；4.3 只有 load_from_buffer（WAV 直读要 4.4+，不做）。
+			var bytes := FileAccess.get_file_as_bytes(abs)
+			if bytes.size() > 0:
+				var s := AudioStreamOggVorbis.load_from_buffer(bytes)
+				if s != null:
+					return s
+		push_warning("[DataPaths] 覆盖音频读取失败，回落基线：" + abs)
+	if ResourceLoader.exists(path):
+		var res: Variant = load(path)
+		if res is AudioStream:
+			return res
+	return null
+
+
 static func _plausible(data: Variant, required_key: String) -> bool:
 	if data == null:
 		return false

@@ -76,6 +76,37 @@ func _initialize() -> void:
 		var got := GameI18n.card_name(CARD_ID, "FALLBACK")
 		_check("译文覆盖生效", got == MARK_EN, got)
 
+	# ---- 4b) 素材覆盖：替换 / 新增 / 坏图 ----
+	# 图片是体积最大的一类，必须能「改一张只下一个文件」，否则每次换卡图都是重下整包。
+	var card_pic := "res://assets/pics/%d.png" % CARD_ID
+	var base_tex := DataPaths.load_texture(card_pic)
+	var base_size := base_tex.get_size() if base_tex != null else Vector2.ZERO
+	_check("基线卡图可读", base_tex != null, str(base_size))
+
+	var art_dir := tmp.path_join("assets/pics")
+	DirAccess.make_dir_recursive_absolute(art_dir)
+	var probe_img := Image.create(7, 5, false, Image.FORMAT_RGBA8)
+	probe_img.fill(Color(1, 0, 0, 1))
+	probe_img.save_png(art_dir.path_join("%d.png" % CARD_ID))
+	_check("覆盖图被识别为存在", DataPaths.has_asset_override(card_pic))
+	var ov_tex := DataPaths.load_texture(card_pic)
+	_check("覆盖图生效（尺寸 7x5）", ov_tex != null and ov_tex.get_size() == Vector2(7, 5),
+			str(ov_tex.get_size()) if ov_tex != null else "null")
+	_check("CardFace 认覆盖图", CardFace._pic_exists(card_pic))
+
+	# 新增：基线里没有的图也能直接读到（新卡图不用重导 pck）
+	var fresh := "res://assets/ui/_probe_fresh.png"
+	DirAccess.make_dir_recursive_absolute(tmp.path_join("assets/ui"))
+	probe_img.save_png(tmp.path_join("assets/ui/_probe_fresh.png"))
+	_check("新增图判存", DataPaths.asset_exists(fresh))
+	_check("新增图可读", DataPaths.load_texture(fresh) != null)
+
+	# 坏图：写垃圾字节 → 回落基线，不能崩、不能变空白
+	_write(art_dir.path_join("%d.png" % CARD_ID), "not a png at all")
+	var fallback_tex := DataPaths.load_texture(card_pic)
+	_check("坏图回落基线", fallback_tex != null and fallback_tex.get_size() == base_size,
+			str(fallback_tex.get_size()) if fallback_tex != null else "null")
+
 	# ---- 5) 收尾：清掉覆盖，回到基线 ----
 	GameSettings.language = "zh"
 	GameI18n.reset_cache()
@@ -93,7 +124,7 @@ func _initialize() -> void:
 	quit(0 if _bad == 0 else 1)
 
 
-func _check(label: String, ok: bool, detail: String) -> void:
+func _check(label: String, ok: bool, detail := "") -> void:
 	if ok:
 		_ok += 1
 		print("  ✓ ", label)
