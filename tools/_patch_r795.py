@@ -228,4 +228,10 @@ dump_clean("test_engine.gd",
            swap(head_text("scripts/test_engine.gd", crlf=True), ANCHOR_TE, ANCHOR_TE + NEW_TE),
            crlf=True)
 
-print("ok：工作区已改 + 干净副本在 " + CLEAN)
+# ============================================================ 6. validate_spanish.py（条数锁定）
+VS_OLD = 'check(len(interface_zh_rows) == 825, "interface 共 825 条")'
+VS_NEW = 'check(len(interface_zh_rows) == 826, "interface 共 826 条")'
+write("i18n/validate_spanish.py", swap(read("i18n/validate_spanish.py"), VS_OLD, VS_NEW))
+dump_clean("validate_spanish.py", swap(head_text("i18n/validate_spanish.py"), VS_OLD, VS_NEW))
+
+print("结束")
