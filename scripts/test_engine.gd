@@ -9755,6 +9755,7 @@ func _init() -> void:
 	# R792：+猴爪 6066（relics.json 写的 tier 是「稀有」，但 `RelicData.RELIC_TIERS`
 	# 只有「一般 / 传奇」两档，`normalize_tier()` 会把它归一成「一般」）+ 板甲 6070 /
 	# 兵 6071 / 墙砖 6072 三件一般 → **25 件 = 19 一般 + 6 传奇**。
+	# R806：+法术卷轴 6080（一般）→ **26 件 = 20 一般 + 6 传奇**（全池 32 件）。
 
 	var r289_repo := RelicRepo.load_json()
 
@@ -9764,9 +9765,9 @@ func _init() -> void:
 
 	var r289_leg := r289_repo.legendary_reward_ids()
 
-	check(r289_all.size() == 31 and r289_nor.size() == 25 and r289_leg.size() == 6,
+	check(r289_all.size() == 32 and r289_nor.size() == 26 and r289_leg.size() == 6,
 
-			"奖励分档：奖励池 31 件 = 一般 25 + 传奇 6（实际 %d / %d / %d）"
+			"奖励分档：奖励池 32 件 = 一般 26 + 传奇 6（实际 %d / %d / %d）"
 
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 
@@ -43973,9 +43974,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 74,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 75,
 
-			"R577b 保真锁：74 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079）")
+			"R577b 保真锁：75 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -73954,6 +73955,7 @@ func _init() -> void:
 	_test_r799()
 	_test_r800()
 	_test_r805()
+	_test_r806()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -79238,6 +79240,124 @@ func _test_r793s() -> void:
 	RunState.spent_relics = r793_sv_spent
 	RunState.max_hp = r793_sv_mhp
 	RunState.hp = r793_sv_hp
+
+
+func _test_r806() -> void:
+	## R806 法术卷轴（6080，一般档）：每场战斗**第一次使用技能卡**时，把那张卡带「次元」的
+	## 复制加进手牌。
+	## 四条关键口径（每条都在下面有独立断言）：
+	##   * 只认 `kind == "技能"` —— `_spell_card_gone()` 也收诅咒（破绽 9154），不判卡种
+	##     的话打个诅咒就把额度花了；
+	##   * 每场只一次（`_scroll_used`，新 GameEngine 自动复位）；
+	##   * 复制品是独立实例，卡库那张**不会被写脏**；
+	##   * 复制品不继承商店附魔（R624 口径），但保留卡面费用与卡种。
+	var r806_repo := RelicRepo.load_json()
+	var r806_r: Variant = r806_repo.get_relic(6080)
+	check(r806_r != null, "R806 数据层：法术卷轴 6080 在库")
+	check(r806_r != null and r806_r.relic_name == "法术卷轴" and r806_r.tier == "一般"
+			and r806_r.source == "奖励" and r806_r.kind == "战斗",
+			"R806 数据层：法术卷轴 = 一般档 · 奖励来源 · 战斗类")
+	check(r806_repo.reward_ids().has(6080), "R806 法术卷轴进奖励池（硬编码 id 表）")
+
+	var r806_en := FileAccess.get_file_as_string("res://i18n/noncard_en.json")
+	var r806_ja := FileAccess.get_file_as_string("res://i18n/noncard_ja.json")
+	var r806_es := FileAccess.get_file_as_string("res://i18n/noncard_es.json")
+	check(r806_en.contains('"6080"') and r806_ja.contains('"6080"') and r806_es.contains('"6080"'),
+			"R806 三语条目齐（6080 法术卷轴）")
+
+	check(GameEngine.SCROLL_RELIC_ID == 6080, "R806 常量：SCROLL_RELIC_ID 6080")
+
+	var r806_cards := CardRepo.load_json()
+	var r806_none: Array[int] = []
+	var r806_scroll: Array[int] = [6080]
+
+	# 「手牌里有几张带「次元」的 9005」—— 用它当判据，比数总手牌数抗干扰
+	#（智慧 9005 本身会抽 2 张，空牌堆时手牌张数会随疲劳/洗牌逻辑浮动）。
+	# ① 端到端：智慧 9005（1 费技能「抽 2 张牌」）打出 → 多一张带「次元」的副本
+	RunState.relics = r806_scroll
+	var r806_e := _new_engine([], 40, 40)
+	r806_e.state.energy = 30
+	r806_e.state.hand.clear()
+	r806_e.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e.use_spell(0)
+	var r806_dim := 0
+	var r806_copy: CardData = null
+	for c in r806_e.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim += 1
+			r806_copy = c
+	check(r806_dim == 1,
+			"R806 卷轴：打出技能卡后手牌里出现 1 张带「次元」的复制（实得 %d）" % r806_dim)
+	check(r806_copy != null and r806_copy.own_copy,
+			"R806 卷轴：复制品是独立实例（own_copy=true）")
+	check(r806_copy != null and r806_copy.kind == "技能" and r806_copy.cost == 1,
+			"R806 卷轴：复制品保留卡面（技能 · 1 费）")
+
+	# ② 每场只有一次：再打一张技能卡，不该再冒出新的次元复制
+	var r806_dim2 := 0
+	r806_e.state.energy = 30
+	r806_e.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e.use_spell(0)
+	for c in r806_e.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim2 += 1
+	check(r806_dim2 == 0,
+			"R806 每场一次：第二次用技能卡不再复制（实得 %d 张次元复制）" % r806_dim2)
+
+	# ③ 没有卷轴就不复制
+	RunState.relics = r806_none
+	var r806_e2 := _new_engine([], 40, 40)
+	r806_e2.state.energy = 30
+	r806_e2.state.hand.clear()
+	r806_e2.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e2.use_spell(0)
+	var r806_dim3 := 0
+	for c in r806_e2.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim3 += 1
+	check(r806_dim3 == 0, "R806 没卷轴：不复制（实得 %d）" % r806_dim3)
+
+	# ④ 只认技能卡：先打盟友，额度不能被吃掉
+	RunState.relics = r806_scroll
+	var r806_e3 := _new_engine([], 40, 40)
+	r806_e3.state.energy = 30
+	r806_e3.state.hand.clear()
+	r806_e3.state.hand.append(CardData.from_dict(r806_cards.get_card(8006).to_dict()))
+	r806_e3.play_from_hand(0, Vector2i(5, 1))
+	check(r806_e3.state.hand.is_empty(),
+			"R806 只认技能卡：打盟友卡不产生复制（手牌仍为空）")
+	r806_e3.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e3.use_spell(0)
+	var r806_dim4 := 0
+	for c in r806_e3.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim4 += 1
+	check(r806_dim4 == 1,
+			"R806 只认技能卡：打过盟友之后额度还在（技能卡照常复制，实得 %d）" % r806_dim4)
+
+	# ⑤ 卡库不被写脏：共享实例上不能长出「次元」
+	check(not r806_cards.get_card(9005).has_affix("次元"),
+			"R806 卡库：智慧 9005 的共享实例没被写上次元")
+
+	# ⑥ 每场复位 + 高亮
+	# ⚠️ `relic_highlight()` 读的是**引擎快照** `self_relics`（只在构造 / 读档时填），
+	#    不是 `RunState.relics` —— 只设后者的话入口第一句就 return false，
+	#    「额度还在时亮」会红、「用完不亮」却是**假绿**（两边都返回 false）。两个引擎都填上。
+	var r806_e4 := _new_engine([], 40, 40)
+	r806_e4.self_relics = r806_scroll
+	r806_e.self_relics = r806_scroll
+	check(not r806_e4._scroll_used, "R806 每场复位：新引擎的 _scroll_used 是 false")
+	check(r806_e4.relic_highlight(6080), "R806 高亮：额度还在时道具栏亮起")
+	check(not r806_e.relic_highlight(6080), "R806 高亮：本场用完就不再亮")
+
+	# ⑦ 源码守卫：挂在唯一去向口，且限定技能卡
+	var r806_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r806_src.contains("_scroll_try_copy(card)"),
+			"R806 挂点在 _spell_card_gone（所有技能卡用完的唯一去向口）")
+	check_src(r806_src.contains("card.kind != \"技能\""),
+			"R806 判据限定技能卡（_spell_card_gone 也收诅咒）")
+
+	RunState.relics = r806_none
 
 
 func _test_r805() -> void:

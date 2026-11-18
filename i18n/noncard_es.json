@@ -268,7 +268,8 @@
     "6076": {"name": "Pata de conejo", "desc": "Ganas 10 de oro extra al vencer en combate y la probabilidad de que caiga una herramienta tras el combate aumenta un 10% (aditivo)."},
     "6077": {"name": "Taladro", "desc": "Cuando usas una carta cuyo coste es X, si X es 6 o más, X se duplica."},
     "6078": {"name": "Caparazón de tortuga", "desc": "Tus aliados que no atacaron en el turno anterior reciben 2 puntos menos de daño (como mínimo 1)."},
-    "6079": {"name": "Miel", "desc": "Todos tus aliados obtienen +1 de velocidad de movimiento."}
+    "6079": {"name": "Miel", "desc": "Todos tus aliados obtienen +1 de velocidad de movimiento."},
+    "6080": {"name": "Pergamino de conjuros", "desc": "La primera vez que uses una carta de habilidad en cada combate, añade a tu mano una copia con «Dimensional»."}
   },
   "classes": {
     "森林精魄": {

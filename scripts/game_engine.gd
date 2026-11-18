@@ -220,6 +220,7 @@ var _battle_energy_bonus:= 0
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
 var _knight_sword_fired:= false  # R383 骑士剑：本场战斗的第一次击杀是否已发生（每场一次）
+var _scroll_used:= false   # R806 法术卷轴：本场战斗的第一次「用技能卡」是否已发生（每场一次）
 var _wild_totem_atk:= 0   # R745 野性图腾：本场已用出的那份力量加成（0 = 还没用；引擎每场重建 → 自动复位）
 ## R752：**选卡型工具**（万能牌 7009 / 神秘牌 7011）的待选状态。
 ## 与 `wish_pending` 那批并列，但触发口在**工具栏**而不是手牌（`begin_tool_pick`）。
@@ -787,6 +788,13 @@ const PLATE_SPEED:= 1
 #   只写 `Placement.honey_spd`，走 `effective_speed()` 出口，离场自动消失。
 const HONEY_RELIC_ID:= 6079
 const HONEY_SPEED:= 1
+# R806 法术卷轴（6080，一般档）：每场战斗**第一次使用技能卡**时，把那张卡带「次元」的
+#   复制加进手牌。
+#   * 挂点选在 `_spell_card_gone()` —— 它是所有「技能卡用完」的唯一去向口，`use_spell` 与
+#     `cast_reload` 这类两段式入口全走这里；挂在 `use_spell` 尾段会漏掉两段式技能。
+#   * 「每场一次」记在 `_scroll_used`（每个新 GameEngine = 一场新战斗 → 自然复位，
+#     与思想钢印 `_steel_stamp_used` 同口径）。
+const SCROLL_RELIC_ID:= 6080
 # R792 兵（6071，一般档）：每场战斗**第一个盟友**可以行动两次。
 #   读在 `FieldState.unit_actions()`（唯一口），落地时还要补发一次行动轮数。
 const PAWN_RELIC_ID:= 6071
@@ -2477,6 +2485,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	_armor_turn_key = -1             # R793 应急装甲：额度每场战斗从零开始
 	_armor_turn_taken = 0
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
+	_scroll_used = false   # R806：法术卷轴每场战斗一次
 	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
 	_three_bots_destroyed = 0   # R534：三个机器人的计数每场战斗重置
 	_thorn_ring_turn = -1
@@ -9134,6 +9143,7 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 	## R213：8053 超越极限原先「卡面带次元却进弃牌区」（R99 起文档与实现不一致）已并入本口。
 	## R239：**判据不再限定卡种** —— 只认「次元」字段。诅咒「破绽」（9154，`use_curse`）
 	## 也要「打出后消失」，它走的就是这里；以后任何卡种要「用后消失」，写上次元即生效。
+	_scroll_try_copy(card)   # R806 法术卷轴：本场第一次用技能卡 → 带次元的复制进手牌
 	if card != null and card.has_affix(AFFIX_DIMENSION):
 		state.void_count += 1
 		state.void_cards.append(card)
@@ -9145,6 +9155,42 @@ func _spell_card_gone(card: CardData, log_text := "") -> bool:
 	if card != null:
 		state.discard.append(card)
 	return false
+
+
+func _scroll_try_copy(card: CardData) -> void:
+	## R806 法术卷轴（6080，一般档）：每场战斗**第一次用技能卡**时，把那张卡带「次元」的
+	## 复制加进手牌。
+	## ⚠️ 必须限定 `kind == "技能"`：`_spell_card_gone()` 也收诅咒（破绽 9154），不判卡种
+	##    的话随手打个诅咒就把本场唯一一次的额度花掉了。
+	## ⚠️ 复制品必须是**独立实例**（`_new_own_card` + 数组 duplicate）：卡库 / 牌库放的全是
+	##    共享实例，直接把原对象塞进手牌 = 给牌库里所有同名卡加「次元」。
+	## ⚠️ **额度先扣、再发卡**：手牌满时复制品走消耗区，这次额度照样算用掉 —— 否则玩家
+	##    可以靠「满手牌打技能卡」把额度一直留到后面。
+	## ⚠️ 手牌满 → 直接进**消耗区**，不走 `_grant_to_hand()` 的弃牌区：带「次元」的卡进了
+	##    弃牌区会被整堆洗回牌库，等于凭空变出一张永久卡（与次元语义相反）。
+	if card == null or card.kind != "技能" or _scroll_used:
+		return
+	if not RunState.has_relic(SCROLL_RELIC_ID):
+		return
+	_scroll_used = true
+	var copy := _new_own_card(card)
+	if copy == null:
+		return
+	copy.traits = (card.traits as Array).duplicate()
+	copy.affixes = (card.affixes as Array).duplicate()
+	RunState.strip_enchant(copy)       # R624 口径：复制品不继承商店附魔
+	copy.add_affix(AFFIX_DIMENSION)
+	if state.hand_full():
+		state.void_count += 1
+		state.void_cards.append(copy)
+		_log("法术卷轴：手牌已满（%d 张）→ 「%s」的次元复制直接消失" % [
+				FieldState.HAND_LIMIT, copy.card_name])
+		action.emit("hand_burn", {"card": copy, "seq": 0, "to": "void",
+				"limit": FieldState.HAND_LIMIT, "hand": state.hand.size(),
+				"source": "法术卷轴"})
+		return
+	_grant_to_hand(copy, "法术卷轴")
+	_log("法术卷轴：%s 的次元复制加入手牌" % card.card_name)
 
 
 func use_spell(hand_index: int, target = null, free_cast := false) -> String:
@@ -16237,6 +16283,8 @@ func relic_highlight(id: int) -> bool:
 			return dice_energy_turns > 0 and turn_number <= dice_energy_turns
 		KNIGHT_SWORD_RELIC_ID: # 骑士剑：本场第一次击杀敌人后全体强化
 			return not _knight_sword_fired
+		SCROLL_RELIC_ID:      # 法术卷轴：本场还没用过技能（额度还在）
+			return not _scroll_used
 		PIPE_RELIC_ID:        # 烟斗：点着时下一场战斗首回合生效（将要在下一次生效）
 			return RunState.pipe_ready
 		CURSE_BIND_RELIC_ID:  # 咒缚：本场第一张卡 -3 费（额度还没用掉）
