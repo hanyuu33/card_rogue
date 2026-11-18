@@ -1026,8 +1026,12 @@ func _apply_ui_assets() -> void:
 		return
 	var campfire: Control = $Campfire
 	campfire.visible = (kind == "rest")
+	# R802：**整屏背景优先** —— 有 `bg_<kind>` 就不再叠那张居中插图。
+	# 全库同时具备两套图的只有 sword / factory，而这两套画的是同一个主体：
+	# 叠起来既互相压住，又让玩家看到「同一样东西出现两次」。
+	var bg := UiAssets.event_bg(kind)
 	var pic := UiAssets.event_pic(kind)
-	if pic != null:
+	if pic != null and bg == null:
 		campfire.visible = false   # 有自定义插图时不再叠内置篝火
 		var tr := TextureRect.new()
 		tr.name = "EventPic"
@@ -1047,7 +1051,6 @@ func _apply_ui_assets() -> void:
 		# R512 修：add_child 是「加到最上层」—— 插图会盖住文案与选项按钮。
 		# 和缺图兜底同一层（$BG 之上、篝火与正文之下）。
 		move_child(tr, 1)
-	var bg := UiAssets.event_bg(kind)
 	if kind == "rest" and bg != null:
 		campfire.visible = false
 	if bg != null:
