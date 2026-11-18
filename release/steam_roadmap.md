@@ -103,11 +103,40 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 | B1 | 名实一致收尾 | `FOOTER` 去「肉鸽开发版」；`export_path` 改 `dist/Quackill.exe` / `dist/Quackill.apk`；`description` / `copyright` / `company_name=risusumai` / `product_name=Quackill` | ✅ R763 完成；历史文档与旧归档包名保留，活动脚本 / 预设无旧名 |
 | B1′ | `rcedit` 工具链 | Godot 只有配置了 rcedit 才能把版本资源 / 图标写进 exe；本机已放 `C:\Users\Administrator\.workbuddy\binaries\rcedit\rcedit-x64.exe` 并写入编辑器设置 `export/windows/rcedit`。来源 rcedit v2.0.0，SHA-256 `3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a` | 换机必须重配；否则导出只得到 Godot Engine 版本资源 |
 | B2 | **桌面纹理变体重测** | `high_quality=true` → bptc + astc；Windows 走 bptc/S3TC。要重跑 `tools/shot_r596g_tex.gd` + `_psnr_r596g.py`（**关 `content_scale_mode`**） | 桌面 PSNR ≥ 45dB；内存 / 首屏加载不劣化 |
-| B3 | 桌面包体重算 | 桌面不带 v7a/arm64 两份 lib；PCK 走 bptc 体积与 astc 不同 | 🟡 R763 实测嵌入 pck 的 exe **260.1MB**；桌面纹理 PSNR 仍待 B2 |
+| B3 | 桌面包体重算 | 桌面不带 v7a/arm64 两份 lib；PCK 走 bptc 体积与 astc 不同 | ✅ R789 实测 `dist/Quackill.exe` **277.1MB = 引擎 80.4MB + 内嵌 PCK 196.7MB**（GDPC 头在 84.28MB）；桌面纹理 PSNR 仍待 B2 |
 | B4 | Windows release 预设核查 | 图标用 `assets/ui/icon.ico`；`config/icon` 现指向 `icon_android_legacy.png`（**桌面也用它**，需确认尺寸观感） | 干净机双击可跑，任务栏图标正确 |
-| B5 | Steam 构建上传 | `steamcmd` + `app_build_<id>.vdf` + `depot_build.vdf`；只一个 depot（exe + pck） | 上传成功、Steam 客户端能下、能启动 |
+| B5 | Steam 构建上传 | `steamcmd` + `app_build_<id>.vdf` + `depot_build.vdf`；**两个 depot**：① exe + pck ② `content/`（见 §2.1） | 上传成功、Steam 客户端能下、能启动 |
 | B6 | 版本号单一来源 | `GameBrand.VERSION=1.0.0`；Windows exe FileVersion / ProductVersion 已实测 1.0.0；Android versionName 1.0.0 | ✅ 代码与包体完成；Steam depot / build 描述待后台填写 |
-| B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」 | 手改一个旧版本 → 更新 → 续档正常 |
+| B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」，并**记录一次真实下载体积** | 改一句文案 → 续档正常，且下载量只有对应 JSON（不是整个 exe） |
+
+### 2.1 内容热更（R789 已落地，避免每次更新全量重下）
+
+**问题**：单文件 exe 里数据与引擎捆在一起，改一张卡的效果文本也会让整个 277MB 的 exe 变化，
+Steam 只能近乎全量重下。而 Steam 的更新粒度是**文件**，不是"包"。
+
+**实测规模**（真正高频变动的只有 1.04MB）：
+
+| 文件 | 大小 | 变更频率 |
+|---|---|---|
+| `cards.json` | 177.6KB | 每轮加卡 / 调数值 |
+| `i18n/*.json` | 28 个文件，约 0.83MB | 改文案 / 翻译 |
+| `relics.json` / `stories.json` / `traps.json` | 16.4KB / 9.3KB / 3.0KB | 偶尔 |
+| 其余（PCK 内美术 / 音频 / 引擎） | 196.7MB + 80.4MB | 发版级 |
+
+**做法**：`scripts/data_paths.gd` 给静态数据加了覆盖层，读取顺序
+`CARDROGUE_CONTENT_DIR`（测试）→ **exe 同目录 `content/`** → pck 内 `res://` 基线。
+发布时 `_release.py` 自动把 32 个 JSON 同步到 `content/`，基线仍留在 pck 里当兜底。
+
+**安全网**（探针 `tools/_probe_content_override.gd`，已并入 `_verify.py` 的 `content` 套件，8 项）：
+- 覆盖生效、数量与基线一致（整份替换，**不是**增量合并）；
+- 语法坏 / 结构空（`{"cards": []}`）→ 打 warning 并回落 pck 基线，不崩；
+- 译文 JSON 同样走覆盖；清掉 `content/` 后自动回到基线。
+
+**边界（写清楚，免得误期待）**：
+- 只能热更**静态数据**。美术 / 场景 / 脚本的热修需要"补丁 pck + `load_resource_pack`"（L2，未做）；
+  引擎本体（80.4MB）不热更，走正常发版。
+- 关卡数值目前在 `scripts/game_levels.gd` 里是代码，改关卡仍要发版；要热更得先把关卡数据化。
+- 安装目录**只读不写**：补丁一律由 Steam 下发，游戏自己不去改安装目录。
 
 ---
 

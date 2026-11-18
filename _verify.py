@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""八套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput）。
+"""九套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput；R789 增补 content）。
 
 用法：python _verify.py
-逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / smoke，统计 ✓/✗，
+逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / content / smoke，统计 ✓/✗，
 任一失败则进程退出码 1。输出落盘 _*.txt 便于事后检查。
 """
 import os
@@ -62,6 +62,9 @@ SUITES = [
     ("traps", ["--headless", "--path", ROOT, "--script", "res://scripts/test_traps.gd"], "_traps.txt"),
     # R667：真实事件注入 —— PC 拖放 / 安卓 ScreenTouch+ScreenDrag / 三种取消 / 底图合一。
     ("trapinput", ["--headless", "--path", ROOT, "--script", "res://scripts/test_trap_input.gd"], "_trapinput.txt"),
+    # R789：内容层热更（content/ 覆盖生效 / 坏文件回落 / 译文覆盖 / 清掉回基线）。
+    # 只读仓库文件，临时目录在 user://patch_probe，跑完自删。
+    ("content", ["--headless", "--path", ROOT, "--script", "res://tools/_probe_content_override.gd"], "_content.txt"),
     ("smoke", ["--headless", "--path", ROOT, "--script", "res://scripts/test_smoke.gd"], "_s.txt"),
 ]
 

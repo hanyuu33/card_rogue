@@ -29,10 +29,9 @@ static func reset_cache() -> void:
 
 
 static func _json(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	return data
+	## R789：全部译文 JSON 的唯一读取口 —— 让它也走 `content/` 覆盖，
+	## 这样改一句文案只需换一个十几 KB 的 JSON，不必重发 277MB 的 exe。
+	return DataPaths.read_json(path)
 
 
 static func _domain(domain: String, lang: String) -> Dictionary:

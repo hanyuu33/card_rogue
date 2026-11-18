@@ -8,10 +8,10 @@ var _cards := {}  # id -> CardData
 
 static func load_json(path: String = "res://cards.json") -> CardRepo:
 	var repo := CardRepo.new()
-	var text := FileAccess.get_file_as_string(path)
-	var data: Variant = JSON.parse_string(text)
+	## R789：`content/` 覆盖优先（热更），缺失或损坏时回落 pck 基线。
+	var data: Variant = DataPaths.read_json(path, "cards")
 	if data == null:
-		push_error("cards.json 解析失败")
+		push_error("cards.json 缺失或解析失败")
 		return repo
 	var list: Array = data if data is Array else data.get("cards", [])
 	for d: Dictionary in list:

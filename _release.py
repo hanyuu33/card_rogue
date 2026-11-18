@@ -70,6 +70,14 @@ PCK_NAME = "Quackill.pck"
 PACK_REL = "dist/" + PCK_NAME
 EXTRA = "release"
 
+# R789：热更内容 —— 这些 JSON 以**松散文件**随包放在 content/ 下，
+# 运行时优先于 pck 内基线（见 scripts/data_paths.gd）。
+# Steam 的更新粒度是**文件**：改一句文案 / 调一张卡，玩家只重下几十 KB，
+# 而不是整个 277MB 的 exe。基线仍留在 pck 里，content/ 缺失或被删就自动回落。
+CONTENT_FILES = ["cards.json", "relics.json", "stories.json", "traps.json"]
+CONTENT_DIRS = ["i18n"]
+CONTENT_DST = "content"
+
 TEMPLATE_NAME = "windows_release_x86_64.exe"
 
 OK = "✓"
@@ -100,6 +108,45 @@ def step(n, s):
 
 def mb(path):
     return os.path.getsize(path) / 1048576.0
+
+
+def dir_size(path):
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for f in files:
+            total += os.path.getsize(os.path.join(root, f))
+    return total / 1048576.0
+
+
+def sync_content(target):
+    """把热更 JSON 平铺到 content/（整份文件，不是增量补丁）。
+
+    `i18n/` 只带 JSON：验证脚本与文档不进包。
+    """
+    dst_root = os.path.join(target, CONTENT_DST)
+    if os.path.isdir(dst_root):
+        shutil.rmtree(dst_root)
+    os.makedirs(dst_root, exist_ok=True)
+    count = 0
+    for name in CONTENT_FILES:
+        src = os.path.join(ROOT, name)
+        if not os.path.isfile(src):
+            die("热更内容缺失：%s" % name)
+        shutil.copy2(src, os.path.join(dst_root, name))
+        count += 1
+    for name in CONTENT_DIRS:
+        src_dir = os.path.join(ROOT, name)
+        dst_dir = os.path.join(dst_root, name)
+        if not os.path.isdir(src_dir):
+            die("热更目录缺失：%s" % name)
+        os.makedirs(dst_dir, exist_ok=True)
+        for f in sorted(os.listdir(src_dir)):
+            if not f.endswith(".json"):
+                continue
+            shutil.copy2(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+            count += 1
+    print("  热更内容 %-20s %7.2f MB（%d 个 JSON，更新时只下变化的文件）"
+          % (CONTENT_DST + "/", dir_size(dst_root), count))
 
 
 def find_template():
@@ -273,6 +320,9 @@ def main():
             if f.endswith(".txt") or f.endswith(".bat"):
                 copy_file(os.path.join(src_extra, f), os.path.join(target, f), f)
 
+    # 热更内容：content/ 必须与 exe 同级，运行时优先于 pck 基线。
+    sync_content(target)
+
     # ---------- 4) 用发布产物自检 ----------
     step(4, "用发布产物复跑四套（解析输出，不看 exit code）")
     ok, summary, reasons = run_suites(exe_dst, target)
@@ -291,6 +341,10 @@ def main():
         if os.path.isfile(p):
             total += mb(p)
             print("    %-28s %8.2f MB" % (f, mb(p)))
+        elif os.path.isdir(p) and f == CONTENT_DST:
+            sz = dir_size(p)
+            total += sz
+            print("    %-28s %8.2f MB  (热更层)" % (f + "/", sz))
     print("    %-28s %8.2f MB" % ("合计", total))
     print("=" * 62)
 

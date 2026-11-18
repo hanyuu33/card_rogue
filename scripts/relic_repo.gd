@@ -18,12 +18,10 @@ static func shared() -> RelicRepo:
 
 static func load_json(path: String = "res://relics.json") -> RelicRepo:
 	var repo := RelicRepo.new()
-	if not FileAccess.file_exists(path):
-		push_error("relics.json 不存在")
-		return repo
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	## R789：`content/` 覆盖优先（热更），缺失或损坏时回落 pck 基线。
+	var data: Variant = DataPaths.read_json(path, "relics")
 	if data == null:
-		push_error("relics.json 解析失败")
+		push_error("relics.json 缺失或解析失败")
 		return repo
 	var list: Array = data if data is Array else data.get("relics", [])
 	for d: Dictionary in list:
