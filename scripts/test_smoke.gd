@@ -1874,8 +1874,15 @@ func _check_r677_story_detail(scene: Variant) -> void:
 		_smoke_fail("R682 故事页没读到任何剧情段")
 		return
 	# 测试档案每次都是空的 → 开发版 `is_story_unlocked()` 恒真 → 有正文的段天然是 ready。
+	# R791：发布版（cardrogue_release）的剧情按进度解锁，空档案下首段天然 locked ——
+	# 那是发布版的正常初始态，不是缺陷。要测正文面板，就先按真实接口把它解锁，
+	# 否则这条断言在发布包里永远跑不到真正要测的三件事。
+	# 测试档案走 profile_test.json（set_test_mode），不会碰玩家进度。
 	var eid := str((repo.entries[0] as Dictionary).get("id", ""))
 	scene._refresh()
+	if repo.episode_state(eid) != StoryRepo.STATE_READY and GameBuild.is_release():
+		ProfileData.unlock_story(eid)
+		scene._refresh()
 	if repo.episode_state(eid) != StoryRepo.STATE_READY:
 		_smoke_fail("R682 造不出 ready 态（%s）" % repo.episode_state(eid))
 		return

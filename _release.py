@@ -5,8 +5,28 @@
     python _release.py                  回归 → 导出 → 覆盖目标 → 用发布产物自检（测试版）
     python _release.py --release        构建**发布版**（职业·难度渐进解锁，见 unlock_system.gd）
     python _release.py --no-verify      跳过回归（已经手工跑过时）
-    python _release.py --two-file       exe + 旁挂 pck 双文件（旧形态，保留兼容）
+    python _release.py --with-content   测试版也带 content/（专门验证覆盖层时用）
+    python _release.py --two-file       测试版强制双文件（调试用，一般不传）
     python _release.py --target=目录    写到别的目录（验证用，不碰正式发布目录）
+
+════════════════════════════════════════════════════════════════════
+两种形态（R791 定稿，别再混用）
+════════════════════════════════════════════════════════════════════
+测试版（默认，`python _release.py`）
+    → 卡牌肉鸽_测试版/
+    → **单文件 exe**（pck 内嵌，preset.0 `embed_pck=true`），**不带 content/**
+    一个文件丢给测试者就能跑，不需要旁挂 pck，也不会因为覆盖层而出现
+    「他改了 JSON 我没改」的口径分歧。这是给内部与试玩用的完整包。
+
+发布版（`--release`）
+    → 卡牌肉鸽_独立版/
+    → **exe + pck + content/**（`--export-release` + 预设 `embed_pck=false` 自动分离）
+    Steam 的更新粒度是文件：改一句文案只动 content/ 里那个 JSON，
+    换一张图只动 content/assets 里那张 PNG，引擎与基线 pck 不动。
+    见 release/steam_roadmap.md §2.1。
+
+两种形态**必须分目录**：同名目录里同时躺着 Quackill.exe（单文件）与
+Quackill_release.exe + pck，会让人误点、也会让「缺 pck」的排查线索变乱。
 
 ════════════════════════════════════════════════════════════════════
 为什么 R386 改成「真导出模板」（这是本轮修的一个真 bug）
@@ -61,13 +81,15 @@ import sys
 GODOT_CONSOLE = r"C:\Users\Administrator\.workbuddy\binaries\godot\Godot_v4.3-stable_win64_console.exe"
 # 双机通用：以脚本自身位置推导工程根目录（D:\work 或 E:\work 都一样），别再写死盘符。
 ROOT = os.path.dirname(os.path.abspath(__file__))
-TARGET = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_独立版")
+# R791：两种形态分目录 —— 发布版进 Steam depot，测试版单独一份完整包。
+TARGET_RELEASE = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_独立版")
+TARGET_TEST = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_测试版")
+TARGET = TARGET_RELEASE   # 兼容旧引用；main() 会按形态重选
 
 PRESET = "Windows Desktop"
 PRESET_RELEASE = "Windows Desktop Release"   # R550：发布版（custom_features=cardrogue_release）
 EXE_NAME = "Quackill.exe"
 PCK_NAME = "Quackill.pck"
-PACK_REL = "dist/" + PCK_NAME
 EXTRA = "release"
 
 # R789：热更内容 —— 这些 JSON 以**松散文件**随包放在 content/ 下，
@@ -78,7 +100,9 @@ CONTENT_FILES = ["cards.json", "relics.json", "stories.json", "traps.json"]
 CONTENT_DIRS = ["i18n"]
 CONTENT_DST = "content"
 
-TEMPLATE_NAME = "windows_release_x86_64.exe"
+# R791 分离形态判据：模板 exe 约 84MB，内嵌 pck 后 277MB。体积比魔数好判。
+EMBEDDED_MAX_MB = 120.0
+PCK_MIN_MB = 100.0
 
 OK = "✓"
 BAD = "✗"
@@ -149,25 +173,58 @@ def sync_content(target):
           % (CONTENT_DST + "/", dir_size(dst_root), count))
 
 
-def find_template():
-    """找 Windows 导出模板（真导出用的那个，不是编辑器）。"""
-    base = os.path.join(os.environ.get("APPDATA", ""), "Godot", "export_templates")
-    if not os.path.isdir(base):
-        return None
-    found = []
-    for root, _dirs, files in os.walk(base):
-        if TEMPLATE_NAME in files:
-            found.append(os.path.join(root, TEMPLATE_NAME))
-    if not found:
-        return None
-    found.sort(key=os.path.getmtime, reverse=True)
-    return found[0]
+def assert_split(exe_path, pck_path):
+    """发布版必须是分离形态，否则热更等于没做。
+
+    判据用体积而不是在 277MB 里扫 GDPC 魔数：
+    模板 exe 约 84MB，一旦 pck 内嵌就变成 277MB，差一个数量级，够判。
+    """
+    exe_mb = mb(exe_path)
+    pck_mb = mb(pck_path)
+    if exe_mb > EMBEDDED_MAX_MB:
+        die("%s 有 %.1f MB —— pck 还嵌在 exe 里。发布版必须分离；"
+            "确认走的是 --export-release，且预设 embed_pck=false。"
+            % (os.path.basename(exe_path), exe_mb))
+    if pck_mb < PCK_MIN_MB:
+        die("%s 只有 %.1f MB —— 内容明显不完整，导出可能中途失败了。"
+            % (os.path.basename(pck_path), pck_mb))
+    print("  分离校验：exe %.2f MB + pck %.2f MB（内嵌形态会是 %.0f MB 的单文件）"
+          % (exe_mb, pck_mb, exe_mb + pck_mb))
 
 
-def run_suites(exe_path, cwd):
+def gdext_dlls():
+    """从 addons/*/*.gdextension 取 Windows x86_64 release 需要的 dll。
+
+    实测（R791）：Godot 导出时把 GDExtension 的库和 dependency **平铺**到 exe
+    同目录（`libgodotsteam.windows.template_release.x86_64.dll`、`steam_api64.dll`），
+    不是放进 addons/ 子目录 —— 所以这里也平铺复制。
+    缺了不会崩，但 Steam 初始化直接失败、所有成就静默跳过，属于「看不见的坏」。
+    """
+    names = []
+    addons = os.path.join(ROOT, "addons")
+    if not os.path.isdir(addons):
+        return names
+    pat = re.compile(r"^\s*windows\.(?:release\.x86_64|x86_64)\s*=\s*(.+)$", re.M)
+    for root, _dirs, files in os.walk(addons):
+        for f in files:
+            if not f.endswith(".gdextension"):
+                continue
+            with open(os.path.join(root, f), encoding="utf-8") as fh:
+                txt = fh.read()
+            for m in pat.finditer(txt):
+                for p in re.findall(r'res://[^"}\s,]+', m.group(1)):
+                    name = p.rsplit("/", 1)[-1]
+                    if name not in names:
+                        names.append(name)
+    return names
+
+
+def run_suites(exe_path, cwd, require_steam=False):
     """用给定 exe 跑四套测试。
 
     ⚠️ 判红靠**解析输出**，不看 exit code —— test_smoke.gd 失败也 exit 0。
+    require_steam：发布版专用。缺 GDExtension 时游戏只会打一行 warning 然后
+    跳过所有成就，套件本身仍是绿的 —— 这种「静默失效」必须在这里判死。
     返回 (全通过?, 统计串, 失败明细列表)。
     """
     all_ok = True
@@ -188,6 +245,8 @@ def run_suites(exe_path, cwd):
         for mark in BAD_MARKS:
             if mark in out:
                 hits.append(mark)
+        if require_steam and "GDExtension dynamic library not found" in out:
+            hits.append("GDExtension dll 缺失")
         # smoke 的收尾是「结束：N 通过 / M 失败」
         m = re.search(r"结束：(\d+) 通过 / (\d+) 失败", out)
         if m and int(m.group(2)) != 0:
@@ -226,25 +285,36 @@ def copy_file(src, dst, label):
 def main():
     args = sys.argv[1:]
     do_verify = "--no-verify" not in args
-    two_file = "--two-file" in args
     # R550：`--release` 构建**发布版**（职业·难度渐进解锁），默认构建**测试版**（全解锁）。
     # 通过 global 改模块级 PRESET / EXE_NAME / PCK_NAME，其余代码照旧。
-    global PRESET, EXE_NAME, PCK_NAME, PACK_REL
+    global PRESET, EXE_NAME, PCK_NAME
     release = "--release" in args
     if release:
         PRESET = PRESET_RELEASE
         sfx = "_release"
         EXE_NAME = "Quackill" + sfx + ".exe"
         PCK_NAME = "Quackill" + sfx + ".pck"
-        PACK_REL = "dist/" + PCK_NAME
-    target = TARGET
+
+    # R791：形态由构建类型决定，不再靠人记得加参数。
+    #   发布版 = 必须分离（exe + pck + content/），否则 Steam 每次更新都近似全量；
+    #   测试版 = 旧的完整单文件包，一个 exe 丢出去就能跑。
+    two_file = True if release else ("--two-file" in args)
+    with_content = release or ("--with-content" in args)
+
+    target = TARGET_RELEASE if release else TARGET_TEST
     for a in args:
         if a.startswith("--target="):
             target = a.split("=", 1)[1].strip().strip('"')
     os.chdir(ROOT)
 
     mode = "双文件（exe + 旁挂 pck）" if two_file else "单文件（pck 内嵌）"
-    print("发布模式：%s  |  构建：%s" % (mode, "发布版" if release else "测试版"))
+    if release:
+        print("发布模式：%s  |  构建：发布版（Steam 分发）" % mode)
+        print("热更层：随包 content/ —— 改文案 / 换图只下变化的小文件")
+    else:
+        print("发布模式：%s  |  构建：测试版（内部 / 试玩）" % mode)
+        print("热更层：%s" % ("随包 content/（显式指定）" if with_content
+                            else "不带 —— 完整包，单文件即可运行"))
     print("目标目录：%s" % target)
 
     # ---------- 1) 回归 ----------
@@ -266,23 +336,26 @@ def main():
     exe_src = None
 
     if two_file:
-        step(2, "导出数据包 pck（--export-pack）+ 用真导出模板当 exe")
+        # R791：不再用「--export-pack + 裸模板」——那条路只产数据包，
+        # GDExtension 的 dll（godotsteam / steam_api64）不会被复制，
+        # 装机后成就直接失效（实测报 "GDExtension dynamic library not found"）。
+        # 预设已是 embed_pck=false，直接 --export-release 就能拿到
+        # exe + pck + 平铺 dll，让引擎自己处理附属文件。
+        step(2, "导出分离包 exe + pck（--export-release，preset embed_pck=false）")
+        exe_src = os.path.join(dist, EXE_NAME)
         pck_src = os.path.join(dist, PCK_NAME)
-        if os.path.exists(pck_src):
-            os.remove(pck_src)
+        for f in (exe_src, pck_src):
+            if os.path.exists(f):
+                os.remove(f)
         rc = subprocess.call([GODOT_CONSOLE, "--headless", "--path", ROOT,
-                              "--export-pack", PRESET, PACK_REL], cwd=ROOT)
+                              "--export-release", PRESET, "dist/" + EXE_NAME], cwd=ROOT)
         if rc != 0:
-            die("导出 pck 失败（Godot exit=%d）" % rc)
-        if not os.path.exists(pck_src):
-            die("导出后没找到 %s" % pck_src)
+            die("导出失败（Godot exit=%d）" % rc)
+        for f in (exe_src, pck_src):
+            if not os.path.exists(f):
+                die("导出后没找到 %s —— 检查 preset 的 embed_pck 是否为 false" % f)
+        print("  %s  %.2f MB" % (EXE_NAME, mb(exe_src)))
         print("  %s  %.2f MB" % (PCK_NAME, mb(pck_src)))
-
-        exe_src = find_template()
-        if exe_src is None:
-            die("找不到 Windows 导出模板 %s（在 %%APPDATA%%\\Godot\\export_templates 下）"
-                % TEMPLATE_NAME)
-        print("  模板 %s  %.2f MB" % (exe_src, mb(exe_src)))
     else:
         step(2, "导出单文件 exe（--export-release，pck 内嵌）")
         exe_src = os.path.join(dist, EXE_NAME)
@@ -321,11 +394,31 @@ def main():
                 copy_file(os.path.join(src_extra, f), os.path.join(target, f), f)
 
     # 热更内容：content/ 必须与 exe 同级，运行时优先于 pck 基线。
-    sync_content(target)
+    # 发布版必带；测试版是完整包，默认不带（留着会悄悄覆盖 pck 基线，让
+    # 「我这儿明明改了」变成排查陷阱）。
+    if with_content:
+        sync_content(target)
+    else:
+        stale = os.path.join(target, CONTENT_DST)
+        if os.path.isdir(stale):
+            shutil.rmtree(stale)
+            print("  删除旧 content/（本形态不带热更层）")
+
+    if two_file:
+        assert_split(exe_dst, pck_dst)
+        dlls = gdext_dlls()
+        if not dlls:
+            die("addons/*.gdextension 里没有 Windows x86_64 的 dll 声明 —— "
+                "发布版必须带 Steam 扩展，否则成就全失效。")
+        for name in dlls:
+            src = os.path.join(dist, name)
+            if not os.path.isfile(src):
+                die("导出后没找到 GDExtension dll：%s（Steam 成就依赖它）" % name)
+            copy_file(src, os.path.join(target, name), name)
 
     # ---------- 4) 用发布产物自检 ----------
     step(4, "用发布产物复跑四套（解析输出，不看 exit code）")
-    ok, summary, reasons = run_suites(exe_dst, target)
+    ok, summary, reasons = run_suites(exe_dst, target, require_steam=two_file)
     print("  " + summary)
     if not ok:
         for r in reasons:
@@ -350,15 +443,17 @@ def main():
 
     allowed = {EXE_NAME, PCK_NAME, "玩法说明.txt", "自检.bat"}
     if two_file:
-        expect = allowed
+        expect = allowed | set(gdext_dlls())
     else:
         expect = allowed - {PCK_NAME}
     extra = [f for f in sorted(os.listdir(target))
              if os.path.isfile(os.path.join(target, f)) and f not in expect]
     if extra:
-        print("  ⚠️ 目标目录有多余文件（历史遗留，考虑手工删掉）：")
+        print("  ⚠️ 目标目录有多余文件（历史遗留的另一种形态 / 改名前的包，手工删掉）：")
         for f in extra:
             print("      " + f)
+        if release and "Quackill.exe" in extra:
+            print("      ↑ 这是测试版单文件包，不该留在发布版目录里 —— 玩家会点错。")
 
 
 if __name__ == "__main__":

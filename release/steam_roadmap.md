@@ -103,13 +103,25 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 | B1 | 名实一致收尾 | `FOOTER` 去「肉鸽开发版」；`export_path` 改 `dist/Quackill.exe` / `dist/Quackill.apk`；`description` / `copyright` / `company_name=risusumai` / `product_name=Quackill` | ✅ R763 完成；历史文档与旧归档包名保留，活动脚本 / 预设无旧名 |
 | B1′ | `rcedit` 工具链 | Godot 只有配置了 rcedit 才能把版本资源 / 图标写进 exe；本机已放 `C:\Users\Administrator\.workbuddy\binaries\rcedit\rcedit-x64.exe` 并写入编辑器设置 `export/windows/rcedit`。来源 rcedit v2.0.0，SHA-256 `3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a` | 换机必须重配；否则导出只得到 Godot Engine 版本资源 |
 | B2 | **桌面纹理变体重测** | `high_quality=true` → bptc + astc；Windows 走 bptc/S3TC。要重跑 `tools/shot_r596g_tex.gd` + `_psnr_r596g.py`（**关 `content_scale_mode`**） | 桌面 PSNR ≥ 45dB；内存 / 首屏加载不劣化 |
-| B3 | 桌面包体重算 | 桌面不带 v7a/arm64 两份 lib；PCK 走 bptc 体积与 astc 不同 | ✅ R789 实测 `dist/Quackill.exe` **277.1MB = 引擎 80.4MB + 内嵌 PCK 196.7MB**（GDPC 头在 84.28MB）；桌面纹理 PSNR 仍待 B2 |
-| B4 | Windows release 预设核查 | 图标用 `assets/ui/icon.ico`；`config/icon` 现指向 `icon_android_legacy.png`（**桌面也用它**，需确认尺寸观感） | 干净机双击可跑，任务栏图标正确 |
-| B5 | Steam 构建上传 | `steamcmd` + `app_build_<id>.vdf` + `depot_build.vdf`；**两个 depot**：① exe + pck（引擎+基线素材+脚本）② `content/`（数据 JSON + 覆盖素材，见 §2.1） | 上传成功、Steam 客户端能下、能启动 |
+| B3 | 桌面包体重算 | 测试版单文件 / 发布版分离（exe + pck）；桌面不带 v7a/arm64 两份 lib；PCK 走 bptc，体积与 astc 不同 | ✅ R791 实测：单文件 **277.1MB**（引擎 80.4 + 内嵌 PCK 196.7）；发布版分离后 **80.31MB + 197.89MB**，且自检直接跑这份真产物；桌面纹理 PSNR 仍待 B2 |
+| B4 | Windows 预设口径 | `preset.0`（测试版）`embed_pck=true` → 单文件；`preset.2`（发布版）`embed_pck=false` → 分离。图标用 `assets/ui/icon.ico`；`config/icon` 现指向 `icon_android_legacy.png`（桌面也用它，需确认尺寸观感） | 干净机双击可跑，任务栏图标正确；发布版 exe 应约 84MB 而非 277MB |
+| B5 | Steam 构建上传 | depot 根目录 = `卡牌肉鸽_独立版/`，**两个 depot**：① `Quackill_release.exe` + `.pck`（+ 玩法说明 / 自检）② `content/` 整目录（见 §2.1）。**不带** `steam_appid.txt` | 上传成功、Steam 客户端能下、能启动 |
 | B6 | 版本号单一来源 | `GameBrand.VERSION=1.0.0`；Windows exe FileVersion / ProductVersion 已实测 1.0.0；Android versionName 1.0.0 | ✅ 代码与包体完成；Steam depot / build 描述待后台填写 |
 | B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」，并**记录两次真实下载体积** | 改一句文案 → 只下对应 JSON；改一张卡图 → 只下那张 PNG（均非整包） |
 
-### 2.1 按需更新四层（R789 数据层 + R790 素材层已落地）
+### 2.1 按需更新四层（R789 数据层 + R790 素材层 + R791 形态定稿）
+
+**两种形态（R791 定稿，分目录，不许混在一个文件夹里）**：
+
+| 形态 | 命令 | 输出目录 | 产物 | 用途 |
+|---|---|---|---|---|
+| 测试版 | `python _release.py` | `卡牌肉鸽_测试版/` | **单文件** `Quackill.exe`（pck 内嵌，`preset.0 embed_pck=true`），**不带 `content/`** | 内部 / 试玩；一个文件丢出去就能跑 |
+| 发布版 | `python _release.py --release` | `卡牌肉鸽_独立版/` | `Quackill_release.exe` + `Quackill_release.pck` + `content/`（`preset.2 embed_pck=false`） | Steam depot；改文案 / 换图只下小文件 |
+
+测试版不带 `content/` 是刻意的：完整包只有一个文件，不会出现「他那儿 JSON 改了、我这儿没改」
+的口径分歧；要专门验覆盖层时用 `--with-content` 临时带上。
+发布版反过来——形态由 `--release` 强制决定，不靠人记得再加 `--two-file`，
+并用 `assert_split()` 卡死：exe 超过 120MB 就说明 pck 还嵌着，直接中止。
 
 **问题**：单文件 exe 把数据、美术与引擎捆在一起，改一张卡图也会让整个 277MB 变化，
 Steam 只能近乎全量重下。Steam 的更新粒度是**文件**，所以要么把变更装进独立小文件，
@@ -135,7 +147,7 @@ Steam 只能近乎全量重下。Steam 的更新粒度是**文件**，所以要�
 | L0 引擎 | 引擎本体 80.4MB | 正常发版 | 80.4MB | 不热更 |
 | L1 数据 | 卡牌 / 道具 / 剧情 / 陷阱 / 全语种文本 | `content/**.json` 覆盖 | 改一句 ≈ 8–200KB | ✅ R789 |
 | L2 素材 | 卡图 / 图标 / 事件图 / 背景 / BGM | `content/assets/**.png\|.ogg` 覆盖 | **只下那一张**（1MiB 块对齐，最小 1 块） | ✅ R790 |
-| L3 脚本 | 卡片效果 / 关卡 / 事件 / 商店 / 奖励 / 场景 | PCK 尾部 `.gdc` | ≈3.3MB（4 个 1MiB 块） | 已够小，不拆 |
+| L3 脚本 | 卡片效果 / 关卡 / 事件 / 商店 / 奖励 / 场景 | PCK 尾部 `.gdc` | ≈3.3MB（4 个 1MiB 块），分离后 **exe 完全不动** | 已够小，不拆 |
 
 `scripts/data_paths.gd` 是唯一的覆盖入口，读取顺序
 `CARDROGUE_CONTENT_DIR`（测试）→ **exe 同目录 `content/`** → pck 内 `res://` 基线。
@@ -157,8 +169,9 @@ Steam 只能近乎全量重下。Steam 的更新粒度是**文件**，所以要�
 - 引擎本体（80.4MB）不热更，走正常发版。
 - 6 张 `preload()` 的图（奖励面板 5 + 原质特效 3）是编译期绑定，不参与覆盖；
   要热更得先改成运行时加载。
-- 关卡 / 商店池 / 奖励表目前是 `game_levels.gd`、`shop_scene.gd` 里的代码，
-  改动走 L3（约 3.3MB），要压到 KB 级得先把这些配置数据化。
+- 关卡 / 商店池 / 奖励表是 `game_levels.gd`、`shop_scene.gd` 里的代码，
+  改动走 L3（约 3.3MB）。**R791 定稿：不做数据化** —— 3.3MB 对玩家只是几秒下载，
+  而重构 1579 行关卡 + 商店 / 奖励逻辑的风险远高于收益；将来真需要再单独评估。
 - 安装目录**只读不写**：补丁一律由 Steam 下发，游戏自己不去改安装目录。
 
 ---
