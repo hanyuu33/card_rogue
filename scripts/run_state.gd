@@ -580,7 +580,21 @@ static func set_difficulty(d: int) -> void:
 
 
 static func difficulty_name() -> String:
-	return DIFFICULTY_NAMES[_diff()]
+	return difficulty_name_at(_diff())
+
+
+static func difficulty_name_at(d: int) -> String:
+	## 指定档位的名称。`d` 越界（旧版本记录 / 脏数据）→ 钳到合法区间，绝不越界取数组。
+	return DIFFICULTY_NAMES[clampi(d, 0, DIFFICULTY_COUNT - 1)]
+
+
+static func difficulty_label(d: int = -1) -> String:
+	## R795：「数字 + 名称」（例 `12 昂贵`）—— 结算副标题 / 对战记录共用的**唯一口**。
+	## 数字就是角色选择界面档位框里的那个 0~12，名称紧跟其后，玩家不用再自己对照。
+	## `d < 0` = 当前档；越界 / 缺失由 `clampi` 兜住 —— **兼容旧版本记录文件**就靠这一句：
+	## 老记录只存了档位数字（`difficulty`），名称一律现推，不落盘也不怕以后改名。
+	var i := _diff() if d < 0 else clampi(d, 0, DIFFICULTY_COUNT - 1)
+	return "%d %s" % [i, DIFFICULTY_NAMES[i]]
 
 
 static func difficulty_note() -> String:

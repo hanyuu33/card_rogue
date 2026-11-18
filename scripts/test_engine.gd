@@ -20442,6 +20442,42 @@ func _init() -> void:
 
 			"难度档位：共 13 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
 
+	# ---- R795：难度显示「数字 + 名称」（结算副标题 / 对战记录）----
+	check(RunState.difficulty_label(0) == "0 轻松" and RunState.difficulty_label(12) == "12 昂贵"
+			and RunState.difficulty_name_at(11) == "上锁",
+			"R795 难度标签＝数字 + 名称（0 → %s / 12 → %s / 11 名 %s）" % [
+			RunState.difficulty_label(0), RunState.difficulty_label(12),
+			RunState.difficulty_name_at(11)])
+
+	# 旧版本记录文件兼容：档位只存了数字，名称现推；越界 / 负数一律钳住，不许越界取数组。
+	check(RunState.difficulty_label(99) == "12 昂贵" and RunState.difficulty_label(-5) == "0 轻松"
+			and RunState.difficulty_name_at(999) == "昂贵",
+			"R795 旧记录越界档位被钳制（99 → %s / -5 → %s）" % [
+			RunState.difficulty_label(99), RunState.difficulty_label(-5)])
+
+	RunState.set_difficulty(7)
+
+	check(RunState.difficulty_label() == "7 贫瘠" and RunState.difficulty_label(-1) == "7 贫瘠",
+			"R795 不带参数＝当前档（%s）" % RunState.difficulty_label())
+
+	var r795_sum := FileAccess.get_file_as_string("res://scripts/run_summary_scene.gd").replace("\r\n", "\n")
+	var r795_rec := FileAccess.get_file_as_string("res://scripts/record_list_scene.gd").replace("\r\n", "\n")
+	var r795_state := FileAccess.get_file_as_string("res://scripts/run_state.gd").replace("\r\n", "\n")
+
+	check_src(r795_sum.find("RunState.difficulty_label(diff)") >= 0
+			and r795_sum.find("RunState.DIFFICULTY_NAMES[diff]") < 0,
+			"R795 结算副标题带档位数字（不再只拼 DIFFICULTY_NAMES）")
+
+	check_src(r795_rec.find("RunState.difficulty_label(int(rec.get(\"difficulty\", 2)))") >= 0
+			and r795_rec.find("难度 %d") < 0,
+			"R795 记录行 / 详情都出「数字 + 名称」（不再只有 %d）")
+
+	check_src(r795_state.find("func difficulty_label(d: int = -1)") >= 0
+			and r795_state.find("DIFFICULTY_NAMES[clampi(d, 0, DIFFICULTY_COUNT - 1)]") >= 0,
+			"R795 难度标签唯一口在 RunState，越界由 clampi 兜住")
+
+	RunState.set_difficulty(0)
+
 	RunState.reset(50)
 
 
