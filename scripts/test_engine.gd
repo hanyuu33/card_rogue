@@ -77106,29 +77106,55 @@ func _test_r777() -> void:
 	var r777_got_cls := {}
 	for c5: CardData in r777_got:
 		r777_got_cls[c5.card_class] = true
+		# 职业 / 卡种先查 —— 它们与费用无关，不能因为下面的 X 费特例被跳过。
+		if c5.card_class == PlayerClass.BARD or c5.card_class == "":
+			r777_cost_bad.append("串职业 %s" % c5.card_name)
+		if c5.kind != "盟友" and c5.kind != "技能":
+			r777_cost_bad.append("卡种 %s" % c5.kind)
 		# R780 顺手修：原来写死 `cost_of == cost - 1`，随机抽到两张特例就必红 ——
 		#   * 回响 9102 卡面「费用最低为 1」→ `_cost_floor()` 压住彩虹诗的 -1（1 → 仍是 1）；
 		#   * 魔像术 9079「每回合第一次用技能时，手卡这张本回合 -1」→ 叠加彩虹诗 = -2（4 → 2）。
 		#   前者是卡面写死的下限（优先于彩虹诗）→ 跳过精确比较；
 		#   后者只会更便宜 → 用「不高于期望」判，不该算坏。
+		# R791：X 费卡（流星雨 9083 等）`cost_of` 读的是**当前剩余能量**，与卡面 cost
+		#   无固定关系（卡面 0 / 实测 3 是正常的），彩虹诗的 -1 对它也不适用 → 跳过费用比较。
+		if c5.x_cost:
+			continue
 		var r777_expect: int = maxi(0, c5.cost - 1)
 		if r777_e._cost_floor(c5, 0) > r777_expect:
 			continue
 		if r777_e.cost_of(c5) > r777_expect:
 			r777_cost_bad.append("%s %d→%d" % [c5.card_name, c5.cost, r777_e.cost_of(c5)])
-		if c5.card_class == PlayerClass.BARD or c5.card_class == "":
-			r777_cost_bad.append("串职业 %s" % c5.card_name)
-		if c5.kind != "盟友" and c5.kind != "技能":
-			r777_cost_bad.append("卡种 %s" % c5.kind)
 	check(r777_cost_bad.is_empty(),
 			"R777 打出：3 张都是其他职业的盟友 / 技能，费用各 -1（异常 %s）"
 			% str(r777_cost_bad))
 	check(r777_got_cls.size() == 3,
 			"R777 打出：3 张来自 3 个不同职业（本次 %s）" % str(r777_got_cls.keys()))
 
+	# R791：X 费卡（流星雨 9083）必须按**剩余能量**计费，不能被手卡内 -1 改写 ——
+	# 否则彩虹诗给它减费会算出「卡面 0 → 实际 3」，先前那条随机断言就是这么红的。
+	var r777_x_deck: Array[CardData] = []
+	var r777_x_e := _new_engine(r777_x_deck, 20, 20, -1, false)
+	r777_x_e.start_game(1)
+	var r777_x_card: CardData = r777_x_e._new_own_card(CardRepo.load_json().get_card(9083))
+	if r777_x_card != null and r777_x_card.x_cost:
+		r777_x_e.state.hand.append(r777_x_card)
+		r777_x_e.state.hand_cost_delta[r777_x_card] = 3
+		r777_x_e.state.energy = 4
+		check(r777_x_e.cost_of(r777_x_card) == 4,
+				"R777 X 费卡：费用跟剩余能量走、不吃手卡减费（实得 %d）"
+				% r777_x_e.cost_of(r777_x_card))
+	else:
+		check(false, "R777 X 费卡：9083 读不到或不是 x_cost 卡")
+
 	# ⑥ 「本局」的成色：换回合仍然 -1（hand_cost_delta 不在 end_turn / _begin_turn 清空）
 	var r777_probe_card: CardData = null
-	if not r777_got.is_empty():
+	for c7: CardData in r777_got:
+		# R791：X 费卡的 `cost_of` 跟剩余能量走，验「本局 -1 / 叠加」没有意义 → 优先普通费卡。
+		if not c7.x_cost:
+			r777_probe_card = c7
+			break
+	if r777_probe_card == null and not r777_got.is_empty():
 		r777_probe_card = r777_got[0]
 	var r777_base_cost := -1
 	var r777_after := -1
