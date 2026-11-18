@@ -196,6 +196,8 @@ func _initialize() -> void:
 	_check("日文同形特性不被英文回落覆盖", GameI18n.source("魔法塔") == "魔法塔"
 			and GameI18n.source("防御") == "防御" and GameI18n.source("死亡") == "死亡",
 			"%s / %s / %s" % [GameI18n.source("魔法塔"), GameI18n.source("防御"), GameI18n.source("死亡")])
+	_check("日文 Boss 分级使用假名", GameI18n.ui("battle", "TIER_BOSS", "Boss") == "ボス",
+			GameI18n.ui("battle", "TIER_BOSS", "Boss"))
 	_check("日文占卜费用模板保留动态数值", GameI18n.source("进行占卜（失去 5 点最大生命）")
 			== "占いを行う（最大HPを5失う）", GameI18n.source("进行占卜（失去 5 点最大生命）"))
 	GameSettings.language = "en"
