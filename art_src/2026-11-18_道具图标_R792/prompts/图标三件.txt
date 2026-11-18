@@ -1,0 +1,31 @@
+# R792 图标生成提示词（原样记录）
+
+参考图：`assets/ui/relic_icon_6069.png`（竖琴，作为风格锚，input_fidelity = high）
+尺寸：1024×1024 / quality high / background transparent（实际被画成棋盘格）
+
+## 6070 板甲
+
+```
+A cute hand-drawn cartoon game relic icon of a medieval steel plate armor breastplate,
+front view, centered, chunky rounded shapes, thick dark navy outline, soft cel shading
+with warm highlight, slightly whimsical storybook style like a cozy indie roguelike game
+icon, flat clean silhouette, no text, no frame, transparent background
+```
+
+## 6071 兵
+
+```
+A cute hand-drawn cartoon game relic icon of a single chess pawn piece, ivory white
+glazed stone with warm highlight and soft shadow, chunky rounded silhouette, thick dark
+navy outline, slightly whimsical storybook style like a cozy indie roguelike game icon,
+centered, flat clean, no text, no frame, transparent background
+```
+
+## 6072 墙砖
+
+```
+A cute hand-drawn cartoon game relic icon of three stacked yellow ochre clay bricks with
+dark mortar lines, warm golden yellow brick surface, chunky rounded shape, thick dark navy
+outline, soft cel shading, slightly whimsical storybook style like a cozy indie roguelike
+game icon, centered, flat clean, no text, no frame, transparent background
+```

@@ -128,6 +128,19 @@ var harp_atk: int = 0
 ## 与竖琴唯一的差别是生效判据：竖琴看「现在是否持有道具」，图腾看「本场是否已经用过」
 ## —— 工具用掉就从工具栏移除，按「持有」判会当场失效。赋值而不是累加，用两次还是 +2。
 var totem_atk: int = 0
+## R792 道具给的**额外生命**（板甲 6070 +6 / 墙砖 6072 +4）—— 与 `fence_bonus_hp` 同构：
+## 已经并进 `p.card.health` 与 `p.health`（血条 / 上限 / 重组都能直接读到），
+## 只在这里记「有多少是道具给的」，离场由 `_card_leaving_field()` 减回去。
+## ⚠️ 单独开字段而不是复用 `fence_bonus_hp`：那条徽标写的是「栅栏加固」，
+##    共用会让玩家看到一件道具加成被标成另一件。
+var relic_bonus_hp: int = 0
+## R792 板甲（6070）：移动速度**上限**（0 = 不设限）。「变为 1」走 `effective_speed()`
+## 出口 —— 移动、AI 队列、界面全部自动读到，不必在 `_move_bfs` 里另写分支。
+## 取 `mini` 而不是硬赋值：本来就不动（0 速）的工事不该被板甲**加**成 1 速。
+var speed_cap: int = 0
+## R792 兵（6071）：本场第一个盟友可以行动两次。读在 `FieldState.unit_actions()` ——
+## 与疾行 / 哈气 / 赫利俄斯同一条「取最大」通道，落地与回合重置自动一致。
+var first_ally_twice: bool = false
 ## R761 诗（6069，吟游诗人初始道具）：「**其他职业**的盟友 +2 力量」——
 ## 与竖琴 / 野性图腾**逐字同构**的持续 buff（赋值不累加、绝不写回 `card.power`）。
 ## 与竖琴唯一的差别是判据：只看「这张盟友不是吟游诗人自己的」（杜鹃不算）。
@@ -277,6 +290,10 @@ func effective_speed() -> int:
 	# 走这个出口 = 移动 / AI 队列全部自然读到，不必在 `_move_bfs` 里另写分支。
 	if boss_phase >= 2:
 		sp -= GameEngine.REVELATOR_SPEED_DOWN
+	# R792 板甲（6070）：移速上限取 `mini` —— 「变为 1」只对本来更快的单位生效，
+	# 原本 0 速（工事 / 不动单位）保持 0，不会反而被加成 1 速。
+	if speed_cap > 0:
+		sp = mini(sp, speed_cap)
 	return maxi(0, sp)
 
 
@@ -361,6 +378,17 @@ func status_entries() -> Array[Dictionary]:
 				"col": COL_B, "kind": "buff"})
 	if poem_atk > 0:
 		out.append({"label": "诗：力量 +%d（本场，不叠加）" % poem_atk,
+				"col": COL_B, "kind": "buff"})
+	# R792 三件道具的可见来源（数值早已并进 health / effective_speed / unit_actions，
+	# 这里只补「是谁给的」，判据只看字段本身有没有值）。
+	if relic_bonus_hp > 0:
+		out.append({"label": "道具：额外生命 +%d（本场）" % relic_bonus_hp,
+				"col": COL_B, "kind": "buff"})
+	if speed_cap > 0:
+		out.append({"label": "板甲：移动速度降为 %d" % speed_cap,
+				"col": COL_B, "kind": "debuff"})
+	if first_ally_twice:
+		out.append({"label": "兵：本场可行动两次",
 				"col": COL_B, "kind": "buff"})
 	if sword_atk > 0:
 		out.append({"label": "骑士剑：力量 +%d（本场首次击杀后）" % sword_atk,

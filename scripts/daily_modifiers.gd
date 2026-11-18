@@ -15,7 +15,7 @@ extends RefCounted
 ##   * **池子顺序即抽取顺序**（用 Fisher-Yates 打乱后取前 N）—— 往池子里加条目会改变
 ##     历史日期的结果；真要加，同时把 `RULES_VERSION` 加一，让旧榜留在旧规则下。
 
-const RULES_VERSION := 3
+const RULES_VERSION := 4
 const BUFF_COUNT := 2
 const DEBUFF_COUNT := 2
 

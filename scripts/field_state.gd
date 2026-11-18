@@ -497,6 +497,11 @@ func unit_actions(p: Placement, side: String) -> int:
 		n = maxi(n, GameEngine.REVELATOR_ACTIONS)
 	if p.card.id == GameEngine.SUN_FORGE_FURY_ID and has_sun_forge(side):
 		n = maxi(n, GameEngine.SUN_FORGE_ACTIONS)
+	# R792 兵（6071）：本场第一个盟友可以行动两次 —— 与上面几条同一条「取最大」通道，
+	# 于是 place / reset_units / apply_extra_actions 三处自动一致，不会出现
+	# 「上场那回合只动一次、下回合才双动」的错位。
+	if p.first_ally_twice:
+		n = maxi(n, GameEngine.PAWN_ACTIONS)
 	return n
 
 

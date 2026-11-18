@@ -776,6 +776,20 @@ const FOREST_FRIENDS_DISCOUNT:= 2
 # R352 竖琴（6052，剧情解锁道具）：所有己方盟友 +2 力量。
 const HARP_RELIC_ID:= 6052
 const HARP_ATK:= 2
+# R792 板甲（6070，一般档）：每场战斗**使用的第一个盟友** +6 生命（不叠加），
+#   但移动速度变为 1。加的血并进 `relic_bonus_hp`（场上有、离场还原）；
+#   移速走 `Placement.speed_cap` → `effective_speed()` 出口。
+const PLATE_RELIC_ID:= 6070
+const PLATE_HP:= 6
+const PLATE_SPEED:= 1
+# R792 兵（6071，一般档）：每场战斗**第一个盟友**可以行动两次。
+#   读在 `FieldState.unit_actions()`（唯一口），落地时还要补发一次行动轮数。
+const PAWN_RELIC_ID:= 6071
+const PAWN_ACTIONS:= 2
+# R792 墙砖（6072，一般档）：所有己方工事生命 +4（持续生效，不叠加）。
+#   与竖琴逐字同构 —— 只写 Placement 字段 + 出口，绝不写回 `card.power` 那种共享基数。
+const BRICK_RELIC_ID:= 6072
+const BRICK_HP:= 4
 # R761 诗（6069，吟游诗人初始道具），两段效果都只住在本组常量里：
 #   ① **每回合第一次**使用「其他职业的盟友」→ 回复 `POEM_REBATE` 点费用（`_poem_tick`）；
 #   ② **其他职业的盟友** +`POEM_ATK` 力量 —— 与竖琴 6052 同一套持续 buff 写法
@@ -2393,6 +2407,8 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	recruit_pending = false
 	_recruit_cards.clear()
 	_poem_used = false          # R761 诗：每场战斗从「这回合还没回费」开始
+	_plate_first_ally_done = false   # R792 板甲：第一个盟友的额度每场重置
+	_pawn_first_ally_done = false    # R792 兵：同上
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
 	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
 	_three_bots_destroyed = 0   # R534：三个机器人的计数每场战斗重置
@@ -4264,6 +4280,10 @@ var earring_pending := false      # 是否处于「自动出牌中」
 ## R761 诗（6069）：**本回合是否已经用掉「第一次使用别职业盟友回费」**。
 ## 每个我方回合开始归零（`_begin_turn`），每场战斗开始也归零（`start_game`）。
 var _poem_used := false
+# R792 板甲 / 兵：本场「第一个盟友」的额度是否已经发过（每场战斗各一次）。
+# 两件道具分开记 —— 只持有一件时另一个标记永远不动，将来加第二件同型道具也不打架。
+var _plate_first_ally_done := false
+var _pawn_first_ally_done := false
 var earring_played := 0           # 已自动出了几张
 ## R288 失控要塞 9161：最近一次入场**实际释放**的技能卡名（日志 / UI / 回归断言共用）。
 var fort_casts: Array[String] = []
@@ -5685,7 +5705,7 @@ func _card_leaving_field(p: Placement) -> CardData:
 		return null
 	# R227：生命循环给的「次元 / 死亡」是**场上这段**的字段 —— 回手 / 返修时摘掉，
 	# 否则那张卡再上场会带着一个不会触发的「死亡」标记（卡面写着效果却不生效）。
-	if p.fence_bonus_hp <= 0 and p.fence_bonus_traits.is_empty() and p.upgrade_hp <= 0 \
+	if p.fence_bonus_hp <= 0 and p.relic_bonus_hp <= 0 and p.fence_bonus_traits.is_empty() and p.upgrade_hp <= 0 \
 			and p.upgrade_range <= 0 and p.upgrade_speed <= 0 \
 			and p.life_cycle_added.is_empty() and p.blade_added.is_empty() \
 			and p.hidden_energy_added.is_empty():
@@ -5703,7 +5723,7 @@ func _card_leaving_field(p: Placement) -> CardData:
 			out.affixes.erase(bg_a)
 		for he_a: String in p.hidden_energy_added:
 			out.affixes.erase(he_a)
-	out.health = maxi(1, p.card.health - p.fence_bonus_hp - p.upgrade_hp)
+	out.health = maxi(1, p.card.health - p.fence_bonus_hp - p.relic_bonus_hp - p.upgrade_hp)
 	for t in p.fence_bonus_traits:
 		out.traits.erase(t)
 	if p.upgrade_range > 0:
@@ -13508,6 +13528,38 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		p.poem_atk = POEM_ATK
 		_log("诗：%s 获得 +%d 力量（%d）"
 				% [card.card_name, POEM_ATK, p.effective_power()])
+	# ── R792 板甲（6070）────────────────────────────────────────────
+	# 「每场战斗使用的第一个盟友」+6 生命（不叠加），但移速变为 1。
+	#   * 「第一个」以**本场第一个落地的己方盟友**为准 —— 手牌打出与涂装机器人
+	#     8080「变成」出来的单位共用本函数，两条来路必须给同一个结论（竖琴约定）；
+	#   * 加的血并进 `relic_bonus_hp` + `card.health` + `health`，离场由
+	#     `_card_leaving_field()` 减回去，不会让同一张卡回手再上场叠成 +12；
+	#   * 移速走 `speed_cap`（`mini` 语义，0 速单位不受影响）。
+	if RunState.has_relic(PLATE_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友" and not _plate_first_ally_done:
+		_plate_first_ally_done = true
+		p.relic_bonus_hp += PLATE_HP
+		p.card.health += PLATE_HP
+		p.health += PLATE_HP
+		p.speed_cap = PLATE_SPEED
+		_log("板甲：第一个盟友 %s 获得 +%d 生命（%d），移动速度降为 %d"
+				% [card.card_name, PLATE_HP, p.health, p.effective_speed()])
+	# ── R792 兵（6071）──────────────────────────────────────────────
+	# 同一个「第一个盟友」可以行动两次。`first_ally_twice` 只为 `unit_actions()` 提供判据，
+	# 但**落地这一刻**行动轮数已经发过了（`place()` 里按老的 unit_actions 发的），
+	# 所以这里必须按差额补发一次 —— 走 `grant_actions` 唯一口，别直接写 `acts_left`。
+	if RunState.has_relic(PAWN_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友" and not _pawn_first_ally_done:
+		_pawn_first_ally_done = true
+		p.first_ally_twice = true
+		state.grant_actions(p, state.unit_actions(p, SIDE_SELF))
+		_log("兵：第一个盟友 %s 本场可以行动两次" % card.card_name)
+	# ── R792 墙砖（6072）────────────────────────────────────────────
+	# 所有己方工事 +4 生命（持续生效，不叠加）：同一张工事回手再上场也只 +4，
+	# 因为离场时 `_card_leaving_field()` 已经把这一份减掉了。
+	if RunState.has_relic(BRICK_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "工事":
+		p.relic_bonus_hp += BRICK_HP
+		p.card.health += BRICK_HP
+		p.health += BRICK_HP
+		_log("墙砖：%s 获得 +%d 生命（%d）" % [card.card_name, BRICK_HP, p.health])
 	var beast_hp:= _beast_hp_bonus(card)
 	if beast_hp > 0:
 		p.health += beast_hp

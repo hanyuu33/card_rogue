@@ -9752,6 +9752,10 @@ func _init() -> void:
 
 	# R440 新增传奇「暗动力」6054 → 21 件 = 15 + 6。
 
+	# R792：+猴爪 6066（relics.json 写的 tier 是「稀有」，但 `RelicData.RELIC_TIERS`
+	# 只有「一般 / 传奇」两档，`normalize_tier()` 会把它归一成「一般」）+ 板甲 6070 /
+	# 兵 6071 / 墙砖 6072 三件一般 → **25 件 = 19 一般 + 6 传奇**。
+
 	var r289_repo := RelicRepo.load_json()
 
 	var r289_all := r289_repo.reward_ids()
@@ -9760,9 +9764,9 @@ func _init() -> void:
 
 	var r289_leg := r289_repo.legendary_reward_ids()
 
-	check(r289_all.size() == 21 and r289_nor.size() == 15 and r289_leg.size() == 6,
+	check(r289_all.size() == 25 and r289_nor.size() == 19 and r289_leg.size() == 6,
 
-			"奖励分档：奖励池 21 件 = 一般 15 + 传奇 6（实际 %d / %d / %d）"
+			"奖励分档：奖励池 25 件 = 一般 19 + 传奇 6（实际 %d / %d / %d）"
 
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 
@@ -43848,7 +43852,7 @@ func _init() -> void:
 
 	# ==== R577b：道具小图标（无背景 PNG）+ 界面分发 + 源码锁 ====
 
-	# ① 数据层：64 件道具逐件都有图标（R743 烤肉改成工具 → 61 件；R745 加回工具箱 6068；R761 加吟游诗人赠品「诗」6069）。
+	# ① 数据层：67 件道具逐件都有图标（R743 烤肉改成工具 → 61 件；R745 加回工具箱 6068；R761 加吟游诗人赠品「诗」6069；R792 加板甲 / 兵 / 墙砖）。
 	#    素材断言一律用 ResourceLoader.exists（导出包里 png 会被 .ctex 取代，
 	#    FileAccess.file_exists 会假红）。
 
@@ -43876,9 +43880,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 64,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 67,
 
-			"R577b 保真锁：64 件道具的 id 都能在 relics.json 源文本里找到（R761 +诗 6069）")
+			"R577b 保真锁：67 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072）")
 
 	# ② 取图口：首末两件 + 信物回退
 
@@ -73822,6 +73826,7 @@ func _init() -> void:
 	_test_r776()
 	_test_r767()
 	_test_r781()
+	_test_r792()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -78205,8 +78210,10 @@ func _test_r776() -> void:
 func _test_r781() -> void:
 	# R781 每日修饰四条改写：巧克力 ±2 / 温暖=火堆选两项 / 阴冷=火堆全换战斗 / 滞涩=抽卡−1。
 	# 改的是**修饰语义**，所以每条都按「fx 汇总 → 唯一取数口 → 实际效果」整链验一遍。
-	check(DailyChallenge.RULES_VERSION == 3 and DailyModifiers.RULES_VERSION == 3,
-			"R781 规则版本：修饰语义变了 → 两处一起升到 3（%d/%d）" % [
+	# R792：奖励池变动后升到 4，这条从「写死 == 3」改成「两处一致 + 不低于 3」——
+	# 守的是**两处必须同升**这条铁律，而不是某一个具体数字（写死会让每次升级都假红）。
+	check(DailyChallenge.RULES_VERSION == DailyModifiers.RULES_VERSION and DailyChallenge.RULES_VERSION >= 3,
+			"R781 规则版本：两处必须一致且不低于 3（%d/%d）" % [
 					DailyChallenge.RULES_VERSION, DailyModifiers.RULES_VERSION])
 
 	var r781_rations := DailyModifiers.fx_of(["RATIONS"])
@@ -78298,5 +78305,130 @@ func _test_r781() -> void:
 	check_src(r781_es.contains("func _rest_after_pick(") and r781_es.contains("RunState.rest_pick_quota()")
 			and r781_es.contains("REST_WARM_NOTE") and r781_map_src.contains("RunState.rest_to_battle()"),
 			"R781 火堆：收尾统一走 _rest_after_pick；地图侧只读 RunState.rest_to_battle()")
+
+
+func _test_r792() -> void:
+	## R792（用户口径）：板甲 / 兵 / 墙砖 三件新道具 + 猴爪进奖励池 + 第三层不再注册事件。
+	var r792_cards := CardRepo.load_json()
+
+	# ================= R792：板甲 / 兵 / 墙砖 + 猴爪进池 + 第三层事件 ==============
+	# ① 数据层：三件在库、都进奖励池；猴爪 6066 不再是「标着奖励却摇不到」的孤儿道具。
+
+	var r792_sv_relics := RunState.relics.duplicate()
+
+	var r792_repo := RelicRepo.load_json()
+
+	check(r792_repo.get_relic(6070) != null and r792_repo.get_relic(6071) != null and r792_repo.get_relic(6072) != null,
+			"R792 数据层：板甲 6070 / 兵 6071 / 墙砖 6072 三件都在库")
+
+	check(r792_repo.get_relic(6070).tier == "一般" and r792_repo.get_relic(6071).tier == "一般" and r792_repo.get_relic(6072).tier == "一般",
+			"R792 数据层：三件新道具都是一般档")
+
+	check(r792_repo.reward_ids().has(6066),
+			"R792 猴爪 6066 已进奖励池（此前标「奖励」却永远摇不到）")
+
+	check(r792_repo.reward_ids().has(6070) and r792_repo.reward_ids().has(6071) and r792_repo.reward_ids().has(6072),
+			"R792 三件新道具都进奖励池")
+
+	# ⚠️ 不能断言 `event_weights(3).is_empty()` —— `content_layers: [2, 3]` 会把
+	# 第二层的 events 表摊进来（关卡池与事件池共用这份配置）。真正该守的是
+	# 「LAYERS[3] 自己不再登记 events 表」：第三层没有事件节点，登记了也抽不到。
+	var r792_l3: Dictionary = GameLayers.LAYERS.get(GameLayers.LAYER_THREE, {})
+
+	check(not r792_l3.has("events"),
+			"R792 第三层不再注册 events 表（内容池仍与第二层共用）")
+
+	var r792_en := FileAccess.get_file_as_string("res://i18n/noncard_en.json")
+
+	var r792_ja := FileAccess.get_file_as_string("res://i18n/noncard_ja.json")
+
+	var r792_es := FileAccess.get_file_as_string("res://i18n/noncard_es.json")
+
+	check(r792_en.contains('"6070"') and r792_ja.contains('"6070"') and r792_es.contains('"6070"') and r792_en.contains('"6071"') and r792_ja.contains('"6071"') and r792_es.contains('"6072"'),
+			"R792 三语条目齐（6070 / 6071 / 6072）")
+
+	# ② 板甲：第一个盟友 +6 生命、移速 5 → 1；第二个盟友完全不受影响
+	var r792_plate_relics: Array[int] = [6070]
+
+	RunState.relics = r792_plate_relics
+
+	var r792_plate := _new_engine([], 40, 40)
+
+	r792_plate.state.energy = 30
+
+	r792_plate.state.hand.clear()
+
+	r792_plate.state.hand.append(CardData.from_dict(r792_cards.get_card(8006).to_dict()))   # 影子猫 1 费 1 血 速 5
+
+	r792_plate.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))   # 龙裔 1 费 12 血 速 1
+
+	var r792_p1 := r792_plate.play_from_hand(0, Vector2i(5, 1))
+
+	var r792_p2 := r792_plate.play_from_hand(0, Vector2i(4, 1))
+
+	check(r792_p1 != null and r792_p1.health == 7 and r792_p1.card.health == 7,
+			"R792 板甲：第一个盟友 1+6=7 生命（实得 %d）" % (r792_p1.health if r792_p1 != null else -1))
+
+	check(r792_p1 != null and r792_p1.effective_speed() == 1 and r792_p1.speed_cap == 1,
+			"R792 板甲：第一个盟友移速 5 → 1（实得 %d）" % (r792_p1.effective_speed() if r792_p1 != null else -1))
+
+	check(r792_p2 != null and r792_p2.health == 12 and r792_p2.speed_cap == 0 and r792_p2.relic_bonus_hp == 0,
+			"R792 板甲：第二个盟友不受影响（生命 %d、无移速上限）" % (r792_p2.health if r792_p2 != null else -1))
+
+	# ③ 兵：第一个盟友当回合就有 2 轮行动；第二个只 1 轮
+	var r792_pawn_relics: Array[int] = [6071]
+
+	RunState.relics = r792_pawn_relics
+
+	var r792_pawn := _new_engine([], 40, 40)
+
+	r792_pawn.state.energy = 30
+
+	r792_pawn.state.hand.clear()
+
+	r792_pawn.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))
+
+	r792_pawn.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))
+
+	var r792_n1 := r792_pawn.play_from_hand(0, Vector2i(5, 1))
+
+	var r792_n2 := r792_pawn.play_from_hand(0, Vector2i(4, 1))
+
+	check(r792_n1 != null and r792_n1.acts_left == 2 and r792_pawn.state.unit_actions(r792_n1, "self") == 2,
+			"R792 兵：第一个盟友本回合就有 2 轮行动（acts_left=%d）" % (r792_n1.acts_left if r792_n1 != null else -1))
+
+	check(r792_n2 != null and r792_n2.acts_left == 1 and not r792_n2.first_ally_twice,
+			"R792 兵：第二个盟友只行动一次")
+
+	# ④ 墙砖：工事 6+4=10；离场还原成 6（同一张回手再上场不会叠成 +8）
+	var r792_brick_relics: Array[int] = [6072]
+
+	RunState.relics = r792_brick_relics
+
+	var r792_brick := _new_engine([], 40, 40)
+
+	r792_brick.state.energy = 30
+
+	r792_brick.state.hand.clear()
+
+	r792_brick.state.hand.append(CardData.from_dict(r792_cards.get_card(8001).to_dict()))   # 木栅栏 2 费 6 血
+
+	var r792_w := r792_brick.play_from_hand(0, Vector2i(5, 1))
+
+	check(r792_w != null and r792_w.health == 10 and r792_w.card.health == 10 and r792_w.relic_bonus_hp == 4,
+			"R792 墙砖：木栅栏 6+4=10 生命（实得 %d）" % (r792_w.health if r792_w != null else -1))
+
+	var r792_back := r792_brick._card_leaving_field(r792_w)
+
+	check(r792_back != null and r792_back.health == 6,
+			"R792 墙砖：离场还原成 6 血（实得 %d）" % (r792_back.health if r792_back != null else -1))
+
+	# ⑤ 源码守卫：「第一个盟友」两个额度各只发一次，重置点在 start_game
+	var r792_ge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+
+	check_src(r792_ge_src.contains("_plate_first_ally_done = false") and r792_ge_src.contains("_pawn_first_ally_done = false") and r792_ge_src.contains("state.grant_actions(p, state.unit_actions(p, SIDE_SELF))"),
+			"R792 源码守卫：兵的双动走 grant_actions 补发，两个额度在 start_game 重置")
+
+	RunState.relics = r792_sv_relics
 
 

@@ -258,7 +258,10 @@
     "6069": {
       "name": "Poema",
       "desc": "La primera vez cada turno que uses un Aliado de otra clase, ganas 1 de Coste. Los Aliados de otras clases tienen +2 de Poder (efecto persistente; no se acumula)."
-    }
+    },
+    "6070": {"name": "Armadura de Placas", "desc": "El primer Aliado que juegas en cada combate obtiene +6 de Vida (no se acumula), pero su Velocidad de Movimiento pasa a ser 1."},
+    "6071": {"name": "Peón", "desc": "El primer Aliado que juegas en cada combate puede actuar dos veces (no se acumula)."},
+    "6072": {"name": "Ladrillo", "desc": "Tus Estructuras tienen +4 de Vida (efecto persistente; no se acumula)."}
   },
   "classes": {
     "森林精魄": {
