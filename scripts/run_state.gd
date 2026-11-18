@@ -375,6 +375,12 @@ static var traps: Array[int] = [-1, -1, -1]   # -1 = 空槽；其余 = traps.jso
 ## `tool_roll_seq` = 本局第几次战斗结算，只用来派生随机种子 —— 随存档一起走，
 ## 续档之后接着往下数，同一条种子不会被摇第二遍。
 const TOOL_DROP_CHANCE := 0.10
+## R796 兔脚（6076，一般档）：战斗胜利金币 +RABBIT_FOOT_GOLD、战斗掉落工具的概率
+## **加算** RABBIT_FOOT_TOOL_DROP（用户口径「＋10%（加算）」→ 10% → 20%，不是 ×1.1）。
+## 判据走 `RunState.has_relic()`（静态读全局），别用引擎的 `self_relics` 快照。
+const RABBIT_FOOT_RELIC_ID := 6076
+const RABBIT_FOOT_GOLD := 10
+const RABBIT_FOOT_TOOL_DROP := 0.10
 static var tool_roll_seq := 0
 ## R745 工具箱发工具的独立序号 —— 与 `tool_roll_seq` 分开，否则「多拿一个工具」
 ## 会把战斗掉落的 10% 摇点整体推歪（同 R312 的分类种子口径）。随存档一起走。
@@ -1674,9 +1680,14 @@ static func roll_battle_tool_drop() -> int:
 	# R754 祭拜祝福（事件「奇异雕像」）：pledge > 0 时这一场**不看概率、必掉一件**，
 	# 然后 -1。⚠️ 必须在 `randf()` 之前分流：祝福不是「提高概率」而是「保证掉落」，
 	# 先摇一次概率再覆盖会让同一个种子在「祝福 / 不祝福」之间产生不同的随机流。
+	# R796 兔脚：概率**加算**（0.10 → 0.20）。放在 `randf()` 之前只算一个数，
+	# 不改变随机流的消费次数 —— 拿没拿兔脚，同一个种子摇出的那一颗 randf() 是同一颗。
+	var drop_chance := TOOL_DROP_CHANCE
+	if has_relic(RABBIT_FOOT_RELIC_ID):
+		drop_chance += RABBIT_FOOT_TOOL_DROP
 	if tool_drop_pledge > 0:
 		tool_drop_pledge -= 1
-	elif rng.randf() >= TOOL_DROP_CHANCE:
+	elif rng.randf() >= drop_chance:
 		return -1
 	# R743：`random_traps()` —— 烤肉 7007 是 `rest_only`，只能从休息处烤出来，
 	# 不能靠打怪掉落刷出来（否则「篝火专属」的名头与实际不符）。
@@ -3599,6 +3610,16 @@ static func gold_for_tier(tier: int) -> int:
 		GameLevels.TIER_ELITE_EASY: return 50
 		GameLevels.TIER_ELITE_HARD: return 65
 		GameLevels.TIER_BOSS: return 100
+	return 0
+
+
+static func rabbit_foot_gold() -> int:
+	## R796 兔脚（6076）：战斗胜利额外给的金币（没有这件道具 → 0）。
+	## ⚠️ 只加在**战斗胜利**这一条上（`battle_scene` 的结算口），不进 `gold_for_tier()` ——
+	##    那个函数是「按难度分级的基础掉落」的唯一口径，测试也按它断言，掺进道具会把它污染成
+	##    「看背包的函数」。宝箱 / 事件 / 商店都不吃兔脚（用户口径写的是「战斗掉落金币」）。
+	if has_relic(RABBIT_FOOT_RELIC_ID):
+		return RABBIT_FOOT_GOLD
 	return 0
 
 

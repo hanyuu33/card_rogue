@@ -9764,9 +9764,9 @@ func _init() -> void:
 
 	var r289_leg := r289_repo.legendary_reward_ids()
 
-	check(r289_all.size() == 27 and r289_nor.size() == 21 and r289_leg.size() == 6,
+	check(r289_all.size() == 29 and r289_nor.size() == 23 and r289_leg.size() == 6,
 
-			"奖励分档：奖励池 27 件 = 一般 21 + 传奇 6（实际 %d / %d / %d）"
+			"奖励分档：奖励池 29 件 = 一般 23 + 传奇 6（实际 %d / %d / %d）"
 
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 
@@ -43944,9 +43944,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 70,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 72,
 
-			"R577b 保真锁：70 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R793s +大师之剑 6075）")
+			"R577b 保真锁：72 件道具的 id 都能在 relics.json 源文本里找到（R793s +大师之剑 6075 / R796 +兔脚 6076 / 钻头 6077）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -57670,9 +57670,9 @@ func _init() -> void:
 
 			"R745 工具：野性图腾是使用型、且不是休息处专属（能掉落 / 能上架）")
 
-	check(r744_trepo.random_traps().size() == 10,
+	check(r744_trepo.random_traps().size() == 12,
 
-			"R745 工具池：可随机 7 件（烤肉 7007 仍被 rest_only 排除）")
+			"R745 工具池：可随机 12 件（烤肉 7007 仍被 rest_only 排除；R796 +卡牌包 / 智慧药剂）")
 
 	# ② 工具箱：获得即给一个工具；满栏不硬塞、转进待领奖励（不吞玩家的东西）。
 	#    ⚠️ 发工具会改全局 RunState，测完逐个还原，别把后面的用例带歪。
@@ -73892,6 +73892,7 @@ func _init() -> void:
 	_test_r792()
 	_test_r793()
 	_test_r793s()
+	_test_r794()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -78497,6 +78498,121 @@ func _test_r792() -> void:
 	RunState.relics = r792_sv_relics
 
 
+
+
+func _test_r794() -> void:
+	## R796（用户口径）：刺墙**扩面**（工事 + HP 被攻击）/ 兔脚 6076 / 钻头 6077 /
+	## 卡牌包 7013（随机卡填满手牌）/ 智慧药剂 7014（抽 3 张）。
+	var r796_cards := CardRepo.load_json()
+	var r796_relic_repo := RelicRepo.load_json()
+	var r796_trap_repo := TrapRepo.load_json()
+	var r796_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r796_sv_traps: Array[int] = RunState.traps.duplicate()
+	var r796_sv_seq := RunState.tool_roll_seq
+	var r796_sv_pledge := RunState.tool_drop_pledge
+
+	# ① 数据层：两件道具在库、都进奖励池且是一般档；两件工具在库
+	check(r796_relic_repo.get_relic(6076) != null and r796_relic_repo.get_relic(6077) != null,
+			"R796 数据层：兔脚 6076 / 钻头 6077 都在库")
+	check(r796_relic_repo.reward_ids().has(6076) and r796_relic_repo.reward_ids().has(6077)
+			and r796_relic_repo.normal_reward_ids().has(6076)
+			and r796_relic_repo.normal_reward_ids().has(6077),
+			"R796 兔脚 / 钻头都进奖励池且都在「一般」档")
+	check(r796_trap_repo.get_trap(7013) != null and r796_trap_repo.get_trap(7014) != null
+			and r796_trap_repo.get_trap(7013).fill_hand
+			and r796_trap_repo.get_trap(7014).draw_cards == 3
+			and r796_trap_repo.get_trap(7013).is_usable()
+			and r796_trap_repo.get_trap(7014).is_usable(),
+			"R796 数据层：卡牌包 7013（fill_hand）/ 智慧药剂 7014（draw_cards 3）都是使用型")
+
+	# ② 刺墙扩面：敌人**直击我方 HP** → 攻击者 -5（原来只管工事，这条永远不触发）
+	var r796_sw_relics: Array[int] = [6073]
+	RunState.relics = r796_sw_relics
+	var r796_sw := _new_engine([], 40, 40)
+	var r796_foe := r796_sw.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r796_foe != null, "R796 刺墙扩面：攻击者就位")
+	var r796_foe_hp0: int = r796_foe.health
+	r796_sw.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r796_foe.health == r796_foe_hp0 - 5,
+			"R796 刺墙扩面：直击 HP → 攻击者 -5（%d → %d）" % [r796_foe_hp0, r796_foe.health])
+
+	# ③ 不持道具时直击 HP 不反伤
+	RunState.relics = []
+	var r796_sw2 := _new_engine([], 40, 40)
+	var r796_foe2 := r796_sw2.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	var r796_foe2_hp0: int = r796_foe2.health
+	r796_sw2.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r796_foe2.health == r796_foe2_hp0,
+			"R796 刺墙扩面：没持道具 → 直击 HP 不反伤（攻击者仍 %d）" % r796_foe2.health)
+
+	# ④ 兔脚：战后金币 +10（没有道具 = 0）
+	check(RunState.rabbit_foot_gold() == 0, "R796 兔脚：没有道具 → 战后金币 +0")
+	RunState.relics = [6076]
+	check(RunState.rabbit_foot_gold() == 10, "R796 兔脚：持有 → 战后金币 +10")
+
+	# ⑤ 兔脚：工具掉率**加算** 10%（300 场对比，走派生流所以确定性）
+	RunState.relics = []
+	RunState.tool_drop_pledge = 0
+	RunState.tool_roll_seq = 0
+	var r796_hits_plain := 0
+	for i in 300:
+		if RunState.roll_battle_tool_drop() > 0:
+			r796_hits_plain += 1
+	RunState.relics = [6076]
+	RunState.tool_drop_pledge = 0
+	RunState.tool_roll_seq = 0
+	var r796_hits_rabbit := 0
+	for i in 300:
+		if RunState.roll_battle_tool_drop() > 0:
+			r796_hits_rabbit += 1
+	check(r796_hits_rabbit > r796_hits_plain + 15,
+			"R796 兔脚：掉率加算 10%%（300 场 %d → %d 次掉落）"
+			% [r796_hits_plain, r796_hits_rabbit])
+
+	# ⑥ 钻头：X ≥ 6 翻倍、X < 6 不动；没道具一律不翻
+	RunState.relics = [6077]
+	var r796_dr := _new_engine([], 40, 40)
+	check(r796_dr._drill_x(5) == 5 and r796_dr._drill_x(6) == 12 and r796_dr._drill_x(9) == 18,
+			"R796 钻头：X<6 不变 / X=6 → 12 / X=9 → 18")
+	RunState.relics = []
+	check(r796_dr._drill_x(6) == 6, "R796 钻头：没持道具 → X 不翻倍")
+
+	# ⑦ 钻头：法术（流星雨）与单位（枭熊）两条 X 必须同一个口
+	var r796_ge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r796_ge_src.contains("_x_spell_value = _drill_x(")
+			and r796_ge_src.contains("x_unit = _drill_x("),
+			"R796 钻头：法术与枭熊两条 X 都过 `_drill_x()`（半边生效是最难查的一类）")
+
+	# ⑧ 智慧药剂：抽 3 张
+	RunState.traps = [7014, -1, -1]
+	var r796_deck: Array[CardData] = []
+	for i in 5:
+		r796_deck.append(CardData.from_dict(r796_cards.get_card(8001).to_dict()))
+	var r796_wis := _new_engine(r796_deck, 40, 40)
+	var r796_hand0: int = r796_wis.state.hand.size()
+	var r796_wis_ok := r796_wis.use_tool(7014, 0)
+	check(r796_wis_ok and r796_wis.state.hand.size() == r796_hand0 + 3,
+			"R796 智慧药剂：抽 3 张（%d → %d）" % [r796_hand0, r796_wis.state.hand.size()])
+
+	# ⑨ 卡牌包：把空手牌填到上限；手牌已满时**拒绝使用**（不能白吃一件消耗品）
+	RunState.traps = [7013, -1, -1]
+	var r796_pack := _new_engine([], 40, 40)
+	r796_pack.state.hand.clear()
+	var r796_pack_ok := r796_pack.use_tool(7013, 0)
+	check(r796_pack_ok and r796_pack.state.hand.size() == FieldState.HAND_LIMIT,
+			"R796 卡牌包：手牌填到上限 %d（实际 %d）"
+			% [FieldState.HAND_LIMIT, r796_pack.state.hand.size()])
+	check(not r796_pack.use_tool(7013, 0), "R796 卡牌包：手牌已满时拒绝使用")
+
+	RunState.relics = r796_sv_relics
+	RunState.traps = r796_sv_traps
+	RunState.tool_roll_seq = r796_sv_seq
+	RunState.tool_drop_pledge = r796_sv_pledge
+	print("  · R796：刺墙扩面 / 兔脚 / 钻头 / 卡牌包 / 智慧药剂")
 
 
 func _test_r793() -> void:

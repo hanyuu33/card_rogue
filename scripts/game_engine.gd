@@ -794,6 +794,13 @@ const BRICK_HP:= 4
 #   挂点与启示者「电磁屏障」（9200 二阶段）同一处 —— 见 `attack()` 里那一段。
 const SPIKE_WALL_RELIC_ID:= 6073
 const SPIKE_WALL_DMG:= 5
+# R796 刺墙**扩面**（用户口径「工事和 HP 被攻击时」）：反伤触发面从「工事」加到
+#   「工事 + 玩家 HP」。常量不变，只多挂一处 —— 见 `attack_hp()` 里那一段。
+# R796 钻头（6077，一般档）：**X 费卡**的效果 X ≥ DRILL_X_MIN 时翻倍。
+#   ⚠️ 翻的是**效果的 X**，不是「要付的费用」—— 流星雨照样吃掉全部费用再放 2X 颗，
+#   枭熊照样付光费用，只是力量记 2X、生命记 9×(2X)。见 `_drill_x()`。
+const DRILL_RELIC_ID:= 6077
+const DRILL_X_MIN:= 6
 # R793 应急装甲（6074，一般档）：**玩家 HP** 每回合最多受 EMERGENCY_ARMOR_CAP 点伤害。
 #   与赫尔墨斯 `HERMES_DMG_CAP` 数值相同但口径不同：那条管一张**单位卡**（`Placement` 挂字段），
 #   这条管**玩家 HP**（额度只能记在引擎上，见 `_emergency_armor_cap()`）。
@@ -5319,6 +5326,19 @@ func _dragon_breath_spell(side: String, target, card: CardData) -> String:
 	return "%s -%d（%d 次）" % [tname, total, hits]
 
 
+func _drill_x(x: int) -> int:
+	## R796 钻头（6077）的**唯一口**：X 费卡的效果 X ≥ 6 → X 翻倍。
+	## 两处调用，别只改一半：
+	##   * 技能（流星雨 9083）→ `play_from_hand` 里的 `_x_spell_value`；
+	##   * 单位（枭熊 9213）→ `place()` 里的 `x_unit`（力量 X / 生命 9X）。
+	## 「半边生效」是最难查的一类 bug（法术吃了道具、传说卡没吃），所以两边必须同一口。
+	## ⚠️ 只放大**效果**，不碰扣费：`_pay()` 依旧吃掉该方全部费用（`cost_of()` 同源），
+	##    玩家不会因为拿了钻头就被多收钱。
+	if x >= DRILL_X_MIN and RunState.has_relic(DRILL_RELIC_ID):
+		return x * 2
+	return x
+
+
 func _meteor_shower(side: String, card: CardData) -> String:
 
 
@@ -5797,7 +5817,7 @@ func play_from_hand(hand_index: int, cell: Vector2i) -> Placement:
 	# 「该方剩余的全部费用」，所以这里读到的 X 与真正扣掉的完全同源。
 	var x_unit:= -1
 	if card.x_cost and card.traits.has(OWLBEAR_TRAIT):
-		x_unit = maxi(0, state.energy_of(SIDE_SELF))
+		x_unit = _drill_x(maxi(0, state.energy_of(SIDE_SELF)))
 	var paid:= _pay(card)
 	# 栅栏修复术（6021）：把栅栏打到已有栅栏的格子上 → 合并（不新建单位）
 	var stack_onto: Placement = state.unit_at(cell)
@@ -9016,7 +9036,7 @@ func use_spell(hand_index: int, target = null, free_cast := false) -> String:
 		return "回旋斩：本回合还需先使用 %d 张其他卡（已用 %d）" % [
 				WHIRL_BLADE_NEED - state.self_card_plays, state.self_card_plays]
 	# 流星雨（9083）：X = 扣费前剩余的**全部费用**（_pay 会把它一次清零）→ 先抓再付。
-	_x_spell_value = maxi(0, state.energy_of(SIDE_SELF)) if card.x_cost else 0
+	_x_spell_value = _drill_x(maxi(0, state.energy_of(SIDE_SELF))) if card.x_cost else 0
 	# R288：`free_cast` = 失控要塞 9161 凭空生成的技能卡（卡面写「释放」，不向玩家收费）。
 	if not free_cast:
 		_pay(card)
@@ -17683,6 +17703,31 @@ func _poison_tick(side: String) -> void :
 ##    这次不打断移动（禁足交给下回合的 rooted），也没有把那 8 张卡加回来。
 
 
+func _fill_hand_random() -> int:
+	## R796 卡牌包 7013：「用随机卡牌填满你的手牌」的**唯一口**。返回实际进手牌的张数。
+	## 池子 = 本职业奖励卡池（与神秘牌 7011 同一个口 `reward_pool_for()`）——
+	## 用整副卡组当池子会把「你已经有的牌」再塞一遍，随机性全无。
+	## 随机源走引擎 `rng`：同种子同结果、回放可复现（与新生 9148 / 随心组装同口径）。
+	## ⚠️ 每张都过 `_new_own_card()`：手牌里永远是**独立副本**。实例级记账
+	##    （`card_discount` / `turn_card_discount` / `hand_free` / `turn_free`）以 CardData
+	##    对象为键，塞共享卡库实例会让「给这一张减费」变成「给所有同名卡减费」（R281 教训）。
+	## ⚠️ 不设 `is_ephemeral`：包里开出来的是**真卡** —— 打掉进弃牌区、之后还能洗回牌库，
+	##    与万能牌那种「回合结束消失的幻影」是两回事。
+	var pool: Array[CardData] = CardRepo.load_json().reward_pool_for(RunState.player_class)
+	if pool.is_empty():
+		return 0
+	var added := 0
+	var guard := 0
+	while not state.hand_full() and guard < FieldState.HAND_LIMIT * 2:
+		guard += 1
+		var c: CardData = _new_own_card(pool[rng.randi() % pool.size()])
+		if _grant_to_hand(c, "卡牌包"):
+			added += 1
+	_log("卡牌包：随机卡填入手牌 %d 张（现在 %d/%d）" % [
+			added, state.hand.size(), FieldState.HAND_LIMIT])
+	return added
+
+
 func use_tool(id: int, slot := -1) -> bool:
 	## R690：**使用型工具**（7005 小血瓶 / 7006 法力药剂 / 7007 烤肉 / 7008 野性图腾 /
 	## R752 快送鸭 7010）的唯一结算口。
@@ -17700,6 +17745,12 @@ func use_tool(id: int, slot := -1) -> bool:
 		return false
 	if t.pick_kind != "":
 		return false      # 选卡型：见 begin_tool_pick（这里返回 false 让界面知道没结算）
+	# R796 卡牌包 7013：手牌**已经满**时用不了 —— 否则「填满手牌」等于什么都没做，
+	# 一件消耗品就这么蒸发了。与 `begin_tool_pick()` 的满手牌闸门同一口径：
+	# 提前挡在结算之前，界面照常提示原因，工具留在栏位里。
+	if t.fill_hand and state.hand_full():
+		_log("工具「%s」：手牌已满（%d 张），先打出一张再用" % [t.trap_name, FieldState.HAND_LIMIT])
+		return false
 	var healed := 0
 	if t.heal_pct > 0:
 		var amount := ceili(float(state.max_hp_self) * float(t.heal_pct) / 100.0)
@@ -17714,6 +17765,15 @@ func use_tool(id: int, slot := -1) -> bool:
 		# 然后立刻同步场上的人；之后再登场的人由 `_relic_on_enter_buffs()` 补。
 		_wild_totem_atk = t.ally_atk
 		_sync_totem()
+	# R796 智慧药剂 7014：抽卡走 `_draw_many()`（所有「抽 n 张」的唯一口）——
+	# 手牌满时它会发 `hand_burn`、把牌丢进弃牌区，与战斗中一切抽卡同一口径。
+	var drawn := 0
+	if t.draw_cards > 0:
+		drawn = _draw_many(t.draw_cards)
+	# R796 卡牌包 7013：用随机卡填满手牌（唯一口 `_fill_hand_random()`）。
+	var hand_added := 0
+	if t.fill_hand:
+		hand_added = _fill_hand_random()
 	var filled := 0
 	if t.fill_toolbar:
 		# R752 快送鸭：先把自己这一格腾空（它「用掉就没」），再往空槽里填商店工具。
@@ -17721,13 +17781,15 @@ func use_tool(id: int, slot := -1) -> bool:
 		if slot >= 0:
 			RunState.consume_trap(slot)
 		filled = RunState.fill_toolbar_with_shop_tools()
-	_log("使用工具：「%s」（回血 %d / 回费 %d / 盟友力量 +%d / 补工具 %d → HP %d/%d，费用 %d）" % [
-			t.trap_name, healed, t.energy, _wild_totem_atk, filled, state.hp_self,
-			state.max_hp_self, state.energy])
+	_log(("使用工具：「%s」（回血 %d / 回费 %d / 盟友力量 +%d / 补工具 %d / 抽卡 %d / 填手牌 %d"
+			+ " → HP %d/%d，费用 %d）") % [
+			t.trap_name, healed, t.energy, _wild_totem_atk, filled, drawn, hand_added,
+			state.hp_self, state.max_hp_self, state.energy])
 	## 纯结算事件：界面据此播数字与提示。不掷随机数，回放确定性不受影响。
 	action.emit("tool_used", {"id": id, "name": t.trap_name, "healed": healed,
 			"energy": t.energy, "hp": state.hp_self, "max_hp": state.max_hp_self,
-			"filled": filled, "slots": RunState.traps.duplicate()})
+			"filled": filled, "drawn": drawn, "hand_added": hand_added,
+			"slots": RunState.traps.duplicate()})
 	return true
 
 
@@ -18827,6 +18889,26 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# `raw` 另存原始攻击力，留给「本该多少」这类显示（目前无人读）。
 	action.emit("hp", {"src": src, "dst": dst, "damage": dealt, "raw": power,
 		"side": side, "atk_name": attacker.card.card_name})
+	# ── R796 刺墙扩面（6073）：**HP 被普通攻击**时也反伤 ──
+	# 用户口径 R796「工事和 HP 被攻击时」。HP 直击走的是**本函数**（`attack()` 只管单位互殴），
+	# 所以反伤必须在 `attack()` 之外再补这一份 —— 只挂 `attack()` 永远等不到直击 HP 这一条。
+	# ⚠️ 溢出 / 打穿漏下来的 HP 伤害**不算**：那一笔是「工事被同一次攻击打穿」的余波，
+	#    同一次攻击已经在 `attack()` 里反过一次，再算就是一刀两反（5 → 10）。
+	# 位置：HP 飘字之后、攻击者的战后触发之前。攻击者被反死 → 直接收工，
+	# 不跑下面的潜影者重置 / 自动生成 / `_tap`（对已销毁的单位横置没有意义）。
+	# ⚠️ 判据必须是 `board.has(src)`（**格子坐标**）—— `board` 是以 `Vector2i` 为键的表，
+	#    传 Placement 进去恒为假，整段静默不执行（R796 首版就踩了这个，测试当场 40 → 40）。
+	var spike_hp_ok: bool = (side != SIDE_SELF and state.board.has(src)
+			and RunState.has_relic(SPIKE_WALL_RELIC_ID))
+	if spike_hp_ok:
+		var sw_hp:= _hit_unit(attacker, SPIKE_WALL_DMG, "刺墙", false)
+		_log("刺墙：%s 攻击我方 HP → 反受 %d 点伤害" % [attacker.card.card_name, sw_hp])
+		action.emit("spike_wall", {"cell": dst, "src": src, "amount": sw_hp,
+				"atk_name": attacker.card.card_name, "def_name": ""})
+		if attacker.health <= 0:
+			_destroy_dead()
+			_check_game_over()
+			return
 	if attacker.card.id == LURKER_ID and attacker.ramp_atk > 0:
 		attacker.ramp_atk = 0
 		_log("潜影者：攻击 HP 后力量重置（当前 %d）" % attacker.effective_power())

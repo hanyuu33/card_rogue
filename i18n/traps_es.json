@@ -50,6 +50,14 @@
   "7012": {
    "name": "Piedra",
    "desc": "Arrástrala sobre una unidad enemiga. Inflige 15 de daño y la herramienta se consume."
+  },
+  "7013": {
+   "name": "Paquete de cartas",
+   "desc": "Tócala dos veces para usarla, sin arrastrarla. Llena tu mano con cartas aleatorias; después, la herramienta se consume."
+  },
+  "7014": {
+   "name": "Poción de sabiduría",
+   "desc": "Tócala dos veces para usarla, sin arrastrarla. Roba 3 cartas; después, la herramienta se consume."
   }
  }
 }

@@ -188,6 +188,7 @@
       "REWARD_GOLD_PART_BATTLE": "戦闘 %d",
       "REWARD_GOLD_PART_COIN": "コイン %d",
       "REWARD_GOLD_PART_BOUNTY_HUNTER": "賞金稼ぎ %d",
+      "REWARD_GOLD_PART_RABBIT_FOOT": "ウサギの足 %d",
       "REWARD_GOLD_LEGACY_SUMMARY": "ゴールド+%d（%s）　現在 %d",
       "REWARD_EVENT_ARCANE_TITLE": "秘術の泉",
       "REWARD_EVENT_CORE_TITLE": "契約の核心",

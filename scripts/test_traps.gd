@@ -57,7 +57,7 @@ func _init() -> void:
 	# R745：新增野性图腾 7008（使用型）→ 8 件（4 放置型 + 4 使用型）
 	# R752：新增万能牌 7009 / 快送鸭 7010 / 神秘牌 7011（都是使用型、都没有售价）→ 11 件
 	# R754：新增石头 7012（**直接伤害型**：拖到敌方单位身上砸 15；no_drop）→ 12 件
-	check(repo.size() == 12, "traps.json 恰好 12 件工具（4 放置 + 1 直接伤害 + 7 使用型）")
+	check(repo.size() == 14, "traps.json 恰好 14 件工具（4 放置 + 1 直接伤害 + 9 使用型）")
 	var bomb: TrapData = repo.get_trap(7001)
 	var frost: TrapData = repo.get_trap(7002)
 	var poison: TrapData = repo.get_trap(7003)
@@ -86,8 +86,8 @@ func _init() -> void:
 	check(bbq != null and bbq.trap_name == "烤肉" and bbq.heal_pct == 25
 			and bbq.is_usable() and bbq.rest_only and bbq.price == 0,
 			"烤肉：回复 25% 最大生命 / 使用型 / rest_only（非卖品）")
-	check(repo.random_traps().size() == 10 and repo.get_trap(7007) != null,
-			"烤肉：`random_traps()` 把它排除（10 件可随机），全量仍是 12 件")
+	check(repo.random_traps().size() == 12 and repo.get_trap(7007) != null,
+			"烤肉：`random_traps()` 把它排除（12 件可随机），全量仍是 14 件")
 	# R752：野性图腾售价按店长口径 45 → 30
 	check(repo.get_trap(7008).price == 30, "野性图腾：商店售价 30")
 	# R752：三件新工具 —— 都是使用型、都没有售价（= 不进商店）
@@ -108,9 +108,9 @@ func _init() -> void:
 	var shop_ids: Array[int] = []
 	for sp: TrapData in shop_pool:
 		shop_ids.append(int(sp.id))
-	check(shop_pool.size() == 7 and not shop_ids.has(7007)
+	check(shop_pool.size() == 9 and not shop_ids.has(7007)
 			and not shop_ids.has(7009) and not shop_ids.has(7010) and not shop_ids.has(7011),
-			"`shop_traps()` = 7 件有售价的（烤肉与三件非卖品都被排除）")
+			"`shop_traps()` = 9 件有售价的（烤肉与三件非卖品都被排除；R796 两件新工具有售价）")
 	check(shop_ids.has(7008), "野性图腾售价 30 → 仍在商店货架上")
 	# R754 石头 7012：事件「奇异雕像」的摧毁选项给的，**直接伤害型**
 	var stone: TrapData = repo.get_trap(7012)
@@ -122,6 +122,19 @@ func _init() -> void:
 	for dt: TrapData in repo.random_traps():
 		drop_ids.append(int(dt.id))
 	check(not drop_ids.has(7012), "石头不进随机掉落 / 工具箱池（no_drop）")
+	# R796：卡牌包 7013（随机卡填满手牌）/ 智慧药剂 7014（抽 3 张）——
+	# 都是使用型、都有售价（能掉落也能买），进商店也进随机池。
+	var cardpack: TrapData = repo.get_trap(7013)
+	var wisdom: TrapData = repo.get_trap(7014)
+	check(cardpack != null and cardpack.trap_name == "卡牌包" and cardpack.fill_hand
+			and cardpack.price == 55 and cardpack.is_usable(),
+			"卡牌包 7013：fill_hand / 使用型 / 55 金")
+	check(wisdom != null and wisdom.trap_name == "智慧药剂" and wisdom.draw_cards == 3
+			and wisdom.price == 40 and wisdom.is_usable(),
+			"智慧药剂 7014：抽 3 张 / 使用型 / 40 金")
+	check(shop_ids.has(7013) and shop_ids.has(7014)
+			and drop_ids.has(7013) and drop_ids.has(7014),
+			"R796 两件新工具：既进商店货架、也进随机掉落池")
 
 	# ---- ①b R690：描述必须写清「怎么发动」—— 放置型拖到格子、使用型轻点 ----
 	# 玩家唯一能读到操作方式的地方就是这条 desc（商店悬浮、战斗里轻点工具栏）。
@@ -139,7 +152,8 @@ func _init() -> void:
 				op_bad += "%s 缺拖放说明 " % tid
 		# R752：交互改成「点两下」（第一下弹出「使用」，第二下才结算），
 		# 所以使用型工具的说明也统一写成「轻点两下即可使用」。
-		for tid in ["7005", "7006", "7007", "7008", "7009", "7010", "7011"]:
+		for tid in ["7005", "7006", "7007", "7008", "7009", "7010", "7011",
+				"7013", "7014"]:
 			var d := str(raw_rows.get(tid, ""))
 			if not d.contains("轻点两下即可使用") or not d.contains("无需拖到战场格子上"):
 				op_bad += "%s 缺轻点说明 " % tid

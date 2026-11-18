@@ -24,6 +24,8 @@ static func color_of(id: int) -> Color:
 		7010: return Color(0.96, 0.72, 0.28)   # 快送鸭 · 快递黄
 		7011: return Color(0.42, 0.82, 0.78)   # 神秘牌 · 谜青
 		7012: return Color(0.68, 0.66, 0.62)   # 石头 · 石灰
+		7013: return Color(0.86, 0.68, 0.42)   # 卡牌包 · 牛皮纸
+		7014: return Color(0.58, 0.72, 0.98)   # 智慧药剂 · 智慧蓝
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -90,6 +92,8 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7010: _deliver(ci, c, s, ink)
 		7011: _mystery(ci, c, s, ink)
 		7012: _stone(ci, c, s, ink)
+		7013: _cardpack(ci, c, s, ink)
+		7014: _wisdom(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
 
 
@@ -261,6 +265,37 @@ static func _potion(ci: CanvasItem, c: Vector2, s: float, col: Color, mana: bool
 	# 高光
 	ci.draw_line(Vector2(c.x - s * 0.10, c.y - s * 0.02),
 			Vector2(c.x - s * 0.10, c.y + s * 0.09), Color(1, 1, 1, 0.45), w * 0.9, true)
+
+static func _cardpack(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R796 卡牌包 7013：三张叠起来的卡 + 一道系带（程序化兜底；有 png 时整段不走）。
+	var w := maxf(1.5, s * 0.028)
+	var card := Rect2(c + Vector2(-s * 0.22, -s * 0.15), Vector2(s * 0.40, s * 0.30))
+	ci.draw_rect(Rect2(card.position + Vector2(-s * 0.05, s * 0.03), card.size), col, true)
+	ci.draw_rect(card, col.lightened(0.35), true)
+	ci.draw_rect(card, col, false, w)
+	var band := Rect2(card.position + Vector2(card.size.x * 0.42, 0),
+			Vector2(card.size.x * 0.16, card.size.y))
+	ci.draw_rect(band, col.darkened(0.25), true)
+
+
+static func _wisdom(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R796 智慧药剂 7014：蓝药瓶 + 瓶口一颗星（「智慧」靠星点区分法力药剂）。
+	var w := maxf(1.5, s * 0.032)
+	var body := PackedVector2Array([
+		c + Vector2(-s * 0.15, -s * 0.04),
+		c + Vector2(s * 0.15, -s * 0.04),
+		c + Vector2(s * 0.11, s * 0.20),
+		c + Vector2(-s * 0.11, s * 0.20)])
+	ci.draw_colored_polygon(body, col)
+	var outline := PackedVector2Array([body[0], body[1], body[2], body[3], body[0]])
+	ci.draw_polyline(outline, col.darkened(0.35), w)
+	ci.draw_line(c + Vector2(0, -s * 0.04), c + Vector2(0, -s * 0.13), col, w * 1.6)
+	var star := c + Vector2(s * 0.17, -s * 0.19)
+	for k in 4:
+		var a := TAU * float(k) / 4.0
+		var d := Vector2(cos(a), sin(a))
+		ci.draw_line(star - d * s * 0.055, star + d * s * 0.055, col.lightened(0.45), maxf(1.2, w * 0.8))
+
 
 static func _stone(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 	## R754 石头（7012）：一块带棱角的碎石，右下角一小撮碎屑。

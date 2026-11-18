@@ -8738,6 +8738,13 @@ func _show_over(win: bool) -> void:
 				RunState.gain_gold(gold_gain)
 				gold_total += gold_gain
 				gold_parts.append(GameI18n.ui("reward", "REWARD_GOLD_PART_BATTLE", "战斗 %d") % gold_gain)
+			# R796 兔脚（6076）：战后金币 +10。**单独记一项**（不并进上面那条「战斗 %d」）——
+			# R423 的口径就是「结算面板要说清这些钱从哪来」，并进去等于把道具效果藏了。
+			var rabbit_gold := RunState.rabbit_foot_gold()
+			if rabbit_gold > 0:
+				RunState.gain_gold(rabbit_gold)
+				gold_total += rabbit_gold
+				gold_parts.append(GameI18n.ui("reward", "REWARD_GOLD_PART_RABBIT_FOOT", "兔脚 %d") % rabbit_gold)
 			# R351：**效果卡**的战斗结束收益（月亮 9180 / 硬币 9181）。
 			# 只管入队 / 加钱 —— 队列后面交给结算面板的奖励悬浮窗，别在这里弹界面。
 			var fx := engine.battle_end_rewards()
@@ -10470,6 +10477,14 @@ func _use_tool_slot(slot: int, td: TrapData) -> void:
 		_say("已使用「%s」，回复 %d%% 生命" % [td.trap_name, td.heal_pct])
 	elif td.ally_atk > 0:
 		_say("已使用「%s」，本场所有盟友 +%d 力量" % [td.trap_name, td.ally_atk])
+	elif td.fill_hand:
+		# R796 卡牌包 7013：报「补进来几张」而不是「手牌满了」——
+		# 手牌本来就满时 `use_tool` 直接拒绝（见那边的早退），走不到这里。
+		_say("已使用「%s」，手牌补到 %d 张" % [td.trap_name, engine.state.hand.size()])
+	elif td.draw_cards > 0:
+		# R796 智慧药剂 7014：手牌满时抽到的会直接进弃牌区（与战斗中一切抽卡同口径），
+		# 所以这里只报「抽了几张」，不承诺「全都进手里」。
+		_say("已使用「%s」，抽 %d 张卡" % [td.trap_name, td.draw_cards])
 	else:
 		_say("已使用「%s」，回复 %d 点费用" % [td.trap_name, td.energy])
 	queue_redraw()

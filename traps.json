@@ -23,6 +23,10 @@
     { "id": 7011, "name": "神秘牌", "pick_kind": "random3",
       "desc": "轻点两下即可使用，无需拖到战场格子上。从 3 张随机卡牌中选择一张加入你的手牌，本回合它的费用为 0。用掉后从工具栏移除。", "icon": "tool_mystery" },
     { "id": 7012, "name": "石头", "direct_damage": 15, "no_drop": true,
-      "desc": "拖到敌方单位身上。对它造成 15 点伤害，用掉后从工具栏移除。", "icon": "tool_stone" }
+      "desc": "拖到敌方单位身上。对它造成 15 点伤害，用掉后从工具栏移除。", "icon": "tool_stone" },
+    { "id": 7013, "name": "卡牌包", "price": 55, "fill_hand": true,
+      "desc": "轻点两下即可使用，无需拖到战场格子上。用随机卡牌填满你的手牌，用掉后从工具栏移除。", "icon": "tool_cardpack" },
+    { "id": 7014, "name": "智慧药剂", "price": 40, "draw_cards": 3,
+      "desc": "轻点两下即可使用，无需拖到战场格子上。立即抽 3 张卡，用掉后从工具栏移除。", "icon": "tool_potion_wisdom" }
   ]
 }

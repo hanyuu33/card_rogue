@@ -1158,6 +1158,10 @@
         "source": "scripts/battle_scene.gd:8137",
         "zh": "赏金猎人 %d"
       },
+      "REWARD_GOLD_PART_RABBIT_FOOT": {
+        "source": "scripts/battle_scene.gd:8750",
+        "zh": "兔脚 %d"
+      },
       "REWARD_GOLD_LEGACY_SUMMARY": {
         "source": "scripts/battle_scene.gd:17083",
         "zh": "金币 ＋%d（%s）　现有 %d"

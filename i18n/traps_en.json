@@ -50,6 +50,14 @@
   "7012": {
    "name": "Stone",
    "desc": "Drag it onto an enemy unit. Deals 15 damage to it, then the tool is used up."
+  },
+  "7013": {
+   "name": "Card Pack",
+   "desc": "Tap it twice to use it, no dragging needed. Fills your hand with random cards; the tool is then used up."
+  },
+  "7014": {
+   "name": "Potion of Wisdom",
+   "desc": "Tap it twice to use it, no dragging needed. Draws 3 cards; the tool is then used up."
   }
  }
 }

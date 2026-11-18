@@ -39,6 +39,12 @@ var pick_kind := ""
 ## R752：快送鸭 7010 —— 使用后**用随机商店工具填满工具栏**（不选卡、当场结算）。
 ## 与 `pick_kind` 并列：一个工具只说明自己「怎么生效」，判据全在数据里。
 var fill_toolbar := false
+## R796：卡牌包 7013 —— 使用后**用随机卡牌填满手牌**（不选卡、当场结算）。
+## 与 `fill_toolbar` 是同一条思路的两个栏位：一个补工具栏，一个补手牌。
+var fill_hand := false
+## R796：智慧药剂 7014 —— 使用后**抽这么多张卡**（走 `_draw_many`，手牌满时照常
+## 进弃牌区，与战斗中一切抽卡同一口径）。
+var draw_cards := 0
 ## R754：**直接伤害型**工具（石头 7012）—— 拖到**敌方单位身上**，当场砸出这么多伤害。
 ## 与放置型（`damage`，埋进空格等敌人踩）是两回事：`damage` 归陷阱触发用，
 ## 这个归「指着谁砸谁」，所以必须是独立字段，判据见 `GameEngine.trap_drop_cells()`。
@@ -50,14 +56,15 @@ var no_drop := false
 
 
 ## R690：「工具」分两类 —— 放置型（陷阱，拖到战场空格）与使用型（药水，轻点即用）。
-## 判据只看数据：带 heal_pct / energy / ally_atk / pick_kind / fill_toolbar 的就是使用型，
+## 判据只看数据：带 heal_pct / energy / ally_atk / pick_kind / fill_toolbar /
+## fill_hand / draw_cards 的就是使用型，
 ## 界面与引擎共用这一个口。
 ## ⚠️ R754：直接伤害型（石头 `direct_damage`）**不算使用型** —— 它要落点（敌方单位），
 ##    走的是拖放那条路，所以这里故意不收 `direct_damage`；别「顺手」加进来，
 ##    加了它会被当成「轻点即结算」直接砸空。
 func is_usable() -> bool:
 	return (heal_pct > 0 or energy > 0 or ally_atk > 0
-			or pick_kind != "" or fill_toolbar)
+			or pick_kind != "" or fill_toolbar or fill_hand or draw_cards > 0)
 
 
 ## R752（用户口径「以后没有售价的则不计入商店」）：**能不能上商店货架**只看售价。
@@ -84,6 +91,8 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.ally_atk = int(d.get("ally_atk", 0))
 	t.pick_kind = str(d.get("pick_kind", ""))
 	t.fill_toolbar = bool(d.get("fill_toolbar", false))
+	t.fill_hand = bool(d.get("fill_hand", false))
+	t.draw_cards = int(d.get("draw_cards", 0))
 	t.direct_damage = int(d.get("direct_damage", 0))
 	t.no_drop = bool(d.get("no_drop", false))
 	return t
