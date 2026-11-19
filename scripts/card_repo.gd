@@ -51,6 +51,17 @@ func enemy_cards() -> Array[CardData]:
 	return by_group("enemy")
 
 
+static func demo_allows(c: CardData) -> bool:
+	## R814：这张卡在当前版本**存不存在**（试玩版裁掉的那批不存在）。
+	## 与奖励池、图鉴、商店同源 —— 判据只有 `no_demo` 一个字段，不许各处再写白名单。
+	## 完整版 / 测试版恒 true（`GameBuild.is_demo()` 为假），所以老逻辑一行都没变。
+	if c == null:
+		return false
+	if GameBuild.is_demo() and c.no_demo:
+		return false
+	return true
+
+
 func obtainable_cards(include_hidden := false) -> Array[CardData]:
 	## 「可获得池」= 奖励池去掉**禁卡**那一层（R346）。
 	## 为什么要单独一个口：禁卡界面必须**列出已被禁的卡**，否则玩家一点它就消失、
@@ -67,6 +78,10 @@ func obtainable_cards(include_hidden := false) -> Array[CardData]:
 		# R509c：event_only（事件/关卡专属，如洞穴枭熊 9213）不该进可获得池——
 		# 不进随机奖励池（reward_pool 已拦），更不该出现在禁卡表里可被 ban。
 		if c.event_only:
+			continue
+		# R814：试玩切片 —— 打了 `no_demo` 的卡不进任何可获得池（奖励 / 商店 / 事件 /
+		# 禁卡表 / 图鉴都由这里或 `demo_allows()` 收口）。完整版无视这个标记。
+		if not demo_allows(c):
 			continue
 		# R761：隐藏职业（吟游诗人）的卡**默认不进任何玩家可见的池** ——
 		# 随机奖励 / 商店 / 事件 / 禁卡表全读这里，一处拦死。

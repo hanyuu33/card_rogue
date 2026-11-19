@@ -356,6 +356,10 @@ static func gallery_visible(c: CardData, release_mode: bool) -> bool:
 
 func _visible(c: CardData) -> bool:
 	## 这张卡在当前版本的图鉴里**存不存在**。
+	## R814：试玩版只列试玩切片里的卡（`no_demo` 的那批连条目都没有）——
+	## 判据复用 `CardRepo.demo_allows()`，与奖励池同一个字段，不另开白名单。
+	if not CardRepo.demo_allows(c):
+		return false
 	return gallery_visible(c, GameBuild.is_release())
 
 

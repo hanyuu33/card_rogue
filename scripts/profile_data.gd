@@ -279,7 +279,12 @@ static func unlock_story(id: String) -> bool:
 static func is_story_unlocked(id: String) -> bool:
 	## 测试版（默认）所有剧情恒解锁 —— 含后续新增的段，无需达成成就；
 	## 正式版才走 `unlocked_stories` 白名单判定（R550b）。
+	## R814：试玩版**一律不解锁**（用户口径「不可解锁剧情」）—— 这一条同时挡住两件事：
+	##   ① 剧情段本身不可领（`claim_story` 会用同一判据拒绝）；
+	##   ② 剧情锁卡（`cards.json` 的 `locked`，如鹅 9187 / 黑暗嵌合 9191）永远不进奖励池。
 	ensure_loaded()
+	if GameBuild.is_demo():
+		return false
 	if not GameBuild.is_release():
 		return true
 	return unlocked_stories.has(id)

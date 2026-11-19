@@ -74048,6 +74048,7 @@ func _init() -> void:
 	_test_r809()
 	_test_r810()
 	_test_r811()
+	_test_r814()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -80232,3 +80233,103 @@ func _test_r811() -> void :
 			"R811 守卫：`_merge_fence` 用 `p.health = p.card.health` 回满")
 	check_src(not r811_src.contains("p.health += card.health"),
 			"R811 守卫：旧的 `p.health += card.health`（只加新栅栏血量）已移除")
+
+
+func _test_r814() -> void:
+	## R814 试玩版（Steam 试玩切片）：只开森林精魄 + 暗影刺客、难度≤1、每职业 60 张卡、
+	## 组合素材与组合触发卡一张不少、事件与道具全量可用、剧情不可解锁、二层 Boss 即收尾。
+	## 口径来源：用户 2026-11-19 的试玩版需求。改这几个数字之前先确认需求有没有变。
+	var r814_repo := CardRepo.load_json()
+	var r814_relics := RelicRepo.load_json()
+
+	# ── ① 闸门：默认不是试玩版；试玩版优先级高于发布版 ──
+	GameBuild.set_test_demo(-1)
+	check(not GameBuild.is_demo(), "R814 闸门：默认（编辑器 / 普通导出）不是试玩版")
+	GameBuild.set_test_release(1)
+	GameBuild.set_test_demo(1)
+	check(GameBuild.is_demo(), "R814 闸门：set_test_demo(1) 后 is_demo 为真")
+	check(not GameBuild.is_release(),
+			"R814 闸门：试玩版压过发布版 —— 即使强开 release，is_release 也恒 false")
+
+	# ── ② 职业 / 难度：只开两个职业，上限 1 ──
+	check(UnlockSystem.is_class_unlocked(PlayerClass.DRUID), "R814 职业：森林精魄可选")
+	check(UnlockSystem.is_class_unlocked(PlayerClass.ROGUE), "R814 职业：暗影刺客可选")
+	check(not UnlockSystem.is_class_unlocked(PlayerClass.MECH),
+			"R814 职业：机械之心在试玩版不可选（选人界面显示「未解锁」）")
+	check(UnlockSystem.difficulty_cap(PlayerClass.DRUID) == 1,
+			"R814 难度：森林精魄上限 = 1（0 轻松 + 1 微恙）")
+	check(UnlockSystem.difficulty_cap(PlayerClass.ROGUE) == 1, "R814 难度：暗影刺客上限 = 1")
+	check(UnlockSystem.global_max_difficulty() == 1,
+			"R814 难度：随机摇人的「尽可能高」也封在 1")
+
+	# ── ③ 卡池：每职业正好 60 张 ──
+	for r814_cid: String in [PlayerClass.DRUID, PlayerClass.ROGUE]:
+		var r814_pool := r814_repo.reward_pool_for(r814_cid)
+		check(r814_pool.size() == 60,
+				"R814 卡池：%s 奖励池 = 60 张（实际 %d）" % [r814_cid, r814_pool.size()])
+		var r814_ids := {}
+		for r814_c: CardData in r814_pool:
+			r814_ids[r814_c.id] = true
+		# 组合链必须全在池里：素材（带 upper_effect 的卡）+ 触发卡（传授 / 影缚 / 宝石兽）。
+		# 判据刻意用「该进池的卡」集合去比对，而不是写死 id 名单 —— 新增素材卡会自动被覆盖。
+		var r814_missing: Array[String] = []
+		for r814_c: CardData in r814_repo.all_cards():
+			if r814_c.card_class != r814_cid or r814_c.rarity > 2:
+				continue
+			if r814_c.locked or r814_c.event_only:
+				continue
+			var r814_is_mat: bool = r814_c.upper_effect.size() > 0 or r814_c.combo_trigger != ""
+			if r814_is_mat and not r814_ids.has(r814_c.id):
+				r814_missing.append("%d %s" % [r814_c.id, r814_c.name])
+		check(r814_missing.is_empty(),
+				"R814 组合：%s 的组合素材 / 触发卡全在池内（缺 %s）" % [r814_cid, str(r814_missing)])
+
+	# 传授 8084（森林精魄）/ 影缚 8085（暗影刺客）/ 宝石兽 9246（死亡触发组合）三张是组合入口。
+	for r814_id: int in [8084, 8085, 9246]:
+		var r814_cls := r814_repo.get_card(r814_id).card_class
+		var r814_hit := false
+		for r814_c: CardData in r814_repo.reward_pool_for(r814_cls):
+			if r814_c.id == r814_id:
+				r814_hit = true
+		check(r814_hit, "R814 组合：%d 在 %s 的试玩版奖励池里" % [r814_id, r814_cls])
+
+	# ── ④ 事件 / 道具：试玩版一件都不裁 ──
+	var r814_ev := GameLayers.event_weights(GameLayers.LAYER_DEFAULT).size()
+	var r814_relic_n := r814_relics.reward_ids().size()
+	check(r814_ev >= 10 and r814_relic_n >= 20,
+			"R814 内容：试玩版事件 %d 种 / 奖励道具 %d 件照常可用" % [r814_ev, r814_relic_n])
+
+	# ── ⑤ 剧情：恒不解锁（剧情锁卡连带进不了池）──
+	check(not ProfileData.is_story_unlocked("episode1"),
+			"R814 剧情：试玩版里 episode1 也是未解锁状态")
+	var r814_goose := r814_repo.get_card(9187)
+	check(r814_goose != null and r814_goose.locked,
+			"R814 剧情：鹅 9187 仍是剧情锁卡（试玩版不放进奖励池）")
+	var r814_goose_in := false
+	for r814_c: CardData in r814_repo.reward_pool_for(PlayerClass.DRUID):
+		if r814_c.id == 9187:
+			r814_goose_in = true
+	check(not r814_goose_in, "R814 剧情：剧情锁卡不在试玩版奖励池里")
+
+	# ── ⑥ 图鉴 / 可获得池同步：被裁的卡在试玩版里「不存在」──
+	check(not CardRepo.demo_allows(r814_repo.get_card(9077)),
+			"R814 图鉴：被裁掉的陨石术 9077 在试玩版里不存在")
+	check(CardRepo.demo_allows(r814_repo.get_card(8001)),
+			"R814 图鉴：初始卡（木栅栏 8001）不被裁")
+	check(CardRepo.demo_allows(r814_repo.get_card(8004)),
+			"R814 图鉴：初始专属卡（熊 8004）不被裁")
+
+	# ── ⑦ 结算：二层 Boss 打完后不进第三层 → 走「胜利？」──
+	var r814_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r814_bs.contains(
+			"if GameBuild.is_demo() and _run_next_layer == GameLayers.LAYER_THREE:"),
+			"R814 结算：试玩版把「二层 Boss 的下一层」截成 0")
+	var r814_sum := FileAccess.get_file_as_string("res://scripts/run_summary_scene.gd")
+	check_src(r814_sum.contains("!= GameLayers.LAYER_THREE"),
+			"R814 结算：标题判据「没停在第三层 → 胜利？」未变，试玩版直接复用")
+
+	# ── ⑧ 复位（后面的用例不该继承试玩版状态）──
+	GameBuild.set_test_demo(-1)
+	GameBuild.set_test_release(-1)
+	check(not GameBuild.is_demo() and not GameBuild.is_release(),
+			"R814 复位：用例结束后回到测试版口径")

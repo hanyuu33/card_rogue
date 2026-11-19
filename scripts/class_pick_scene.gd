@@ -98,6 +98,15 @@ func _ready() -> void:
 		_selected = clampi(last_selected, 0, PlayerClass.ids().size() - 1)
 		# R761：上次玩的是吟游诗人 → 恢复成同一枚（开关关着就退回普通头像）
 		_bard_sel = last_bard and PlayerClass.bard_enabled()
+	# R814：试玩版只开森林精魄 / 暗影刺客 —— 档案里的 `last_selected` 可能停在机械之心
+	# （完整版玩过），直接沿用会让选人界面一进来就锁在一个不能选的职业上。
+	# 落到第一个可选的，顺便把难度压回该职业上限（档案里可能存着 12）。
+	if not _bard_sel and not UnlockSystem.is_class_unlocked(PlayerClass.ids()[_selected]):
+		for i in PlayerClass.ids().size():
+			if UnlockSystem.is_class_unlocked(PlayerClass.ids()[i]):
+				_selected = i
+				break
+	_diff_set_to(RunState.difficulty)
 	# R223：`-- --screenshot --diff N` 预选难度档位（0~10，看累计 debuff 文本的换行情况）。
 	for ai in uargs.size():
 		if uargs[ai] == "--diff" and ai + 1 < uargs.size():

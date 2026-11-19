@@ -1286,7 +1286,9 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R550（发布版解锁）：防御性钳制 —— 难度不得超过当前职业已解锁的上限。
 	# UI（class_pick_scene）里已经拦，这里是纵深防御：任何路径带着超限难度进来都会被压回。
 	# R762：每日挑战例外。固定配置对所有人相同，不能被各账号的解锁进度压成不同难度。
-	if GameBuild.is_release() and daily_date == "":
+	# R814：**试玩版也要钳**。试玩版 `is_release()` 恒 false，只判发布版的话，
+	# 一份来自完整版的档案（难度 12）能让试玩版直接 12 开局 —— 档位上限 1 就形同虚设。
+	if (GameBuild.is_release() or GameBuild.is_demo()) and daily_date == "":
 		difficulty = clampi(difficulty, 0, UnlockSystem.difficulty_cap(player_class))
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
 	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。

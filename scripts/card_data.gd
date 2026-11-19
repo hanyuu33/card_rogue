@@ -286,6 +286,11 @@ var no_remove: bool = false
 ## 不进随机奖励池（`CardRepo.reward_pool()` 唯一判据），免得「专属奖励」变成随处可见的史诗。
 ## 与 `locked` 的区别：那个是「还没解锁」，这个是「本来就不该随机出现」（永远不进池）。
 var event_only: bool = false
+
+## R814：**不进试玩版**（`GameBuild.is_demo()`）—— 试玩切片把每个职业的卡池
+## 裁到 60 张，被裁的卡打这个标记。缺省 false → 老数据一行都不用改；完整版无视它。
+## 判据只在 `CardRepo.obtainable_cards()` 与图鉴的 `demo_allows()` 两处。
+var no_demo: bool = false
 ## R373：**这张卡不能打出**（诅咒「麻痹」9185）。
 ## 判据只认本字段 —— 界面置灰 / 引擎三个出牌入口（play_from_hand / use_spell /
 ## use_curse）全部读它，不许按 id 硬编码。
@@ -420,6 +425,8 @@ static func from_dict(d: Dictionary) -> CardData:
 	# R346：剧情解锁标记（缺省 false = 老数据不用改，一直在池子里）
 	c.locked = bool(d.get("locked", false))
 	c.event_only = bool(d.get("event_only", false))
+	# R814：试玩版裁剪标记（缺省 false → 老卡一行都不用改）
+	c.no_demo = bool(d.get("no_demo", false))
 	# R351：**这张卡不能从卡组删除**（月亮 9180 / 硬币 9181 / 罐子 9157）。
 	# 缺省 false → 老数据一行都不用改；判据只认本字段，界面里不许按 id 硬编码。
 	c.no_remove = bool(d.get("no_remove", false))
@@ -543,6 +550,8 @@ func to_dict() -> Dictionary:
 		# R346：剧情解锁标记随复制通道走（复制出来的卡不该突然变成「已解锁」的普通卡）。
 		"locked": locked,
 		"event_only": event_only,
+		# R814：裁剪标记必须随复制通道走，否则试玩包里复制出来的卡会绕过池过滤
+		"no_demo": no_demo,
 		# R351：不可删除标记同样随复制通道走（复制出来的月亮 / 硬币也不许删）。
 		"no_remove": no_remove,
 		"unplayable": unplayable,

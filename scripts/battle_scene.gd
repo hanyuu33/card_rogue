@@ -8850,6 +8850,13 @@ func _show_over(win: bool) -> void:
 				if _run_next_layer == GameLayers.LAYER_THREE \
 						and not RunState.can_enter_third_layer():
 					_run_next_layer = 0
+				# R814 试玩版：内容只到第二层 —— 打完二层 Boss 直接收尾，不进第三层。
+				# 结算标题不用另写：`run_summary_scene._draw_head()` 的判据是「该局没停在
+				# 第三层」→ 自动显示「胜利？」，与「信物不齐」那条路共用一个口径。
+				# ⚠️ 必须放在算 `_run_next_layer` 之后、清 `pending_rewards` 之前：
+				#    下面那段 R756 的判据读的就是它（进结算页不该还挂着「待领 N 件」）。
+				if GameBuild.is_demo() and _run_next_layer == GameLayers.LAYER_THREE:
+					_run_next_layer = 0
 			# R472（用户口径「打完 3 层 boss 游戏都胜利了，不需要结算奖励了，直接提示胜利」）：
 			# **这一局到此为止**时，卡组 / 道具 / 金币都不会再被用到 —— 留一批「待领 N 件」
 			# 纯属多此一举（奖励窗的打开判据就是 `pending_reward_count() > 0`）。
