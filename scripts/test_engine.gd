@@ -16975,15 +16975,15 @@ func _init() -> void:
 
 	var l2ids := l2repo.layer2_ids()
 
-	check(l2ids.size() == 9 and l2ids.has(6014) and l2ids.has(6015)
+	check(l2ids.size() == 10 and l2ids.has(6014) and l2ids.has(6015)
 
 			and l2ids.has(6016) and l2ids.has(6017) and l2ids.has(6018)
 
 			and l2ids.has(6033) and l2ids.has(6049) and l2ids.has(6010)
 
-			and l2ids.has(6067),
+			and l2ids.has(6067) and l2ids.has(6085),
 
-			"第二层起始道具池 9 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049 + R514 鸭之低语 6010 + R509 记忆药水 6067）")
+			"第二层起始道具池 10 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049 + R514 鸭之低语 6010 + R509 记忆药水 6067 + R824 鸭子闹钟 6085）")
 
 	# R375（用户口径）：附魔大师 6034 移出二层起始池 —— 数据还在（旧存档 / 图鉴照样能读），
 
@@ -44034,9 +44034,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 79,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 80,
 
-			"R577b 保真锁：79 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084）")
+			"R577b 保真锁：80 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -44734,7 +44734,7 @@ func _init() -> void:
 
 	# R375 起附魔大师 6034 被移出（`not r246_l2.has(6034)`）—— 道具数据本身不动。
 
-	check(r246_l2.size() == 9 and r246_l2.has(6033) and not r246_l2.has(6034),
+	check(r246_l2.size() == 10 and r246_l2.has(6033) and not r246_l2.has(6034),
 
 			"R246 二层起始道具池：兼修 6033 在池里 / 附魔大师 6034 已移出 / R514 +鸭之低语 6010（%d 件）" % r246_l2.size())
 
@@ -74053,6 +74053,8 @@ func _init() -> void:
 	_test_r819()
 	_test_r822()
 
+	_test_r824()
+
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
 	quit(1 if fails > 0 else 0)
@@ -79913,7 +79915,7 @@ func _test_r810() -> void:
 			r810_bad.append("%d 不在奖励池" % r810_id)
 	check(r810_bad.is_empty(), "R810 数据层：四件都在库 · 战斗类 · 奖励来源 · 进奖励池（%s）"
 			% str(r810_bad))
-	check(r810_repo.all_relics().size() == 79, "R810 数据层：道具总数 79 件")
+	check(r810_repo.all_relics().size() == 80, "R824 数据层：道具总数 80 件（+鸭子闹钟 6085）")
 	check(r810_repo.normal_reward_ids().size() == 30
 			and r810_repo.legendary_reward_ids().size() == 6,
 			"R810/R813 数据层：奖励池 30 一般 + 6 传奇 = 36")
@@ -80502,7 +80504,8 @@ func _test_r822() -> void:
 	## 四条容易被写漏的判据：
 	##   ① 「遇到谁」必须由**种子派生**（不摇 rng、不进存档）—— 存场景变量 / 存档里，
 	##      退出去再进就能重摇，等于让玩家自选主持人（R819 占卜室的原坑）。
-	##   ② 两位主持人的道具池**互斥**，且并集必须还是原来那 9 件 —— 少一件就是内容凭空蒸发。
+	##   ② 两位主持人的道具池**互斥**，且并集必须是二层池全量（R822 是 9 件，R824 起 10 件）
+	##      —— 少一件就是内容凭空蒸发。
 	##   ③ 「带鸭」的判据用**名字里有没有「鸭」**，不写死 id 名单：以后新增带鸭道具会自动归位。
 	##   ④ 试玩版不进鸭绅士（R817「新增不跟着走」），但那 4 件要留在卷卷池里发得出去。
 	var r822_seed_bak := RunState.run_seed
@@ -80544,15 +80547,21 @@ func _test_r822() -> void:
 	check(int(r822_cnt[0]) > 0 and int(r822_cnt[1]) > 0,
 			"R822 宿主：两种结果都能出现（卷卷 %d / 鸭绅士 %d）" % [int(r822_cnt[0]), int(r822_cnt[1])])
 
-	# ── ⑤ 池子分流：9 = 5 + 4，互不重叠 ──
+	# ── ⑤ 池子分流：10 = 5 + 5，互不重叠（R824 加的鸭子闹钟 6085 归鸭绅士）──
 	var r822_all := r822_relics.layer2_ids()
 	var r822_duck := r822_relics.duck_host_ids()
 	var r822_bun := r822_relics.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN)
 	var r822_duck_pool := r822_relics.layer2_ids_for(RunState.LAYER2_HOST_DUCK)
-	check(r822_all.size() == 9, "R822 池：二层起始池全量仍是 9 件（实际 %d）" % r822_all.size())
-	check(r822_duck.size() == 4, "R822 池：鸭绅士 4 件（实际 %d）" % r822_duck.size())
+	check(r822_all.size() == 10,
+
+			"R824 池：二层起始池全量 10 件（R822 的 9 + 鸭子闹钟 6085，实际 %d）"
+
+			% r822_all.size())
+	check(r822_duck.size() == 5,
+
+			"R824 池：鸭绅士 5 件（含鸭子闹钟，实际 %d）" % r822_duck.size())
 	check(r822_bun.size() == 5, "R822 池：卷卷 5 件（实际 %d）" % r822_bun.size())
-	check(r822_duck_pool == r822_duck, "R822 池：遇到鸭绅士时出的就是那 4 件")
+	check(r822_duck_pool == r822_duck, "R824 池：遇到鸭绅士时出的就是那 5 件")
 	var r822_overlap: Array[int] = []
 	for r822_id: int in r822_bun:
 		if r822_duck.has(r822_id):
@@ -80562,8 +80571,8 @@ func _test_r822() -> void:
 	for r822_id2: int in r822_duck:
 		if not r822_union.has(r822_id2):
 			r822_union.append(r822_id2)
-	check(r822_union.size() == 9,
-			"R822 池：5 + 4 = 原 9 件，一件没丢（实际 %d）" % r822_union.size())
+	check(r822_union.size() == 10,
+			"R824 池：5 + 5 = 10 件，一件没丢（实际 %d）" % r822_union.size())
 
 	# ── ⑥ 归属：名字带「鸭」的道具全部在鸭绅士池，鸭绅士池里也只有带鸭的 ──
 	var r822_missing: Array[String] = []
@@ -80665,15 +80674,23 @@ func _test_r822() -> void:
 	check(ResourceLoader.exists("res://assets/ui/bg_curtain_duck.png"),
 			"R822 素材：bg_curtain_duck.png 在包里")
 
-	# ── ⑪ 试玩版：不进鸭绅士，但那 4 件要留在卷卷池发得出去 ──
+	# ── ⑪ 试玩版（R824 店长口径「试玩版改为给鸭绅士」）：主持人与池子都不再例外 ──
+
 	GameBuild.set_test_demo(1)
-	check(RunState.layer2_host(424242) == RunState.LAYER2_HOST_BUNBUN,
-			"R822 试玩版：恒为卷卷（鸭绅士是新增内容，按 R817 不进试玩）")
-	check(r822_relics.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN).size() == 9,
-			"R822 试玩版：卷卷池仍是 9 件（鸭绅士不在，4 件不能凭空消失）")
-	GameBuild.set_test_demo(-1)
+
 	check(RunState.layer2_host(424242) == r822_a,
-			"R822 试玩版：关掉注入后回到派生值")
+
+			"R824 试玩版：主持人与正式版同一条派生（不再恒卷卷）")
+
+	check(r822_relics.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN) == r822_bun,
+
+			"R824 试玩版：卷卷池与正式版一致（5 件）")
+
+	check(r822_relics.layer2_ids_for(RunState.LAYER2_HOST_DUCK) == r822_duck_pool,
+
+			"R824 试玩版：鸭绅士池与正式版一致（5 件，含鸭子闹钟）")
+
+	GameBuild.set_test_demo(-1)
 
 	# ── ⑫ 老调用点不受影响：不传 host 按卷卷算 ──
 	check(r822_relics.start_ids_for_layer(GameLayers.LAYER_TWO) == r822_bun,
@@ -80683,3 +80700,203 @@ func _test_r822() -> void:
 	RunState.run_seed = r822_seed_bak
 	RunState.run_rng.seed = r822_rng_seed_bak
 	RunState.run_rng.state = r822_rng_state_bak
+
+
+func _test_r824() -> void:
+
+	## R824（店长口径）：① 试玩版**改为也出鸭绅士**；② 新增二层鸭绅士道具「鸭子闹钟」6085 ——
+	## 每场战斗的第 2 回合抽 1 张卡并获得 1 点费用；第 5 回合起技能伤害 +1。
+	##
+	## 两条最容易写漏的：
+	##   · 6085 归鸭绅士之后，卷卷池必须**不含**它 —— 否则归属白分，两边都抽得到；
+	##   · 「第 5 回合起」是**从第 5 回合开始一直有效**，不是「只在第 5 回合」。
+
+	var r824_repo := RelicRepo.load_json()
+
+	var r824_rel: RelicData = r824_repo.get_relic(6085)
+
+	check(r824_rel != null and r824_rel.relic_name == "鸭子闹钟",
+
+			"R824 数据层：6085 鸭子闹钟在库")
+
+	check(r824_rel.kind == "战斗" and r824_rel.source == "二层" and r824_rel.tier == "一般",
+
+			"R824 数据层：战斗类 · 二层来源 · 一般档（实际 %s / %s / %s）"
+
+			% [r824_rel.kind, r824_rel.source, r824_rel.tier])
+
+	check(r824_rel.desc.contains("第 2 回合") and r824_rel.desc.contains("第 5 回合")
+
+			and r824_rel.desc.contains("技能伤害 +1"),
+
+			"R824 文案：写着第 2 回合 / 第 5 回合起技能 +1（%s）" % r824_rel.desc)
+
+	# 常量为唯一数值来源：文案里的 2 / 5 / +1 与引擎常量必须一致
+
+	check(GameEngine.DUCK_ALARM_RELIC_ID == 6085 and GameEngine.DUCK_ALARM_TURN == 2
+
+			and GameEngine.DUCK_ALARM_ENERGY == 1 and GameEngine.DUCK_ALARM_DRAW == 1
+
+			and GameEngine.DUCK_ALARM_SPELL_FROM == 5 and GameEngine.DUCK_ALARM_SPELL == 1,
+
+			"R824 常量：6085 / 第 2 回合 / +1 费 / 抽 1 / 第 5 回合起技能 +1")
+
+	# 图标（每个道具都必须有 relic_icon_<id>.png，缺一张 R577b 就红）
+
+	check(ResourceLoader.exists(UiAssets.relic_icon_path(6085)),
+
+			"R824 素材：relic_icon_6085.png 在包里")
+
+	# ── ① 池子归属：只归鸭绅士；第一层初始池 / 奖励池 / 事件池都不许有它 ──
+
+	check(r824_repo.duck_host_ids().has(6085), "R824 池：鸭子闹钟归鸭绅士")
+
+	check(r824_repo.layer2_ids_for(RunState.LAYER2_HOST_DUCK).has(6085),
+
+			"R824 池：遇到鸭绅士能抽到鸭子闹钟")
+
+	check(not r824_repo.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN).has(6085),
+
+			"R824 池：遇到卷卷没有鸭子闹钟（归属不重叠）")
+
+	check(not r824_repo.initial_ids().has(6085) and not r824_repo.reward_ids().has(6085)
+
+			and not r824_repo.event_ids().has(6085),
+
+			"R824 池：不进第一层初始池 / 奖励池 / 事件池")
+
+	# ── ② 试玩版：6085 在基线里（R814 口径「道具全部登陆」），且鸭绅士在试玩版可达 ──
+
+	check(DemoScope.allows_relic(6085), "R824 试玩版：6085 在 demo_scope 基线里")
+
+	var r824_demo_backup := RunState.run_seed
+
+	GameBuild.set_test_demo(1)
+
+	var r824_demo_host := RunState.layer2_host(424242)
+
+	check(r824_repo.layer2_ids_for(RunState.LAYER2_HOST_DUCK).has(6085),
+
+			"R824 试玩版：鸭绅士池里仍有鸭子闹钟")
+
+	GameBuild.set_test_demo(-1)
+
+	check(r824_demo_host == RunState.layer2_host(424242),
+
+			"R824 试玩版：主持人派生与正式版一致（%d / %d）"
+
+			% [r824_demo_host, RunState.layer2_host(424242)])
+
+	RunState.run_seed = r824_demo_backup
+
+	# ── ③ 引擎：第 1 回合不发，第 2 回合 +1 费 + 多抽 1 张，第 3 回合恢复 ──
+
+	var r824_eng := _new_engine(_ordered_deck(), 40, 40, -1, false)
+
+	r824_eng.self_relics = [6085]
+
+	r824_eng.start_game()
+
+	check(r824_eng.state.energy == FieldState.ENERGY_PER_TURN,
+
+			"R824 引擎：第 1 回合不多给费（实际 %d）" % r824_eng.state.energy)
+
+	check(r824_eng.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
+
+			"R824 引擎：第 1 回合不多抽（实际 %d）" % r824_eng.state.hand.size())
+
+	r824_eng.end_turn()
+
+	r824_eng.end_turn()
+
+	check(r824_eng.turn_number == 2,
+
+			"R824 引擎：两次 end_turn 后是我方第 2 回合（实际 %d）" % r824_eng.turn_number)
+
+	check(r824_eng.state.energy == FieldState.ENERGY_PER_TURN + 1,
+
+			"R824 引擎：第 2 回合费用 +1（%d + 1，实际 %d）"
+
+			% [FieldState.ENERGY_PER_TURN, r824_eng.state.energy])
+
+	check(r824_eng.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 1,
+
+			"R824 引擎：第 2 回合多抽 1 张（%d + 1，实际 %d）"
+
+			% [FieldState.HAND_DRAW_PER_TURN, r824_eng.state.hand.size()])
+
+	r824_eng.end_turn()
+
+	r824_eng.end_turn()
+
+	check(r824_eng.state.energy == FieldState.ENERGY_PER_TURN,
+
+			"R824 引擎：第 3 回合不再给费（实际 %d）" % r824_eng.state.energy)
+
+	check(r824_eng.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
+
+			"R824 引擎：第 3 回合不再多抽（实际 %d）" % r824_eng.state.hand.size())
+
+	# ── ④ 技能伤害：第 3 / 4 回合不加，第 5 回合起 +1 且一直有效 ──
+
+	check(r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+
+			"R824 技能：第 3 回合仍是 10（实际 %d）"
+
+			% r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10))
+
+	r824_eng.end_turn()
+
+	r824_eng.end_turn()
+
+	check(r824_eng.turn_number == 4 and r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+
+			"R824 技能：第 4 回合仍是 10（回合 %d）" % r824_eng.turn_number)
+
+	r824_eng.end_turn()
+
+	r824_eng.end_turn()
+
+	check(r824_eng.turn_number == 5,
+
+			"R824 技能：推进到我方第 5 回合（实际 %d）" % r824_eng.turn_number)
+
+	check(r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 11,
+
+			"R824 技能：第 5 回合起 +1（10 → 实际 %d）"
+
+			% r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10))
+
+	r824_eng.end_turn()
+
+	r824_eng.end_turn()
+
+	check(r824_eng.turn_number == 6 and r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 11,
+
+			"R824 技能：第 6 回合仍然 +1（回合 %d）" % r824_eng.turn_number)
+
+	# 对照组：不拿鸭子闹钟 → 第 5 回合也是 10（加成只来自这件道具）
+
+	var r824_ctrl := _new_engine(_ordered_deck(), 40, 40, -1, false)
+
+	r824_ctrl.start_game()
+
+	for _r824_i in 4:
+
+		r824_ctrl.end_turn()
+
+		r824_ctrl.end_turn()
+
+	check(r824_ctrl.turn_number == 5
+
+			and r824_ctrl._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+
+			"R824 技能：对照组第 5 回合仍是 10（回合 %d）" % r824_ctrl.turn_number)
+
+	# ── ⑤ 敌方侧不受影响（加成只给己方）──
+
+	check(r824_eng._spell_dmg(GameEngine.SIDE_OPPONENT, 10) == 10,
+
+			"R824 技能：敌方技能伤害不吃这件道具（实际 %d）"
+
+			% r824_eng._spell_dmg(GameEngine.SIDE_OPPONENT, 10))

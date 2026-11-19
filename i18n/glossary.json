@@ -2295,6 +2295,11 @@
       "en": "Defective Clock",
       "ja": "欠陥時計",
       "id": 6084
+    },
+    "鸭子闹钟": {
+      "en": "Duck Alarm Clock",
+      "ja": "アヒルの目覚まし時計",
+      "id": 6085
     }
   },
   "levels": {

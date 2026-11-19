@@ -194,8 +194,8 @@ for trait in sorted(required_trait_terms):
 # 即时效果只标获得时机，不译成消耗。
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
-check(len(NONCARD_ES["relics"]) == 79 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 79 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R806 +法术卷轴 6080 / R805 +蜂蜜 6079 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084）")
+check(len(NONCARD_ES["relics"]) == 80 and len(NONCARD_ES["classes"]) == 3,
+      "noncard 为 80 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R806 +法术卷轴 6080 / R805 +蜂蜜 6079 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085）")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})

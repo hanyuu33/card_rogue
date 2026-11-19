@@ -606,6 +606,16 @@ const PEACH_MAX_HP_GAIN:= 1     # 黄桃罐头：每次战斗结束最大生命 
 const DUCK_EYE_RELIC_ID:= 6009  # 鸭之眼：己方技能伤害 +X（X = 该技能卡的原始费用）
 const EARRING_RELIC_ID:= 6015
 const EARRING_AUTOPLAY_MAX:= 20
+# R824 鸭子闹钟（6085，二层起始池 · 鸭绅士）：**第 2 个我方回合** +1 费 + 多抽 1 张；
+#   **第 5 个我方回合起**技能伤害 +1。
+# 两条都只读 `turn_number`（本场战斗内计数），**不落存档、不加新字段** ——
+# 读档续战由引擎快照里已有的 turn_number 还原，与鹿首标本同口径。
+const DUCK_ALARM_RELIC_ID:= 6085
+const DUCK_ALARM_TURN:= 2
+const DUCK_ALARM_ENERGY:= 1
+const DUCK_ALARM_DRAW:= 1
+const DUCK_ALARM_SPELL_FROM:= 5
+const DUCK_ALARM_SPELL:= 1
 const ICECREAM_RELIC_ID:= 6016
 const ICECREAM_HP_COST:= 3
 const ICECREAM_ENERGY:= 2    # R340 下调：+4 → +2（抽牌仍是 3 张）
@@ -2724,6 +2734,18 @@ func _begin_turn(side: String) -> void :
 			earring_energy = 1
 			state.energy += earring_energy
 			_log("鸭语耳环：本回合费用 +1")
+
+		# R824 鸭子闹钟（6085）：**第 2 个我方回合**发一次 —— +1 费、多抽 1 张。
+		# 费用与鸭翼 / 鸭语耳环同一条 `state.energy` 发放口；抽牌走 `extra_draw`
+		# （唯一抽牌口 `_draw_many`，所以必须在它之前加）。判据只看 `turn_number`。
+		if self_relics.has(DUCK_ALARM_RELIC_ID) and turn_number == DUCK_ALARM_TURN:
+			state.energy += DUCK_ALARM_ENERGY
+			extra_draw += DUCK_ALARM_DRAW
+			_log("鸭子闹钟：第 %d 回合，费用 +%d、多抽 %d 张"
+					% [DUCK_ALARM_TURN, DUCK_ALARM_ENERGY, DUCK_ALARM_DRAW])
+			action.emit("relic", {"id": DUCK_ALARM_RELIC_ID,
+					"text": "鸭子闹钟：第 %d 回合费用 +%d / 多抽 %d 张"
+							% [DUCK_ALARM_TURN, DUCK_ALARM_ENERGY, DUCK_ALARM_DRAW]})
 
 		# R810 新月耳饰（6081）：每 3 场战斗，**在该场第一回合**多给 1 点费用。
 		# 推进计数的口只有这里（`turn_number == 1` 每场只成立一次）——
@@ -15132,6 +15154,10 @@ func _spell_dmg(side: String, base: int, card: CardData = null,
 	out += turn_spell_bonus
 	out += turn_dmg_bonus
 	out += deer_bonus   # R341 鹿首标本：每回合 +1（本场累计）
+	# R824 鸭子闹钟（6085）：第 5 个我方回合**起**技能伤害 +1（固定值，不是累计层数）。
+	# 与鹿首标本 / 骑士剑同属固定加成，会被后面的快速符文百分比一起放大。
+	if self_relics.has(DUCK_ALARM_RELIC_ID) and turn_number >= DUCK_ALARM_SPELL_FROM:
+		out += DUCK_ALARM_SPELL
 	# R383 骑士剑（6053）：本场第一次击杀之后，己方技能伤害 +1（固定值，只加一次）。
 	if _knight_sword_active():
 		out += KNIGHT_SWORD_SPELL

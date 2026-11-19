@@ -744,9 +744,8 @@ static func layer2_host(p_seed := -1) -> int:
 	##   · 不摇 rng → 不扰动地图 / 掉落那条顺序链，同一种子重跑必然一致；
 	##   · 不进存档 → 与 R819 占卜室同一口径：退出事件再进、回标题再继续，**换不了人**。
 	##     （存在场景变量或存档里能「重摇」的随机结果，都是玩家可以反复试到想要那一边的漏洞。）
-	## 试玩版恒为卷卷：鸭绅士是 R822 的新增内容，按 R817「新增不跟着走」不进试玩。
-	if GameBuild.is_demo():
-		return LAYER2_HOST_BUNBUN
+	## R824（店长口径「试玩版改为给鸭绅士」）：试玩版**不再短路成卷卷**，
+	## 与正式版走同一条派生 —— 玩家在试玩版也该看到两种开场。
 	var s: int = run_seed if p_seed < 0 else p_seed
 	return absi(hash("%d:layer2host" % s)) % 2
 
@@ -1680,8 +1679,8 @@ static func _pick_from_boss_pool(layer: int) -> Dictionary:
 static func _roll_relic_choice() -> Array[int]:
 	## 从「本层起始道具池」随机抽 3 个不重复的（池小于 3 时全给）：
 	## 第一层 = 初始道具池（6001~6004）；第二层 = 二层专属起始道具池（6014~6018）。
-	## R822：第二层按「这一局遇到谁」分流 —— 鸭绅士在场时池子里是那 4 件带鸭道具，
-	## 卷卷在场时是剩下的 5 件（试玩版没有鸭绅士，4 件留在卷卷池，一件都不丢）。
+	## R822：第二层按「这一局遇到谁」分流 —— 鸭绅士在场时池子里是带鸭道具，
+	## 卷卷在场时是剩下的 5 件。R824 起试玩版也出鸭绅士，两边同一条分流。
 	var host: int = layer2_host() if current_layer == GameLayers.LAYER_TWO else LAYER2_HOST_BUNBUN
 	var pool := RelicRepo.load_json().start_ids_for_layer(current_layer, host)
 	var out: Array[int] = []
