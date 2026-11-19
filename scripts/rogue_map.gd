@@ -414,12 +414,17 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 		var i3 := int(cell3.get("id", -1))
 		if i3 < 0 or is_fixed_open(cell3) or bool(cell3.get("hidden", false)):
 			continue
-		var w := _unknown_weights(cell3, layer, start_nbs)
-		var t := ""
+		# R815：第一层起点邻居**整格不参与重摇**（内容与显示都不动）。
+		# R192 要求它「只可能是事件 / 一般战斗、不得是 ? 房」，`_make_cells` 为此写死
+		# `hidden = false`；本函数早先把它一并翻成 ?，规则就在显示层被掀掉了。
+		# 而「重摇成另一个 battle/event」本身没有意义 —— 它本来就只在这两类里。
+		# ⚠️ 必须整格跳过而不是「重摇后强制 hidden=false」：后者让本函数的幂等判据
+		#    （跳过 hidden 的格子）永远对它不成立，第二次调用会再算一遍重摇格数。
+		# ⚠️ 只豁免**第一层**：第二层起点邻居本来就允许是 ?（R192 只禁精英/篝火）。
 		if start_nbs.has(i3) and layer == GameLayers.LAYER_DEFAULT:
-			t = _weighted(w, rng)
-		else:
-			t = _weighted_far(w, rng, col_of(i3), row_of(i3), far_norm)
+			continue
+		var w := _unknown_weights(cell3, layer, start_nbs)
+		var t := _weighted_far(w, rng, col_of(i3), row_of(i3), far_norm)
 		cell3["type"] = t
 		cell3["hidden"] = true
 		cell3["revealed"] = false

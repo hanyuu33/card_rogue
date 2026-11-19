@@ -15364,6 +15364,65 @@ func _init() -> void:
 
 			"R192 第一层起点邻居：事件与一般战斗都确实会出现（未被写死成单一类型）")
 
+	# ---- R815：R192 的约束在**带骰子**时也得成立 ----
+	# R192 的老测试走 `RogueMap.generate(rng, LAYER)`（不带 dice_rng），只覆盖生成期；
+	# 而骰子的重摇是另一条路（`reroll_as_unknown` 把所有非固定格翻成 ?）。
+	# 实测（tools/_check_r813b_dice.gd，24 张）：修之前起点邻居 55/55 全显示成 ?。
+	var q_r814_bad_l1 := ""
+	var q_r814_bad_l2 := ""
+	for q_r814_i in 40:
+		var q_r814_rng := RandomNumberGenerator.new()
+		q_r814_rng.seed = 140000 + q_r814_i
+		var q_r814_dice := RandomNumberGenerator.new()
+		q_r814_dice.seed = 240000 + q_r814_i
+		var q_r814_m1: Array = RogueMap.generate(q_r814_rng, GameLayers.LAYER_DEFAULT,
+				q_r814_dice, {})
+		var q_r814_s1: Dictionary = RogueMap.start_cell(q_r814_m1)
+		for q_r814_nid: int in (q_r814_s1["doors"] as Array):
+			var q_r814_c: Dictionary = q_r814_m1[q_r814_nid]
+			var q_r814_t := str(q_r814_c.get("type", ""))
+			if q_r814_t != "event" and q_r814_t != "battle":
+				q_r814_bad_l1 = "层1#%d 类型=%s" % [q_r814_nid, q_r814_t]
+			if bool(q_r814_c.get("hidden", false)):
+				q_r814_bad_l1 = "层1#%d 被遮成?房" % q_r814_nid
+		var q_r814_dice2 := RandomNumberGenerator.new()
+		q_r814_dice2.seed = 340000 + q_r814_i
+		var q_r814_m2: Array = RogueMap.generate(q_r814_rng, GameLayers.LAYER_TWO,
+				q_r814_dice2, {})
+		var q_r814_s2: Dictionary = RogueMap.start_cell(q_r814_m2)
+		for q_r814_nid2: int in (q_r814_s2["doors"] as Array):
+			var q_r814_t2 := str(q_r814_m2[q_r814_nid2].get("type", ""))
+			if q_r814_t2 == "elite" or q_r814_t2 == "rest":
+				q_r814_bad_l2 = "层2#%d 类型=%s" % [q_r814_nid2, q_r814_t2]
+	check(q_r814_bad_l1 == "",
+			"R815 带骰子：第一层起点邻居仍是事件/一般战斗，**没被遮成 ? 房**（违例：%s）"
+			% ("无" if q_r814_bad_l1 == "" else q_r814_bad_l1))
+	check(q_r814_bad_l2 == "",
+			"R815 带骰子：第二层起点邻居仍不出精英/篝火（违例：%s）"
+			% ("无" if q_r814_bad_l2 == "" else q_r814_bad_l2))
+	# 反面对照：除起点邻居外的非固定格**必须**被遮成 ?（否则「只修了症状、骰子失效」）
+	var q_r814_other_q := 0
+	var q_r814_other_n := 0
+	var q_r814_rng3 := RandomNumberGenerator.new()
+	q_r814_rng3.seed = 140777
+	var q_r814_dice3 := RandomNumberGenerator.new()
+	q_r814_dice3.seed = 240777
+	var q_r814_m3: Array = RogueMap.generate(q_r814_rng3, GameLayers.LAYER_DEFAULT,
+			q_r814_dice3, {})
+	var q_r814_nb := {}
+	for q_r814_d: int in (RogueMap.start_cell(q_r814_m3)["doors"] as Array):
+		q_r814_nb[int(q_r814_d)] = true
+	for q_r814_c3: Dictionary in q_r814_m3:
+		var q_r814_i3 := int(q_r814_c3.get("id", -1))
+		if RogueMap.is_fixed_open(q_r814_c3) or q_r814_nb.has(q_r814_i3):
+			continue
+		q_r814_other_n += 1
+		if bool(q_r814_c3.get("hidden", false)):
+			q_r814_other_q += 1
+	check(q_r814_other_n > 0 and q_r814_other_q == q_r814_other_n,
+			"R815 带骰子：其余非固定格**全部**变成 ? 房（%d / %d）"
+			% [q_r814_other_q, q_r814_other_n])
+
 
 
 	# ---- R68：同一张地图上事件子类型不重复（全出过一遍后才允许重复）----
@@ -51642,9 +51701,17 @@ func _init() -> void:
 
 	var r312_nonfixed_hidden := true
 
+	# R814：第一层起点邻居**也不在**重摇名单里（R192 要求它保持明牌的战斗/事件）。
+	# 这是本轮唯一的口径变化，来源见 `RogueMap.reroll_as_unknown()` 的 R814 注释。
+	var r312_start_nb := {}
+	var r312_start_i := RogueMap.idx(RogueMap.START_COL, RogueMap.START_ROW)
+	if r312_start_i >= 0 and r312_start_i < r312_dice.size():
+		for r312_nbd: int in (r312_dice[r312_start_i]["doors"] as Array):
+			r312_start_nb[int(r312_nbd)] = true
+
 	for c312: Dictionary in r312_dice:
 
-		if RogueMap.is_fixed_open(c312):
+		if RogueMap.is_fixed_open(c312) or r312_start_nb.has(int(c312.get("id", -1))):
 
 			continue
 
@@ -51654,7 +51721,9 @@ func _init() -> void:
 
 			r312_nonfixed_hidden = false
 
-	check(r312_nonfixed_hidden, "R312 水晶骰子：除固定房间外，所有房间都是「?」")
+	check(r312_nonfixed_hidden,
+
+			"R312/R815 水晶骰子：除固定房间与第一层起点邻居外，所有房间都是「?」")
 
 	# ② 逐格语义：拿**同一张图**的副本重摇再比 —— 不能拿两次 generate 的结果互比。
 
@@ -51760,9 +51829,13 @@ func _init() -> void:
 
 	var r312_live_ok := true
 
+	var r312_live_nb := {}
+	if r312_start_i >= 0 and r312_start_i < r312_live.size():
+		for r312_lnd: int in (r312_live[r312_start_i]["doors"] as Array):
+			r312_live_nb[int(r312_lnd)] = true
 	for c: Dictionary in r312_live:
 
-		if RogueMap.is_fixed_open(c):
+		if RogueMap.is_fixed_open(c) or r312_live_nb.has(int(c.get("id", -1))):
 
 			continue
 
@@ -51770,7 +51843,9 @@ func _init() -> void:
 
 			r312_live_ok = false
 
-	check(r312_live_ok, "R312 水晶骰子：重摇后非固定房间全部读作「?」")
+	check(r312_live_ok,
+
+			"R312/R815 水晶骰子：重摇后非固定房间（起点邻居除外）全部读作「?」")
 
 
 
