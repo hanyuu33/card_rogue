@@ -745,7 +745,14 @@
       "UI_MENU_TITLE": "メニュー",
       "UI_MENU_SEED": "シード：%s",
       "GAME_BRAND_NAME_ZH": "ガーガー乱殺",
-      "GAME_BRAND_FOOTER": "v{v}"
+      "GAME_BRAND_FOOTER": "v{v}",
+      "CURTAIN_DUCK_SPEAKER": "アヒル紳士",
+      "CURTAIN_DUCK_GREETING_DRUID": "またお手を煩わせてしまって、すみません。",
+      "CURTAIN_DUCK_GREETING_ROGUE": "あの忌々しい猫を捕まえてくれませんか？密輸、脱税、窃盗、ろくでもないことばかりです。",
+      "CURTAIN_DUCK_GREETING_MECH": "お急ぎにならないで。まだまだ相談したいことがたくさんあるんですよ。",
+      "CURTAIN_DUCK_REPLY_DRUID": "みんなの役に立てて嬉しいです。",
+      "CURTAIN_DUCK_REPLY_ROGUE": "強いんですか、そいつは？",
+      "CURTAIN_DUCK_REPLY_MECH": "また今度、ですね。"
     },
     "shared": {
       "BAN_MENU_CONTINUE": "続ける",

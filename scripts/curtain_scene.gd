@@ -13,12 +13,19 @@ extends Control
 ##
 ## 素材（缺失都不空白、不报错）：
 ##   assets/ui/bg_curtain.png          整屏背景（卷卷的森林 CG）
+##   assets/ui/bg_curtain_duck.png     整屏背景（R822 鸭绅士的二层工业 CG）
 ##   assets/ui/curtain_box.png         羊皮纸对话框（九宫格，中心留白写字）
 ##   assets/ui/curtain_plate.png       名称牌
 ## ⚠️ R310 修订（用户口径）：**不再使用角色立绘** —— 二层回答改成只换名称牌 + 台词，
 ##    立绘素材（curtain_hero_*）已从 assets/ui 撤掉，源图留在 art_src 备查。
 ##
 ## 文案唯一口 = `CurtainLines`（本文件只负责排版与状态机）。
+##
+## R822（店长口径）：**第二层起点有两位主持人，权重相等** —— 卷卷（豚鼠吟游诗人）/ 鸭绅士。
+##   是谁由 `RunState.layer2_host()` 按本局种子派生（不摇 rng、不进存档 —— 退出去再进换不了人）。
+##   两位的流程一模一样（招呼一句 → 三选一 → 玩家回一句），所以这里只多一个 `_host`：
+##   背景图、名称牌、台词、道具池跟着它走，状态机一行没改。
+##   道具池的分流在 `RelicRepo.layer2_ids_for(host)`：鸭绅士那 4 件带鸭的道具只在鸭绅士这边出。
 ##
 ## 进程纪律：起点三选一的候选仍由 `RunState.relic_choice` 生成（start_run /
 ## advance_layer 各摇一次）；收下或跳过都要把它清空，否则地图会把人再送回来。
@@ -47,6 +54,8 @@ var _menu: UiMenu = null
 
 var _layer := 1
 var _cls := ""
+var _host := CurtainLines.HOST_BUNBUN   # R822：本次起点的主持人（0 卷卷 / 1 鸭绅士）
+var _host_force := -1                   # R822：出图参数强制指定（-1 = 跟随派生）
 var _stage := 0
 var _typing := false
 var _typed := 0.0
@@ -77,6 +86,16 @@ func _ready() -> void:
 	if _cls == "":
 		_cls = PlayerClass.default_id()
 	_apply_demo_args()
+	# R822：第二层起点「遇到谁」—— 由本局种子派生（`RunState.layer2_host()`，
+	# 权重相等、不摇 rng、不进存档）。第一层恒为卷卷。
+	# ⚠️ 只在这里读一次并存进 `_host`：`layer2_host()` 是纯函数，但每帧重算没有意义，
+	#    而且出图参数要在算之前先生效（`_host_force`）。
+	if _host_force >= 0:
+		_host = _host_force
+	elif _layer >= GameLayers.LAYER_TWO:
+		_host = RunState.layer2_host()
+	else:
+		_host = CurtainLines.HOST_BUNBUN
 	# R470（用户口径「进入第三层时依然会触发第一层的起始事件」）：第三层没有开场事件 ——
 	# 万一路径上仍被送到这里（旧存档 / 别处跳转），**直接转去地图**，不要再演一遍
 	# 「卷卷 + 三选一」（下面那段自愈会给它摇到第一层的初始池，正是用户看到的现象）。
@@ -87,7 +106,7 @@ func _ready() -> void:
 	_build_nodes()
 	# 候选兜底：直接打开场景（调试 / 出图）时给一组（本层起始道具池前 3 个）
 	if RunState.relic_choice.is_empty():
-		var pool: Array[int] = RelicRepo.load_json().start_ids_for_layer(_layer)
+		var pool: Array[int] = RelicRepo.load_json().start_ids_for_layer(_layer, _host)
 		RunState.relic_choice = pool.slice(0, mini(3, pool.size()))
 	_fill_options()
 	_relayout()
@@ -96,7 +115,7 @@ func _ready() -> void:
 	# 两个查看按钮（与其他 run 内界面同一口径）。全局状态条（头像/生命/金币）本就显示。
 	DeckViewer.attach(self)
 	RelicViewer.attach(self, Vector2(1044, 6))
-	_say(CurtainLines.greeting(_layer, _cls))
+	_say(CurtainLines.greeting(_layer, _cls, _host))
 	if _tip_demo >= 0:
 		_hover = _tip_demo
 		_tip.queue_redraw.call_deferred()
@@ -139,6 +158,14 @@ func _apply_demo_args() -> void:
 				_layer = GameLayers.LAYER_DEFAULT
 			"--curtain2":
 				_layer = GameLayers.LAYER_TWO
+			"--curtainduck":
+				# R822 出图：强制「鸭绅士」这场（否则会按本局种子随机落到卷卷）
+				_layer = GameLayers.LAYER_TWO
+				_host_force = CurtainLines.HOST_DUCK
+			"--curtainbunbun":
+				# R822 出图：强制「卷卷」这场（对照用）
+				_layer = GameLayers.LAYER_TWO
+				_host_force = CurtainLines.HOST_BUNBUN
 			"--typedone":
 				_instant = true
 			"--curtainbox":
@@ -167,7 +194,8 @@ func _apply_demo_args() -> void:
 func _build_nodes() -> void:
 	# ① 背景（缺图 → 退 v 内置暗底 ColorRect）
 	_bg = TextureRect.new()
-	_bg.texture = UiAssets.get_tex("bg_curtain")
+	# R822：背景跟着主持人走 —— 卷卷用森林那张，鸭绅士用二层工业场景那张。
+	_bg.texture = UiAssets.get_tex(CurtainLines.backdrop_name(_host))
 	# 用户口径：**背景图不拉伸** —— 等比完整显示、居中；
 	# 窗口不是 16:9 时宁可两侧/上下留暗边，也不裁掉画面、更不拉变形。
 	_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -211,7 +239,8 @@ func _build_nodes() -> void:
 	_plate.texture = UiAssets.get_tex("curtain_plate")
 	add_child(_plate)
 	_title = Label.new()
-	_title.text = GameI18n.source(CurtainLines.SPEAKER)
+	# `speaker_of()` 返回的已经是当前语言的名字 —— 不要再过一次 `GameI18n.source()`
+	_title.text = CurtainLines.speaker_of(_host)
 	_title.add_theme_font_override("font", _font_bold)
 	_title.add_theme_font_size_override("font_size", UiTheme.FS_SUBHEAD)
 	_title.add_theme_color_override("font_color", Color("5b3f1c"))
@@ -244,7 +273,7 @@ func _build_nodes() -> void:
 		_opts.append(b)
 	# ⑦ 跳过 / 离开
 	_skip = Button.new()
-	_skip.text = CurtainLines.skip_label(_layer)
+	_skip.text = CurtainLines.skip_label(_layer, _host)
 	UiTheme.apply_chip(_skip, true, true)
 	_skip.pressed.connect(_on_skip)
 	add_child(_skip)
@@ -304,7 +333,7 @@ func _say(text: String, speaker := "") -> void:
 	_desc.text = text
 	_desc.visible_characters = 0 if not _instant else -1
 	if speaker != "":
-		_title.text = GameI18n.source(speaker)
+		_title.text = speaker
 	if _instant:
 		_typing = false
 		_desc.visible_characters = -1
@@ -405,12 +434,13 @@ func _pick(i: int) -> void:
 	_show_options(false)
 	RunState.choose_start_relic(id)
 	var name: String = RunState.relic_display_name(id)
-	if CurtainLines.has_reply(_layer):
+	if CurtainLines.has_reply(_layer, _host):
 		# 二层起：角色回一句（R310 修订：只换名称牌，不再出立绘 —— 用户口径）
-		_say(CurtainLines.reply(_layer, _cls), CurtainLines.reply_speaker(_layer, _cls))
+		_say(CurtainLines.reply(_layer, _cls, _host), CurtainLines.reply_speaker(_layer, _cls, _host))
 		_skip.text = GameI18n.ui("shell", "CURTAIN_LEAVE", "离开")
 	elif name != "":
-		_say(GameI18n.ui("shell", "CURTAIN_ACCEPTED_FALLBACK", "「%s」收下了——路上小心哦。") % name, CurtainLines.SPEAKER)
+		_say(GameI18n.ui("shell", "CURTAIN_ACCEPTED_FALLBACK", "「%s」收下了——路上小心哦。") % name,
+				CurtainLines.speaker_of(_host))
 		_skip.text = GameI18n.ui("shell", "CURTAIN_LEAVE", "离开")
 	else:
 		_end_stage()

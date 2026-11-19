@@ -733,6 +733,24 @@ static func sacrament_stay_key() -> int:
 	return current_layer * 10000 + current_node_id
 
 
+## R822：第二层起点的主持人 —— 0 = 卷卷 / 1 = 鸭绅士（与 `CurtainLines.HOST_*` 同值）。
+const LAYER2_HOST_BUNBUN := 0
+const LAYER2_HOST_DUCK := 1
+
+
+static func layer2_host(p_seed := -1) -> int:
+	## R822（店长口径）：第二层起点遇到谁 —— 卷卷 / 鸭绅士，**权重相等**（各 50%）。
+	## 由「本局种子」派生，不摇 `run_rng`、也不进存档：
+	##   · 不摇 rng → 不扰动地图 / 掉落那条顺序链，同一种子重跑必然一致；
+	##   · 不进存档 → 与 R819 占卜室同一口径：退出事件再进、回标题再继续，**换不了人**。
+	##     （存在场景变量或存档里能「重摇」的随机结果，都是玩家可以反复试到想要那一边的漏洞。）
+	## 试玩版恒为卷卷：鸭绅士是 R822 的新增内容，按 R817「新增不跟着走」不进试玩。
+	if GameBuild.is_demo():
+		return LAYER2_HOST_BUNBUN
+	var s: int = run_seed if p_seed < 0 else p_seed
+	return absi(hash("%d:layer2host" % s)) % 2
+
+
 static func divination_roll_for(p_seed: int, p_layer: int, p_node: int,
 		p_kinds := 4) -> int:
 	## R819 占卜室：**这一次占卜出第几种幻象**（1~p_kinds）—— 由「种子 + 层 + 节点」派生，
@@ -1662,7 +1680,10 @@ static func _pick_from_boss_pool(layer: int) -> Dictionary:
 static func _roll_relic_choice() -> Array[int]:
 	## 从「本层起始道具池」随机抽 3 个不重复的（池小于 3 时全给）：
 	## 第一层 = 初始道具池（6001~6004）；第二层 = 二层专属起始道具池（6014~6018）。
-	var pool := RelicRepo.load_json().start_ids_for_layer(current_layer)
+	## R822：第二层按「这一局遇到谁」分流 —— 鸭绅士在场时池子里是那 4 件带鸭道具，
+	## 卷卷在场时是剩下的 5 件（试玩版没有鸭绅士，4 件留在卷卷池，一件都不丢）。
+	var host: int = layer2_host() if current_layer == GameLayers.LAYER_TWO else LAYER2_HOST_BUNBUN
+	var pool := RelicRepo.load_json().start_ids_for_layer(current_layer, host)
 	var out: Array[int] = []
 	var bag: Array[int] = pool.duplicate()
 	while out.size() < 3 and not bag.is_empty():

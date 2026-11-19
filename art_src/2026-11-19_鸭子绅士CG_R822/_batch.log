@@ -1,0 +1,12 @@
+[18:16:19] 代理预检 HTTP 200
+[18:16:19] RUN  cg_duck_gentleman_v1.png  纯文生图  第1次
+[18:21:04] OK   cg_duck_gentleman_v1.png  285s  2153517 字节
+[18:21:04] === R819 结束 成功1 / 失败0 []
+[18:43:09] 代理预检 HTTP 200
+[18:43:09] RUN  cg_duck_gentleman_v2.png  带参考图×1  第1次
+[18:46:29] OK   cg_duck_gentleman_v2.png  200s  1986291 字节
+[18:46:29] === R819 结束 成功1 / 失败0 []
+[18:46:56] 代理预检 HTTP 200
+[18:46:56] RUN  cg_duck_gentleman_v3.png  带参考图×1  第1次
+[18:55:38] OK   cg_duck_gentleman_v3.png  522s  1906810 字节
+[18:55:38] === R819 结束 成功1 / 失败0 []

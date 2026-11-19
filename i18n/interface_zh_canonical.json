@@ -2617,59 +2617,59 @@
         "zh": "按任意键继续"
       },
       "CURTAIN_MENU_CONTINUE": {
-        "source": "scripts/curtain_scene.gd:127",
+        "source": "scripts/curtain_scene.gd:146",
         "zh": "继续这段对话"
       },
       "CURTAIN_MENU_SUBTITLE": {
-        "source": "scripts/curtain_scene.gd:128",
+        "source": "scripts/curtain_scene.gd:147",
         "zh": "起点"
       },
       "CURTAIN_OPTION_EMPTY": {
-        "source": "scripts/curtain_scene.gd:367",
+        "source": "scripts/curtain_scene.gd:396",
         "zh": "（空缺）"
       },
       "CURTAIN_OPTION_UNKNOWN": {
-        "source": "scripts/curtain_scene.gd:371",
+        "source": "scripts/curtain_scene.gd:400",
         "zh": "（未知道具 %d）"
       },
       "CURTAIN_OPTION_NAME": {
-        "source": "scripts/curtain_scene.gd:375",
+        "source": "scripts/curtain_scene.gd:404",
         "zh": "「%s」"
       },
       "CURTAIN_LEAVE": {
-        "source": "scripts/curtain_scene.gd:411",
+        "source": "scripts/curtain_scene.gd:440",
         "zh": "离开"
       },
       "CURTAIN_ACCEPTED_FALLBACK": {
-        "source": "scripts/curtain_scene.gd:413",
+        "source": "scripts/curtain_scene.gd:442",
         "zh": "「%s」收下了——路上小心哦。"
       },
       "CURTAIN_RELIC_KIND": {
-        "source": "scripts/curtain_scene.gd:542",
+        "source": "scripts/curtain_scene.gd:572",
         "zh": "道具 · %s"
       },
       "CURTAIN_LINKED_CARD_TITLE": {
-        "source": "scripts/curtain_scene.gd:579",
+        "source": "scripts/curtain_scene.gd:609",
         "zh": "获得卡牌"
       },
       "CURTAIN_LINKED_CARD_META": {
-        "source": "scripts/curtain_scene.gd:592",
+        "source": "scripts/curtain_scene.gd:622",
         "zh": "%s · %d 费 · %s"
       },
       "CURTAIN_SOUND_ON": {
-        "source": "scripts/curtain_scene.gd:609",
+        "source": "scripts/curtain_scene.gd:639",
         "zh": "音效：开"
       },
       "CURTAIN_SOUND_OFF": {
-        "source": "scripts/curtain_scene.gd:609",
+        "source": "scripts/curtain_scene.gd:639",
         "zh": "音效：关"
       },
       "CURTAIN_BACK_TITLE": {
-        "source": "scripts/curtain_scene.gd:611",
+        "source": "scripts/curtain_scene.gd:641",
         "zh": "返回标题"
       },
       "CURTAIN_SPEAKER": {
-        "source": "scripts/curtain_lines.gd:16",
+        "source": "scripts/curtain_lines.gd:36",
         "zh": "卷卷"
       },
       "CURTAIN_SPEAKER_SUBTITLE": {
@@ -2677,39 +2677,39 @@
         "zh": "豚鼠吟游诗人"
       },
       "CURTAIN_GREETING_DEFAULT": {
-        "source": "scripts/curtain_lines.gd:23",
+        "source": "scripts/curtain_lines.gd:42",
         "zh": "看看这里有什么能帮到你的。"
       },
       "CURTAIN_GREETING_DRUID": {
-        "source": "scripts/curtain_lines.gd:26",
+        "source": "scripts/curtain_lines.gd:55",
         "zh": "在这里遇到你真开心。"
       },
       "CURTAIN_GREETING_ROGUE": {
-        "source": "scripts/curtain_lines.gd:28",
+        "source": "scripts/curtain_lines.gd:57",
         "zh": "这些就当做定金吧。"
       },
       "CURTAIN_GREETING_MECH": {
-        "source": "scripts/curtain_lines.gd:30",
+        "source": "scripts/curtain_lines.gd:59",
         "zh": "你喜欢音乐吗？"
       },
       "CURTAIN_REPLY_DRUID": {
-        "source": "scripts/curtain_lines.gd:45",
+        "source": "scripts/curtain_lines.gd:84",
         "zh": "我也是。"
       },
       "CURTAIN_REPLY_ROGUE": {
-        "source": "scripts/curtain_lines.gd:47",
+        "source": "scripts/curtain_lines.gd:86",
         "zh": "我就喜欢这种有趣的工作。"
       },
       "CURTAIN_REPLY_MECH": {
-        "source": "scripts/curtain_lines.gd:49",
+        "source": "scripts/curtain_lines.gd:88",
         "zh": "是的，这个节奏让我安心。"
       },
       "CURTAIN_SKIP_LAYER_ONE": {
-        "source": "scripts/curtain_lines.gd:61",
+        "source": "scripts/curtain_lines.gd:100",
         "zh": "摇摇头（不拿）"
       },
       "CURTAIN_SKIP_LAYER_TWO": {
-        "source": "scripts/curtain_lines.gd:62",
+        "source": "scripts/curtain_lines.gd:101",
         "zh": "摆手拒绝（不拿）"
       },
       "RUN_SUMMARY_CLASS": {
@@ -3025,30 +3025,102 @@
         "source": "scripts/class_pick_scene.gd:638",
         "zh": "尚未解锁"
       },
-      "MODE_BACK": {"source": "scripts/mode_select_scene.gd", "zh": "返回标题"},
-      "MODE_STANDARD_START": {"source": "scripts/mode_select_scene.gd", "zh": "标准模式 · 选择角色"},
-      "DAILY_USED": {"source": "scripts/mode_select_scene.gd", "zh": "今日已挑战"},
-      "DAILY_START": {"source": "scripts/mode_select_scene.gd", "zh": "开始今日挑战"},
-      "DAILY_STEAM_REFRESH": {"source": "scripts/mode_select_scene.gd", "zh": "刷新"},
-      "DAILY_STEAM_IDLE": {"source": "scripts/mode_select_scene.gd", "zh": "连接后读取今日前十"},
-      "DAILY_STEAM_LOADING": {"source": "scripts/mode_select_scene.gd", "zh": "正在读取……"},
-      "DAILY_STEAM_OFFLINE": {"source": "scripts/mode_select_scene.gd", "zh": "Steam 未连接 · 本地成绩仍保留"},
-      "DAILY_STEAM_FAILED": {"source": "scripts/mode_select_scene.gd", "zh": "读取失败 · 不影响本地成绩"},
-      "MODE_TITLE": {"source": "scripts/mode_select_scene.gd", "zh": "选择游戏模式"},
-      "MODE_SUBTITLE": {"source": "scripts/mode_select_scene.gd", "zh": "自由构筑，或挑战今天所有人相同的一局"},
-      "MODE_STANDARD": {"source": "scripts/mode_select_scene.gd", "zh": "标准模式"},
-      "MODE_DAILY": {"source": "scripts/mode_select_scene.gd", "zh": "每日挑战"},
-      "MODE_STANDARD_DESC": {"source": "scripts/mode_select_scene.gd", "zh": "自选角色与难度，也可输入种子。\n卡组、道具和剧情进度按标准规则累积。"},
-      "DAILY_CLASS": {"source": "scripts/mode_select_scene.gd", "zh": "固定角色"},
-      "DAILY_DIFFICULTY": {"source": "scripts/mode_select_scene.gd", "zh": "固定难度"},
-      "DAILY_DIFFICULTY_NAME_2": {"source": "scripts/mode_select_scene.gd", "zh": "严酷"},
-      "DAILY_SEED": {"source": "scripts/mode_select_scene.gd", "zh": "今日种子"},
-      "DAILY_ONCE": {"source": "scripts/mode_select_scene.gd", "zh": "每天一次 · 开局即计次 · 可续档"},
-      "DAILY_PLAYING": {"source": "scripts/mode_select_scene.gd", "zh": "今日挑战进行中"},
-      "DAILY_RESULT": {"source": "scripts/mode_select_scene.gd", "zh": "今日成绩"},
-      "DAILY_LOCAL_BOARD": {"source": "scripts/mode_select_scene.gd", "zh": "本地成绩 · 高分优先"},
-      "DAILY_NO_SCORE": {"source": "scripts/mode_select_scene.gd", "zh": "还没有已结算的每日挑战"},
-      "DAILY_STEAM_BOARD": {"source": "scripts/mode_select_scene.gd", "zh": "Steam 今日榜"},
+      "MODE_BACK": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "返回标题"
+      },
+      "MODE_STANDARD_START": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "标准模式 · 选择角色"
+      },
+      "DAILY_USED": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日已挑战"
+      },
+      "DAILY_START": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "开始今日挑战"
+      },
+      "DAILY_STEAM_REFRESH": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "刷新"
+      },
+      "DAILY_STEAM_IDLE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "连接后读取今日前十"
+      },
+      "DAILY_STEAM_LOADING": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "正在读取……"
+      },
+      "DAILY_STEAM_OFFLINE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "Steam 未连接 · 本地成绩仍保留"
+      },
+      "DAILY_STEAM_FAILED": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "读取失败 · 不影响本地成绩"
+      },
+      "MODE_TITLE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "选择游戏模式"
+      },
+      "MODE_SUBTITLE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "自由构筑，或挑战今天所有人相同的一局"
+      },
+      "MODE_STANDARD": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "标准模式"
+      },
+      "MODE_DAILY": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "每日挑战"
+      },
+      "MODE_STANDARD_DESC": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "自选角色与难度，也可输入种子。\n卡组、道具和剧情进度按标准规则累积。"
+      },
+      "DAILY_CLASS": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "固定角色"
+      },
+      "DAILY_DIFFICULTY": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "固定难度"
+      },
+      "DAILY_DIFFICULTY_NAME_2": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "严酷"
+      },
+      "DAILY_SEED": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日种子"
+      },
+      "DAILY_ONCE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "每天一次 · 开局即计次 · 可续档"
+      },
+      "DAILY_PLAYING": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日挑战进行中"
+      },
+      "DAILY_RESULT": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日成绩"
+      },
+      "DAILY_LOCAL_BOARD": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "本地成绩 · 高分优先"
+      },
+      "DAILY_NO_SCORE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "还没有已结算的每日挑战"
+      },
+      "DAILY_STEAM_BOARD": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "Steam 今日榜"
+      },
       "TITLE_START": {
         "source": "scripts/l10n.gd:27",
         "zh": "开始对战"
@@ -3308,6 +3380,34 @@
       "GAME_BRAND_FOOTER": {
         "source": "scripts/game_brand.gd:51",
         "zh": "v{v}"
+      },
+      "CURTAIN_DUCK_SPEAKER": {
+        "source": "scripts/curtain_lines.gd:35",
+        "zh": "鸭绅士"
+      },
+      "CURTAIN_DUCK_GREETING_DRUID": {
+        "source": "scripts/curtain_lines.gd:46",
+        "zh": "这次又给你添麻烦了。"
+      },
+      "CURTAIN_DUCK_GREETING_ROGUE": {
+        "source": "scripts/curtain_lines.gd:48",
+        "zh": "能帮我逮住那只该死的猫吗？走私，逃税，偷窃，简直无恶不作。"
+      },
+      "CURTAIN_DUCK_GREETING_MECH": {
+        "source": "scripts/curtain_lines.gd:51",
+        "zh": "别急着走，我还要很多合作想和你谈。"
+      },
+      "CURTAIN_DUCK_REPLY_DRUID": {
+        "source": "scripts/curtain_lines.gd:76",
+        "zh": "很高兴能帮到大家。"
+      },
+      "CURTAIN_DUCK_REPLY_ROGUE": {
+        "source": "scripts/curtain_lines.gd:78",
+        "zh": "强吗，那家伙？"
+      },
+      "CURTAIN_DUCK_REPLY_MECH": {
+        "source": "scripts/curtain_lines.gd:80",
+        "zh": "下次一定。"
       }
     },
     "shared": {
@@ -3686,7 +3786,7 @@
     "reward": 125,
     "map": 244,
     "battle": 80,
-    "shell": 215,
+    "shell": 222,
     "shared": 92
   }
 }

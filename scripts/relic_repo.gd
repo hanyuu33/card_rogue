@@ -193,15 +193,49 @@ func layer2_ids() -> Array[int]:
 	##       所以它每局约 3/9 的概率出现在选项里，而不是必出。
 	## R509（用户口径）：**「记忆药水」6067 进二层起始池** —— 第二层起点的「卷卷三选一」给出，
 	##       每次战斗开始自动打出一张效果卡。池子 8→9 件。
+	## R822（店长口径）：这 9 件里 **4 件带鸭的（6010 / 6015 / 6017 / 6018）归属移到鸭绅士**。
+	##       本函数仍返回**全量 9 件**（它是二层的权威名单）；实际发放走进
+	##       `layer2_ids_for(host)` —— 遇到卷卷只出剩下 5 件，遇到鸭绅士只出那 4 件。
 	var out: Array[int] = [6014, 6015, 6016, 6017, 6018, 6033, 6049, 6010, 6067]
 	return _demo_ids(out)
 
 
-func start_ids_for_layer(layer: int) -> Array[int]:
-	## 该层「起始节点三选一」的道具池：第一层 = 初始池，第二层 = 二层起始池。
+func duck_host_ids() -> Array[int]:
+	## R822（店长口径）：**鸭绅士**的起始道具池 —— 4 件「带鸭」的道具
+	## （6010 鸭之低语 / 6015 鸭语耳环 / 6017 重鸭 / 6018 生蛋鸭）。
+	## 归属整体移到鸭绅士这边：卷卷在场时这 4 件不再出现；
+	## 鸭绅士的三选一从这 4 件里抽 3 件（不重复）。
+	## 判据只有「在不在这份名单里」一条 —— 场景 / 存档 / 测试都不许另写一遍。
+	var out: Array[int] = [6010, 6015, 6017, 6018]
+	return _demo_ids(out)
+
+
+func layer2_ids_for(host: int) -> Array[int]:
+	## R822：按「这一局第二层起点遇到谁」取起始池。
+	##   host = 1（鸭绅士）→ 那 4 件带鸭的；
+	##   host = 0（卷卷）  → 全量 9 件减去那 4 件 = 5 件；
+	##   **试玩版例外**：鸭绅士是 R822 的新增内容，按 R817「新增不跟着走」不进试玩；
+	##   但它一走，那 4 件就既没人发放、又不在任何池子里 —— 等于凭空少 4 件内容。
+	##   所以试玩版的卷卷池保持全量 9 件（`layer2_ids()` 原样返回）。
+	if host != 0:
+		return duck_host_ids()
+	var all_ids := layer2_ids()
+	if GameBuild.is_demo():
+		return all_ids
+	var duck := duck_host_ids()
+	var out: Array[int] = []
+	for id: int in all_ids:
+		if not duck.has(id):
+			out.append(id)
+	return out
+
+
+func start_ids_for_layer(layer: int, host := 0) -> Array[int]:
+	## 该层「起始节点三选一」的道具池：第一层 = 初始池；第二层 = 二层起始池（按 host 分流）。
+	## `host` 省略时按卷卷算 —— 老调用点（出图 / 测试）行为不变。
 	match layer:
 		2:
-			return layer2_ids()
+			return layer2_ids_for(host)
 	return initial_ids()
 
 

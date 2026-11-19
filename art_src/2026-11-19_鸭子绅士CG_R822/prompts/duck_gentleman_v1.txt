@@ -1,0 +1,74 @@
+A 16:9 WIDE horizontal game event illustration (1600x900), JAPANESE ANIME style, for a light-fantasy
+card roguelike. Soft painterly watercolour cel shading: thin clean line art, exactly 2-3 tone steps
+per surface, hard-edged shadows softened only by a light bloom. Palette: cool blue-grey steel,
+warm amber lamps, pure white feathers, deep black formal wear with one crimson accent.
+
+THE CHARACTER — one anthropomorphic WHITE DUCK GENTLEMAN, and he is the only figure in the picture.
+
+BODY — THE ONE THING TO GET RIGHT:
+- He is TALL and SLENDER, about 7 head-heights from the top of his head to his heels.
+- The head is SMALL: its width is less than one ninth of his total height.
+- Shoulders are narrow, roughly 2 head-widths across. The torso is slim and tapers to a narrow
+  waist. There is NO barrel chest, NO round belly, NO plump silhouette.
+- He is clearly THINNER than a comical cartoon knight duck. Think of a tall thin butler, not a
+  round toy duck.
+
+NECK — THE SECOND THING TO GET RIGHT, THIS IS THE POINT OF THE DESIGN:
+- Between his head and his collar there is a CLEARLY VISIBLE SLENDER WHITE NECK covered in smooth
+  short feathers.
+- That neck is about one third of the head height long and about half the head width wide.
+- The stiff shirt collar sits LOW, well below the jaw, so a band of white neck feathers is always
+  showing between the collar and the chin. The head does NOT rest on the shoulders.
+- NO neckless body, NO head sitting directly between the shoulders, NO fat blob silhouette.
+
+HEAD:
+- Clean white duck head, smooth short feathers, a small rounded crest of three feather tufts on top
+  of the head.
+- Large glossy ORANGE BILL, calm and elegant (not a grin, not a wide open beak).
+- One dark eye with a small bright highlight. A gold-rimmed MONOCLE over the right eye, its thin
+  chain dropping toward the waistcoat.
+- Expression: composed, faintly amused, a gentleman waiting politely.
+
+OUTFIT — count these pieces:
+- ONE black TOP HAT with a deep crimson ribbon band, sitting straight on his head.
+- ONE black TAILCOAT with two long pointed tails hanging behind his knees, worn open.
+- ONE crisp white dress shirt with a high stiff collar, ONE dark crimson bow tie.
+- ONE grey waistcoat with three visible brass buttons.
+- ONE pair of white formal GLOVES on both hands.
+- ONE silver-headed WALKING CANE in his right hand, its tip resting on the floor.
+- His feet are ORANGE WEBBED DUCK FEET below the trouser cuffs.
+
+POSE AND PLACEMENT:
+- He STANDS upright in a relaxed three-quarter view, body and shoulders turned slightly toward the
+  LEFT side of the frame, head turned a touch further left.
+- His left hand rests lightly on the brim of his hat (a small polite greeting); his right hand holds
+  the cane planted on the floor.
+- He occupies the RIGHT part of the frame: his body spans roughly 55% to 80% of the frame width.
+- The LEFT THIRTIETH to THIRTIETH-FIVE percent of the frame is background only — open industrial
+  space, nothing important there.
+- The top of his hat sits about 7% below the top edge of the frame.
+- His feet are near the bottom edge of the frame.
+
+BACKGROUND — this is the SECOND area of the game, an industrial works:
+- A riveted steel platform underfoot, seams and bolt heads visible.
+- Behind him: steel guard rails, thick insulated pipes with big valve wheels, a bank of pressure
+  tanks, and two tall chimneys receding into cool blue-grey haze.
+- White steam vents from three places, drifting sideways in a light breeze.
+- Small warm amber industrial lamps on the railings, giving the only warm light. Main light comes
+  from the upper left (overcast morning sky), so the crisp edge of his hat brim and his left
+  shoulder catch a pale rim light.
+- Keep the background simple and slightly hazy so he stays the sharpest thing in the frame.
+- The BOTTOM 30% of the picture is plain steel floor and thin drifting steam, with NO important
+  detail — a UI dialogue box will be drawn over that area.
+
+STRICTLY:
+- NO text, NO letters, NO numbers, NO logo, NO watermark, NO signature, NO border, NO frame,
+  NO UI elements anywhere.
+- NO second character, NO other ducks, NO people, NO crowd, NO reflections of a second figure.
+- NO knight armour, NO knight helmet with plume, NO sword, NO shield, NO blue cape — he is a
+  gentleman in evening dress, not a knight.
+- NO chibi proportions, NO super-deformed, NO oversized head, NO round baby body, NO short stubby
+  legs, NO four-head-tall figure.
+- NO photorealistic rendering, NO oil painting, NO thick brush texture, NO 3D render,
+  NO ray-traced reflections, NO photographic metal, NO pores, NO film grain, NO depth-of-field
+  bokeh, NO western comic style, NO Marvel or DC cover look.

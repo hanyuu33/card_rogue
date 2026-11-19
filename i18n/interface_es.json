@@ -745,7 +745,14 @@
       "UI_MENU_TITLE": "Menú",
       "UI_MENU_SEED": "Semilla: %s",
       "GAME_BRAND_NAME_ZH": "Quackill",
-      "GAME_BRAND_FOOTER": "v{v}"
+      "GAME_BRAND_FOOTER": "v{v}",
+      "CURTAIN_DUCK_SPEAKER": "Caballero Pato",
+      "CURTAIN_DUCK_GREETING_DRUID": "Perdón por causarte problemas otra vez.",
+      "CURTAIN_DUCK_GREETING_ROGUE": "¿Podrías atrapar a ese maldito gato por mí? Contrabando, evasión de impuestos, robo... no hay bajeza que no cometa.",
+      "CURTAIN_DUCK_GREETING_MECH": "No te vayas tan rápido. Todavía tengo muchas colaboraciones que hablar contigo.",
+      "CURTAIN_DUCK_REPLY_DRUID": "Me alegra poder ayudar a todos.",
+      "CURTAIN_DUCK_REPLY_ROGUE": "¿Y es fuerte, ese tal?",
+      "CURTAIN_DUCK_REPLY_MECH": "La próxima vez, entonces."
     },
     "shared": {
       "BAN_MENU_CONTINUE": "Reanudar",

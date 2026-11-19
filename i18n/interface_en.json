@@ -745,7 +745,14 @@
       "UI_MENU_TITLE": "Menu",
       "UI_MENU_SEED": "Seed: %s",
       "GAME_BRAND_NAME_ZH": "Quackill",
-      "GAME_BRAND_FOOTER": "v{v}"
+      "GAME_BRAND_FOOTER": "v{v}",
+      "CURTAIN_DUCK_SPEAKER": "Duck Gentleman",
+      "CURTAIN_DUCK_GREETING_DRUID": "Sorry to trouble you again.",
+      "CURTAIN_DUCK_GREETING_ROGUE": "Could you catch that blasted cat for me? Smuggling, tax evasion, theft, you name it, it does it.",
+      "CURTAIN_DUCK_GREETING_MECH": "Don't rush off. I still have plenty of partnerships to discuss with you.",
+      "CURTAIN_DUCK_REPLY_DRUID": "Glad I could help everyone.",
+      "CURTAIN_DUCK_REPLY_ROGUE": "Is that one strong?",
+      "CURTAIN_DUCK_REPLY_MECH": "Next time, then."
     },
     "shared": {
       "BAN_MENU_CONTINUE": "Resume",
