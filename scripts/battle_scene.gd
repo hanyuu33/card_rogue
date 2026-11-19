@@ -17867,7 +17867,9 @@ func _draw_relic_badge(rect: Rect2, id: int) -> void:
 	## 雕像与不锈钢盆的余量）。数值唯一口 = `RunState.relic_badge_text()` ——
 	## 界面不另算一遍，免得「角标写 3、悬停说 4」变成两套账。
 	## 样式跟着 UI 的暖金描边走：深底 + 1px 金边 + 浅米字，压在弧与蓝边之上。
-	var txt := RunState.relic_badge_text(id)
+	# R832：缺陷时钟的计数在**引擎**里（本场已打出张数）—— 这里把引擎值递进去，
+	# 界面不自己拿 `_clock_plays` 反算。其余道具不读这个参数，照旧只认 RunState。
+	var txt := RunState.relic_badge_text(id, engine.defect_clock_left())
 	if txt == "":
 		return
 	var fs := 12

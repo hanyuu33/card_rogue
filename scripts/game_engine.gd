@@ -7640,6 +7640,15 @@ func _harpoon_tick(p: Placement, dmg: int) -> void:
 			"amount": HARPOON_DMG, "hits": p.harpoon_hits})
 
 
+func defect_clock_left() -> int:
+	## R832：缺陷时钟（6084）**本场还要再打几张牌**才触发 —— 角标唯一的取数口。
+	## 计数 `_clock_plays` 只活在引擎里：每个新 GameEngine = 一场新战斗，天然复位，
+	## 所以读档续战之后角标与实际触发同源（RunState 不另存一份，免得两套账）。
+	## ⚠️ 触发之后 `_clock_plays` 还会继续涨（`_note_card_played` 只对 `==` 置待办）→
+	##    夹到 0：本场已经白赚过一回合，「0」＝本场没戏，下一场重新数。
+	return maxi(0, DEFECT_CLOCK_AT - mini(_clock_plays, DEFECT_CLOCK_AT))
+
+
 func _clock_maybe_switch() -> void:
 	## R810 缺陷时钟（6084）：本场第 DEFECT_CLOCK_AT 张牌打完 → 结束当前回合、
 	## **跳过敌方回合**，直接开始新的我方回合。

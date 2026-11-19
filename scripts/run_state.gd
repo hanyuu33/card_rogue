@@ -164,6 +164,12 @@ const CRESCENT_EARING_ID := 6081
 const CRESCENT_EVERY := 3
 static var crescent_battles := 0
 
+## R832 缺陷时钟（6084，传奇档）：每场战斗打出第 12 张牌 → 结束当前回合并跳过敌方回合。
+## ⚠️ 计数**只活在战斗引擎里**（`GameEngine._clock_plays`）—— 这里不另存一份，
+##    否则读档续战之后「角标」与「实际触发」会变成两套账。
+##    角标由战斗界面把 `engine.defect_clock_left()` 当参数递进来（见 `relic_badge_text`）。
+const DEFECT_CLOCK_BADGE_ID := 6084
+
 ## R314 传奇掉落概率：**5% × 当前层数**；大宝箱翻倍。
 ## 层数取 `current_layer`（第一层 1 / 第二层 2 …），所以第一层 5%、第二层 10%；
 ## 大宝箱第一层 10%、第二层 20%。上限 100%（层数继续加也不会溢出）。
@@ -804,7 +810,7 @@ static func relic_display_name(id: int, plays := -1) -> String:
 	return rel.relic_name
 
 
-static func relic_badge_text(id: int) -> String:
+static func relic_badge_text(id: int, clock_left := -1) -> String:
 	## 道具图标**右下角角标**的唯一取数口（R809）。返回 "" = 不画角标。
 	## 为什么要有这一层：图标模式下 `_draw_relic_bar` 只画图、不画名字，
 	## 「还剩几次 / 还差几回合」原本只有悬停能看到 —— 触摸端等于看不见。
@@ -816,6 +822,10 @@ static func relic_badge_text(id: int) -> String:
 	##   * 洞窟绳（6048）→ 一次性，还在就是 1 次。
 	##   * 雕像（6039）/ 不锈钢盆（6041）→ 剩余次数
 	##     （`relic_display_name` 那对括号只在「缺图、退回文字」时才看得见）。
+	##   * 缺陷时钟（6084，R832）→ 本场**还差几张牌**触发。它的计数在引擎里，
+	##     由战斗界面当第二参 `clock_left` 递进来；没有战斗上下文（图鉴 / 商店 / 奖励页）
+	##     时是默认的 -1 → 不画。本场已触发过 → 「0」照画（跟火柴同口径：得让玩家
+	##     看见这一场已经用光了）。
 	##   * 其余道具 → 没有可数的东西。
 	if not relics.has(id) or is_relic_spent(id):
 		return ""
@@ -834,6 +844,8 @@ static func relic_badge_text(id: int) -> String:
 			return str(statue_charge) if statue_charge > 0 else ""
 		BASIN_RELIC_ID:
 			return str(basin_charge) if basin_charge > 0 else ""
+		DEFECT_CLOCK_BADGE_ID:
+			return str(clock_left) if clock_left >= 0 else ""
 	return ""
 
 

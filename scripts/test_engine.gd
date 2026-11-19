@@ -74068,6 +74068,7 @@ func _init() -> void:
 	_test_r826()
 	_test_r829()
 	_test_r830()
+	_test_r832()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -79737,7 +79738,7 @@ func _test_r809() -> void:
 			"R809 面板：状态注在 spent 分支外面（缩进 %d 个 tab，应为 2）" % r809_tabs)
 	check_src(r809_src.contains("_draw_relic_badge(rect, int(ids[i]))"),
 			"R809 角标：道具栏每格都接上了 `_draw_relic_badge`")
-	check_src(r809_src.contains("RunState.relic_badge_text(id)"),
+	check_src(r809_src.contains("RunState.relic_badge_text(id, engine.defect_clock_left())"),
 			"R809 角标：绘制口走唯一取数口，不自己算数字")
 
 	RunState.relics = []
@@ -81308,6 +81309,88 @@ func _test_r829() -> void:
 		if c.id == 8001 and c.has_affix(GameEngine.AFFIX_DIMENSION):
 			r828_fort_back += 1
 	check(r828_fort_back == 1, "R829 礼帽：工事死亡也洗回抽牌库并带次元（%d）" % r828_fort_back)
+
+
+func _test_r832() -> void:
+	## R832：缺陷时钟（6084）**角标不显示计数**（用户实测）。
+	## 根因不是画不出来，是取数口没这一支：它的计数是「本场已打出张数」，
+	## 活在引擎 `_clock_plays` 里，而 `RunState.relic_badge_text()` 只认 RunState 的静态状态。
+	## 现在第二参 `clock_left` 由 `battle_scene._draw_relic_badge()` 把
+	## `engine.defect_clock_left()` 递进来 —— 与 `relic_display_name(id, plays)` 同一套先例。
+	var r832_sv_relics := RunState.relics
+	var r832_sv_spent := RunState.spent_relics
+	var r832_cards := CardRepo.load_json()
+	RunState.relics = [6084]
+	RunState.spent_relics = []
+
+	# ① 没有战斗上下文（图鉴 / 商店 / 奖励页）→ 不画（默认参 -1）
+	check(RunState.relic_badge_text(6084) == "",
+			"R832 缺陷时钟：非战斗界面不画角标（实际「%s」）"
+				% RunState.relic_badge_text(6084))
+
+	# ② 战斗开场 → 还差 12 张
+	var r832_e := _new_engine([], 40, 40)
+	r832_e.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照
+	r832_e._begin_turn(GameEngine.SIDE_SELF)
+	check(r832_e.defect_clock_left() == 12,
+			"R832 缺陷时钟：开场还差 12 张（实际 %d）" % r832_e.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "12",
+			"R832 角标：开场画「12」（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
+
+	# ③ 真打一张 → 11（走真实出牌口，验「引擎计数 → 角标」这条链是活的）
+	r832_e.state.energy = 30
+	r832_e.state.hand.clear()
+	r832_e.state.hand.append(CardData.from_dict(r832_cards.get_card(8006).to_dict()))
+	r832_e.play_from_hand(0, Vector2i(4, 1))
+	check(r832_e.defect_clock_left() == 11,
+			"R832 缺陷时钟：打 1 张后还差 11 张（实际 %d）" % r832_e.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "11",
+			"R832 角标：打 1 张后画「11」（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
+
+	# ④ 第 12 张 → 触发（换回合），角标「0」＝本场用光
+	r832_e.state.energy = 30
+	r832_e.state.hand.clear()
+	r832_e.state.hand.append(CardData.from_dict(r832_cards.get_card(8006).to_dict()))
+	r832_e._clock_plays = 11
+	var r832_t0: int = r832_e.turn_number
+	r832_e.play_from_hand(0, Vector2i(4, 0))
+	check(r832_e.turn_number == r832_t0 + 1 and r832_e.opp_turns == 0,
+			"R832 缺陷时钟：第 12 张照旧跳过敌方回合（回合 %d → %d，opp_turns %d）"
+				% [r832_t0, r832_e.turn_number, r832_e.opp_turns])
+	check(r832_e.defect_clock_left() == 0,
+			"R832 缺陷时钟：触发后还差 0 张（实际 %d）" % r832_e.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "0",
+			"R832 角标：触发后画「0」（本场用光）")
+
+	# ⑤ 再打几张也不会变负数（`_clock_plays` 会继续涨，取数口必须夹住）
+	r832_e.state.energy = 30
+	r832_e.state.hand.clear()
+	r832_e.state.hand.append(CardData.from_dict(r832_cards.get_card(8006).to_dict()))
+	r832_e.play_from_hand(0, Vector2i(4, 2))
+	check(r832_e.defect_clock_left() == 0,
+			"R832 缺陷时钟：第 13 张后仍为 0，不出负数（实际 %d）" % r832_e.defect_clock_left())
+
+	# ⑥ 下一场（新引擎）→ 回到 12（每场复位是设计口径，不是漏清）
+	var r832_e2 := _new_engine([], 40, 40)
+	r832_e2.self_relics = RunState.active_relics()
+	r832_e2._begin_turn(GameEngine.SIDE_SELF)
+	check(r832_e2.defect_clock_left() == 12,
+			"R832 缺陷时钟：下一场重新数到 12（实际 %d）" % r832_e2.defect_clock_left())
+
+	# ⑦ 没这件道具 → 不画（传了引擎值也不画）
+	RunState.relics = []
+	check(RunState.relic_badge_text(6084, 7) == "",
+			"R832 角标：没持有缺陷时钟时不画（实际「%s」）" % RunState.relic_badge_text(6084, 7))
+
+	# ⑧ 源码守卫：绘制口必须把引擎计数递进唯一取数口，不许界面自己算
+	var r832_bs_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r832_bs_src.contains("RunState.relic_badge_text(id, engine.defect_clock_left())"),
+			"R832 守卫：角标绘制口把 `engine.defect_clock_left()` 递进取数口")
+
+	RunState.relics = r832_sv_relics
+	RunState.spent_relics = r832_sv_spent
 
 
 func _test_r830() -> void:
