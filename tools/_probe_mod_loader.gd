@@ -5,9 +5,9 @@ extends SceneTree
 ## 这条验证「mod 增量合并」。两条都绿，外部内容层才算完整。
 ##
 ## 验证清单（缺一条都算没做完）：
-##   1. 没有 mod 目录时读到的就是 pck 基线（337 张）
-##   2. 单个 mod 新增一张卡 → 338，基线卡不动
-##   3. 两个 mod 各加一张 → 339（**可共存**，谁也不用交出整份 cards.json）
+##   1. 没有 mod 目录时读到的就是 pck 基线（344 张）
+##   2. 单个 mod 新增一张卡 → 345，基线卡不动
+##   3. 两个 mod 各加一张 → 346（**可共存**，谁也不用交出整份 cards.json）
 ##   4. mod 只写 `{id,name}` → 深合并，同卡其余字段仍取基线值
 ##   5. priority 大的后加载 → 同 id 覆盖时赢
 ##   6. 坏 mod.json → 该目录跳过，其余 mod 与基线不受影响
@@ -16,7 +16,7 @@ extends SceneTree
 ##   9. i18n 嵌套 dict 深合并：只改一句，其余译名仍在
 ##  10. 素材覆盖：mod 图生效，且高 priority 的图压过低 priority
 ##  11. 编辑器 / 回归默认不扫 user://mods
-##  12. 全部卸载后回到 337
+##  12. 全部卸载后回到 344
 ##
 ## 不碰玩家存档；临时目录在 user://probe_mods，跑完删掉。
 
@@ -45,7 +45,7 @@ func _initialize() -> void:
 	var base_count := base.all_cards().size()
 	var proto := _proto_card()
 	var base_card := base.get_card(CARD_ID)
-	_check("基线 337 张", base_count == 337, str(base_count))
+	_check("基线 344 张", base_count == 344, str(base_count))
 	_check("基线原型卡可读", not proto.is_empty() and base_card != null, str(proto.size()))
 	var base_cost := base_card.cost if base_card != null else -1
 	var base_power := base_card.power if base_card != null else -1
@@ -61,7 +61,7 @@ func _initialize() -> void:
 	DataPaths.reset_root()
 
 	# ---- 1) 空 mod 根 ----
-	_check("空 mod 根 = 基线 337", CardRepo.load_json().all_cards().size() == 337,
+	_check("空 mod 根 = 基线 344", CardRepo.load_json().all_cards().size() == 344,
 			str(CardRepo.load_json().all_cards().size()))
 
 	# ---- 2) 单 mod 加一张 ----
@@ -70,7 +70,7 @@ func _initialize() -> void:
 	})
 	DataPaths.reset_root()
 	var r2 := CardRepo.load_json()
-	_check("单 mod 加卡后 338", r2.all_cards().size() == 338, str(r2.all_cards().size()))
+	_check("单 mod 加卡后 345", r2.all_cards().size() == 345, str(r2.all_cards().size()))
 	_check("新卡 id 读得到", r2.get_card(NEW_A) != null)
 	_check("新卡名字正确", r2.get_card(NEW_A).card_name == "PROBE_A" if r2.get_card(NEW_A) != null else "null")
 
@@ -80,7 +80,7 @@ func _initialize() -> void:
 	})
 	DataPaths.reset_root()
 	var r3 := CardRepo.load_json()
-	_check("两个 mod 共存 = 339", r3.all_cards().size() == 339, str(r3.all_cards().size()))
+	_check("两个 mod 共存 = 346", r3.all_cards().size() == 346, str(r3.all_cards().size()))
 	_check("A 的卡还在", r3.get_card(NEW_A) != null)
 	_check("B 的卡也在", r3.get_card(NEW_B) != null)
 
@@ -97,7 +97,7 @@ func _initialize() -> void:
 			"%d / %d" % [c4.cost if c4 != null else -1, base_cost])
 	_check("深合并：power 仍是基线值", c4 != null and c4.power == base_power,
 			"%d / %d" % [c4.power if c4 != null else -1, base_power])
-	_check("深合并后总数仍是 339", r4.all_cards().size() == 339, str(r4.all_cards().size()))
+	_check("深合并后总数仍是 346", r4.all_cards().size() == 346, str(r4.all_cards().size()))
 
 	# ---- 5) priority 仲裁 ----
 	_mk("mod_lo", {"id": "lo", "name": "LO", "priority": 40}, {
@@ -116,7 +116,7 @@ func _initialize() -> void:
 	_mk("mod_broken_json", {"id": "broken"}, {"cards.json": "{ this is not json"})
 	DataPaths.reset_root()
 	var r6 := CardRepo.load_json()
-	_check("坏清单目录被跳过", r6.all_cards().size() == 339, str(r6.all_cards().size()))
+	_check("坏清单目录被跳过", r6.all_cards().size() == 346, str(r6.all_cards().size()))
 	## problems 只记「清单层」问题（坏清单 / 缺依赖 / 重复 id）。
 	## 坏 cards.json 属于数据层，由 DataPaths 自己 push_warning，刻意不进这里 ——
 	## 分层清楚，将来管理页才能分开显示「这个 mod 装坏了」和「这个 mod 的数据有一处跳过了」。
@@ -138,7 +138,7 @@ func _initialize() -> void:
 	DataPaths.reset_root()
 	var r8 := CardRepo.load_json()
 	_check("缺依赖的 mod 被剔除", r8.get_card(NEW_D) == null)
-	_check("剔除后总数不变（340 = 337 + A/B/C）", r8.all_cards().size() == 340, str(r8.all_cards().size()))
+	_check("剔除后总数不变（347 = 344 + A/B/C）", r8.all_cards().size() == 347, str(r8.all_cards().size()))
 
 	# ---- 9) i18n 深合并 ----
 	## 先切到 en 再取基线：zh 分支下 card_name 走的是原文，拿不到英文表。
@@ -177,12 +177,12 @@ func _initialize() -> void:
 	# ---- 11b) 启停（R818）----
 	# 停用 = 不进 load_order，但仍在 all_mods 里（设置页还要能列出来再打开）。
 	var before_off := CardRepo.load_json().all_cards().size()
-	_check("启停：停用前是 340", before_off == 340, str(before_off))
+	_check("启停：停用前是 347", before_off == 347, str(before_off))
 	ModRegistry.set_enabled("a", false)
 	DataPaths.reset_root()
 	var r_off := CardRepo.load_json()
 	_check("停用后 A 的卡消失", r_off.get_card(NEW_A) == null)
-	_check("停用后总数 339", r_off.all_cards().size() == 339, str(r_off.all_cards().size()))
+	_check("停用后总数 346", r_off.all_cards().size() == 346, str(r_off.all_cards().size()))
 	_check("停用后 all_mods 仍列得出它", _has_mod("a"), str(ModRegistry.all_mods().size()))
 	_check("is_enabled(a) = false", not ModRegistry.is_enabled("a"))
 	_check("cfg 已落盘", FileAccess.file_exists(_cfg), _cfg)
@@ -190,7 +190,7 @@ func _initialize() -> void:
 	ModRegistry.set_enabled("a", true)
 	DataPaths.reset_root()
 	var r_on := CardRepo.load_json()
-	_check("重新启用后回到 340", r_on.all_cards().size() == 340, str(r_on.all_cards().size()))
+	_check("重新启用后回到 347", r_on.all_cards().size() == 347, str(r_on.all_cards().size()))
 	_check("is_enabled(a) = true", ModRegistry.is_enabled("a"))
 
 	# ---- 12) 全部卸载 ----
@@ -202,7 +202,7 @@ func _initialize() -> void:
 	GameI18n.reset_cache()
 	_rm_rf(_root)
 	var after := CardRepo.load_json()
-	_check("卸载后回到 337", after.all_cards().size() == 337, str(after.all_cards().size()))
+	_check("卸载后回到 344", after.all_cards().size() == 344, str(after.all_cards().size()))
 	_check("卸载后卡名回基线", after.get_card(CARD_ID).card_name == base_card.card_name,
 			after.get_card(CARD_ID).card_name)
 

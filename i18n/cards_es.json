@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 337,
+ "count": 344,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1349,6 +1349,34 @@
   "9275": {
    "name": "Nota",
    "effect_text": "Obtienes 2 de Coste y robas 2 cartas."
+  },
+  "9277": {
+   "name": "Do",
+   "effect_text": "Roba 2 cartas. Al inicio de tu próximo turno, gana 1 de Coste y roba 1 carta."
+  },
+  "9278": {
+   "name": "Re",
+   "effect_text": "Inflige 4 de daño a todos los enemigos. Añade otra Nota aleatoria a tu pila de robo."
+  },
+  "9279": {
+   "name": "Mi",
+   "effect_text": "Dos enemigos aleatorios tienen -6 de Poder este turno. Roba 1 carta."
+  },
+  "9280": {
+   "name": "Fa",
+   "effect_text": "Inflige 18 de daño a un enemigo y 5 de daño a todos los demás enemigos."
+  },
+  "9281": {
+   "name": "Sol",
+   "effect_text": "Aturde al objetivo durante 1 turno e inflige 6 de daño a todos los enemigos."
+  },
+  "9282": {
+   "name": "La",
+   "effect_text": "Roba 3 cartas; esas cartas cuestan 1 menos este combate. Los Aliados y Estructuras robados así ganan +3 de Poder."
+  },
+  "9283": {
+   "name": "Si",
+   "effect_text": "Inflige 7 de daño a una unidad enemiga aleatoria, repetido 7 veces."
   },
   "9276": {
    "name": "Muñeca maldita",

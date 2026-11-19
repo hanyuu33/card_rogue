@@ -7568,6 +7568,14 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 		for x in FieldState.BOARD_ROWS:
 			for y in FieldState.BOARD_COLS:
 				out.append(Vector2i(x, y))
+	elif card.id == GameEngine.NOTE_FA_ID or card.id == GameEngine.NOTE_SOL_ID:
+		# Fa / Sol（音符，R826）：主目标只能点敌方单位（Fa 打 18 溅射、Sol 眩晕 + AOE）——
+		# 落进 else 会把己方单位也高亮，点下去才被引擎拒「没有敌方目标」。
+		for c: Vector2i in engine.state.board:
+			var np: Placement = engine.state.board[c]
+			if np.owner == GameEngine.SIDE_OPPONENT:
+				out.append(c)
+		out.sort()
 	elif card.id == GameEngine.GOLEM_SPELL_ID:
 		# 魔像术：在自己半场选一格召唤魔像 → 只列出自己半场的空格
 		for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):

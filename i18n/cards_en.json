@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 337,
+ "count": 344,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1349,6 +1349,34 @@
   "9275": {
    "name": "Note",
    "effect_text": "Gain 2 Cost and draw 2 cards."
+  },
+  "9277": {
+   "name": "Do",
+   "effect_text": "Draw 2 cards. At the start of your next turn, gain 1 Cost and draw 1 card."
+  },
+  "9278": {
+   "name": "Re",
+   "effect_text": "Deal 4 damage to all enemies. Add another random Note to your Draw Pile."
+  },
+  "9279": {
+   "name": "Mi",
+   "effect_text": "Two random enemies have -6 Power this turn. Draw 1 card."
+  },
+  "9280": {
+   "name": "Fa",
+   "effect_text": "Deal 18 damage to an enemy, and deal 5 damage to all other enemies."
+  },
+  "9281": {
+   "name": "Sol",
+   "effect_text": "Stun the target for 1 turn, and deal 6 damage to all enemies."
+  },
+  "9282": {
+   "name": "La",
+   "effect_text": "Draw 3 cards; those cards cost 1 less this battle. Allies and Structures drawn this way gain +3 Power."
+  },
+  "9283": {
+   "name": "Si",
+   "effect_text": "Deal 7 damage to a random enemy unit, repeated 7 times."
   },
   "9276": {
    "name": "Curse Doll",

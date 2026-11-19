@@ -7041,6 +7041,167 @@
       "color": "暗影",
       "image": "",
       "unplayable": true
+    },
+    {
+      "id": 9277,
+      "name": "Do",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "抽 2 张卡。下个回合开始时获得 1 点费用并抽 1 张卡。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9278,
+      "name": "Re",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "对所有敌人造成 4 点伤害。将另一张随机音符加入抽牌库。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9279,
+      "name": "Mi",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "随机两个敌人本回合力量 -6。抽 1 张卡。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9280,
+      "name": "Fa",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "对一个敌人造成 18 点伤害，并对其他所有敌人各造成 5 点伤害。",
+      "target_mode": "unit",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9281,
+      "name": "Sol",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "使目标眩晕 1 个回合，并对所有敌人造成 6 点伤害。",
+      "target_mode": "unit",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9282,
+      "name": "La",
+      "kind": "技能",
+      "cost": 3,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "抽 3 张卡，这些卡本局费用 -1；其中盟友与工事力量 +3。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9283,
+      "name": "Si",
+      "kind": "技能",
+      "cost": 4,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "对随机敌方单位造成 7 点伤害，重复 7 次。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
     }
   ]
 }

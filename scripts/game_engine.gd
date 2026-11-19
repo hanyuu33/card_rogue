@@ -617,6 +617,35 @@ const DUCK_ALARM_ENERGY:= 1
 const DUCK_ALARM_DRAW:= 1
 const DUCK_ALARM_SPELL_FROM:= 5
 const DUCK_ALARM_SPELL:= 1
+# R826 音乐盒（6086，二层起始池 · 卷卷）：每场战斗开始，把 MUSIC_BOX_DRAW 张随机音符
+#   加入**抽牌库**（不是手卡 —— 卡面写「加入卡组」）。
+# 音符卡（9277~9283）是吟游诗人职业的**特例**：class = 吟游诗人（隐藏职业）→ 不进
+#   奖励池 / 商店 / 禁卡表 / 图鉴；rarity 5 再兜一层「不进可获得池」。
+#   它们**不是奖励卡牌**（R826 店长口径），唯一获得途径就是这件道具。
+const MUSIC_BOX_RELIC_ID:= 6086
+const MUSIC_BOX_DRAW:= 2
+const NOTE_TRAIT:= "音符"
+# 音符卡的 id —— 只有「排除本张」这类场合要精确比对（re 9278 的「另一张」）。
+const NOTE_DO_ID:= 9277
+const NOTE_RE_ID:= 9278
+const NOTE_MI_ID:= 9279
+const NOTE_FA_ID:= 9280
+const NOTE_SOL_ID:= 9281
+const NOTE_LA_ID:= 9282
+const NOTE_SI_ID:= 9283
+const NOTE_DO_DRAW:= 2
+const NOTE_DO_NEXT_ENERGY:= 1
+const NOTE_DO_NEXT_DRAW:= 1
+const NOTE_RE_DMG:= 4
+const NOTE_MI_TARGETS:= 2
+const NOTE_MI_POWER_DOWN:= 6
+const NOTE_FA_DMG:= 18
+const NOTE_FA_SPLASH:= 5
+const NOTE_SOL_DMG:= 6
+const NOTE_LA_DRAW:= 3
+const NOTE_LA_POWER:= 3
+const NOTE_SI_DMG:= 7
+const NOTE_SI_TIMES:= 7
 const ICECREAM_RELIC_ID:= 6016
 const ICECREAM_HP_COST:= 3
 const ICECREAM_ENERGY:= 2    # R340 下调：+4 → +2（抽牌仍是 3 张）
@@ -4016,15 +4045,23 @@ func _fallback_familiar() -> CardData:
 
 
 func _draw_many(n: int) -> int:
-	## 抽 n 张的**唯一口**（所有「抽卡」都走这里）。返回**真正进手牌**的张数。
+	## 抽 n 张的**薄壳**（R826 起）—— 真正实现挪进 `_draw_many_cards()`，
+	## 这样 La（9282）这类「要拿到抽到的是哪几张」的卡能直接用，不必再写一份手牌 diff 快照。
+	var cards := _draw_many_cards(n)
+	return cards.size()
+
+
+func _draw_many_cards(n: int) -> Array[CardData]:
+	## 抽 n 张的**唯一口**（所有「抽卡」都走这里）。返回**真正进手牌**的卡（Array）。
 	## R299（用户规则）：手牌满时**不再停下不抽** —— 抽到的牌由 `FieldState.draw()` 直接丢进弃牌区，
 	## 这里逐张发 `hand_burn`（带序号，界面用来错开动画），最后汇总发一条 `hand_full`。
 	## ⚠️ 区分三种「没进手牌」：① 手牌满 → burn（卡进弃牌区）；② 牌库+弃牌区都空 → 抽不到；
 	##   ③ 抽到了但…（不存在）。判据只看 `state.last_burn_card`，不要去比较弃牌区张数
 	##   （弃牌区可能同时被别的效果改动）。
+	## ⚠️ 返回值**不含**被 hand_burn 烧掉的那些（它们进了弃牌区，不算「抽到手上」）。
 	var got := 0
 	var burned := 0
-	var gained: Array = []
+	var gained: Array[CardData] = []
 	for _i in n:
 		var c := state.draw()
 		if c != null:
@@ -4055,7 +4092,7 @@ func _draw_many(n: int) -> int:
 		action.emit("card_gained", {"card": gc, "how": "draw"})
 	if got + burned > 0:
 		_assemble_tick(SIDE_SELF, "after_draw")
-	return got
+	return gained
 
 
 func _move_key(tbl: Dictionary, a: CardData, b: CardData) -> void:
@@ -4234,6 +4271,39 @@ func apply_battle_start_relics(repo: CardRepo) -> void :
 	# 放在本函数**最后**（同水晶骰子 / 机械臂）—— 它要动 `state.deck`，追加在末尾不干扰前面。
 	if self_relics.has(MEMORY_POTION_RELIC_ID):
 		_memory_potion_tick()
+	# R826 音乐盒（6086）：放在记忆药水之后 —— 两者都动 state.deck，追加在末尾不干扰前面。
+	if self_relics.has(MUSIC_BOX_RELIC_ID):
+		_music_box_tick(repo)
+
+
+func _music_box_tick(repo: CardRepo) -> void:
+	## R826 音乐盒（6086，二层起始池 · 卷卷）：每场战斗开始，把 MUSIC_BOX_DRAW 张随机音符
+	## 加入**抽牌库**（不是手卡 —— 卡面写「加入卡组」）。
+	## 音符卡（9277~9283）是吟游诗人职业的**特例**：class = 吟游诗人（隐藏职业）→ 不进奖励池 /
+	## 商店 / 禁卡表 / 图鉴；rarity 5 再兜一层「不进可获得池」。唯一获得途径就是这件道具。
+	if repo == null:
+		return
+	var pool: Array[CardData] = []
+	for c: CardData in repo.all_cards():
+		if c != null and c.traits.has(NOTE_TRAIT):
+			pool.append(c)
+	if pool.is_empty():
+		_log("音乐盒：卡库里没有音符卡，跳过")
+		return
+	# 不重复抽两张；音符不足两张时有多少抽多少（走引擎 rng → 回放一致）。
+	var n := mini(MUSIC_BOX_DRAW, pool.size())
+	var names: Array[String] = []
+	for _i in n:
+		var k := rng.randi() % pool.size()
+		var proto: CardData = pool[k]
+		pool.remove_at(k)
+		var own := _new_own_card(proto)
+		state.deck.append(own)
+		names.append(own.card_name)
+	_log("音乐盒：把 %s 加入抽牌库" % "、".join(names))
+	action.emit("relic", {"id": MUSIC_BOX_RELIC_ID,
+			"text": "音乐盒：%s 加入抽牌库" % "、".join(names)})
+
 
 func _memory_potion_tick() -> void:
 	## R509 记忆药水（6067）：每次战斗开始，从**抽牌库**随机打出一张效果卡。
@@ -9939,6 +10009,10 @@ const SPELL_BASE_DMG := {
 	9215: 10,    # 乱打（随机 2 个敌人各 10）
 	9216: 22,    # 飞踢（击杀时溢出沿同列传递）
 	9217: 16,    # 冲拳（另有其余敌人各 8，不并进这个数）
+	9278: 4,     # Re（音符；全体敌人）
+	9280: 18,    # Fa（音符；另有其余敌人各 5）
+	9281: 6,     # Sol（音符；全体敌人）
+	9283: 7,     # Si（音符；随机 7 伤 × 7 次，表登记卡面首个 N）
 }
 
 # 卡面**给不出确数**的伤害技能（数字随局势变）→ 即使一点加成都沒有也要报当前值。
@@ -9958,7 +10032,7 @@ const SPELL_DYNAMIC_IDS: Array[int] = [9083, 9086, 9090, 9093, 9104, 9162, 9272,
 #   * 9160 弹跳飞刀：主目标 5、弹跳 4 / 3，同一张卡对不同格数字不同。
 # 这些卡仍享受 AOE 覆盖 / 自伤警告预览，只是不报数字（宁可不说，也不许说错）。
 # 9004 击退：8 伤是「没走满 2 格」才触发的条件伤害，目标格上不能预先报 8。
-const SPELL_NO_CELL_PREVIEW: Array[int] = [DRAGON_BREATH_ID, METEOR_SHOWER_ID, 9160, 9004]
+const SPELL_NO_CELL_PREVIEW: Array[int] = [DRAGON_BREATH_ID, METEOR_SHOWER_ID, 9160, 9004, NOTE_SI_ID]
 
 
 func mass_mnemosyne_bonus_ready(side: String = SIDE_SELF) -> bool:
@@ -12590,6 +12664,27 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					"bonus": _rapid_enemy_bonus, "side": side})
 			return "抽 %d 张（0 费 %d 张），本回合敌人受到伤害 +%d" \
 					% [rp_got, rp_zero, _rapid_enemy_bonus]
+		NOTE_DO_ID:
+			# Do（9277，音符 · 0 费次元）：抽 2 张；下个回合开始 +1 费 + 多抽 1 张。
+			# 两条都走既有的「下回合」记账（self_next_energy / self_next_draw），不加新字段。
+			var nd_drawn := _draw_many(NOTE_DO_DRAW)
+			state.self_next_energy += NOTE_DO_NEXT_ENERGY
+			state.self_next_draw += NOTE_DO_NEXT_DRAW
+			_log("Do：抽 %d 张；下回合 +%d 费、多抽 %d 张"
+					% [nd_drawn, NOTE_DO_NEXT_ENERGY, NOTE_DO_NEXT_DRAW])
+			return "抽 %d 张，下回合 +1 费并多抽 1 张" % nd_drawn
+		NOTE_RE_ID:
+			return _note_re(side, card)
+		NOTE_MI_ID:
+			return _note_mi(side)
+		NOTE_FA_ID:
+			return _note_fa(side, target, card)
+		NOTE_SOL_ID:
+			return _note_sol(side, target, card)
+		NOTE_LA_ID:
+			return _note_la(side)
+		NOTE_SI_ID:
+			return _note_si(side, card)
 		LASER_SWEEP_ID:
 			# 激光扫射（9172，R316，机械之心 2 费稀有技能）：对所有敌人造成 9 点伤害。
 			# 与激发 8077 / 风妖精 6042 同口径：逐格走 `_hit_unit`（护盾 / 减伤 / 光环照常），
@@ -17995,6 +18090,171 @@ func _flying_kick(side: String, target, card: CardData) -> String:
 				"dst": cell, "atk_name": "飞踢", "def_name": pierced})
 	_destroy_dead()
 	return "%s；溢出的 %d 点沿同列继续" % [msg, carry]
+
+
+func _foe_cells(side: String) -> Array[Vector2i]:
+	## R826：当前棋盘上**敌方存活单位**所在的格子（按格排序，回放 / 同种子逐帧一致）。
+	## 音符卡的 AOE（Re / Sol / Si / Mi）都从这里取，与激光扫射同口径（不直击敌方 HP）。
+	var foe := SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
+	var out: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner == foe and u.health > 0:
+			out.append(cell)
+	out.sort()
+	return out
+
+
+func _note_cards() -> Array[CardData]:
+	## R826：卡库里所有带 trait「音符」的卡（当前 Do~Si 七张）。
+	## 音乐盒与 Re 的「另一张随机音符」都从这份名单取 —— 判据只有 trait 一处，不写死 id。
+	var repo := CardRepo.load_json()
+	var out: Array[CardData] = []
+	for c: CardData in repo.all_cards():
+		if c != null and c.traits.has(NOTE_TRAIT):
+			out.append(c)
+	return out
+
+
+func _random_note_except(exclude_id: int) -> CardData:
+	## R826：抽一张「另一张」随机音符（Re 9278 用）—— 排除本卡 id。走引擎 rng → 回放一致。
+	var pool: Array[CardData] = []
+	for c: CardData in _note_cards():
+		if c.id != exclude_id:
+			pool.append(c)
+	if pool.is_empty():
+		return null
+	return pool[rng.randi() % pool.size()]
+
+
+func _note_re(side: String, card: CardData) -> String:
+	## Re（9278，音符 · 1 费次元）：对全体敌人 NOTE_RE_DMG 伤 + 把另一张随机音符加入抽牌库。
+	var dmg := _spell_dmg(side, NOTE_RE_DMG, card)
+	var cells := _foe_cells(side)
+	var hits := 0
+	for c2: Vector2i in cells:
+		var q: Placement = state.board.get(c2, null)
+		if q == null or q.health <= 0:
+			continue
+		_hit_unit(q, dmg, "Re")
+		hits += 1
+	_destroy_dead()
+	var add_txt := ""
+	var extra := _random_note_except(NOTE_RE_ID)
+	if extra != null:
+		state.deck.append(_new_own_card(extra))
+		add_txt = "；「%s」加入抽牌库" % extra.card_name
+	_log("Re：对 %d 个敌人各 %d 伤%s" % [hits, dmg, add_txt])
+	return "对 %d 个敌人各 %d 伤%s" % [hits, dmg, add_txt]
+
+
+func _note_mi(side: String) -> String:
+	## Mi（9279，音符 · 1 费次元）：随机 2 个敌人本回合力量 -NOTE_MI_POWER_DOWN；抽 1 张。
+	## 「本回合」走 atk_buff_turn（负数也并进 effective_power，最低压到 0）；敌方回合结束由
+	## end_turn 自然清零，正好挡住它下一次攻击。
+	var cells := _foe_cells(side)
+	var targets: Array[Vector2i] = []
+	var pool := cells.duplicate()
+	for _i in NOTE_MI_TARGETS:
+		if pool.is_empty():
+			break
+		var k := rng.randi() % pool.size()
+		targets.append(pool[k])
+		pool.remove_at(k)
+	var weakened := 0
+	for c2: Vector2i in targets:
+		var q: Placement = state.board.get(c2, null)
+		if q == null or q.health <= 0:
+			continue
+		q.atk_buff_turn -= NOTE_MI_POWER_DOWN
+		weakened += 1
+	var drawn := _draw_many(1)
+	_log("Mi：%d 个敌人本回合力量 -%d；抽 %d 张" % [weakened, NOTE_MI_POWER_DOWN, drawn])
+	return "%d 个敌人本回合力量 -%d；抽 %d 张" % [weakened, NOTE_MI_POWER_DOWN, drawn]
+
+
+func _note_fa(side: String, target, card: CardData) -> String:
+	## Fa（9280，音符 · 2 费次元）：目标 NOTE_FA_DMG 伤 + 其余每个敌人各 NOTE_FA_SPLASH。
+	## 与冲拳同构（无击退）；目标必须是敌方单位，否则视为「没有目标」。
+	var p: Placement = _target_placement(side, target)
+	if p == null or p.owner == side:
+		_log("Fa：没有敌方目标")
+		return "（没有目标）"
+	var main_cell := _cell_of(p)
+	var others: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var u: Placement = state.board[cell]
+		if u != null and u.owner != side and u.health > 0 and cell != main_cell:
+			others.append(cell)
+	others.sort()
+	var msg := _op_deal_damage(side, _spell_dmg(side, NOTE_FA_DMG, card), target)
+	var splash := _spell_dmg(side, NOTE_FA_SPLASH, card)
+	var hits := 0
+	for cell: Vector2i in others:
+		var u2: Placement = state.board.get(cell, null)
+		if u2 == null or u2.health <= 0:
+			continue
+		_op_deal_damage(side, splash, cell)
+		hits += 1
+	_log("Fa：%s；其余 %d 个敌人各 %d 伤" % [msg, hits, splash])
+	return "%s；其余 %d 个敌人各 %d 伤" % [msg, hits, splash]
+
+
+func _note_sol(side: String, target, card: CardData) -> String:
+	## Sol（9281，音符 · 2 费次元）：目标眩晕 1 回合 + 全体敌人 NOTE_SOL_DMG 伤。
+	## 目标必须是敌方单位（眩晕友方不合理）；AOE 与激光扫射同口径。
+	var p: Placement = _target_placement(side, target)
+	var stun_txt := "（没有目标）"
+	if p != null and p.owner != side:
+		_apply_stun(p, "Sol")
+		stun_txt = "%s 被眩晕" % p.card.card_name
+	var dmg := _spell_dmg(side, NOTE_SOL_DMG, card)
+	var cells := _foe_cells(side)
+	var hits := 0
+	for c2: Vector2i in cells:
+		var q: Placement = state.board.get(c2, null)
+		if q == null or q.health <= 0:
+			continue
+		_hit_unit(q, dmg, "Sol")
+		hits += 1
+	_destroy_dead()
+	_log("Sol：%s；%d 个敌人各 %d 伤" % [stun_txt, hits, dmg])
+	return "%s；%d 个敌人各 %d 伤" % [stun_txt, hits, dmg]
+
+
+func _note_la(side: String) -> String:
+	## La（9282，音符 · 3 费次元）：抽 NOTE_LA_DRAW 张，这些卡本局费用 -1；其中盟友与工事力量 +3。
+	## 「本局费用 -1」走实例级减费 card_discount（本场有效、卡回牌库再抽到仍减 —— 与陨石术
+	## 「本局一直累加」同一条路）；「力量 +3」直接烘进卡面 power（手牌里的卡还没有 Placement）。
+	var got := _draw_many_cards(NOTE_LA_DRAW)
+	var buffed := 0
+	for c: CardData in got:
+		state.card_discount[c] = int(state.card_discount.get(c, 0)) + 1
+		if c.kind == "盟友" or c.kind == "工事":
+			c.power += NOTE_LA_POWER
+			buffed += 1
+	_log("La：抽 %d 张（各 -1 费）；%d 张盟友 / 工事力量 +%d" % [got.size(), buffed, NOTE_LA_POWER])
+	return "抽 %d 张（各 -1 费）；%d 张盟友 / 工事力量 +%d" % [got.size(), buffed, NOTE_LA_POWER]
+
+
+func _note_si(side: String, card: CardData) -> String:
+	## Si（9283，音符 · 4 费次元）：对随机敌方单位造成 NOTE_SI_DMG 伤，重复 NOTE_SI_TIMES 次。
+	## 每次独立抽取（可重复打同一只、也可换目标），走引擎 rng → 回放一致；敌人死光就提前收工。
+	var dmg := _spell_dmg(side, NOTE_SI_DMG, card)
+	var hits := 0
+	for _i in NOTE_SI_TIMES:
+		var cells := _foe_cells(side)
+		if cells.is_empty():
+			break
+		var c2: Vector2i = cells[rng.randi() % cells.size()]
+		var q: Placement = state.board.get(c2, null)
+		if q == null or q.health <= 0:
+			continue
+		_hit_unit(q, dmg, "Si")
+		hits += 1
+	_destroy_dead()
+	_log("Si：随机打击 %d 次，每次 %d 伤" % [hits, dmg])
+	return "随机打击 %d 次，每次 %d 伤" % [hits, dmg]
 
 
 func _rush_punch(side: String, target, card: CardData) -> String:

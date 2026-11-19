@@ -137,7 +137,7 @@ check("15 or more" in EN["relics"]["6059"]["desc"] and "15以上" in JA["relics"
 check("Refit" in EN["classes"]["机械之心"]["subtitle"] and "改修" in JA["classes"]["机械之心"]["subtitle"], "8027 卡名与 Upgrade／改造机制不混用")
 
 for rid, row in ZH["relics"].items():
-    for old in ("手卡", "生命值", "血量", "攻击力", "抽牌库", "弃牌库", "弃牌堆"):
+    for old in ("手卡", "生命值", "血量", "攻击力", "抽牌堆", "弃牌库", "弃牌堆"):
         if old in row["desc"]:
             errors.append("%s canonical 残留未归一词 %s" % (rid, old))
 
