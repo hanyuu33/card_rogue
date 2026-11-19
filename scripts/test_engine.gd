@@ -74619,7 +74619,7 @@ func _test_r593() -> void:
 
 	check(r593_rel != null and r593_rel.relic_name == "机械臂"
 
-			and r593_rel.desc == "每次战斗开始，把一张随机盟友加入你的手卡，本回合费用-1。"
+			and r593_rel.desc == "每次战斗开始，将一张随机盟友加入手牌，本回合费用-1。"
 
 			and r593_rel.locked and r593_rel.tier == "一般" and r593_rel.source == "奖励",
 

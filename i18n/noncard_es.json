@@ -241,7 +241,7 @@
     },
     "6065": {
       "name": "Brazo mecánico",
-      "desc": "Al comienzo de cada combate, añade a tu mano un Aliado aleatorio del grupo de recompensas de la clase actual; tiene Coste -1 durante tu primer turno."
+      "desc": "Al comienzo de cada combate, añade un Aliado aleatorio a tu mano; cuesta -1 este turno."
     },
     "6066": {
       "name": "Pata de mono",

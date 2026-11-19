@@ -241,7 +241,7 @@
     },
     "6065": {
       "name": "Mechanical Arm",
-      "desc": "At the start of each battle, add a random Ally from the current class's reward pool to your Hand; it has Cost -1 during your first turn."
+      "desc": "At the start of each battle, add a random Ally to your Hand; it has Cost -1 this turn."
     },
     "6066": {
       "name": "Monkey's Paw",
