@@ -834,11 +834,11 @@ const FOREST_FRIENDS_DISCOUNT:= 2
 # R352 竖琴（6052，剧情解锁道具）：所有己方盟友 +2 力量。
 const HARP_RELIC_ID:= 6052
 const HARP_ATK:= 2
-# R792 板甲（6070，一般档）：每场战斗**使用的第一个盟友** +6 生命（不叠加），
-#   但移动速度变为 1。加的血并进 `relic_bonus_hp`（场上有、离场还原）；
-#   移速走 `Placement.speed_cap` → `effective_speed()` 出口。
+# R792 板甲（6070，一般档）：每场战斗**使用的第一个盟友**获得「当前层数 × 3」生命
+#   （不叠加），但移动速度变为 1。加的血并进 `relic_bonus_hp`（场上有、离场还原）；
+#   移速走 `Placement.speed_cap` → `effective_speed()` 出口。层数 = `RunState.current_layer`。
 const PLATE_RELIC_ID:= 6070
-const PLATE_HP:= 6
+const PLATE_HP_PER_LAYER:= 3
 const PLATE_SPEED:= 1
 # R805 蜂蜜（6079，一般档）：**所有己方盟友**移动速度 +1 —— 与板甲 / 兵不同，
 #   不设「第一个盟友」闸门，此后上场的每一个己方盟友都吃。与竖琴 6052 逐字同构：
@@ -14187,20 +14187,22 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		_log("诗：%s 获得 +%d 力量（%d）"
 				% [card.card_name, POEM_ATK, p.effective_power()])
 	# ── R792 板甲（6070）────────────────────────────────────────────
-	# 「每场战斗使用的第一个盟友」+6 生命（不叠加），但移速变为 1。
+	# 「每场战斗使用的第一个盟友」获得「当前层数 × 3」生命（不叠加），但移速变为 1。
 	#   * 「第一个」以**本场第一个落地的己方盟友**为准 —— 手牌打出与涂装机器人
 	#     8080「变成」出来的单位共用本函数，两条来路必须给同一个结论（竖琴约定）；
 	#   * 加的血并进 `relic_bonus_hp` + `card.health` + `health`，离场由
-	#     `_card_leaving_field()` 减回去，不会让同一张卡回手再上场叠成 +12；
+	#     `_card_leaving_field()` 减回去，不会让同一张卡回手再上场叠双份；
 	#   * 移速走 `speed_cap`（`mini` 语义，0 速单位不受影响）。
+	#   * R828：加值由固定 +6 改为「当前层数 × 3」（第一层 3 / 第二层 6 / 第三层 9）。
 	if RunState.has_relic(PLATE_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友" and not _plate_first_ally_done:
 		_plate_first_ally_done = true
-		p.relic_bonus_hp += PLATE_HP
-		p.card.health += PLATE_HP
-		p.health += PLATE_HP
+		var plate_hp: int = RunState.current_layer * PLATE_HP_PER_LAYER
+		p.relic_bonus_hp += plate_hp
+		p.card.health += plate_hp
+		p.health += plate_hp
 		p.speed_cap = PLATE_SPEED
 		_log("板甲：第一个盟友 %s 获得 +%d 生命（%d），移动速度降为 %d"
-				% [card.card_name, PLATE_HP, p.health, p.effective_speed()])
+				% [card.card_name, plate_hp, p.health, p.effective_speed()])
 	# ── R792 兵（6071）──────────────────────────────────────────────
 	# 同一个「第一个盟友」可以行动两次。`first_ally_twice` 只为 `unit_actions()` 提供判据，
 	# 但**落地这一刻**行动轮数已经发过了（`place()` 里按老的 unit_actions 发的），

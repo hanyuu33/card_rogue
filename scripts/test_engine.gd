@@ -78579,10 +78579,13 @@ func _test_r792() -> void:
 	check(r792_en.contains('"6070"') and r792_ja.contains('"6070"') and r792_es.contains('"6070"') and r792_en.contains('"6071"') and r792_ja.contains('"6071"') and r792_es.contains('"6072"'),
 			"R792 三语条目齐（6070 / 6071 / 6072）")
 
-	# ② 板甲：第一个盟友 +6 生命、移速 5 → 1；第二个盟友完全不受影响
+	# ② 板甲：第一个盟友获得「当前层数 × 3」生命、移速 5 → 1；第二个盟友完全不受影响
+	var r792_layer_save: int = RunState.current_layer
 	var r792_plate_relics: Array[int] = [6070]
 
 	RunState.relics = r792_plate_relics
+
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
 
 	var r792_plate := _new_engine([], 40, 40)
 
@@ -78598,14 +78601,47 @@ func _test_r792() -> void:
 
 	var r792_p2 := r792_plate.play_from_hand(0, Vector2i(4, 1))
 
-	check(r792_p1 != null and r792_p1.health == 7 and r792_p1.card.health == 7,
-			"R792 板甲：第一个盟友 1+6=7 生命（实得 %d）" % (r792_p1.health if r792_p1 != null else -1))
+	check(r792_p1 != null and r792_p1.health == 4 and r792_p1.card.health == 4,
+			"R792 板甲：第一层第一个盟友 1+3=4 生命（实得 %d）" % (r792_p1.health if r792_p1 != null else -1))
 
 	check(r792_p1 != null and r792_p1.effective_speed() == 1 and r792_p1.speed_cap == 1,
 			"R792 板甲：第一个盟友移速 5 → 1（实得 %d）" % (r792_p1.effective_speed() if r792_p1 != null else -1))
 
 	check(r792_p2 != null and r792_p2.health == 12 and r792_p2.speed_cap == 0 and r792_p2.relic_bonus_hp == 0,
 			"R792 板甲：第二个盟友不受影响（生命 %d、无移速上限）" % (r792_p2.health if r792_p2 != null else -1))
+
+	# R828：第二层 2×3=6、第三层 3×3=9 —— 加值随层数放大，仍是「第一个盟友」同一额度
+	RunState.current_layer = GameLayers.LAYER_TWO
+
+	var r792_plate_l2 := _new_engine([], 40, 40)
+
+	r792_plate_l2.state.energy = 30
+
+	r792_plate_l2.state.hand.clear()
+
+	r792_plate_l2.state.hand.append(CardData.from_dict(r792_cards.get_card(8006).to_dict()))
+
+	var r792_l2p := r792_plate_l2.play_from_hand(0, Vector2i(5, 1))
+
+	check(r792_l2p != null and r792_l2p.health == 7,
+			"R792 板甲：第二层第一个盟友 1+6=7 生命（实得 %d）" % (r792_l2p.health if r792_l2p != null else -1))
+
+	RunState.current_layer = GameLayers.LAYER_THREE
+
+	var r792_plate_l3 := _new_engine([], 40, 40)
+
+	r792_plate_l3.state.energy = 30
+
+	r792_plate_l3.state.hand.clear()
+
+	r792_plate_l3.state.hand.append(CardData.from_dict(r792_cards.get_card(8006).to_dict()))
+
+	var r792_l3p := r792_plate_l3.play_from_hand(0, Vector2i(5, 1))
+
+	check(r792_l3p != null and r792_l3p.health == 10,
+			"R792 板甲：第三层第一个盟友 1+9=10 生命（实得 %d）" % (r792_l3p.health if r792_l3p != null else -1))
+
+	RunState.current_layer = r792_layer_save
 
 	# ③ 兵：第一个盟友当回合就有 2 轮行动；第二个只 1 轮
 	var r792_pawn_relics: Array[int] = [6071]

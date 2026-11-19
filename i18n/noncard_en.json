@@ -259,7 +259,7 @@
       "name": "Poem",
       "desc": "The first time each turn you use an Ally from another class: gain 1 Cost. Allies from other classes have +2 Power (persistent; does not stack)."
     },
-    "6070": {"name": "Plate Armor", "desc": "The first Ally you play each combat gains +6 Health (does not stack), but its Move Speed becomes 1."},
+    "6070": {"name": "Plate Armor", "desc": "The first Ally you play each combat gains +3 Health per current Layer (does not stack), but its Move Speed becomes 1."},
     "6071": {"name": "Pawn", "desc": "The first Ally you play each combat can act twice (does not stack)."},
     "6072": {"name": "Wall Brick", "desc": "Your Structures have +4 Health (persistent; does not stack)."},
     "6073": {"name": "Spike Wall", "desc": "Once per turn: whenever one of your Structures or your HP is attacked, deal 5 damage to the attacker."},
