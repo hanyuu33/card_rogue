@@ -290,6 +290,7 @@
       "CORE_CONTRACT_CORE_GAINED": "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张尚未附魔的伤害技能牌上。用掉之后失效。"
     },
     "divination": {
+      "DIVINATION_COST_PAID": "（占卜的代价：失去 %d 点最大生命 → %d / %d）",
       "DIVINATION_CARD_GAINED": "「%s」已加入卡组。",
       "DIVINATION_RELIC_GAINED": "「%s」已收进道具栏。"
     },

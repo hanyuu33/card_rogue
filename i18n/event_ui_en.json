@@ -292,6 +292,7 @@
       "CORE_CONTRACT_CORE_GAINED": "\"Core\" has been added to your Relic inventory: after you have lost a cumulative total of %d Health in battle, it takes shape; an extra exchange becomes available on the reward page when this battle ends—sacrifice 1 damage Skill, permanently Removing it from your Deck, and attach its first instance of damage as an Enchant to another damage Skill with no Enchant. It becomes inactive after use."
     },
     "divination": {
+      "DIVINATION_COST_PAID": "(Divination cost: -%d Max Health -> %d / %d)",
       "DIVINATION_CARD_GAINED": "\"%s\" has been added to your Deck.",
       "DIVINATION_RELIC_GAINED": "\"%s\" has been added to your Relic inventory."
     },

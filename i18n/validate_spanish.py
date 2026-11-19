@@ -260,7 +260,7 @@ for achievement_id, zh_row in NARRATIVE_ZH["achievements"].items():
 event_zh_rows = flatten_event(EVENT_ZH)
 event_es_rows = flatten_event(EVENT_ES)
 check(set(event_es_rows) == set(event_zh_rows), "event_ui 全部 key 覆盖一致")
-check(len(event_zh_rows) == 180, "event_ui 为 99 选项 + 73 结果 + 5 选货 + 3 动态（R793 +5；R794 +6；R807 +2 +2）")
+check(len(event_zh_rows) == 181, "event_ui 为 99 选项 + 74 结果 + 5 选货 + 3 动态（R793 +5；R794 +6；R807 +2 +2；R819 +1 占卜代价行）")
 for path, zh_text in event_zh_rows.items():
     check_text("event_ui." + path, zh_text, event_es_rows.get(path))
 dynamic_map = {

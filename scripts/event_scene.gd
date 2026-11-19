@@ -1798,6 +1798,13 @@ func _ready() -> void:
 		_setup_arcane()
 	elif _is_divination():
 		event_name.text = "占 卜 室"
+		# R819：幻象**由「本局种子 + 层 + 节点」派生**（不摇 run_rng、不进存档）——
+		# 退出重进 / 回标题继续拿到的都是同一种，「反复重摇到满意再付 5 点」这条路就此堵死。
+		# 代价与奖励仍在本房间内结算（中途退出 = 作废，与其它事件同口径）。
+		if _div_stage == 0:
+			_div_rolled = RunState.divination_roll_for(
+					RunState.run_seed, RunState.current_layer, RunState.current_node_id,
+					DIVINATION_KINDS)
 		if _div_stage >= 2:
 			desc.text = DIVINATION_DONE_DESC
 			_collapse_to_leave()
@@ -2408,13 +2415,19 @@ func _on_main() -> void:
 			if RunState.max_hp <= DIVINATION_HP_COST:
 				return
 			var div_paid := RunState.lose_max_hp(DIVINATION_HP_COST)
-			# 进行占卜：1~4 随机（**走本局 run_rng**，同种子一致）
-			_div_rolled = RunState.run_rng.randi_range(1, DIVINATION_KINDS)
+			# R819：幻象在进房时已按「种子 + 层 + 节点」派生好 —— 这里只取，不再摇。
+			if _div_rolled < 1:
+				_div_rolled = RunState.divination_roll_for(
+						RunState.run_seed, RunState.current_layer, RunState.current_node_id,
+						DIVINATION_KINDS)
 			_div_stage = 1
 			_apply_divination_text()
 			if div_paid > 0:
-				result_label.text = "（占卜的代价：失去 %d 点最大生命 → %d / %d）" % [
-						div_paid, RunState.hp, RunState.max_hp]
+				# R819：结果行含三个动态数值 → 必须走模板表（event_ui `DIVINATION_COST_PAID`），
+				# 直接赋中文串的话 en / ja / es 下会原地回落中文（R807 的同一类坑）。
+				result_label.text = GameI18n.source(
+						"（占卜的代价：失去 %d 点最大生命 → %d / %d）" % [
+								div_paid, RunState.hp, RunState.max_hp])
 			_update_orb_vision()
 			sfx.play("click")
 			_redraw()
@@ -3295,7 +3308,9 @@ func _resolve_divination(first: bool) -> void:
 	_claim_reward(rest_btn if first else bbq_btn)
 	_collapse_to_leave()
 	desc.text = DIVINATION_DONE_DESC
-	result_label.text = _div_result
+	# R819：结果行带动态卡名 / 道具名 → 走模板表（`DIVINATION_CARD_GAINED` /
+	# `DIVINATION_RELIC_GAINED`，含 %s）；不套这一层，en / ja / es 下这行永远是中文。
+	result_label.text = GameI18n.source(_div_result)
 	result_label.add_theme_color_override("font_color", Color("8a9ad8"))
 	_redraw()
 

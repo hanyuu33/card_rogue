@@ -292,6 +292,7 @@
       "CORE_CONTRACT_CORE_GAINED": "«Núcleo» se ha añadido a tu inventario de Reliquias: tras perder un total acumulado de %d Vida en combate, tomará forma; al terminar este combate, aparecerá un intercambio adicional en la página de recompensas: sacrifica 1 Habilidad de daño, eliminándola permanentemente del mazo, y añade su primera instancia de daño como Encantamiento a otra Habilidad de daño que no tenga Encantamiento. Se vuelve inactivo después de usarlo."
     },
     "divination": {
+      "DIVINATION_COST_PAID": "(Coste de la adivinación: -%d de Vida máxima -> %d / %d)",
       "DIVINATION_CARD_GAINED": "«%s» se ha añadido a tu mazo.",
       "DIVINATION_RELIC_GAINED": "«%s» se ha añadido a tu inventario de Reliquias."
     },

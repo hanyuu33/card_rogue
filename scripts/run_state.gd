@@ -733,6 +733,19 @@ static func sacrament_stay_key() -> int:
 	return current_layer * 10000 + current_node_id
 
 
+static func divination_roll_for(p_seed: int, p_layer: int, p_node: int,
+		p_kinds := 4) -> int:
+	## R819 占卜室：**这一次占卜出第几种幻象**（1~p_kinds）—— 由「种子 + 层 + 节点」派生，
+	## 不走 `run_rng`、也不进存档。
+	## ⚠️ 原来摇在「点下进行占卜」那一刻、且只存在场景变量里：`_div_stage` 一归零
+	##    （回标题 → 继续 → 重进本房）就能重摇，玩家可以反复试到想要的那一种
+	##    （鲸鱼之怒 / 烈火之剑）再付 5 点。改成派生后，同一局同一层同一间**必然是同一结果**，
+	##    退出重进换不了，也不需要往存档里塞字段（不落盘就没有「读档站死在占卜室」的副作用）。
+	## 同种子重跑同一种子自然一致，与 run 层其它随机的口径相同。
+	var h := absi(hash("%d:%d:%d" % [p_seed, p_layer, p_node]))
+	return (h % maxi(1, p_kinds)) + 1
+
+
 static func sacrament_arrive() -> int:
 	## R473 圣餐（6038）：**到达**篝火处回复 50% 最大生命，返回实际回复量。
 	## 0 = 没持有 / 这一间已经结算过 / 本来就是满血。
