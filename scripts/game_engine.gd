@@ -219,6 +219,7 @@ var _recruit_cards: Array = []
 var _battle_energy_bonus:= 0
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
+var _spike_wall_turn:= -1      # R827 刺墙：上次触发是第几回合（每回合一次）
 var _knight_sword_fired:= false  # R383 骑士剑：本场战斗的第一次击杀是否已发生（每场一次）
 var _scroll_used:= false   # R806 法术卷轴：本场战斗的第一次「用技能卡」是否已发生（每场一次）
 ## R810 太阳指环（6082）：重入保护。它自己造成伤害 → 若某只敌人被这一下打死、死亡效果
@@ -868,6 +869,8 @@ const SPIKE_WALL_RELIC_ID:= 6073
 const SPIKE_WALL_DMG:= 5
 # R796 刺墙**扩面**（用户口径「工事和 HP 被攻击时」）：反伤触发面从「工事」加到
 #   「工事 + 玩家 HP」。常量不变，只多挂一处 —— 见 `attack_hp()` 里那一段。
+# R827 刺墙**一回合一次**：反伤每回合（turn_number 口径）至多触发一次 ——
+#   `_spike_wall_turn` 记上次触发的回合号，工事反伤与 HP 反伤**共用同一个额度**。
 # R796 钻头（6077，一般档）：**X 费卡**的效果 X ≥ DRILL_X_MIN 时翻倍。
 #   ⚠️ 翻的是**效果的 X**，不是「要付的费用」—— 流星雨照样吃掉全部费用再放 2X 颗，
 #   枭熊照样付光费用，只是力量记 2X、生命记 9×(2X)。见 `_drill_x()`。
@@ -2542,6 +2545,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	_first_kill_growth_done.clear()   # R393：击杀成长每场战斗各卡一次
 	_three_bots_destroyed = 0   # R534：三个机器人的计数每场战斗重置
 	_thorn_ring_turn = -1
+	_spike_wall_turn = -1
 	state.starting_hand(starting_hand)
 	# R767：同上（开局那一次）
 	state.energy = RunState.energy_per_turn()
@@ -19439,8 +19443,10 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# ⚠️ 只认**普通攻击**：`attack()` 是普攻唯一的结算口，技能 / 效果打过来不经过这里。
 	var spike_wall_ok: bool = (defender.owner == SIDE_SELF
 			and defender.card.kind == "工事"
-			and RunState.has_relic(SPIKE_WALL_RELIC_ID))
+			and RunState.has_relic(SPIKE_WALL_RELIC_ID)
+			and _spike_wall_turn != turn_number)
 	if state.board.has(src) and spike_wall_ok:
+		_spike_wall_turn = turn_number
 		var sw:= _hit_unit(attacker, SPIKE_WALL_DMG, "刺墙", false)
 		_log("刺墙：%s 攻击工事 %s → 反受 %d 点伤害" % [
 				attacker.card.card_name, defender.card.card_name, sw])
@@ -19577,8 +19583,10 @@ func attack_hp(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# ⚠️ 判据必须是 `board.has(src)`（**格子坐标**）—— `board` 是以 `Vector2i` 为键的表，
 	#    传 Placement 进去恒为假，整段静默不执行（R796 首版就踩了这个，测试当场 40 → 40）。
 	var spike_hp_ok: bool = (side != SIDE_SELF and state.board.has(src)
-			and RunState.has_relic(SPIKE_WALL_RELIC_ID))
+			and RunState.has_relic(SPIKE_WALL_RELIC_ID)
+			and _spike_wall_turn != turn_number)
 	if spike_hp_ok:
+		_spike_wall_turn = turn_number
 		var sw_hp:= _hit_unit(attacker, SPIKE_WALL_DMG, "刺墙", false)
 		_log("刺墙：%s 攻击我方 HP → 反受 %d 点伤害" % [attacker.card.card_name, sw_hp])
 		action.emit("spike_wall", {"cell": dst, "src": src, "amount": sw_hp,

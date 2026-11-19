@@ -78703,6 +78703,26 @@ func _test_r796() -> void:
 	check(r796_foe.health == r796_foe_hp0 - 5,
 			"R796 刺墙扩面：直击 HP → 攻击者 -5（%d → %d）" % [r796_foe_hp0, r796_foe.health])
 
+	# ②b 刺墙一回合一次（R827）：工事反过之后，同回合直击 HP 不再反（共享额度）
+	RunState.relics = [6073]
+	var r827_sh := _new_engine([], 40, 40)
+	r827_sh.state.energy = 30
+	r827_sh.state.hand.clear()
+	r827_sh.state.hand.append(CardData.from_dict(r796_cards.get_card(8001).to_dict()))
+	var r827_shw := r827_sh.play_from_hand(0, Vector2i(5, 0))
+	var r827_she1 := r827_sh.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 0), GameEngine.SIDE_OPPONENT)
+	var r827_she2 := r827_sh.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	var r827_she1hp0: int = r827_she1.health
+	var r827_she2hp0: int = r827_she2.health
+	r827_sh.attack(Vector2i(4, 0), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
+	r827_sh.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r827_she1.health == r827_she1hp0 - 5 and r827_she2.health == r827_she2hp0,
+			"R827 刺墙一回合一次：工事反过后同回合 HP 直击不反（共享额度 %d/%d）" % [
+				r827_she1.health, r827_she2.health])
 	# ③ 不持道具时直击 HP 不反伤
 	RunState.relics = []
 	var r796_sw2 := _new_engine([], 40, 40)
@@ -79144,6 +79164,42 @@ func _test_r793() -> void:
 	check(r793_foe.health == r793_foe_hp0 - 5,
 			"R793 刺墙：攻击工事 → 攻击者 -5（%d → %d）" % [r793_foe_hp0, r793_foe.health])
 
+	# ②b 刺墙一回合一次（R827）：同回合第二刀不反；换回合恢复额度
+	var r827_w_relics: Array[int] = [6073]
+	RunState.relics = r827_w_relics
+	var r827_w := _new_engine([], 40, 40)
+	r827_w.state.energy = 30
+	r827_w.state.hand.clear()
+	r827_w.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	r827_w.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	var r827_w1 := r827_w.play_from_hand(0, Vector2i(5, 0))
+	var r827_w2 := r827_w.play_from_hand(0, Vector2i(5, 1))
+	var r827_e1 := r827_w.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 0), GameEngine.SIDE_OPPONENT)
+	var r827_e2 := r827_w.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r827_w1 != null and r827_w2 != null and r827_e1 != null and r827_e2 != null,
+			"R827 刺墙一回合一次：两个工事与两个攻击者就位")
+	var r827_e1hp0: int = r827_e1.health
+	var r827_e2hp0: int = r827_e2.health
+	r827_w.attack(Vector2i(4, 0), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
+	r827_w.attack(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r827_e1.health == r827_e1hp0 - 5 and r827_e2.health == r827_e2hp0,
+			"R827 刺墙一回合一次：同回合两刀只反第一刀（%d/%d）" % [
+				r827_e1.health, r827_e2.health])
+	r827_w.turn_number += 1
+	r827_w.state.hand.clear()
+	r827_w.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	var r827_w3 := r827_w.play_from_hand(0, Vector2i(5, 2))
+	var r827_e3 := r827_w.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	var r827_e3hp0: int = r827_e3.health
+	r827_w.attack(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+	check(r827_e3.health == r827_e3hp0 - 5,
+			"R827 刺墙一回合一次：换回合后额度恢复（%d → %d）" % [r827_e3hp0, r827_e3.health])
 	# ③ 刺墙只认工事：同样的位置换成盟友，攻击者不掉血
 	RunState.relics = r793_sw_relics
 	var r793_sw2 := _new_engine([], 40, 40)
