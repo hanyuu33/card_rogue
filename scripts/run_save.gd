@@ -331,6 +331,7 @@ static func snapshot() -> Dictionary:
 		"statue_charge": RunState.statue_charge,
 		"basin_charge": RunState.basin_charge,   # R311 不锈钢盆：剩余点数（跨战斗累计）
 		"lucky7_turns": RunState.lucky7_turns,   # R314 lucky 7：跨战斗回合计数
+		"crescent_battles": RunState.crescent_battles,   # R810 新月耳饰：距下一点费用的场数进度
 		"pipe_ready": RunState.pipe_ready,   # R446 烟斗：还亮着没有
 		"core_lost": RunState.core_lost,      # R458 核心：累计失去的生命值
 		"core_armed": RunState.core_armed,     # R458 核心：够 15 点没有
@@ -668,6 +669,8 @@ static func apply(d: Dictionary) -> bool:
 		RunState.basin_charge = RunState.BASIN_MAX
 	# R314 lucky 7：老存档没有这个字段 → 按 0（下次开始我方回合起重新累计）
 	RunState.lucky7_turns = int(d.get("lucky7_turns", 0))
+	# R810 新月耳饰：老存档没有这个字段 → 按 0（等于「还差 3 场」）
+	RunState.crescent_battles = clampi(int(d.get("crescent_battles", 0)), 0, RunState.CRESCENT_EVERY - 1)
 	RunState.pipe_ready = bool(d.get("pipe_ready", false))   # R446
 	# R458 核心：老档没有这两个字段 → 默认 0 / false（等于「还没受过伤」）
 	RunState.core_lost = int(d.get("core_lost", 0))

@@ -2275,6 +2275,26 @@
       "en": "Spell Scroll",
       "ja": "スペルスクロール",
       "id": 6080
+    },
+    "新月耳饰": {
+      "en": "Crescent Earring",
+      "ja": "三日月のイヤリング",
+      "id": 6081
+    },
+    "太阳指环": {
+      "en": "Sun Ring",
+      "ja": "太陽の指輪",
+      "id": 6082
+    },
+    "海妖鱼叉": {
+      "en": "Siren Harpoon",
+      "ja": "セイレーンの銛",
+      "id": 6083
+    },
+    "缺陷时钟": {
+      "en": "Defective Clock",
+      "ja": "欠陥時計",
+      "id": 6084
     }
   },
   "levels": {

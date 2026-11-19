@@ -178,6 +178,7 @@
       "REWARD_RELIC_STATE_REROLLS": "Rerolls remaining: %d.",
       "REWARD_RELIC_STATE_LUCKY7_ACTIVE": "Active this turn: immune to all HP damage + Skills deal 7 additional damage.",
       "REWARD_RELIC_STATE_LUCKY7_WAITING": "%d turns until the next activation.",
+      "REWARD_RELIC_STATE_CRESCENT_WAITING": "%d battles until the next Energy.",
       "REWARD_VICTORY_GOLD_HEADING": "Gold Acquired",
       "REWARD_VICTORY_VIEW_REWARDS": "View Rewards",
       "REWARD_VICTORY_GOLD_PARTS": "%s　Current: %d",

@@ -269,7 +269,11 @@
     "6077": {"name": "Drill", "desc": "When you play a card whose cost is X, if X is 6 or more, X is doubled."},
     "6078": {"name": "Turtle Shell", "desc": "Your allies that did not attack last turn take 2 less damage (still at least 1)."},
     "6079": {"name": "Honey", "desc": "All friendly allies gain +1 Move Speed."},
-    "6080": {"name": "Spell Scroll", "desc": "The first time you use a Skill card each battle, add a copy of it with Dimensional to your Hand."}
+    "6080": {"name": "Spell Scroll", "desc": "The first time you use a Skill card each battle, add a copy of it with Dimensional to your Hand."},
+    "6081": {"name": "Crescent Earring", "desc": "Every 3 battles, gain 1 Energy."},
+    "6082": {"name": "Sun Ring", "desc": "Each turn, deal 3 damage to all enemy units."},
+    "6083": {"name": "Siren Harpoon", "desc": "Within the same turn, every 3rd time you deal damage to an enemy, deal 6 damage to it."},
+    "6084": {"name": "Defective Clock", "desc": "The 12th card you play each battle ends your current turn and immediately begins a new one of yours (the enemy turn never happens)."}
   },
   "classes": {
     "森林精魄": {

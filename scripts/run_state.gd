@@ -156,6 +156,14 @@ const LUCKY7_EVERY := 7
 ## 满 7 的倍数那一回合生效。随存档走（run_save）。
 static var lucky7_turns := 0
 
+## R810 新月耳饰（6081，一般档）：每 `CRESCENT_EVERY` 场战斗，在**那场的第一回合** +1 费用。
+## 计数只记「拿着这件道具之后开打的战斗」，跨战斗保留、随存档走（run_save）。
+## ⚠️ 推进口唯一 = `GameEngine._begin_turn()` 的 `turn_number == 1` 分支里调 `crescent_tick()`
+##    —— 那里每场战斗只成立一次。别在战斗开始处再加一次，否则一场数两下。
+const CRESCENT_EARING_ID := 6081
+const CRESCENT_EVERY := 3
+static var crescent_battles := 0
+
 ## R314 传奇掉落概率：**5% × 当前层数**；大宝箱翻倍。
 ## 层数取 `current_layer`（第一层 1 / 第二层 2 …），所以第一层 5%、第二层 10%；
 ## 大宝箱第一层 10%、第二层 20%。上限 100%（层数继续加也不会溢出）。
@@ -785,11 +793,32 @@ static func relic_badge_text(id: int) -> String:
 			return str(maxi(0, match_charge))
 		CAVE_ROPE_RELIC_ID:
 			return "1"
+		CRESCENT_EARING_ID:
+			# R810 新月耳饰：还差几场战斗 → 下一点费用（3 / 2 / 1）。
+			# 与 lucky 7 不同，这里**没有「正在生效」的回合**要避让，所以永远画。
+			return str(crescent_left())
 		RELIC_STATUE_ID:
 			return str(statue_charge) if statue_charge > 0 else ""
 		BASIN_RELIC_ID:
 			return str(basin_charge) if basin_charge > 0 else ""
 	return ""
+
+
+static func crescent_tick() -> bool:
+	## R810 新月耳饰（6081）：**每场战斗开始时**（引擎侧 = `turn_number == 1`）调一次。
+	## 返回「这一场是否该发 1 点费用」—— 场数满 `CRESCENT_EVERY` 的倍数时为 true，
+	## 计到倍数就**归零重数**（而不是一直对模），于是角标「还差几场」永远算得清。
+	## ⚠️ 无条件累加（只要持有道具）；发不发钱由返回值决定，调用方负责加 `state.energy`。
+	crescent_battles += 1
+	if crescent_battles >= CRESCENT_EVERY:
+		crescent_battles = 0
+		return true
+	return false
+
+
+static func crescent_left() -> int:
+	## 还差几场战斗才发下一点费用（角标 / 状态注共用）—— 刚发完时是 `CRESCENT_EVERY`。
+	return maxi(1, CRESCENT_EVERY - crescent_battles)
 
 
 static func lucky7_tick() -> bool:
@@ -2814,6 +2843,9 @@ static func relic_state_note(id: int) -> String:
 	# R314 lucky 7：写清「还差几个回合生效」—— 它的效果是周期性脉冲，不是常亮
 	if id == MATCH_RELIC_ID and relics.has(MATCH_RELIC_ID):
 		return GameI18n.ui("reward", "REWARD_RELIC_STATE_REROLLS", "剩余刷新次数 %d 次。") % maxi(0, match_charge)
+	if id == CRESCENT_EARING_ID and relics.has(CRESCENT_EARING_ID):
+		return GameI18n.ui("reward", "REWARD_RELIC_STATE_CRESCENT_WAITING",
+				"距获得下一点费用还有 %d 场战斗。") % crescent_left()
 	if id == LUCKY7_RELIC_ID and relics.has(LUCKY7_RELIC_ID):
 		if lucky7_is_due():
 			return GameI18n.ui("reward", "REWARD_RELIC_STATE_LUCKY7_ACTIVE", "本回合生效：免疫所有 HP 伤害 + 技能额外 7 点伤害。")

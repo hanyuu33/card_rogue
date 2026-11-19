@@ -1118,6 +1118,10 @@
         "source": "scripts/run_state.gd:2325",
         "zh": "距下次生效还有 %d 个回合。"
       },
+      "REWARD_RELIC_STATE_CRESCENT_WAITING": {
+        "source": "scripts/run_state.gd:2317",
+        "zh": "距获得下一点费用还有 %d 场战斗。"
+      },
       "REWARD_VICTORY_GOLD_HEADING": {
         "source": "scripts/battle_scene.gd:7805",
         "zh": "获得金币"
@@ -3679,7 +3683,7 @@
   },
   "expected_counts": {
     "shop": 72,
-    "reward": 124,
+    "reward": 125,
     "map": 244,
     "battle": 80,
     "shell": 215,

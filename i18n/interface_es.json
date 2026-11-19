@@ -178,6 +178,7 @@
       "REWARD_RELIC_STATE_REROLLS": "Renovaciones restantes: %d.",
       "REWARD_RELIC_STATE_LUCKY7_ACTIVE": "Activa este turno: inmunidad a todo el daño a la Vida + las Habilidades infligen 7 de daño adicional.",
       "REWARD_RELIC_STATE_LUCKY7_WAITING": "Faltan %d turnos para la próxima activación.",
+      "REWARD_RELIC_STATE_CRESCENT_WAITING": "Faltan %d combates para obtener la próxima Energía.",
       "REWARD_VICTORY_GOLD_HEADING": "Oro obtenido",
       "REWARD_VICTORY_VIEW_REWARDS": "Ver recompensas",
       "REWARD_VICTORY_GOLD_PARTS": "%s　Actual: %d",

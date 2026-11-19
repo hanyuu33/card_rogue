@@ -178,6 +178,7 @@
       "REWARD_RELIC_STATE_REROLLS": "残りリロール回数：%d回。",
       "REWARD_RELIC_STATE_LUCKY7_ACTIVE": "このターン有効：全てのHPダメージを無効化し、スキルの追加ダメージ+7。",
       "REWARD_RELIC_STATE_LUCKY7_WAITING": "次の発動まであと%dターン。",
+      "REWARD_RELIC_STATE_CRESCENT_WAITING": "次のコスト獲得まであと%d戦。",
       "REWARD_VICTORY_GOLD_HEADING": "ゴールドを獲得",
       "REWARD_VICTORY_VIEW_REWARDS": "報酬を見る",
       "REWARD_VICTORY_GOLD_PARTS": "%s　現在 %d",
