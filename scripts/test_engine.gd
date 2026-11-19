@@ -9765,9 +9765,9 @@ func _init() -> void:
 
 	var r289_leg := r289_repo.legendary_reward_ids()
 
-	check(r289_all.size() == 36 and r289_nor.size() == 29 and r289_leg.size() == 7,
+	check(r289_all.size() == 36 and r289_nor.size() == 30 and r289_leg.size() == 6,
 
-			"奖励分档：奖励池 36 件 = 一般 29 + 传奇 7（实际 %d / %d / %d）"
+			"奖励分档：奖励池 36 件 = 一般 30 + 传奇 6（实际 %d / %d / %d）"
 
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 
@@ -52514,13 +52514,23 @@ func _init() -> void:
 
 	var r314_repo := RelicRepo.load_json()
 
-	check(r314_repo.get_relic(6040).tier == RelicData.TIER_LEGENDARY
+	check(r314_repo.get_relic(6044).tier == RelicData.TIER_LEGENDARY
 
-			and r314_repo.get_relic(6044).tier == RelicData.TIER_LEGENDARY
+			and r314_repo.get_relic(6045).tier == RelicData.TIER_LEGENDARY
 
-			and r314_repo.get_relic(6045).tier == RelicData.TIER_LEGENDARY,
+			and r314_repo.get_relic(6040).tier == RelicData.TIER_NORMAL,
 
-			"R314 水晶骰子 / 储物箱 / lucky 7 三件都是「传奇」档")
+			"R314/R813 储物箱 / lucky 7 是「传奇」档；水晶骰子 R813 起降为「一般」")
+
+	# R813（店长口径「骰子降为普通道具」）：光改 tier 字段不够 —— 必须确认**真的换池**。
+	# 一般池 +1 件 / 传奇池 -1 件，两条都锁住；只锁一条时「档位改了但池子没跟上」照样能过。
+	check(r314_repo.normal_reward_ids().has(6040)
+
+			and not r314_repo.legendary_reward_ids().has(6040),
+
+			"R813 水晶骰子：降为一般档后**进一般池、出传奇池**（一般 %d / 传奇 %d）"
+
+			% [r314_repo.normal_reward_ids().size(), r314_repo.legendary_reward_ids().size()])
 
 	check(r314_repo.get_relic(6044).relic_name == "储物箱"
 
@@ -65630,11 +65640,13 @@ func _init() -> void:
 
 			"R410 水晶骰子：不靠括号补注（括号在卡面会被剥掉，等于没写）")
 
+	# R813（店长口径「骰子降为普通道具」）：档位已由传奇改为一般，
+	# 本段原本锁的「仍是传奇」正是要推翻的旧口径 —— 改成一般，锁的仍是「档位没被误改」。
 	check(GameEngine.DICE_RELIC_ID == 6040 and r410_dice != null
 
-			and r410_dice.tier == RelicData.TIER_LEGENDARY,
+			and r410_dice.tier == RelicData.TIER_NORMAL,
 
-			"R410 水晶骰子：仍是传奇道具（这次只改文案）")
+			"R410/R813 水晶骰子：档位是「一般」（R813 由传奇降档）")
 
 
 
@@ -79820,9 +79832,9 @@ func _test_r810() -> void:
 	check(r810_bad.is_empty(), "R810 数据层：四件都在库 · 战斗类 · 奖励来源 · 进奖励池（%s）"
 			% str(r810_bad))
 	check(r810_repo.all_relics().size() == 79, "R810 数据层：道具总数 79 件")
-	check(r810_repo.normal_reward_ids().size() == 29
-			and r810_repo.legendary_reward_ids().size() == 7,
-			"R810 数据层：奖励池 29 一般 + 7 传奇 = 36")
+	check(r810_repo.normal_reward_ids().size() == 30
+			and r810_repo.legendary_reward_ids().size() == 6,
+			"R810/R813 数据层：奖励池 30 一般 + 6 传奇 = 36")
 	check(r810_repo.get_relic(6081).desc == "每 3 场战斗，获得 1 点费用。",
 			"R810 新月耳饰：描述只写「每 3 场战斗，获得 1 点费用。」（%s）"
 					% r810_repo.get_relic(6081).desc)
