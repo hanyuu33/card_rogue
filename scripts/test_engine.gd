@@ -15963,11 +15963,11 @@ func _init() -> void:
 
 	var relic_repo := RelicRepo.load_json()
 
-	check(relic_repo.initial_ids().size() == 10 and relic_repo.get_relic(6001) != null
+	check(relic_repo.initial_ids().size() == 11 and relic_repo.get_relic(6001) != null
 
 			and relic_repo.get_relic(6004) != null and relic_repo.get_relic(6021) != null,
 
-			"道具库：10 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048 / R745 工具箱 6068）")
+			"道具库：11 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048 / R745 工具箱 6068 / R830 首饰盒 6088）")
 
 	RunState.choose_start_relic(6001)
 
@@ -43134,9 +43134,9 @@ func _init() -> void:
 
 	var r244_pack := r244_repo.get_relic(6030)
 
-	check(r244_init.size() == 10 and r244_init.has(6030) and not r244_init.has(6003),
+	check(r244_init.size() == 11 and r244_init.has(6030) and not r244_init.has(6003),
 
-			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R745 后共 10 个）")
+			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R830 后共 11 个）")
 
 	check(r244_pack != null and r244_pack.source == "初始"
 
@@ -44034,9 +44034,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 82,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 83,
 
-			"R577b 保真锁：82 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087）")
+			"R577b 保真锁：83 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087 / R830 +首饰盒 6088）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -44365,7 +44365,7 @@ func _init() -> void:
 
 	var r245_pot := r245_rrepo.get_relic(6032)
 
-	check(r245_init.size() == 10 and r245_init.has(6031) and r245_init.has(6032),
+	check(r245_init.size() == 11 and r245_init.has(6031) and r245_init.has(6032),
 
 			"R245 初始道具池：勇气徽章 6031 / 陶罐 6032 已在池内（%d 个）" % r245_init.size())
 
@@ -74057,6 +74057,7 @@ func _init() -> void:
 	_test_r824()
 	_test_r826()
 	_test_r829()
+	_test_r830()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -80010,7 +80011,7 @@ func _test_r810() -> void:
 			r810_bad.append("%d 不在奖励池" % r810_id)
 	check(r810_bad.is_empty(), "R810 数据层：四件都在库 · 战斗类 · 奖励来源 · 进奖励池（%s）"
 			% str(r810_bad))
-	check(r810_repo.all_relics().size() == 82, "R824 数据层：道具总数 82 件（+鸭子闹钟 6085 / R826 音乐盒 6086 / R829 这是礼帽 6087）")
+	check(r810_repo.all_relics().size() == 83, "R824 数据层：道具总数 83 件（+鸭子闹钟 6085 / R826 音乐盒 6086 / R829 这是礼帽 6087 / R830 首饰盒 6088）")
 	check(r810_repo.normal_reward_ids().size() == 30
 			and r810_repo.legendary_reward_ids().size() == 6,
 			"R810/R813 数据层：奖励池 30 一般 + 6 传奇 = 36")
@@ -81297,4 +81298,35 @@ func _test_r829() -> void:
 		if c.id == 8001 and c.has_affix(GameEngine.AFFIX_DIMENSION):
 			r828_fort_back += 1
 	check(r828_fort_back == 1, "R829 礼帽：工事死亡也洗回抽牌库并带次元（%d）" % r828_fort_back)
+
+
+func _test_r830() -> void:
+	## R830（店长口径）：新增一层初始道具「首饰盒」6088 —— 获得即随机一张史诗卡加入卡组。
+	var repo := CardRepo.load_json()
+	var rrepo := RelicRepo.load_json()
+
+	# ── ① 数据层：6088 在库 · 即时 · 初始 · 一般 ──
+	var r830_jb := rrepo.get_relic(6088)
+	check(r830_jb != null and r830_jb.relic_name == "首饰盒"
+			and r830_jb.kind == "即时" and r830_jb.source == "初始" and r830_jb.tier == "一般",
+			"R830 数据：6088 首饰盒（即时 · 初始 · 一般）")
+	check(r830_jb.desc.contains("史诗") and r830_jb.desc.contains("卡组"),
+			"R830 文案：写着史诗 / 卡组（%s）" % r830_jb.desc)
+
+	# ── ② 池子：首饰盒进初始池，不进奖励 / 事件 / 二层起始 ──
+	check(rrepo.initial_ids().has(6088), "R830 池：首饰盒在一层初始池")
+	check(not rrepo.reward_ids().has(6088) and not rrepo.event_ids().has(6088)
+			and not rrepo.layer2_ids().has(6088), "R830 池：不进奖励 / 事件 / 二层起始池")
+	check(DemoScope.allows_relic(6088), "R830 试玩版：6088 在 demo_scope 基线里")
+
+	# ── ③ 逻辑：获得即随机一张史诗卡加入卡组 ──
+	RunState.deck_ids = [8001, 8002]
+	RunState.ensure_deck_mods()
+	var r830_deck0 := RunState.deck_ids.size()
+	RunState.gain_relic(RunState.JEWELRY_BOX_RELIC_ID)
+	var r830_last := RunState.deck_ids[RunState.deck_ids.size() - 1]
+	var r830_c := repo.get_card(r830_last)
+	check(RunState.deck_ids.size() == r830_deck0 + 1 and r830_c != null and r830_c.rarity == 2,
+			"R830 首饰盒：获得即随机一张史诗卡加入卡组（%s）"
+			% (r830_c.card_name if r830_c != null else "?"))
 

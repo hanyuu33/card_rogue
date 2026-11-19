@@ -276,7 +276,8 @@
     "6084": {"name": "Defective Clock", "desc": "The 12th card you play each battle ends your current turn and immediately begins a new one of yours (the enemy turn never happens)."},
     "6085": {"name": "Duck Alarm Clock", "desc": "On the 2nd turn of every battle, draw 1 card and gain 1 Energy. From the 5th turn onward, skill damage +1."},
     "6086": {"name": "Music Box", "desc": "At the start of each battle, add 3 random Notes to your Draw Pile."},
-    "6087": {"name": "This Is a Top Hat", "desc": "Your Allies and Structures gain \"Death\": when Destroyed, they are shuffled back into your Draw Pile, cost 2 less this battle, and gain Dimensional."}
+    "6087": {"name": "This Is a Top Hat", "desc": "Your Allies and Structures gain \"Death\": when Destroyed, they are shuffled back into your Draw Pile, cost 2 less this battle, and gain Dimensional."},
+    "6088": {"name": "Jewelry Box", "desc": "On pickup: add a random Epic card to your deck."}
   },
   "classes": {
     "森林精魄": {

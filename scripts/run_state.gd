@@ -543,6 +543,9 @@ const BOX_CARD_ID := 9179
 # R341 洞窟绳（6048，第一层初始池）：Boss 以外的战斗可以逃跑，逃跑即失去道具。
 # 判据只留一处 `can_use_cave_rope()` —— 战斗界面的按钮显隐与真正的逃跑结算共用它。
 const CAVE_ROPE_RELIC_ID := 6048
+# R830 新道具：首饰盒（6088，初始池）—— 获得时随机一张**史诗卡**加入卡组。
+# 与湖中仙女·诚实共用同一条抽卡口（LAKE_EPIC_RARITY = 2 = 史诗）；随机源走 run_rng。
+const JEWELRY_BOX_RELIC_ID := 6088
 # R342 采集刀（6050，**传奇**奖励池）：「战斗后额外获得一份卡牌奖励」。
 # 唯一消费点 = `queue_battle_card_rewards()` —— 战斗胜利的卡牌奖励只从那里入队。
 const HARVEST_KNIFE_RELIC_ID := 6050
@@ -1944,6 +1947,8 @@ static func gain_relic(id: int) -> void:
 			note_reveal_bigchest()
 		FLINT_RELIC_ID:  # 燧石（R447）：要玩家在地图上点一格走过的房间 → 回地图后进选格模式
 			pending_relic = relic.id
+		JEWELRY_BOX_RELIC_ID:   # 首饰盒（R830）：随机一张史诗卡加入卡组
+			_grant_random_epic()
 
 
 static func _grant_linked_card(rel: RelicData, fallback := -1) -> void:
@@ -1960,6 +1965,16 @@ static func _grant_linked_card(rel: RelicData, fallback := -1) -> void:
 		cid = fallback
 	if cid > 0:
 		add_card(cid)
+
+
+static func _grant_random_epic() -> void:
+	## 首饰盒（6088，R830）：随机一张**史诗卡**（本职业奖励池里稀有度 2 的卡）加入卡组。
+	## 复用湖中仙女·诚实的同一条抽卡口（LAKE_EPIC_RARITY = 2）；随机源走 run_rng → 同种子一致。
+	var rolled := CardReward.roll_rarity(CardRepo.load_json(), LAKE_EPIC_RARITY, 1, run_rng)
+	if rolled.is_empty():
+		return
+	var c: CardData = rolled[0]
+	add_card(c.id)
 
 
 static func _apply_pot(rel: RelicData = null) -> void:

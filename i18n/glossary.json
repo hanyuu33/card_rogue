@@ -2310,6 +2310,11 @@
       "en": "This Is a Top Hat",
       "ja": "これはシルクハット",
       "id": 6087
+    },
+    "首饰盒": {
+      "en": "Jewelry Box",
+      "ja": "宝石箱",
+      "id": 6088
     }
   },
   "levels": {
