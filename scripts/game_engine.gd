@@ -224,6 +224,7 @@ var _scroll_used:= false   # R806 法术卷轴：本场战斗的第一次「用�
 ## R810 太阳指环（6082）：重入保护。它自己造成伤害 → 若某只敌人被这一下打死、死亡效果
 ## 又对敌人补了一刀，`_hit_unit` 会再走回本 tick。这个标记保证一次结算不被递归放大。
 var _sun_ring_busy:= false
+var _sun_ring_used:= false   # R812：每场战斗只放一次（引擎即一场战斗，天然复位）
 ## R810 海妖鱼叉（6083）：同上。自己补的那 HARPOON_DMG 点**不许**再算一次计数，
 ## 否则「第 3 次 → 补 6 点 → 这一下又算第 4 次」会滚成雪球。
 var _harpoon_busy:= false
@@ -817,9 +818,10 @@ const SCROLL_RELIC_ID:= 6080
 #   ⚠️ 别在战斗开始时另加一次：一场会数两下，第 3 场永远轮不到。
 const CRESCENT_EARING_ID:= 6081
 const CRESCENT_ENERGY:= 1
-# R810 太阳指环（6082，一般档）：**每个我方回合开始**，对所有敌方单位各 SUN_RING_DMG 点伤害。
+# R810 太阳指环（6082，一般档）：对所有敌方单位各 SUN_RING_DMG 点伤害。
+#   ⚠️ R812 起触发次数改为**每场战斗一次**（原先每个我方回合都放）。
 #   与风妖精 6042 同一套写法（`_hit_unit` → `_destroy_dead` → `action` 演出），
-#   差别只在触发时机。伤害走 `_hit_unit` → 护盾 / 减伤 / 光环 / 鱼叉计数全部照常生效。
+#   差别只在触发时机与次数。伤害走 `_hit_unit` → 护盾 / 减伤 / 光环 / 鱼叉计数全部照常生效。
 const SUN_RING_ID:= 6082
 const SUN_RING_DMG:= 3
 # R810 海妖鱼叉（6083，一般档）：**同一回合内**每对一个敌人造成 HARPOON_HITS 次伤害，
@@ -828,7 +830,7 @@ const SUN_RING_DMG:= 3
 #   就是静默错账，同赫尔墨斯 `turn_dmg_key` 的范式）。
 const HARPOON_ID:= 6083
 const HARPOON_HITS:= 3
-const HARPOON_DMG:= 6
+const HARPOON_DMG:= 4
 # R810 缺陷时钟（6084，**传奇档**）：每场战斗打出第 DEFECT_CLOCK_AT 张牌时，结束当前回合并
 #   **跳过敌方回合**，直接开始新的我方回合（`end_turn(true)`）。
 #   ⚠️ 触发点不在 `_note_card_played` 里直接换回合 —— 那时这张牌还没彻底结算完
@@ -2911,7 +2913,7 @@ func _begin_turn(side: String) -> void :
 		_refresh_mnemosyne()           # R271 谟涅摩叙涅：按改造层数重算敌方力量减益
 		_refresh_night_owl()           # R270 夜鸭：按本回合奇偶刷新「惧光」
 		_run_battlecries(SIDE_SELF)
-		# R810 太阳指环（6082）：**每个我方回合开始**，对所有敌方单位 3 点伤害。
+		# R810 太阳指环（6082）：**每场战斗一次**，对所有敌方单位 3 点伤害（R812 由每回合改来）。
 		# 放在召唤 / 成长 / 战吼之后 = 「这一拍已经站在台上的敌人才吃」；
 		# 也保证回合头那条总日志之前场内已经稳定（被打死的不会在日志里还挂着）。
 		# ⚠️ 打完可能把战斗直接结束 → 立刻 `return`，别让后面的回合头日志写一场已结束的仗。
@@ -7465,12 +7467,15 @@ func _wind_fairy_tick(side: String) -> void:
 
 
 func _sun_ring_tick() -> int:
-	## R810 太阳指环（6082）：**每个我方回合开始**，对所有敌方单位各 SUN_RING_DMG 点伤害。
+	## R810 太阳指环（6082）：对所有敌方单位各 SUN_RING_DMG 点伤害。
+	## **R812：每场战斗只放一次**（原先每个我方回合都放）—— 保险丝是 `_sun_ring_used`。
+	## 为什么不用另做一个「战斗开始复位」：`GameEngine` 实例本身就是一场战斗，
+	## 字段跟着实例走，换一场新战斗就是新实例（同缺陷时钟 `_clock_plays` 的理由）。
 	## 与风妖精 6042 逐款同构（伤害走 `_hit_unit`、致死统一交 `_destroy_dead()`、
-	## 最后 `action.emit` 让界面演出），差别只有触发时机。
+	## 最后 `action.emit` 让界面演出），差别只有触发时机与次数。
 	## ⚠️ 格子先 `sort()`：Dictionary 迭代顺序不可依赖，回放 / 同种子必须一致。
 	## ⚠️ 只打**场上的敌方单位**，不直击敌方 HP（没有单位时效果落空）。
-	if not self_relics.has(SUN_RING_ID) or _sun_ring_busy:
+	if not self_relics.has(SUN_RING_ID) or _sun_ring_busy or _sun_ring_used:
 		return 0
 	_sun_ring_busy = true
 	var cells: Array[Vector2i] = []
@@ -7481,6 +7486,9 @@ func _sun_ring_tick() -> int:
 	if cells.is_empty():
 		_sun_ring_busy = false
 		return 0
+	# R812：**只有真的打到人才烧掉这一场的一次性额度** —— 开场还没有敌人的关卡
+	# 不该把效果空放掉。放在这里（而不是函数入口）是有意的。
+	_sun_ring_used = true
 	cells.sort()
 	var hits: Array[Vector2i] = []
 	for c: Vector2i in cells:
@@ -7505,7 +7513,9 @@ func _harpoon_tick(p: Placement, dmg: int) -> void:
 	##     （漏扫一只就是静默错账，与赫尔墨斯 `turn_dmg_key` 同一范式）；
 	##   * 只认**我方回合**：卡面写「同一回合内」，那一回合是玩家的回合；
 	##   * 只认**敌方单位**：打自己的单位不该攒层。
-	## ⚠️ `_harpoon_busy`：自己补的那 6 点不许再算一次计数，否则会自我滚雪球。
+	## ⚠️ `_harpoon_busy`：**自己追加的那一笔不进计数**（R812 口径）。追加伤害也走
+	##    `_hit_unit` → 又会调回本函数，见到 busy 立刻退 —— 否则第 3 次命中补完又算第 4 次，
+	##    等于自我滚雪球（而且玩家根本看不出是自己滚出来的）。
 	## ⚠️ 不在这里调 `_destroy_dead()`：本函数是在别人的 `_hit_unit` 里被调的，
 	##    外层那条伤害链自己会收尾（`attack()` 走 `_reap`、技能走 `_destroy_dead`）。
 	if _harpoon_busy or dmg <= 0:

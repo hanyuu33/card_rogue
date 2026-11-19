@@ -268,7 +268,7 @@ var boss_phase: int = 0
 ##    写 `card.actions` 会跨局泄漏）。于是「原本就能行动两次的单位不会被选中」这条
 ##    只能靠 `FieldState.unit_actions` 读本字段来判断。
 var haste_double: bool = false
-## R810 海妖鱼叉（6083）：**本回合**这个敌人已经挨了几次伤害（道具的 3 次 → 6 点就看它）。
+## R810 海妖鱼叉（6083）：**本回合**这个敌人已经挨了几次伤害（道具的 3 次 → 4 点就看它）。
 ## `harpoon_turn` = 记账那次的 `GameEngine.turn_number`（整轮口径：只有我方回合开始才 +1）。
 ## 换回合后钥匙失配 → `GameEngine._harpoon_tick()` 自动从 0 重算，所以**不需要**在回合开始
 ## 扫全场清零（漏扫一只就是静默错账，与赫尔墨斯 `turn_dmg_key` 同一范式）。

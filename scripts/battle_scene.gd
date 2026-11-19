@@ -14874,11 +14874,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 						"sc": _grid_scroll, "text": "风妖精 -%d" % wf_d,
 						"col": Color("7fd2a0"), "size": 15, "start": n, "dur": 1500})
 		"sun_ring":
-			# R810 太阳指环（6082）：每个我方回合开始，对所有敌方单位 3 点伤害。
+			# R810 太阳指环（6082）：对所有敌方单位 3 点伤害。R812 起**每场战斗只放一次**。
 			# 与风妖精同一套「全体 ping」演出，只换色：日轮 = 金 + 象牙白。
-			# ⚠️ 每回合都会放 → **不弹横幅、不拉镜头**（那是大事件的位置），
-			#    节奏靠逐格 60ms 错开：看得见「一圈扫过去」，又不至于卡住操作。
+			# 一场就这一下 → 爆点换成 big + 加一次轻抖，让它有分量；
+			# ⚠️ 仍**不弹横幅** —— 回合头本来就有「我方回合 · 第 N 回合」的横幅，
+			#    这里是同一拍触发的，再压一条会被它盖掉（不是「每回合所以不弹」那个理由了）。
 			sfx.play("spell")
+			_shake(4.0, 260)     # R812：一场只这一下，给点分量（幅度小于缺陷时钟的 6.0）
 			var sr_d := int(data.get("dmg", 0))
 			var sr_n := int(data.get("hits", 0))
 			_say("☀ 太阳指环：对所有敌方单位造成 %d 点伤害（%d 个目标）" % [sr_d, sr_n])
@@ -14887,15 +14889,16 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				var sr_at := n + sr_i * 60
 				_fx_push_cell(FxArt.SKILL_HOLY, sc, sr_at, 560, 132.0)
 				_bursts.append({"pos": _cell_center(sc), "sc": _grid_scroll,
-						"start": sr_at, "dur": 520, "col": Color("f2c14e"), "big": false})
+						"start": sr_at, "dur": 620, "col": Color("f2c14e"), "big": true})
 				_floaters.append({"pos": _cell_center(sc) + Vector2(0, -24),
 						"sc": _grid_scroll, "text": "太阳指环 -%d" % sr_d,
 						"col": Color("f0c24e"), "size": 15, "start": sr_at, "dur": 1400})
 				sr_i += 1
 		"harpoon":
-			# R810 海妖鱼叉（6083）：同一回合第 3 次命中同一敌人 → 追加 6 点。
+			# R810 海妖鱼叉（6083）：同一回合第 3 次命中同一敌人 → 追加 HARPOON_DMG 点
+			# （R812 起为 4 点，且这一笔**不进自身的命中计数**）。
 			# 这一下是**追加伤害**，`fx_impact` 可能被「同格 700ms 只演一次」吞掉，
-			# 所以这里单独给一次更重的爆点 + 自己的飘字，保证「追加的那 6 点」看得见。
+			# 所以这里单独给一次更重的爆点 + 自己的飘字，保证「追加的那一下」看得见。
 			sfx.play("hit")
 			var hp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var hp_d := int(data.get("amount", 0))

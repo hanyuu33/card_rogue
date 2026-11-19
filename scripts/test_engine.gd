@@ -79787,7 +79787,7 @@ func _test_r810() -> void:
 	## R810：四件新道具。
 	##   新月耳饰 6081（一般）：每 3 场战斗，在该场第一回合 +1 费用（**括号里那句不写进描述**）；
 	##   太阳指环 6082（一般）：每个我方回合开始，对所有敌方单位 3 点伤害（走 `_hit_unit`）；
-	##   海妖鱼叉 6083（一般）：同一回合内同一个敌人每挨 3 次伤害 → 追加 6 点；
+	##   海妖鱼叉 6083（一般）：同一回合内同一个敌人每挨 3 次伤害 → 追加 4 点；
 	##   缺陷时钟 6084（传奇）：每场打出第 12 张牌 → 结束当前回合、**跳过敌方回合**。
 	## 每条都先验「数据层进了池」，再验机制，最后验「没有这件道具时什么也不发生」。
 	var r810_sv_relics := RunState.relics
@@ -79799,8 +79799,8 @@ func _test_r810() -> void:
 	var r810_repo := RelicRepo.load_json()
 	var r810_expect := {
 		6081: ["新月耳饰", "一般", "每 3 场战斗，获得 1 点费用。"],
-		6082: ["太阳指环", "一般", "每个回合，对所有敌方单位造成 3 点伤害。"],
-		6083: ["海妖鱼叉", "一般", "同一回合内，每对一个敌人造成 3 次伤害，对其造成 6 点伤害。"],
+		6082: ["太阳指环", "一般", "每场战斗一次，对所有敌方单位造成 3 点伤害。"],
+		6083: ["海妖鱼叉", "一般", "同一回合内，每对一个敌人造成 3 次伤害，对其造成 4 点伤害。"],
 		6084: ["缺陷时钟", "传奇", ""],
 	}
 	var r810_bad: Array = []
@@ -79874,7 +79874,7 @@ func _test_r810() -> void:
 			"R810 新月耳饰：计数归零后的那一场不发（%d == %d）"
 			% [r810_e2.state.energy, r810_base])
 
-	# ── ③ 太阳指环：每个我方回合开始打全体敌人 3 点 ──
+	# ── ③ 太阳指环：**每场战斗一次**，打全体敌人 3 点（R812 由「每回合」改来）──
 	var r810_cards := CardRepo.load_json()
 	RunState.relics = [6082]
 	var r810_e3 := _new_engine([], 40, 40)
@@ -79895,9 +79895,36 @@ func _test_r810() -> void:
 			"R810 太阳指环：只打敌人，己方单位不掉血")
 	r810_e3.end_turn()     # 我方 → 敌方
 	r810_e3.end_turn()     # 敌方 → 我方（第二个我方回合）
-	check(r810_foe.health == r810_f0 - 6,
-			"R810 太阳指环：第二个我方回合再打一次（累计 -6，实际 %d）"
+	check(r810_foe.health == r810_f0 - 3,
+			"R812 太阳指环：**每场只打一次** —— 第二个我方回合不再掉血（仍是 -3，实际 %d）"
 			% (r810_f0 - r810_foe.health))
+
+	# 换一场战斗（= 新引擎实例）→ 一次性额度重新可用
+	var r810_e3b := _new_engine([], 40, 40)
+	r810_e3b.self_relics = RunState.active_relics()
+	var r810_foe_b := r810_e3b.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_fb0: int = r810_foe_b.health
+	r810_e3b._begin_turn(GameEngine.SIDE_SELF)
+	check(r810_foe_b.health == r810_fb0 - 3,
+			"R812 太阳指环：换一场战斗后重新可用（%d → %d）"
+			% [r810_fb0, r810_foe_b.health])
+
+	# 空场不白烧额度：开场没有敌人时不置位，敌人后到场仍吃得到
+	var r810_e3c := _new_engine([], 40, 40)
+	r810_e3c.self_relics = RunState.active_relics()
+	r810_e3c._begin_turn(GameEngine.SIDE_SELF)     # 场上一个敌人都没有
+	check(not r810_e3c._sun_ring_used,
+			"R812 太阳指环：空场不消耗「每场一次」的额度")
+	var r810_late := r810_e3c.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_l0: int = r810_late.health
+	r810_e3c._sun_ring_tick()
+	check(r810_late.health == r810_l0 - 3 and r810_e3c._sun_ring_used,
+			"R812 太阳指环：敌人后到场仍吃得到，吃到后额度才置位（%d → %d）"
+			% [r810_l0, r810_late.health])
 
 	# 没有道具 → 一点血都不掉
 	RunState.relics = []
@@ -79910,7 +79937,7 @@ func _test_r810() -> void:
 	r810_e4._begin_turn(GameEngine.SIDE_SELF)
 	check(r810_foe2.health == r810_f2, "R810 太阳指环：没道具时回合开始不掉血")
 
-	# ── ④ 海妖鱼叉：同一回合内同一个敌人每 3 次伤害 → 追加 6 ──
+	# ── ④ 海妖鱼叉：同一回合内同一个敌人每 3 次伤害 → 追加 4（R812 由 6 下调）──
 	RunState.relics = [6083]
 	var r810_e5 := _new_engine([], 40, 40)
 	r810_e5.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
@@ -79930,14 +79957,22 @@ func _test_r810() -> void:
 	check(r810_other.health == r810_ho,
 			"R810 海妖鱼叉：另一个敌人各自记账，不会被牵连")
 	r810_e5._hit_unit(r810_p5, 1, "测试")
-	check(r810_p5.health == r810_h5 - 3 - 6,
-			"R810 海妖鱼叉：第 3 次 → 1 点 + 追加 6 点（累计 %d）"
+	check(r810_p5.health == r810_h5 - 3 - 4,
+			"R812 海妖鱼叉：第 3 次 → 1 点 + 追加 4 点（累计 %d）"
 			% (r810_h5 - r810_p5.health))
+	# ⚠️ 关键断言：追加的那一笔**不许把自己算成第 4 次命中**。
+	# 老测试只比总伤害，分辨不出这件事 —— 两种口径的总数都是 18（6 基础 + 6×2 追加）。
+	check(r810_p5.harpoon_hits == 3,
+			"R812 海妖鱼叉：追加伤害不进计数（第 3 次命中后仍是 3，实际 %d）"
+			% r810_p5.harpoon_hits)
 	r810_e5._hit_unit(r810_p5, 1, "测试")
 	r810_e5._hit_unit(r810_p5, 1, "测试")
 	r810_e5._hit_unit(r810_p5, 1, "测试")
-	check(r810_p5.health == r810_h5 - 6 - 12,
-			"R810 海妖鱼叉：第 6 次再追加一次（累计 %d）" % (r810_h5 - r810_p5.health))
+	check(r810_p5.health == r810_h5 - 6 - 8,
+			"R812 海妖鱼叉：第 6 次再追加一次（累计 %d）" % (r810_h5 - r810_p5.health))
+	check(r810_p5.harpoon_hits == 6,
+			"R812 海妖鱼叉：两次追加都没混进计数（6 次命中 = 6，实际 %d）"
+			% r810_p5.harpoon_hits)
 	# 换回合（turn_number +1）→ 计数从 0 重算
 	var r810_h5b: int = r810_p5.health
 	r810_e5.turn_number += 1
@@ -80029,6 +80064,10 @@ func _test_r810() -> void:
 	check_src(r810_clock_calls == 3,
 			"R810 守卫：三个公共出牌入口（play_from_hand / use_spell / use_effect）各调一次"
 					+ " `_clock_maybe_switch`（实际 %d 处）" % r810_clock_calls)
+	check_src(r810_eng_src.contains("_sun_ring_used"),
+			"R812 守卫：太阳指环有「每场一次」的保险丝 `_sun_ring_used`")
+	check_src(r810_eng_src.contains("or _sun_ring_used"),
+			"R812 守卫：`_sun_ring_tick` 的入口判据带上 `_sun_ring_used`")
 	var r810_place_src := FileAccess.get_file_as_string("res://scripts/placement.gd")
 	check_src(r810_place_src.contains('"harpoon_hits", "harpoon_turn"'),
 			"R810 守卫：鱼叉计数进了 Placement 存档字段（否则续档归零）")

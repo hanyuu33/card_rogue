@@ -271,8 +271,8 @@
     "6079": {"name": "Miel", "desc": "Todos tus aliados obtienen +1 de velocidad de movimiento."},
     "6080": {"name": "Pergamino de conjuros", "desc": "La primera vez que uses una carta de habilidad en cada combate, añade a tu mano una copia con «Dimensional»."},
     "6081": {"name": "Pendiente de luna creciente", "desc": "Cada 3 combates, obtienes 1 de Energía."},
-    "6082": {"name": "Anillo solar", "desc": "Cada turno, infliges 3 de daño a todas las unidades enemigas."},
-    "6083": {"name": "Arpón de sirena", "desc": "Dentro del mismo turno, cada 3.ª vez que infliges daño a un enemigo, le infliges 6 de daño."},
+    "6082": {"name": "Anillo solar", "desc": "Una vez por batalla, infliges 3 de daño a todas las unidades enemigas."},
+    "6083": {"name": "Arpón de sirena", "desc": "Dentro del mismo turno, cada 3.ª vez que infliges daño a un enemigo, le infliges 4 de daño."},
     "6084": {"name": "Reloj defectuoso", "desc": "La 12.ª carta que juegas en cada combate termina tu turno actual y comienza de inmediato un nuevo turno tuyo (el turno enemigo no ocurre)."}
   },
   "classes": {
