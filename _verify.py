@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""九套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput；R789 增补 content）。
+"""十套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput；R789 增补 content；R816 增补 mod）。
 
 用法：python _verify.py
-逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / content / smoke，统计 ✓/✗，
+逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / content / mod / smoke，统计 ✓/✗，
 任一失败则进程退出码 1。输出落盘 _*.txt 便于事后检查。
 """
 import os
@@ -65,6 +65,10 @@ SUITES = [
     # R789：内容层热更（content/ 覆盖生效 / 坏文件回落 / 译文覆盖 / 清掉回基线）。
     # 只读仓库文件，临时目录在 user://patch_probe，跑完自删。
     ("content", ["--headless", "--path", ROOT, "--script", "res://tools/_probe_content_override.gd"], "_content.txt"),
+    # R816：mod 层（多目录增量合并 / 只写部分字段的深合并 / priority 仲裁 /
+    #       坏清单与坏 JSON 只伤自己 / 素材覆盖与压制 / 编辑器默认不扫）。
+    # 与 content 套是两条链：那条测官方热更的「整份替换」，这条测 mod 的「增量合并」。
+    ("mod", ["--headless", "--path", ROOT, "--script", "res://tools/_probe_mod_loader.gd"], "_mod.txt"),
     ("smoke", ["--headless", "--path", ROOT, "--script", "res://scripts/test_smoke.gd"], "_s.txt"),
 ]
 
