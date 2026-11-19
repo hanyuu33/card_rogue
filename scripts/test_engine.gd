@@ -74052,6 +74052,7 @@ func _init() -> void:
 	_test_r817()
 	_test_r819()
 	_test_r822()
+	_test_r825()
 
 	_test_r824()
 
@@ -80900,3 +80901,86 @@ func _test_r824() -> void:
 			"R824 技能：敌方技能伤害不吃这件道具（实际 %d）"
 
 			% r824_eng._spell_dmg(GameEngine.SIDE_OPPONENT, 10))
+
+func _test_r825() -> void:
+	## R825：战斗 / 奖励 / 商店共用存档的真实写盘 + 读盘，不只测 snapshot 字典。
+	## 运行入口已 set_test_mode()，这里只碰 run_save_test.sav，不碰玩家真档。
+	print("-- R825 存档时序与上下文恢复")
+	var r825_rng := RandomNumberGenerator.new()
+	r825_rng.seed = 8252026
+	RunState.start_run(RogueMap.generate(r825_rng), GameLayers.LAYER_DEFAULT)
+	RunState.relic_choice = []
+	RunState.max_hp = 60
+	RunState.hp = 17
+	RunState.gold = 237
+	RunState.chocolate = 4
+	RunState.traps = [7001, -1, -1]
+	RunState.pending_rewards = []
+	RunState.queue_relic_reward(6005)
+	var r825_idx := RunState.pending_rewards.size() - 1
+	var r825_node := RunState.current_node_id
+	var r825_shop := {"row1": [[8001, 1, 0]], "row2": [["trap", 7001, 1]],
+			"row3": [["maxhp", 1], ["choco", 0]]}
+	RunState.store_shop_state(r825_node, r825_shop)
+	RunState.shop_mark_revisit(r825_node)
+	check(RunSave.save_run(), "R825 真写盘：组合状态能写入测试存档")
+	RunState.hp = 60
+	RunState.gold = 0
+	RunState.chocolate = 0
+	RunState.traps = [-1, -1, -1]
+	RunState.pending_rewards = []
+	RunState.shop_states = {}
+	RunState.shop_revisit_id = -1
+	check(RunSave.load_run(), "R825 真读档：%s" % RunSave.last_error)
+	check(RunState.hp == 17 and RunState.max_hp == 60,
+			"R825 生命：读档保持战后 17/60，不恢复成满血（实际 %d/%d）" % [RunState.hp, RunState.max_hp])
+	check(RunState.gold == 237 and RunState.chocolate == 4,
+			"R825 资源：金币 237 / 巧克力 4 原样恢复")
+	check(RunState.pending_reward_count() == 1 and not RunState.has_relic(6005),
+			"R825 奖励：未领道具仍在队列，且没有提前入库")
+	check(RunState.traps == [7001, -1, -1],
+			"R825 工具：栏位与空格位置原样恢复（%s）" % str(RunState.traps))
+	check(JSON.stringify(RunState.shop_state_of(r825_node)) == JSON.stringify(r825_shop)
+			and RunState.shop_revisit_ok(r825_node),
+			"R825 商店：同一货架、售罄位和重进窗口一起恢复")
+
+	# 已领取状态也必须落盘；读档后再次领取要拒绝，不能多发一件。
+	check(RunState.claim_pending_reward(r825_idx) and RunState.has_relic(6005),
+			"R825 领奖：道具正常入库")
+	check(RunSave.save_run(), "R825 领奖后写盘成功")
+	RunState.relics = []
+	RunState.pending_rewards[r825_idx]["state"] = RunState.REWARD_PENDING
+	check(RunSave.load_run(), "R825 领奖后读档成功")
+	check(str((RunState.pending_rewards[r825_idx] as Dictionary).get("state", "")) == RunState.REWARD_CLAIMED
+			and RunState.pending_reward_count() == 0 and RunState.relics.count(6005) == 1,
+			"R825 领奖后读档：claimed 与持有件数都保留")
+	check(not RunState.claim_pending_reward(r825_idx) and RunState.relics.count(6005) == 1,
+			"R825 防重复：已领条目不能再次发奖")
+
+	# 时序守卫：结算后的覆盖写必须真的位于生命、金币、奖励入队之后。
+	var r825_battle_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r825_show := r825_battle_src.find("func _show_over(win: bool)")
+	var r825_save := r825_battle_src.find("# R825：函数开头", r825_show)
+	check_src(r825_show >= 0 and r825_save > r825_battle_src.find("RunState.hp = maxi", r825_show)
+			and r825_save > r825_battle_src.find("RunState.gain_gold(gold_gain)", r825_show)
+			and r825_save > r825_battle_src.find("RunState.queue_battle_card_rewards", r825_show),
+			"R825 战斗：最终检查点位于战后生命 / 金币 / 奖励结算之后")
+	var r825_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r825_map_src.contains("RunState.boss_beaten and RunState.pending_reward_count() == 0")
+			and r825_map_src.contains("func _on_map_reward_closed()"),
+			"R825 Boss：有待领奖励时暂缓换层，关窗后交还原路由")
+	var r825_reward_src := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	var r825_shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r825_reward_src.contains("if not RunState.claim_pending_reward(i):\n\t\treturn\n\t_save_reward_checkpoint()")
+			and r825_reward_src.contains("if not RunState.pick_pending_card(i, card_id):\n\t\treturn\n\t_save_reward_checkpoint()")
+			and r825_reward_src.contains("if RunState.claim_all_relic_rewards() > 0:\n\t\t\t\t\t_save_reward_checkpoint()")
+			and r825_reward_src.contains("_save_reward_checkpoint()\n\tif not _closing_to_route"),
+			"R825 奖励：领取 / 选卡 / 一键领取成交当刻落盘，关窗再兜底")
+	check_src(r825_shop_src.contains("func _row3_template(for_restore := false)")
+			and r825_shop_src.contains("for_restore or not RunState.has_key")
+			and r825_shop_src.contains("for d: Dictionary in _row3_template(true):"),
+			"R825 商店：已持有匕首也能恢复原货位，新货架仍不重复出售")
+	var r825_trap_fn := r825_shop_src.find("func _buy_trap")
+	check_src(r825_trap_fn >= 0 and r825_shop_src.find("RunState.gain_trap", r825_trap_fn)
+			< r825_shop_src.find("_sync_shop_state()", r825_trap_fn),
+			"R825 商店：工具先发放再保存售罄状态")

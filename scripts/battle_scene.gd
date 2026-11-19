@@ -9010,6 +9010,12 @@ func _show_over(win: bool) -> void:
 	# **不再自动弹奖励窗** —— 玩家先看清这一场拿了多少金币，再点「查看奖励」进去。
 	# 奖励不会丢：`RunState.pending_rewards` 一直在，左上角常驻「✦ 待领奖励 N」；
 	# 关掉奖励窗时 `_on_reward_panel_closed` 会照旧把玩家送走。
+	# R825：函数开头 `_clear_battle_checkpoint()` 写的是「清掉战斗续点」那一瞬，
+	# 当时战后生命与奖励还没入账；若玩家在胜利 / 奖励页退出，旧档会表现为无故回血 + 吞奖励。
+	# 这里在整段结算全部完成后覆盖一份：普通胜利与「Boss 已打、尚未换层」都保留当下状态。
+	if RunState.run_active and not RunState.run_finished and not _shot_pending \
+			and not _net_mode and DisplayServer.get_name() != "headless":
+		RunSave.save_run()
 
 
 func _spawn_confetti() -> void:

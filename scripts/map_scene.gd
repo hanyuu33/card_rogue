@@ -163,6 +163,7 @@ var _whisper_auto := false
 var _whisper_next: Dictionary = {}   # 命运本轮选中的下一间（画紫圈的目标）
 var _whisper_wait := 0.0             # 距命运落下一步还有多少秒（<= 0 即可走）
 var _reward_panel: RewardPanel = null
+var _shop_return_btn: Button = null   # R825：地图左上「返回同一间商店」
 ## R405：面板（道具 / 记录 / 卡组）这次按下**拖动过没有** ——
 ## 触屏上「按下滑一下」与「点一下」是同一个手势序列，不分开就会「一滑就把面板关了」。
 var _panel_dragged := false
@@ -209,7 +210,9 @@ func _ready() -> void:
 	#    `relic_choice`，下面那段既有的「候选非空 → 去卷卷」重定向会接着做（源码锁也认那条判据）。
 	# ⚠️ R372：**第三层故意不填**（用户口径「3 层的起始点不需要道具事件，只需要回复生命」）——
 	#    `advance_layer` 在这一层把候选置空，于是不会跳卷卷，玩家直接落在地图上。
-	if RunState.run_active and RunState.boss_beaten:
+	# R825：Boss 战后直接退出再读档时，先留在本层让玩家领奖励；
+	# 旧顺序会先 advance_layer → forfeit_pending_rewards，奖励就被换层规则误吞了。
+	if RunState.run_active and RunState.boss_beaten and RunState.pending_reward_count() == 0:
 		var nxt := GameLayers.next_layer(RunState.current_layer)
 		if nxt > 0:
 			RunState.advance_layer(nxt)
@@ -324,6 +327,10 @@ func _ready() -> void:
 		RunState.store_shop_state(RunState.current_node_id,
 				{"row1": [[8001, 0]], "row2": [], "row3": []})
 		RunState.shop_mark_revisit(RunState.current_node_id)
+	# R825：`--screenshot --reshop --savecontext` 同时验收奖励与同店两个返回按钮。
+	if "--savecontext" in OS.get_cmdline_user_args():
+		RunState.pending_rewards = []
+		RunState.queue_relic_reward(6005)
 	# -- --midway：演示「走过一片区域」的状态（截图核验视野规则用）
 	if "--midway" in OS.get_cmdline_user_args():
 		_prep_midway_demo()
@@ -405,7 +412,20 @@ func _ready() -> void:
 		"back": GameI18n.ui("map", "MAP_MENU_BACK", "返回地图"),
 		"sub": GameI18n.ui("map", "MAP_MENU_SUBTITLE", "冒险地图"),
 	})
-	_reward_panel = RewardPanel.attach(self, Vector2(12, 40))
+	# R825：两个入口收进顶栏天然空档，不压首领条、标记工具、信物或地图格。
+	_reward_panel = RewardPanel.attach(self, Vector2(300, 10))
+	_reward_panel.on_closed = _on_map_reward_closed
+	# R825：商店返回不再只靠「点脚下那格」；读档回来也有明确按钮，货架仍读 shop_states。
+	_shop_return_btn = Button.new()
+	_shop_return_btn.position = Vector2(size.x - 462, 10)
+	_shop_return_btn.size = Vector2(154, 46)
+	_shop_return_btn.custom_minimum_size = Vector2(154, 46)
+	_shop_return_btn.text = GameI18n.ui("map", "MAP_RETURN_TO_SHOP", "返回同一间商店")
+	_shop_return_btn.tooltip_text = ""
+	_shop_return_btn.pressed.connect(_return_to_shop)
+	UiTheme.apply_return_button(_shop_return_btn)
+	add_child(_shop_return_btn)
+	_refresh_shop_return_btn()
 	# R442：暗动力（6054）的代价 —— 卡牌奖励必须当场领掉，**不许**靠「关窗 → 上地图 →
 	# 待领入口」把它推迟。只要还有待领的卡牌奖励，进地图就把它顶出来。
 	# 判据只有 `RunState.must_take_card_reward()` 一个口（本局已收尾时它自己放行）。
@@ -858,6 +878,31 @@ func _dispatch_node(cell: Dictionary) -> void:
 			SceneFx.goto("res://scenes/shop.tscn")
 
 
+func _refresh_shop_return_btn() -> void:
+	## R825：只有「脚下这间店仍可重进」才显示；一旦真正走去新格，advance 会关掉窗口。
+	if _shop_return_btn != null:
+		_shop_return_btn.visible = RunState.run_active \
+				and RunState.shop_revisit_ok(RunState.current_node_id)
+
+
+func _return_to_shop() -> void:
+	## R825：回当前格对应的同一间店；不 advance、不扣巧克力、不作废待领奖励、不重摇货架。
+	if not RunState.shop_revisit_ok(RunState.current_node_id):
+		return
+	var cell := _cur_cell()
+	if cell.is_empty():
+		return
+	RunState.pending_node = cell
+	SceneFx.goto("res://scenes/shop.tscn")
+
+
+func _on_map_reward_closed() -> void:
+	## R825：读档时被暂缓的 Boss 换层，在这批奖励处理完后交还给地图原路由。
+	if RunState.run_active and RunState.boss_beaten and RunState.pending_reward_count() == 0 \
+			and GameLayers.next_layer(RunState.current_layer) > 0:
+		SceneFx.goto("res://scenes/map.tscn")
+
+
 func _open_reward_panel() -> void:
 	queue_redraw()
 	if _reward_panel != null:
@@ -874,6 +919,7 @@ func _set_note(text: String) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	_refresh_shop_return_btn()
 	# R407 出图：没有真鼠标时钉住悬停位置，否则浮窗永远不出现
 	if _relic_tip_pin and not RunState.relics.is_empty():
 		_mouse = _relic_rect(0).get_center()

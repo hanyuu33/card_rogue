@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-18",
+  "updated": "2026-11-19",
   "purpose": "R667 界面与共享组件翻译专用规范中文底本。权威 GDScript 中文不改；仅明确审计的规则漂移在 canonical 修正。",
   "rules": [
     "卡组是跨战斗完整构筑，抽牌堆是本场待抽区；删除是跨战斗 Remove，消失是本场 Banish。",
@@ -181,7 +181,7 @@
       "scripts/run_state.gd": "e50ea22431dc25bb72673f2d786866c2cf8c2d6812cbbead6305c735f3896848"
     },
     "reward": {
-      "scripts/reward_panel.gd": "dc2bd6893e3dde7e5c0be8483d283b56a448cb4ee927bb9b236311379ed9d486",
+      "scripts/reward_panel.gd": "be430a3f36412f5456aa08b8f87c5fb91cc4ee8de47c53573ba7a14207954ee1",
       "scripts/reward_panel_adventure_v2.gd": "8c8815d609b1dc311e94ac8ffa037f02628986a3befbba475a094e51d1cd84a8",
       "scripts/card_reward.gd": "c37251c64fbff151de0a677b52a1a447af6582380c98541b946117cd5a8f1b0f",
       "scripts/relic_pick_scene.gd": "9c8e28c5265287cbbb1d9fabd17b8dd0eda9db502c8d98f8eb9cb526592481af",
@@ -191,7 +191,7 @@
       "scripts/event_scene.gd": "038f8be23e85302cabf740150ae381a114b8d009ab50b2b2ce84e68ad3f07756"
     },
     "map": {
-      "scripts/map_scene.gd": "b1af2bdb4b57075bee7f8d0a92da561c47c42dc9b670fa8b525fdccddd358060",
+      "scripts/map_scene.gd": "c69fbbd03f86895c5fb64ae23952c259f6a35b2265db80f08d0787ec64bc0d55",
       "scripts/map_visual.gd": "638358a73bf109dd9629b860e1a794c671c410f8955a26b44f8036b75ec7fc05",
       "scripts/rogue_map.gd": "634b5d1059ee099fe9ddeeee9a08dc8f083c18daede7cae1a13c25843bf80ba8",
       "scripts/deck_edit_scene.gd": "cf3a3e281c7a2656ad2e80defd93f4e2e5b4b981952a95c1464cbb4b0c058254",
@@ -724,8 +724,8 @@
         "zh": "史诗卡牌"
       },
       "REWARD_PENDING_ENTRY": {
-        "source": "scripts/reward_panel.gd:267",
-        "zh": "✦ 待领奖励 %d"
+        "source": "scripts/reward_panel.gd",
+        "zh": "返回待领奖励 %d"
       },
       "REWARD_UNKNOWN_RELIC": {
         "source": "scripts/reward_panel.gd:311",
@@ -2187,6 +2187,10 @@
       "MAP_REWARD_FORFEIT": {
         "source": "scripts/map_scene.gd",
         "zh": "离开上一格：%d 件没领的奖励已作废（要拿就得在进新格子之前回去）"
+      },
+      "MAP_RETURN_TO_SHOP": {
+        "source": "scripts/map_scene.gd",
+        "zh": "返回同一间商店"
       }
     },
     "battle": {
@@ -3784,7 +3788,7 @@
   "expected_counts": {
     "shop": 72,
     "reward": 125,
-    "map": 244,
+    "map": 245,
     "battle": 80,
     "shell": 222,
     "shared": 92

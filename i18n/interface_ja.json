@@ -80,7 +80,7 @@
       "REWARD_TYPE_BOSS": "ボスクリア報酬",
       "REWARD_TYPE_EPIC": "エピックカード報酬",
       "REWARD_TYPE_LEGENDARY": "エピックカード",
-      "REWARD_PENDING_ENTRY": "✦ 未受取報酬 %d",
+      "REWARD_PENDING_ENTRY": "未受取報酬 %d",
       "REWARD_UNKNOWN_RELIC": "未知のレリック",
       "REWARD_BONUS_RELIC_NAME": "レリック：%s",
       "REWARD_RELIC_OR_KEY_NAME": "レリック / 命の種（2択）",
@@ -446,7 +446,8 @@
       "RELIC_VIEWER_BUTTON_OVERFLOW": "レリック %d ▾",
       "RELIC_VIEWER_BUTTON": "レリック %d",
       "RELIC_VIEWER_SPENT_PREFIX": "消耗済み · ",
-      "MAP_REWARD_FORFEIT": "前のマスを離れた：未受取の報酬 %d 件が失効した（受け取るなら新しいマスに入る前に戻ること）"
+      "MAP_REWARD_FORFEIT": "前のマスを離れた：未受取の報酬 %d 件が失効した（受け取るなら新しいマスに入る前に戻ること）",
+      "MAP_RETURN_TO_SHOP": "同じ商店へ戻る"
     },
     "battle": {
       "BATTLE_LOG": "記録",

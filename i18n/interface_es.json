@@ -80,7 +80,7 @@
       "REWARD_TYPE_BOSS": "Recompensa de victoria contra el Jefe",
       "REWARD_TYPE_EPIC": "Recompensa de carta épica",
       "REWARD_TYPE_LEGENDARY": "Cartas de leyenda",
-      "REWARD_PENDING_ENTRY": "✦ Recompensas pendientes: %d",
+      "REWARD_PENDING_ENTRY": "Recompensas: %d",
       "REWARD_UNKNOWN_RELIC": "Reliquia desconocida",
       "REWARD_BONUS_RELIC_NAME": "Reliquia: %s",
       "REWARD_RELIC_OR_KEY_NAME": "Reliquia / Semilla de vida (elige 1 de 2)",
@@ -446,7 +446,8 @@
       "RELIC_VIEWER_BUTTON_OVERFLOW": "Reliquias %d ▾",
       "RELIC_VIEWER_BUTTON": "Reliquias %d",
       "RELIC_VIEWER_SPENT_PREFIX": "Agotada · ",
-      "MAP_REWARD_FORFEIT": "Saliste de la sala anterior: %d recompensa(s) sin reclamar caducaron (vuelve antes de entrar en una casilla nueva)"
+      "MAP_REWARD_FORFEIT": "Saliste de la sala anterior: %d recompensa(s) sin reclamar caducaron (vuelve antes de entrar en una casilla nueva)",
+      "MAP_RETURN_TO_SHOP": "Volver a la tienda"
     },
     "battle": {
       "BATTLE_LOG": "Registro",

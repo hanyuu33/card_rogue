@@ -80,7 +80,7 @@
       "REWARD_TYPE_BOSS": "Boss Victory Reward",
       "REWARD_TYPE_EPIC": "Epic Card Reward",
       "REWARD_TYPE_LEGENDARY": "Epic Cards",
-      "REWARD_PENDING_ENTRY": "✦ Pending Rewards %d",
+      "REWARD_PENDING_ENTRY": "Pending Rewards %d",
       "REWARD_UNKNOWN_RELIC": "Unknown Relic",
       "REWARD_BONUS_RELIC_NAME": "Relic: %s",
       "REWARD_RELIC_OR_KEY_NAME": "Relic / Seed of Life (Choose 1 of 2)",
@@ -446,7 +446,8 @@
       "RELIC_VIEWER_BUTTON_OVERFLOW": "Relics %d ▾",
       "RELIC_VIEWER_BUTTON": "Relics %d",
       "RELIC_VIEWER_SPENT_PREFIX": "Depleted · ",
-      "MAP_REWARD_FORFEIT": "Left the previous room: %d unclaimed reward(s) expired (go back before entering a new room to claim them)"
+      "MAP_REWARD_FORFEIT": "Left the previous room: %d unclaimed reward(s) expired (go back before entering a new room to claim them)",
+      "MAP_RETURN_TO_SHOP": "Return to Shop"
     },
     "battle": {
       "BATTLE_LOG": "Records",

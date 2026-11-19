@@ -1159,6 +1159,40 @@ static func adventure_button_style(primary: bool, state := "normal", px := BTN_P
 	return sb
 
 
+static func apply_return_button(btn: Button) -> void:
+	## R825：地图「返回奖励 / 返回同一间商店」共用的 codex 羊皮纸按钮底。
+	## 文字仍由 Godot 按当前语言绘制；素材缺失 / 未导入时回退到既有 button_paper。
+	if btn == null:
+		return
+	var tex: Texture2D = UiAssets.get_tex("return_context_button")
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		if tex == null:
+			btn.add_theme_stylebox_override(state, adventure_button_style(false, state, 12, 6))
+			continue
+		var sb := StyleBoxTexture.new()
+		sb.texture = tex
+		sb.texture_margin_left = 44
+		sb.texture_margin_right = 34
+		sb.texture_margin_top = 6
+		sb.texture_margin_bottom = 6
+		sb.content_margin_left = 28
+		sb.content_margin_right = 12
+		sb.content_margin_top = 2
+		sb.content_margin_bottom = 2
+		if state == "hover" or state == "hover_pressed":
+			sb.modulate_color = Color(1.10, 1.10, 1.06)
+		elif state == "pressed":
+			sb.modulate_color = Color(0.86, 0.88, 0.82)
+		btn.add_theme_stylebox_override(state, sb)
+	btn.add_theme_stylebox_override("focus", _btn_box(Color.TRANSPARENT, ADVENTURE_BRASS_LIT, 2, RADIUS_SM))
+	for role in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		btn.add_theme_color_override(role, PAGE_INK)
+	btn.add_theme_color_override("font_disabled_color", PAGE_MUTED)
+	btn.add_theme_font_override("font", font())
+	btn.add_theme_font_size_override("font_size", FS_LABEL)
+	UiPressFx.attach(btn)
+
+
 static func adventure_panel_style(padding := 24.0, dark := false) -> StyleBox:
 	if dark:
 		return _btn_box(ADVENTURE_FOREST, ADVENTURE_BRASS, 1, RADIUS_SM, int(padding), int(padding))

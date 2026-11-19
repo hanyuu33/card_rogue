@@ -277,8 +277,8 @@ for dynamic_key, narrative_key in dynamic_map.items():
 interface_zh_rows, interface_entries = flatten_interface(INTERFACE_ZH)
 interface_es_rows, _ = flatten_interface(INTERFACE_ES, translated=True)
 check(set(interface_es_rows) == set(interface_zh_rows), "interface 全部 scope.key 覆盖一致")
-check(len(interface_zh_rows) == 835,
-      "interface 共 835 条（R822 +鸭绅士 7 条事件文案）")
+check(len(interface_zh_rows) == 836,
+      "interface 共 836 条（R822 +鸭绅士 7 条事件文案；R825 +返回同一间商店）")
 reuse_locked = set(INTERFACE_ZH.get("l10n_reuse", {})) | set(INTERFACE_ZH.get("glossary_reuse", {}))
 for path, zh_text in interface_zh_rows.items():
     entry = interface_entries[path]

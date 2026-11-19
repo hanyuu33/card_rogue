@@ -74,6 +74,22 @@ func _initialize() -> void:
 				RunState.start_run(_map())
 				RunState.relic_choice = [],
 			_check_map_scene],
+		# R825：待领奖励 + 当前商店同时可返回；两个按钮共用 codex 羊皮纸素材。
+		["res://scenes/map.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = []
+				RunState.queue_relic_reward(6005)
+				for _r825_c: Dictionary in RunState.map_cells:
+					if int(_r825_c["id"]) == RunState.current_node_id:
+						_r825_c["type"] = "shop"
+						_r825_c["hidden"] = false
+						_r825_c["revealed"] = true
+						break
+				RunState.store_shop_state(RunState.current_node_id,
+						{"row1": [[8001, 0, 0]], "row2": [], "row3": []})
+				RunState.shop_mark_revisit(RunState.current_node_id),
+			_check_r825_map_context],
 		["res://scenes/battle.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -6470,3 +6486,51 @@ func _ribbon_opaque_ratio(tex: Texture2D) -> float:
 				opaque += 1
 	return float(opaque) / float(w * h)
 
+func _check_r825_map_context(scene: Variant) -> void:
+	## R825：玩家要的「直接按按钮回去」必须落在真实地图上，不是只有 RunState 判据。
+	var rp: RewardPanel = scene._reward_panel
+	var sb: Button = scene._shop_return_btn
+	if rp == null or rp._btn == null or sb == null:
+		_smoke_fail("R825 地图：奖励 / 商店返回按钮没有实例化")
+		return
+	if not rp._btn.visible or not sb.visible:
+		_smoke_fail("R825 地图：有待领奖励和可重进商店时两个按钮都应显示")
+		return
+	if rp._btn.text != "返回待领奖励 1" or sb.text != "返回同一间商店":
+		_smoke_fail("R825 地图按钮文案漂移：%s / %s" % [rp._btn.text, sb.text])
+		return
+	if rp._btn.text.contains("←") or sb.text.contains("←"):
+		_smoke_fail("R825 地图按钮：素材已有箭头，文案不能再叠一个")
+		return
+	var rr := Rect2(rp._btn.position, rp._btn.size)
+	var sr := Rect2(sb.position, sb.size)
+	var title_left: float = scene.MAP_X0 + scene.MAP_W / 2.0 - 150.0
+	var title_right: float = scene.MAP_X0 + scene.MAP_W / 2.0 + 150.0
+	if rr.intersects(sr) or rr.size.x < 154.0 or sr.size.x < 154.0 			or rr.end.y > 62.0 or sr.end.y > 62.0 or rr.end.x > title_left 			or sr.position.x < title_right or sr.end.x > scene._choco_panel_rect().position.x:
+		_smoke_fail("R825 地图按钮：重叠 / 越出顶栏空档 / 压到首领条（%s / %s）" % [str(rr), str(sr)])
+		return
+	for b: Button in [rp._btn, sb]:
+		var style := b.get_theme_stylebox("normal")
+		if not (style is StyleBoxTexture) or (style as StyleBoxTexture).texture == null:
+			_smoke_fail("R825 地图按钮：没有使用已导入的 codex 纹理")
+			return
+	if not sb.pressed.is_connected(Callable(scene, "_return_to_shop")):
+		_smoke_fail("R825 商店按钮：pressed 没有接到同店返回函数")
+		return
+	rp._btn.pressed.emit()
+	if not rp.is_open():
+		_smoke_fail("R825 奖励按钮：点击后没有打开当前待领奖励")
+		return
+	rp.close()
+	if rp.is_open():
+		_smoke_fail("R825 奖励按钮：关闭后仍盖住地图")
+		return
+	var src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	if not src.is_empty():
+		var a := src.find("func _return_to_shop()")
+		var b := src.find("func _on_map_reward_closed()", a)
+		var body := src.substr(a, b - a) if a >= 0 and b > a else ""
+		if body.is_empty() or body.contains("RunState.advance(") or body.contains("forfeit_pending_rewards"):
+			_smoke_fail("R825 同店返回：不许推进地图或作废待领奖励")
+			return
+	print("SMOKE OK R825 地图：奖励 / 同店双返回按钮、codex 纹理、奖励开关与同店无推进守卫")

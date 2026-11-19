@@ -284,7 +284,11 @@ func _ready() -> void:
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		if not RunState.relics.has(RunState.DARK_POWER_RELIC_ID):
 			RunState.relics.append(RunState.DARK_POWER_RELIC_ID)
+	# R825：玩家此刻就站在这间店里；回标题 / 关进程后也应能回同一间，而不是等正常离店才登记。
+	if RunState.current_node_id >= 0:
+		RunState.shop_mark_revisit(RunState.current_node_id)
 	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
+	_save_shop_checkpoint()   # 恢复分支不会走 _sync_shop_state，这里把重进标记也落一份
 	# R444 出图：`--affixdemo` 把第一行头两张换成**带字段**的卡（钢铁卫士 = 超负荷 + 嘲讽、
 	# 白狼 = 疾行），并「选中查看」第一张 —— 字段是随卡池随机来的，
 	# 靠运气截图十次有九次截不到带字段的卡，等于没有核验手段。
@@ -500,7 +504,7 @@ func _setup_shop() -> void:
 	_tele_shelf()
 
 
-func _row3_template() -> Array:
+func _row3_template(for_restore := false) -> Array:
 	## 第三行固定三项的**唯一定义**（R390 抽出来）：恢复货架时要按 key 反查，
 	## 两处各写一份 —— 改价只改一处、另一处还留着老价钱，是最典型的漂移。
 	var out: Array = [
@@ -519,7 +523,9 @@ func _row3_template() -> Array:
 	# R543（用户口径「商店第三排额外售卖屠戮匕首，3 格变 4 格」）：
 	# 难度 ≥11 且玩家不持有屠戮匕首（6063）时，第三排追加一个「屠戮匕首」商品。
 	# ⚠️ 只在难度 ≥11 生效 —— 低难度不出现（信物只在第三层上锁难度下才有意义）。
-	if RunState.third_layer_locked() and not RunState.has_key(RunState.DAGGER_RELIC_ID):
+	# R825：for_restore 只供读档反查。已持有不代表存档里的已售罄货位可以消失；
+	# 若这里仍按「持有就删定义」，_restore_shop 会整店回退重摇，把其他成交位也抹掉。
+	if RunState.third_layer_locked() and (for_restore or not RunState.has_key(RunState.DAGGER_RELIC_ID)):
 		out.append({"key": "dagger", "name": "屠戮匕首",
 			"desc": RunState.key_relic_desc(RunState.DAGGER_RELIC_ID),
 			"price": PRICE_DAGGER, "icon": "shop_icon_dagger", "sold": false})
@@ -528,7 +534,7 @@ func _row3_template() -> Array:
 
 func _row3_def(key: String) -> Dictionary:
 	## 按 key 取第三行商品定义（恢复货架用）。找不到返回空字典。
-	for d: Dictionary in _row3_template():
+	for d: Dictionary in _row3_template(true):
 		if str(d["key"]) == key:
 			return d
 	return {}
@@ -652,6 +658,14 @@ func _sync_shop_state() -> void:
 	for e3: Dictionary in _row3:
 		r3.append([str(e3["key"]), 1 if bool(e3["sold"]) else 0])
 	RunState.store_shop_state(_shop_node, {"row1": r1, "row2": r2, "row3": r3})
+	_save_shop_checkpoint()   # R825：成交后立刻可续，不再只等「回到标题」那一次
+
+
+func _save_shop_checkpoint() -> void:
+	## R825：商店检查点唯一写盘口。调用方必须先把商品与对应奖励 / 扣款都结算完。
+	if RunState.run_active and DisplayServer.get_name() != "headless" \
+			and "--screenshot" not in OS.get_cmdline_user_args():
+		RunSave.save_run()
 
 
 func _ask_redraw() -> void:
@@ -1759,8 +1773,8 @@ func _buy_trap(i: int) -> void:
 		_set_hint("金币不足（需要 %d）" % price)
 		return
 	e["sold"] = true
-	_sync_shop_state()      # R390：售罄位要进货架存档，重进店不重摇
 	RunState.gain_trap(int(t.id))
+	_sync_shop_state()      # R390 / R825：商品与售罄位一起进存档
 	Telemetry.note_shop("trap", int(t.id), price, true)
 	_set_hint("获得工具「%s」· %s" % [t.trap_name, _paid_tag(price)])
 
@@ -1789,25 +1803,25 @@ func _buy_row3(i: int) -> void:
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
-		_sync_shop_state()      # R390
 		RunState.gain_max_hp(5)
+		_sync_shop_state()      # R390 / R825：生命与售罄位一起进存档
 		_set_hint(GameI18n.ui("shop", "SHOP_MAX_HP_GAINED", "最大生命 +5（并回复 5 点）· %s") % _paid_tag(price))
 	elif key == "choco":
 		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
-		_sync_shop_state()      # R390
 		RunState.add_chocolate(1)   # R236：体力回到 > 0 会撤销「耗尽→开 Boss」的待触发
 		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
+		_sync_shop_state()      # R390 / R825：巧克力、疲惫与售罄位一起进存档
 		_set_hint(GameI18n.ui("shop", "SHOP_CHOCOLATE_GAINED", "巧克力 +1 · %s") % _paid_tag(price))
 	elif key == "dagger":
 		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
-		_sync_shop_state()      # R390
 		RunState.gain_key(RunState.DAGGER_RELIC_ID)
+		_sync_shop_state()      # R390 / R825：信物与售罄位一起进存档
 		_set_hint(GameI18n.ui("shop", "SHOP_DAGGER_OBTAINED", "获得信物「屠戮匕首」· %s") % _paid_tag(price))
 
 
