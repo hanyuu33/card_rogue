@@ -681,7 +681,8 @@ func reset_units(side: String) -> void:
 				p.tapped = true
 				p.stun_left -= 1
 			elif p.sleep_left > 0:
-				# 沉睡（恶魔鸭 9116，R63）：还在睡 → 本回合**不行动**（复用横置通道，
+				# 沉睡（带「沉睡」trait 的单位，R63；如恶魔鸭 9116 / 激光巨炮 9241）：
+				# 还在睡 → 本回合**不行动**（复用横置通道，
 				# 于是 move / attack / attack_hp / AI 队列全部自然被拦住，不用各写一遍）。
 				p.tapped = true
 			else:

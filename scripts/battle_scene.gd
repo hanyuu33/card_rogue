@@ -201,7 +201,7 @@ const LP_MS := 500              # R186：触屏长按判定时长（毫秒）—
 const LP_SLOP := 18.0           # R186：长按允许的最大位移（px，超过视为拖拽）
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
-const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
+const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（带「沉睡」trait 的单位：恶魔鸭 9116 / 激光巨炮 9241）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
 const COL_FUSE := UiTheme.STATE_FUSE                # 铸造倒计时（R149）：橙红脉冲环 +「倒数 N」徽标
 const COL_STUN := UiTheme.STATE_STUN                # 眩晕（R341 惊奇盒子 / 摇篮曲 / 组合）：金色虚线环 + 绕头星点
 const COL_FIELD_SELF := Color("ffb03a")         # 场地效果（R74）：我方放的 —— 琥珀色斜纹 + 名字角标
@@ -879,7 +879,7 @@ var _cam_to := 0.0
 var _cam_t0 := 0
 var _cam_ms := 0                # >0 = 镜头正在补间（玩家一操作就取消）
 var _fx_claimed: Dictionary = {}   # Vector2i -> ms：这一格已有专属命中表现，通用演出让路
-var _wake_rings: Array = []     # {pos, start, dur, col}                       恶魔鸭苏醒的挣脱环（R72）
+var _wake_rings: Array = []     # {pos, start, dur, col}                       沉睡单位苏醒的挣脱环（R72）
 var _shake_until := 0           # 屏幕震动截止时刻
 var _shake_mag := 0.0           # 屏幕震动幅度（像素）
 
@@ -14628,16 +14628,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_hand_fly.append({"mode": "fade", "start": n, "dur": 300})
 			_earring_missed = 0
 		"wake":
-			# 恶魔鸭（9116，R63 / R72 补特效）：沉睡结束 / 被击中提前醒来。
+			# 沉睡单位（恶魔鸭 9116 / 激光巨炮 9241 …，R63 / R72 补特效）：沉睡结束 / 被击中提前醒来。
 			# R72：原来只有一圈爆点 + 飘字，「挣脱束缚」的观感不足；补一圈向外扩散的
 			# 紫色冲击环（从卡面中心扩散出去），和常驻的沉睡环在颜色上呼应 ——
 			# 玩家扫一眼就知道「刚才那圈紫的就是这个状态，现在它没了」。
 			var wk_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var wk_pos:= _cell_center(wk_cell)
-			var wk_txt := "恶魔鸭 苏醒"
+			# R820：沉睡不再只属于恶魔鸭 —— 飘字按**卡名**取，谁醒就显示谁。
+			var wk_card := data.get("card", null) as CardData
+			var wk_name := str(wk_card.card_name) if wk_card != null else ""
+			var wk_txt := ("%s 苏醒" % wk_name) if wk_name != "" else "苏醒"
 			var wk_col := Color("9b6bff")
 			if bool(data.get("hurt", false)):
-				wk_txt = "恶魔鸭 提前醒来"
+				wk_txt = ("%s 提前醒来" % wk_name) if wk_name != "" else "提前醒来"
 				wk_col = Color("d84a12")
 			# 挣脱环：2 圈错峰扩散的描边圆（不是实心块，保留卡面可读性）
 			for _wi in 2:
@@ -16501,7 +16504,7 @@ static func _rev_hash(a: int, b: int, c: int) -> float:
 
 
 func _draw_wake_rings() -> void:
-	## 恶魔鸭苏醒（R72）：一圈圈向外扩散并淡出的**空心**挣脱环。
+	## 沉睡单位苏醒（R72；恶魔鸭 / 激光巨炮等通用）：一圈圈向外扩散并淡出的**空心**挣脱环。
 	## 为什么不用 _bursts：那个是打击爆点（带放射火花、收缩的内圈），观感是「被打」。
 	## 苏醒是「挣脱束缚」，用**只扩张、不收缩、无线条**的环，且比爆点晚画（压在上层）——
 	## 常驻的紫色沉睡环正在同一位置消失，这一圈紫色扩散正好接上，状态变化的因果一眼可见。
