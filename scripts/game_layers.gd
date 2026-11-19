@@ -218,6 +218,10 @@ static func event_weights(layer: int) -> Dictionary:
 			continue
 		var ev: Dictionary = cfg["events"]
 		for k in ev:
+			# R817：试玩版只出基线内的事件（新事件默认不进试玩）。
+			# `event_kinds()` / `has_events()` / 地图生成全读本函数，一处收口。
+			if GameBuild.is_demo() and not DemoScope.allows_event(str(k)):
+				continue
 			out[k] = int(out.get(k, 0)) + int(ev[k])
 	return out
 

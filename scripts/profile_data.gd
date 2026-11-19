@@ -354,11 +354,21 @@ static func unlock_relic(id: int) -> bool:
 
 
 static func is_card_unlocked(id: int) -> bool:
+	## R817：试玩版恒 false —— 「不可解锁剧情」的完整语义不只是剧情段领不到，
+	## 而是**剧情锁卡一张都不可得**。原先只挡了 `is_story_unlocked`，`unlocked_cards`
+	## 是「曾经解锁过」的存档记录：一份来自完整版的档案会让鹅 9187 这类卡直接进试玩版
+	## 奖励池（实测本机档案就带 9187 / 9191），试玩的卡池大小因玩家而异。
+	if GameBuild.is_demo():
+		return false
 	ensure_loaded()
 	return unlocked_cards.has(id)
 
 
 static func is_relic_unlocked(id: int) -> bool:
+	## R817：同上 —— 试玩版不解锁剧情，剧情锁道具（竖琴 6052 / 骑士剑 6053 等）
+	## 也就永远拿不到，别让完整版档案把它们带进来。
+	if GameBuild.is_demo():
+		return false
 	ensure_loaded()
 	return unlocked_relics.has(id)
 

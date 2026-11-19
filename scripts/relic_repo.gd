@@ -37,6 +37,9 @@ func get_relic(id: int) -> RelicData:
 func all_relics() -> Array[RelicData]:
 	var out: Array[RelicData] = []
 	for id: int in _relics.keys():
+		# R817：试玩版只列基线内的道具（图鉴 / 商店陈列 / 事件取货都读这里）
+		if GameBuild.is_demo() and not DemoScope.allows_relic(id):
+			continue
 		out.append(_relics[id])
 	out.sort_custom(func(a: RelicData, b: RelicData): return a.id < b.id)
 	return out
@@ -51,7 +54,8 @@ func initial_ids() -> Array[int]:
 	## R341：新增「惊奇盒子」6047（获得即塞一张同名工事卡）与「洞窟绳」6048
 	##       （Boss 以外的战斗可以逃跑，逃跑即失去）。两件都只在第一层起点三选一。
 	# R745：新增「工具箱」6068（立即给一个随机工具、每进新层再给一个）。
-	return [6001, 6002, 6004, 6021, 6030, 6031, 6032, 6047, 6048, 6068]
+	var out: Array[int] = [6001, 6002, 6004, 6021, 6030, 6031, 6032, 6047, 6048, 6068]
+	return _demo_ids(out)
 
 
 func reward_ids(tier: String = "") -> Array[int]:
@@ -103,7 +107,21 @@ func reward_ids(tier: String = "") -> Array[int]:
 			6050, 6051, 6052, 6053, 6054, 6060, 6064, 6065, 6066,
 			6070, 6071, 6072, 6073, 6074, 6076, 6077, 6078, 6079, 6080,
 		6081, 6082, 6083, 6084]
-	return _filter_by_tier(_drop_locked(ids), tier)
+	return _demo_ids(_filter_by_tier(_drop_locked(ids), tier))
+
+
+func _demo_ids(ids: Array[int]) -> Array[int]:
+	## R817：试玩版的内容基线过滤（道具侧的**唯一口**，与卡池的
+	## `CardRepo.demo_allows()` 同一张表）。口径 =「修复跟着走、新增不跟着走」：
+	## 老道具改效果 / 修 bug 用的是同一个 id，自动同步到试玩；新道具 id 不在
+	## `demo_scope.json` 里，默认不进试玩。非试玩版原样返回（零行为变化）。
+	if not GameBuild.is_demo():
+		return ids
+	var out: Array[int] = []
+	for id: int in ids:
+		if DemoScope.allows_relic(id):
+			out.append(id)
+	return out
 
 
 func _drop_locked(ids: Array[int]) -> Array[int]:
@@ -155,7 +173,8 @@ func event_ids() -> Array[int]:
 	## R743：烤肉 6011 已从道具改成**工具**（7007，见 traps.json / RunState.BARBECUE_TOOL_ID）——
 	## 它不再属于道具池的任何一类，这里必须拿掉，否则火焰熔炉 / 投入道具这类
 	## 「按道具池取货」的地方会拿一个 relics.json 里根本不存在的 id。
-	return [6010, 6012, 6019, 6027]
+	var out: Array[int] = [6010, 6012, 6019, 6027]
+	return _demo_ids(out)
 
 
 func layer2_ids() -> Array[int]:
@@ -174,7 +193,8 @@ func layer2_ids() -> Array[int]:
 	##       所以它每局约 3/9 的概率出现在选项里，而不是必出。
 	## R509（用户口径）：**「记忆药水」6067 进二层起始池** —— 第二层起点的「卷卷三选一」给出，
 	##       每次战斗开始自动打出一张效果卡。池子 8→9 件。
-	return [6014, 6015, 6016, 6017, 6018, 6033, 6049, 6010, 6067]
+	var out: Array[int] = [6014, 6015, 6016, 6017, 6018, 6033, 6049, 6010, 6067]
+	return _demo_ids(out)
 
 
 func start_ids_for_layer(layer: int) -> Array[int]:
@@ -188,7 +208,8 @@ func start_ids_for_layer(layer: int) -> Array[int]:
 func class_ids() -> Array[int]:
 	## 角色赠品道具（选定角色时由 RunState.start_run 发放，如森林精魄的「荒野形态」6022）。
 	## 这一池**不参与任何随机抽取**：起点三选一 / 奖励掉落 / 事件 / 二层起始都不含它。
-	return [6022, 6023, 6025]
+	var out: Array[int] = [6022, 6023, 6025]
+	return _demo_ids(out)
 
 
 func roll_reward(rng: RandomNumberGenerator, tier: String = "") -> int:

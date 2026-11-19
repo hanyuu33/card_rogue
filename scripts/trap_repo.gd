@@ -35,6 +35,10 @@ func get_trap(id: int) -> TrapData:
 func all_traps() -> Array[TrapData]:
 	var out: Array[TrapData] = []
 	for id: int in _traps.keys():
+		# R817：试玩版只列基线内的工具 —— `random_traps()` / `shop_traps()`
+		# 都基于本函数，所以「新工具默认不进试玩」一处收口就够。
+		if GameBuild.is_demo() and not DemoScope.allows_trap(id):
+			continue
 		out.append(_traps[id])
 	out.sort_custom(func(a: TrapData, b: TrapData): return a.id < b.id)
 	return out

@@ -4,6 +4,8 @@
 用法：
     python _release.py                  回归 → 导出 → 覆盖目标 → 用发布产物自检（测试版）
     python _release.py --release        构建**发布版**（职业·难度渐进解锁，见 unlock_system.gd）
+    python _release.py --demo           构建**试玩版**（只开森林精魄/暗影刺客、各 60 张、难度≤1、
+                                        剧情不解锁、二层 Boss 即「胜利？」—— 见 game_build.gd）
     python _release.py --no-verify      跳过回归（已经手工跑过时）
     python _release.py --with-content   测试版也带 content/（专门验证覆盖层时用）
     python _release.py --two-file       测试版强制双文件（调试用，一般不传）
@@ -84,10 +86,14 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 # R791：两种形态分目录 —— 发布版进 Steam depot，测试版单独一份完整包。
 TARGET_RELEASE = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_独立版")
 TARGET_TEST = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_测试版")
+# R817：试玩版单独一份目录 —— 它和发布版**同名文件不同内容**（卡池裁过），
+# 混在一个目录里会被 Steam depot / 手动拷贝弄反，所以物理隔开。
+TARGET_DEMO = os.path.join(os.path.dirname(ROOT), "卡牌肉鸽_试玩版")
 TARGET = TARGET_RELEASE   # 兼容旧引用；main() 会按形态重选
 
 PRESET = "Windows Desktop"
 PRESET_RELEASE = "Windows Desktop Release"   # R550：发布版（custom_features=cardrogue_release）
+PRESET_DEMO = "Windows Desktop Demo"         # R817：试玩版（custom_features=cardrogue_demo）
 EXE_NAME = "Quackill.exe"
 PCK_NAME = "Quackill.pck"
 EXTRA = "release"
@@ -289,19 +295,32 @@ def main():
     # 通过 global 改模块级 PRESET / EXE_NAME / PCK_NAME，其余代码照旧。
     global PRESET, EXE_NAME, PCK_NAME
     release = "--release" in args
+    # R817：试玩版与发布版互斥 —— 两个都传是笔误，别猜，直接停。
+    demo = "--demo" in args
+    if release and demo:
+        die("--release 与 --demo 不能同时用：它们要覆盖同一个目标目录。")
     if release:
         PRESET = PRESET_RELEASE
         sfx = "_release"
+        EXE_NAME = "Quackill" + sfx + ".exe"
+        PCK_NAME = "Quackill" + sfx + ".pck"
+    elif demo:
+        PRESET = PRESET_DEMO
+        sfx = "_demo"
         EXE_NAME = "Quackill" + sfx + ".exe"
         PCK_NAME = "Quackill" + sfx + ".pck"
 
     # R791：形态由构建类型决定，不再靠人记得加参数。
     #   发布版 = 必须分离（exe + pck + content/），否则 Steam 每次更新都近似全量；
     #   测试版 = 旧的完整单文件包，一个 exe 丢出去就能跑。
-    two_file = True if release else ("--two-file" in args)
-    with_content = release or ("--with-content" in args)
+    # R817：试玩版跟发布版同规格 —— 双文件 + 随包 content/。
+    # 这不是为了 Steam 增量（试玩包不上 depot），而是为了**试玩版的修复能热更**：
+    # 「后续修复要同步到试玩」这条口径落到技术上，就是改 content/ 里的几张 json，
+    # 而不是每次让玩家重下 240MB。
+    two_file = True if (release or demo) else ("--two-file" in args)
+    with_content = release or demo or ("--with-content" in args)
 
-    target = TARGET_RELEASE if release else TARGET_TEST
+    target = TARGET_RELEASE if release else (TARGET_DEMO if demo else TARGET_TEST)
     for a in args:
         if a.startswith("--target="):
             target = a.split("=", 1)[1].strip().strip('"')
@@ -311,6 +330,10 @@ def main():
     if release:
         print("发布模式：%s  |  构建：发布版（Steam 分发）" % mode)
         print("热更层：随包 content/ —— 改文案 / 换图只下变化的小文件")
+    elif demo:
+        print("发布模式：%s  |  构建：试玩版（Steam 试玩 / 展会）" % mode)
+        print("内容口径：森林精魄 + 暗影刺客各 60 张 / 难度 ≤ 1 / 二层 Boss 即结算")
+        print("热更层：随包 content/ —— 后续**修复**走这里同步到试玩版")
     else:
         print("发布模式：%s  |  构建：测试版（内部 / 试玩）" % mode)
         print("热更层：%s" % ("随包 content/（显式指定）" if with_content

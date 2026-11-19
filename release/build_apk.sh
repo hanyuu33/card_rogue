@@ -52,12 +52,15 @@ ROUND="${1:-}"
 MODE="${2:-test}"   # test（默认，全解锁）/ release（发布版：职业·难度渐进解锁）
 case "$MODE" in
   release|Release) MODE=release ;;
+  demo|Demo) MODE=demo ;;          # R817：试玩版（只开两职业、各 60 张、难度≤1）
   *) MODE=test ;;
 esac
 PRESET="Android"
 [ "$MODE" = "release" ] && PRESET="Android Release"
+[ "$MODE" = "demo" ] && PRESET="Android Demo"
 SFX=""
 [ "$MODE" = "release" ] && SFX="_release"
+[ "$MODE" = "demo" ] && SFX="_demo"
 OUT_UNSIGNED="$ROOT/dist/Quackill${SFX}.apk"
 OUT_SIGNED="$ROOT/dist/Quackill${SFX}-signed.apk"
 

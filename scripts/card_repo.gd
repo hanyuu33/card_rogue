@@ -52,14 +52,24 @@ func enemy_cards() -> Array[CardData]:
 
 
 static func demo_allows(c: CardData) -> bool:
-	## R814：这张卡在当前版本**存不存在**（试玩版裁掉的那批不存在）。
-	## 与奖励池、图鉴、商店同源 —— 判据只有 `no_demo` 一个字段，不许各处再写白名单。
-	## 完整版 / 测试版恒 true（`GameBuild.is_demo()` 为假），所以老逻辑一行都没变。
+	## R814/R817：这张卡在当前版本**存不存在**（试玩版裁掉的那批不存在）。
+	## 与奖励池、图鉴、商店同源 —— 判据只在这里，不许各处再写白名单。两道闸：
+	##   ① `no_demo`   = 显式否决（R814 逐张标的那 13 张，留着当「为什么裁它」的记录）；
+	##   ② `DemoScope` = **准入白名单**（R817）—— 新卡默认不在基线里，所以默认不进试玩。
+	##      店长口径：「修复跟着走、新增不跟着走」：改老卡的数据自动同步，新卡要进试玩
+	##      必须显式加进 demo_scope.json。
+	## 完整版 / 测试版恒 true（`GameBuild.is_demo()` 为假），老逻辑一行都没变。
 	if c == null:
 		return false
-	if GameBuild.is_demo() and c.no_demo:
+	if not GameBuild.is_demo():
+		return true
+	if c.no_demo:
 		return false
-	return true
+	# 基线管的是「**奖励池可获得**的那一层」（rarity 0~2）。初始卡 / 怪物卡 / 事件专属卡
+	# 本来就不进奖励池，图鉴与卡面照样要画得出来 —— 别把它们判成「不存在」。
+	if c.rarity > 2:
+		return true
+	return DemoScope.allows_card(c.id)
 
 
 func obtainable_cards(include_hidden := false) -> Array[CardData]:
