@@ -623,7 +623,7 @@ const DUCK_ALARM_SPELL:= 1
 #   奖励池 / 商店 / 禁卡表 / 图鉴；rarity 5 再兜一层「不进可获得池」。
 #   它们**不是奖励卡牌**（R826 店长口径），唯一获得途径就是这件道具。
 const MUSIC_BOX_RELIC_ID:= 6086
-const MUSIC_BOX_DRAW:= 2
+const MUSIC_BOX_DRAW:= 3
 const NOTE_TRAIT:= "音符"
 # 音符卡的 id —— 只有「排除本张」这类场合要精确比对（re 9278 的「另一张」）。
 const NOTE_DO_ID:= 9277
@@ -642,10 +642,12 @@ const NOTE_MI_POWER_DOWN:= 6
 const NOTE_FA_DMG:= 18
 const NOTE_FA_SPLASH:= 5
 const NOTE_SOL_DMG:= 6
-const NOTE_LA_DRAW:= 3
-const NOTE_LA_POWER:= 3
+const NOTE_LA_DRAW:= 4
+const NOTE_LA_POWER:= 2
 const NOTE_SI_DMG:= 7
 const NOTE_SI_TIMES:= 7
+const TOP_HAT_RELIC_ID:= 6087   # R829「这是礼帽」（二层鸭绅士）：己方盟友/工事死亡 → 洗回抽牌库 + 本局 -2 费 + 次元
+const TOP_HAT_DISCOUNT:= 2
 const ICECREAM_RELIC_ID:= 6016
 const ICECREAM_HP_COST:= 3
 const ICECREAM_ENERGY:= 2    # R340 下调：+4 → +2（抽牌仍是 3 张）
@@ -4290,7 +4292,7 @@ func _music_box_tick(repo: CardRepo) -> void:
 	if pool.is_empty():
 		_log("音乐盒：卡库里没有音符卡，跳过")
 		return
-	# 不重复抽两张；音符不足两张时有多少抽多少（走引擎 rng → 回放一致）。
+	# 不重复抽三张；音符不足三张时有多少抽多少（走引擎 rng → 回放一致）。
 	var n := mini(MUSIC_BOX_DRAW, pool.size())
 	var names: Array[String] = []
 	for _i in n:
@@ -17174,6 +17176,19 @@ func _destroy(cell: Vector2i) -> void :
 				state.hand.append(back)
 		elif _legacy_try_return(p):
 			pass   # R528 传承记忆：已回手卡（日志与减费都在里面记）
+		elif self_relics.has(TOP_HAT_RELIC_ID) and (p.card.kind == "盟友" or p.card.is_fort()):
+			# R829「这是礼帽」6087：己方盟友 / 工事死亡 → 洗回抽牌库 + 本局费用 -2 + 获得次元。
+			# ⚠️ 带次元的卡在第一个分支已被「离场即消失」接走，走不到这里 —— 所以每张卡
+			#    只会被礼帽救一次（救回来就带次元，下次死亡真消失），不会无限洗回。
+			var hat_back := _own_card(_card_leaving_field(p))
+			if hat_back == null:
+				_log("礼帽：%s 被击破 → 洗回失败（卡为空）" % p.card.card_name)
+			else:
+				state.card_discount[hat_back] = int(state.card_discount.get(hat_back, 0)) + TOP_HAT_DISCOUNT
+				hat_back.add_affix(AFFIX_DIMENSION)
+				state.deck.append(hat_back)
+				_log("%s 被击破，洗回抽牌库（本局费用 -%d，获得次元）" % [p.card.card_name, TOP_HAT_DISCOUNT])
+				action.emit("relic", {"id": TOP_HAT_RELIC_ID, "text": "%s 洗回抽牌库" % p.card.card_name})
 		else:
 			# 进弃牌区的是「离场还原后」那张卡：栅栏修复术的加血只在场上有效（R67）。
 			# action.emit 里的 card 仍用场上那张（玩家看到的就是它），只有交出去的卡被还原。
@@ -18225,9 +18240,9 @@ func _note_sol(side: String, target, card: CardData) -> String:
 
 
 func _note_la(side: String) -> String:
-	## La（9282，音符 · 3 费次元）：抽 NOTE_LA_DRAW 张，这些卡本局费用 -1；其中盟友与工事力量 +3。
+	## La（9282，音符 · 3 费次元）：抽 NOTE_LA_DRAW 张，这些卡本局费用 -1；其中盟友与工事力量 +2。
 	## 「本局费用 -1」走实例级减费 card_discount（本场有效、卡回牌库再抽到仍减 —— 与陨石术
-	## 「本局一直累加」同一条路）；「力量 +3」直接烘进卡面 power（手牌里的卡还没有 Placement）。
+	## 「本局一直累加」同一条路）；「力量 +2」直接烘进卡面 power（手牌里的卡还没有 Placement）。
 	var got := _draw_many_cards(NOTE_LA_DRAW)
 	var buffed := 0
 	for c: CardData in got:

@@ -275,7 +275,8 @@
     "6083": {"name": "Arpón de sirena", "desc": "Dentro del mismo turno, cada 3.ª vez que infliges daño a un enemigo, le infliges 4 de daño."},
     "6084": {"name": "Reloj defectuoso", "desc": "La 12.ª carta que juegas en cada combate termina tu turno actual y comienza de inmediato un nuevo turno tuyo (el turno enemigo no ocurre)."},
     "6085": {"name": "Despertador de pato", "desc": "En el 2.º turno de cada combate, roba 1 carta y obtén 1 de Coste. A partir del 5.º turno, el daño de habilidad +1."},
-    "6086": {"name": "Caja de música", "desc": "Al inicio de cada combate, añade 2 Notas aleatorias a tu pila de robo."}
+    "6086": {"name": "Caja de música", "desc": "Al inicio de cada combate, añade 3 Notas aleatorias a tu pila de robo."},
+    "6087": {"name": "Este es un Sombrero de Copa", "desc": "Tus Aliados y Estructuras obtienen «Muerte»: al ser destruidos, vuelven a tu pila de robo, cuestan 2 menos este combate y obtienen «dimensional»."}
   },
   "classes": {
     "森林精魄": {
