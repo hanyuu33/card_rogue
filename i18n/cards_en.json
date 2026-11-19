@@ -936,7 +936,7 @@
   },
   "9156": {
    "name": "Charge",
-   "effect_text": "Deal 0 damage. At the end of the turn, for each point of unspent Cost, this card in your Hand gains +3 damage; this bonus accumulates for the rest of this battle."
+   "effect_text": "Deal 0 damage. At the end of the turn, for each point of unspent Cost, this card in your Hand gains +3 damage for this battle."
   },
   "9157": {
    "name": "Jar",

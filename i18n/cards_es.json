@@ -936,7 +936,7 @@
   },
   "9156": {
    "name": "Acumulación de Fuerza",
-   "effect_text": "Inflige 0 de daño. Al final del turno, por cada 1 punto de Coste sin gastar, esta carta de la mano obtiene +3 de daño; esta bonificación se acumula durante esta batalla."
+   "effect_text": "Inflige 0 de daño. Al final del turno, por cada 1 punto de Coste sin gastar, esta carta de la mano obtiene +3 de daño durante esta batalla."
   },
   "9157": {
    "name": "Jarro",

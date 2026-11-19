@@ -1446,7 +1446,7 @@ const FLAME_SWORD_DMG := 10
 const NIGHT_WALK_ID:= 9155
 const NIGHT_WALK_MAX:= 5
 # 蓄势（9156 技能，R232，暗影刺客普通）：1 费 + 保存；造成 value 点伤害（初始 0）；
-# 回合结束时每剩 1 点费用 → 手卡里这张 +CHARGE_UP_PER_ENERGY 伤害（战斗内不重置）。
+# 回合结束时每剩 1 点费用 → 手卡里这张 +CHARGE_UP_PER_ENERGY 伤害（本局累计）。
 const CHARGE_UP_ID:= 9156
 const CHARGE_UP_PER_ENERGY:= 3
 # ── 暗影刺客扩展（R263，2026-10-19）──
@@ -5112,7 +5112,7 @@ func _play_cap_blocked() -> String:
 
 func _charge_up_text(v: int) -> String:
 	## 蓄势（9156，R232）的卡面文案：始终显示当前伤害 v（随剩余费用成长）。
-	return "造成 %d 点伤害。回合结束时，每有 1 点未使用的费用，手卡的此卡伤害 +3（战斗内不重置）。" % v
+	return "造成 %d 点伤害。回合结束时，每有 1 点未使用的费用，手牌的此卡本局伤害 +3。" % v
 
 
 func _charge_up_grow(left: int) -> void:

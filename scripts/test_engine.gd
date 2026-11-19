@@ -42308,6 +42308,10 @@ func _init() -> void:
 
 			"R232 夜行：史诗 2 费技能（暗影刺客，无目标，非伤害卡）")
 
+	check(r232_cu != null and r232_cu.effect_text.contains("手牌的此卡本局伤害 +3"),
+
+			"R831 蓄势：cards.json 文案统一为「手牌的此卡本局伤害 +3」（%s）" % (r232_cu.effect_text if r232_cu else ""))
+
 	check(r232_cu != null and r232_cu.card_name == "蓄势" and r232_cu.is_spell()
 
 			and r232_cu.cost == 1 and r232_cu.rarity == 0
@@ -42477,6 +42481,12 @@ func _init() -> void:
 	check(r232_g1 != null and r232_g1.effect_text.contains("造成 21 点伤害"),
 
 			"R232 蓄势：卡面文案同步显示当前伤害（%s）" % (r232_g1.effect_text if r232_g1 else ""))
+
+	check(r232_g1 != null and r232_g1.effect_text.contains("手牌的此卡本局伤害 +3")
+
+			and not r232_g1.effect_text.contains("战斗内不重置"),
+
+			"R831 蓄势：运行时文案用「手牌的此卡本局伤害 +3」、不再出现「战斗内不重置」（%s）" % (r232_g1.effect_text if r232_g1 else ""))
 
 
 
