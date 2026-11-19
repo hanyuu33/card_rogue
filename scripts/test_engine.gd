@@ -78130,7 +78130,7 @@ func _test_r767() -> void:
 
 
 func _test_r769() -> void:
-	## R769 猴爪：发进手牌的**那张**，本回合费用 -1（店长追加口径）。
+	## R769 猴爪：发进手牌的**那张**，本回合费用 -2（R769 建机制 -1，R823 店长上调为 -2）。
 	## 走的是既有 `state.hand_cost_turn`（R276 随心组装同一张表），所以验的不是「新机制」，
 	## 而是**接得对不对**：标记写进去、cost_of 真降、离手与回合末都自动复原。
 	var r769_sv_deck: Array[int] = RunState.deck_ids.duplicate()
@@ -78142,17 +78142,18 @@ func _test_r769() -> void:
 	r769_e.start_game(0)
 	var r769_alien: CardData = null
 	for c: CardData in r769_e.state.hand:
-		# 排除回响 9102：它卡面写死「最低 1 费」，_cost_floor 会压住这 -1，断言会假红
+		# 排除回响 9102：它卡面写死「最低 1 费」，_cost_floor 会压住这次减费，断言会假红
 		if r769_e._other_class_card(c) and c.id != GameEngine.ECHO_ID:
 			r769_alien = c
 	check(r769_alien != null,
 			"R769 准备：第 1 回合手牌里拿到一张其他职业卡（否则后面的断言是空的）")
 	if r769_alien != null:
 		check(int(r769_e.state.hand_cost_turn.get(r769_alien, 0)) == GameEngine.MONKEY_CLAW_DISCOUNT,
-				"R769 猴爪：发进手牌的那张打上「本回合费用 -1」标记")
+				"R769 猴爪：发进手牌的那张打上「本回合费用 -%d」标记"
+				% GameEngine.MONKEY_CLAW_DISCOUNT)
 		var r769_before: int = r769_alien.cost
 		var r769_after: int = r769_e.cost_of(r769_alien)
-		check(r769_after == maxi(0, r769_before - 1),
+		check(r769_after == maxi(0, r769_before - GameEngine.MONKEY_CLAW_DISCOUNT),
 				"R769 猴爪：「%s」本回合费用 %d → %d（cost_of 唯一口）"
 				% [r769_alien.card_name, r769_before, r769_after])
 		check(r769_alien.cost == r769_before,
@@ -78171,22 +78172,24 @@ func _test_r769() -> void:
 				"R769 猴爪：回合结束清空本回合减费表（剩 %d 条）"
 				% r769_e.state.hand_cost_turn.size())
 
-	# ④' 「-1 真生效」的硬证据：上面那张是随机摇的，可能是 0 费（0-1 被 maxi(0,…) 夹住，
-	#     断言虽过却嚼不出味道）。这里另取一张**确定 >=1 费**的别职业卡，挂同一个标记，
-	#     直接验 cost_of 真降 1 —— 前者证接线，这条证效果。
+	# ④' 「减费真生效」的硬证据：上面那张是随机摇的，可能是低费（减完被 maxi(0,…) 夹住，
+	#     断言虽过却嚼不出味道）。这里另取一张**确定 >= 减费量**的别职业卡，挂同一个标记，
+	#     直接验 cost_of 真降 N —— 前者证接线，这条证效果。
 	var r769_pick: CardData = null
 	for pc: CardData in CardRepo.load_json().reward_pool():
-		if r769_e._other_class_card(pc) and pc.cost >= 1 and pc.id != GameEngine.ECHO_ID:
+		if (r769_e._other_class_card(pc) and pc.cost >= GameEngine.MONKEY_CLAW_DISCOUNT
+				and pc.id != GameEngine.ECHO_ID):
 			r769_pick = pc
 			break
-	check(r769_pick != null, "R769 准备：卡池里有 >=1 费的别职业卡")
+	check(r769_pick != null, "R769 准备：卡池里有够减 %d 费的别职业卡" % GameEngine.MONKEY_CLAW_DISCOUNT)
 	if r769_pick != null:
 		var r769_inst := r769_e._new_own_card(r769_pick)
 		r769_e.state.hand.append(r769_inst)
 		r769_e.state.hand_cost_turn[r769_inst] = GameEngine.MONKEY_CLAW_DISCOUNT
-		check(r769_e.cost_of(r769_inst) == r769_pick.cost - 1,
-				"R769 猴爪：「%s」%d 费 → 本回合 %d 费（-1 真落地，没被 0 费夹住）"
-				% [r769_pick.card_name, r769_pick.cost, r769_e.cost_of(r769_inst)])
+		check(r769_e.cost_of(r769_inst) == r769_pick.cost - GameEngine.MONKEY_CLAW_DISCOUNT,
+				"R769 猴爪：「%s」%d 费 → 本回合 %d 费（-%d 真落地，没被 0 费夹住）"
+				% [r769_pick.card_name, r769_pick.cost, r769_e.cost_of(r769_inst),
+						GameEngine.MONKEY_CLAW_DISCOUNT])
 		r769_e.state.hand.erase(r769_inst)
 		r769_e.state.hand_cost_turn.erase(r769_inst)
 

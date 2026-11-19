@@ -245,7 +245,7 @@
     },
     "6066": {
       "name": "Monkey's Paw",
-      "desc": "At the start of each of the first three turns of every battle: add a random card of another class to your Hand (it costs -1 this turn), and add a Regret to your Deck."
+      "desc": "At the start of each of the first three turns of every battle: add a random card of another class to your Hand (it costs -2 this turn), and add a Regret to your Deck."
     },
     "6067": {
       "name": "Memory Potion",

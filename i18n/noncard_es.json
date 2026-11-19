@@ -245,7 +245,7 @@
     },
     "6066": {
       "name": "Pata de mono",
-      "desc": "Al inicio de cada uno de los tres primeros turnos de cada combate: añade una carta aleatoria de otra clase a tu mano (cuesta -1 este turno) y añade un Arrepentimiento a tu mazo."
+      "desc": "Al inicio de cada uno de los tres primeros turnos de cada combate: añade una carta aleatoria de otra clase a tu mano (cuesta -2 este turno) y añade un Arrepentimiento a tu mazo."
     },
     "6067": {
       "name": "Poción de memoria",

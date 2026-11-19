@@ -1,0 +1,16 @@
+R823：猴爪 6066 减费由 -1 上调为 -2
+
+店长口径：「猴爪，调整为本回合费用-2。」
+
+改动：
+1. game_engine.gd：MONKEY_CLAW_DISCOUNT 1 -> 2（唯一数值口，cost_of 读 hand_cost_turn，
+   末段 maxi(0, c) 兜住下限，1 费卡减到 0 不会为负）；三处注释与 _claw_tick 的 _log 串跟随常量。
+2. 文本四处同改（中两处真源 + en/ja/es）：
+   relics.json / i18n/noncard_zh_canonical.json「（该卡本回合费用-2）」
+   en "(it costs -2 this turn)" / ja "（このターン中コスト-2）" / es "(cuesta -2 este turno)"
+3. test_engine.gd R769：两处写死的 `- 1` 改为引用 GameEngine.MONKEY_CLAW_DISCOUNT，
+   选卡门槛由 cost>=1 提到 cost>=减费量（否则 1 费卡被 maxi 夹住会假红）。
+
+回归：9 套全绿（engine 6864 / reward 26 / bgm 39 / traps 206 / trapinput 77 /
+content 15 / mod 37 / smoke 75 / assemble 0 / mana PASS）；validate_noncard 79 道具通过；
+存档已还原 RESTORE_VERIFY OK。

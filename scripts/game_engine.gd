@@ -959,7 +959,7 @@ const MECHANICAL_ARM_DISCOUNT:= 1
 # ⚠️ 「加入卡组」= 永久卡组，**本场抽牌堆不掺** —— 下一场战斗才抽得到。
 const MONKEY_CLAW_RELIC_ID:= 6066
 const MONKEY_CLAW_TURNS:= 3
-const MONKEY_CLAW_DISCOUNT:= 1   # R769：发进手牌的那张，本回合费用 -1
+const MONKEY_CLAW_DISCOUNT:= 2   # R769 建机制 -1；R823 店长口径上调为 -2（发进手牌的那张，本回合费用 -2）
 const REGRET_CARD_ID:= 9265
 const FOREST_GUARD_ID:= 9037
 const FOREST_GUARD_LAST_WORD_DRAW:= 1   # R663 森林守护附带的「死亡：抽一张卡」
@@ -11201,7 +11201,7 @@ func _random_other_class_card() -> CardData:
 	var repo:= CardRepo.load_json()
 	var pool: Array[CardData] = []
 	for c: CardData in repo.reward_pool():
-		# R799：X 费卡（连斩 9272 / 炮火就位 9273）不参与 —— 猴爪给的是「本回合费用 -1」，
+		# R799：X 费卡（连斩 9272 / 炮火就位 9273）不参与 —— 猴爪给的是「本回合费用 -2」，
 		# 而 X 费没有固定费用（`cost_of()` 返回当前全部费用），发到手也是空效果。
 		if c.x_cost:
 			continue
@@ -11215,7 +11215,7 @@ func _random_other_class_card() -> CardData:
 func _claw_tick() -> void:
 	## R766 猴爪（6066）：每场战斗的**前三个回合开始时**各触发一次。
 	## ① 随机其他职业卡 → 手牌（走 `_grant_to_hand` 唯一口：满手时按既有口径改投弃牌区，
-	##    卡不会凭空蒸发），并让它在**本回合**费用 -1（R769）；
+	##    卡不会凭空蒸发），并让它在**本回合**费用 -2（R769 建机制，R823 上调）；
 	##    ② 一张「懊悔」→ **卡组**（永久，`RunState.add_card`）。
 	## ⚠️ 调用点排在抽牌与耳环自动出牌**之后** —— 那时手牌状态已稳定，不会出现
 	##    「先塞一张再抽牌」把满手判定算在两套口径上。
@@ -11230,7 +11230,7 @@ func _claw_tick() -> void:
 	else:
 		var copy:= _new_own_card(alien)
 		var got:= _grant_to_hand(copy, "猴爪")
-		# R769：加进手牌的这张，**本回合**费用 -1。复用 `state.hand_cost_turn` 既有链路
+		# R769 建机制 / R823 上调：加进手牌的这张，**本回合**费用 -2。复用 `state.hand_cost_turn` 既有链路
 		# （`cost_of` 唯一口读它、判据「此刻还在手牌里」、`end_turn` 清空、`_move_key` 迁移），
 		# 不新造卡字段 —— 所以 CardData / `_migrate_card_state` 都不用动。
 		# 只在 `got` 时标记：满手改投弃牌区的那张不在手牌，标记无处生效。
@@ -11239,7 +11239,7 @@ func _claw_tick() -> void:
 			state.hand_cost_turn[copy] = cur + MONKEY_CLAW_DISCOUNT
 		_log("猴爪：第 %d 回合，%s「%s」%s" % [
 				turn_number, "手牌加入" if got else "手牌已满 → 改投弃牌区", copy.card_name,
-				"（本回合费用 -1）" if got else ""])
+				("（本回合费用 -%d）" % MONKEY_CLAW_DISCOUNT) if got else ""])
 		action.emit("relic", {"id": MONKEY_CLAW_RELIC_ID, "turn": turn_number,
 				"card": copy, "to_hand": got})
 	RunState.add_card(REGRET_CARD_ID)
