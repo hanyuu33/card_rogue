@@ -29,12 +29,16 @@ const NEW_D := 90004
 var _ok := 0
 var _bad := 0
 var _root := ""
+var _cfg := ""
 
 
 func _initialize() -> void:
 	_root = ProjectSettings.globalize_path("user://probe_mods").replace("\\", "/")
 	_rm_rf(_root)
 	DirAccess.make_dir_recursive_absolute(_root)
+	# 启停配置也要隔离：否则探针会写脏玩家真实的 user://mods.cfg。
+	_cfg = _root.path_join("probe_mods.cfg")
+	OS.set_environment(ModRegistry.ENV_CFG, _cfg)
 
 	# ---- 0) 基线 ----
 	var base := CardRepo.load_json()
@@ -170,8 +174,28 @@ func _initialize() -> void:
 	_check("高 priority 的图压过低 priority（3x4）", t_hi != null and t_hi.get_size() == Vector2(3, 4),
 			str(t_hi.get_size()) if t_hi != null else "null")
 
+	# ---- 11b) 启停（R818）----
+	# 停用 = 不进 load_order，但仍在 all_mods 里（设置页还要能列出来再打开）。
+	var before_off := CardRepo.load_json().all_cards().size()
+	_check("启停：停用前是 340", before_off == 340, str(before_off))
+	ModRegistry.set_enabled("a", false)
+	DataPaths.reset_root()
+	var r_off := CardRepo.load_json()
+	_check("停用后 A 的卡消失", r_off.get_card(NEW_A) == null)
+	_check("停用后总数 339", r_off.all_cards().size() == 339, str(r_off.all_cards().size()))
+	_check("停用后 all_mods 仍列得出它", _has_mod("a"), str(ModRegistry.all_mods().size()))
+	_check("is_enabled(a) = false", not ModRegistry.is_enabled("a"))
+	_check("cfg 已落盘", FileAccess.file_exists(_cfg), _cfg)
+	# 重新启用：配置写回 + 数据层重算，卡要原样回来
+	ModRegistry.set_enabled("a", true)
+	DataPaths.reset_root()
+	var r_on := CardRepo.load_json()
+	_check("重新启用后回到 340", r_on.all_cards().size() == 340, str(r_on.all_cards().size()))
+	_check("is_enabled(a) = true", ModRegistry.is_enabled("a"))
+
 	# ---- 12) 全部卸载 ----
 	OS.set_environment(ModRegistry.ENV_MODS, "")
+	OS.set_environment(ModRegistry.ENV_CFG, "")
 	OS.set_environment(DataPaths.ENV_ROOT, "")
 	DataPaths.reset_root()
 	GameSettings.language = "zh"
@@ -230,6 +254,13 @@ func _mk_png(mod_name: String, rel: String, w: int, h: int) -> void:
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(1, 0, 0, 1))
 	img.save_png(p)
+
+
+func _has_mod(id: String) -> bool:
+	for m: Dictionary in ModRegistry.all_mods():
+		if str(m["id"]) == id:
+			return true
+	return false
 
 
 func _check(label: String, ok: bool, detail := "") -> void:

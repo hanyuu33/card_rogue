@@ -1090,17 +1090,17 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 
 
 func _check_settings(scene: Variant) -> void:
-	## R660c：设置页按类分页 —— 四个页签各摊自己的项；语言列表 / 种子输入框
+	## R660c/R818：设置页按类分页 —— 五个页签各摊自己的项；语言列表 / 种子输入框
 	## 只在对应页可见（别的页留着会浮在行卡上面）。
-	if scene.TABS.size() != 4:
-		_smoke_fail("R660c 设置页：页签应有 4 个，实际 %d" % scene.TABS.size())
+	if scene.TABS.size() != 5:
+		_smoke_fail("R660c/R818 设置页：页签应有 5 个，实际 %d" % scene.TABS.size())
 		return
 	# R660d：页签是**一条整栏**（等分贴紧、总宽 = ROW_W），不是一排带间隙的按钮。
 	var tabs: Array = scene._tab_rects()
 	var bar_ok := false
 	var seam_ok := true
-	if tabs.size() == 4:
-		bar_ok = absf((tabs[3].end.x - tabs[0].position.x) - scene.ROW_W) < 0.5
+	if tabs.size() == 5:
+		bar_ok = absf((tabs[4].end.x - tabs[0].position.x) - scene.ROW_W) < 0.5
 		for i in range(1, tabs.size()):
 			if absf(tabs[i].position.x - tabs[i - 1].end.x) > 0.01:
 				seam_ok = false
@@ -1110,6 +1110,8 @@ func _check_settings(scene: Variant) -> void:
 	scene._set_tab(scene.TAB_LANGUAGE)
 	var lang_rows: Array = scene._rows()
 	var lang_vis: bool = scene._lang_list != null and scene._lang_list.visible
+	scene._set_tab(scene.TAB_MOD)
+	var mod_rows: Array = scene._rows()
 	scene._set_tab(scene.TAB_RUN)
 	var seed_vis: bool = scene._seed_edit != null and scene._seed_edit.visible
 	var diag_rect: Rect2 = scene._diag_rect()
@@ -1126,7 +1128,9 @@ func _check_settings(scene: Variant) -> void:
 		_smoke_fail("R660c 设置页：语言页没把语言列表显示出来")
 	elif not seed_vis:
 		_smoke_fail("R660c 设置页：对局页没把种子输入框显示出来")
-	elif tabs.size() != 4 or tabs[0].size.x < 60.0:
+	elif not mod_rows.is_empty():
+		_smoke_fail("R818 设置页：模组页不该有设置行")
+	elif tabs.size() != 5 or tabs[0].size.x < 52.0:
 		_smoke_fail("R660c 设置页：页签几何无效")
 	elif not bar_ok:
 		_smoke_fail("R660d 设置页：页签整栏宽度应等于下方框体宽（%.1f）" % scene.ROW_W)
@@ -1135,7 +1139,7 @@ func _check_settings(scene: Variant) -> void:
 	elif not diag_ok:
 		_smoke_fail("R763 设置页：诊断按钮应在种子面板下方且不越出 720 高（%s）" % str(diag_rect))
 	else:
-		print("SMOKE OK R660c 设置页：4 页签各摊自己的项 · 列表/输入框按页显隐")
+		print("SMOKE OK R660c 设置页：5 页签各摊自己的项 · 列表/输入框按页显隐")
 		print("SMOKE OK R660d 设置页：页签等分贴紧，整栏宽 = 框体宽 %.0f" % scene.ROW_W)
 		print("SMOKE OK R763 设置页：诊断按钮在种子面板下方，整行 %.0f×%.0f" % [diag_rect.size.x, diag_rect.size.y])
 

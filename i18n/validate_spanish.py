@@ -294,7 +294,7 @@ pattern = re.compile(
 for match in pattern.finditer(l10n_source):
     l10n_zh_rows[match.group("key")] = json.loads(match.group("zh"))
 check(set(L10N_ES) == set(l10n_zh_rows), "l10n 骨架 key 覆盖一致")
-check(len(L10N_ES) == 67, "l10n 骨架共 67 条")
+check(len(L10N_ES) == 73, "l10n 骨架共 73 条")
 for key, zh_text in l10n_zh_rows.items():
     check_text("l10n." + key, zh_text, L10N_ES.get(key))
 
