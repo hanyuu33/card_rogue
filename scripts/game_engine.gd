@@ -5977,7 +5977,7 @@ func fence_merge_target(cell: Vector2i, card: CardData) -> bool:
 
 
 func _merge_fence(p: Placement, card: CardData) -> void:
-	## 两张栅栏合并成一张：生命值相加、特性取并集（效果叠加）。
+	## 两张栅栏合并成一张：生命值相加、特性取并集（效果叠加），**并把当前生命回满**（R811）。
 	## 卡面身份沿用**场上那张**（同一堵墙被加固），绝不改卡库里共享的 CardData 实例。
 	## R67：加的血与**新加的特性**都只是「战斗内持续生效」的场上加固 ——
 	## 分别记在 `fence_bonus_hp` / `fence_bonus_traits`，单位离场时由
@@ -5996,7 +5996,12 @@ func _merge_fence(p: Placement, card: CardData) -> void:
 			p.fence_bonus_traits.append(t)
 	p.card = merged
 	p.fence_bonus_hp += card.health
-	p.health += card.health
+	# R811：**叠加即回满**。旧行为只把「新栅栏的生命」加到当前值 —— 2/6 的残墙叠一张
+	# 6 血木栅栏只到 8/12，等于白亏一截；现在上限相加之后直接把当前值填满。
+	# 读 `p.card.health`（= 基础 + fence_bonus_hp + relic_bonus_hp + upgrade_hp，与
+	# `_card_leaving_field` 的还原公式同源），所以回满天然包含板甲 / 墙砖 / 改造的加成。
+	# ⚠️ 只改**当前值**：上限口径与离场还原一律不动（`fence_bonus_hp` 照旧累加）。
+	p.health = p.card.health
 
 
 func _card_leaving_field(p: Placement) -> CardData:

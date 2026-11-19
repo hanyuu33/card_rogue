@@ -12599,7 +12599,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": _cell_center(fm_cell) + Vector2(0, -20), "sc": _grid_scroll,
 					"text": "叠栅栏 生+%d" % int(data.get("gained", 0)),
 					"col": Color("e08a2e"), "start": n, "dur": 1500, "size": 18})
-			_say("▣ 栅栏修复术：两张栅栏合并 → %s 生命 %d" % [fm_name,
+			_say("▣ 栅栏修复术：两张栅栏合并 → %s 生命 %d（回满）" % [fm_name,
 					int(data.get("health", 0))])
 		"void_lord":
 			# 风元素（9082）：本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -1

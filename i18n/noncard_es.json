@@ -77,7 +77,7 @@
     },
     "6021": {
       "name": "Reparación de vallas",
-      "desc": "Las cartas de Valla se pueden jugar en casillas que ya contengan una Valla aliada. Las Vallas se fusionan en una, suman su Vida y combinan sus rasgos sin duplicar los rasgos idénticos."
+      "desc": "Las cartas de Valla se pueden jugar en casillas que ya contengan una Valla aliada. Las Vallas se fusionan en una: sus máximos de Vida se suman y la Valla fusionada recupera toda su Vida, y sus rasgos se combinan sin duplicar los rasgos idénticos."
     },
     "6022": {
       "name": "Forma salvaje",

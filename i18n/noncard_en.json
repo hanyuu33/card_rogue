@@ -77,7 +77,7 @@
     },
     "6021": {
       "name": "Fence Mending",
-      "desc": "Fence cards can be played on tiles that already contain a friendly Fence. The Fences merge into one, adding their Health together and combining their traits without duplicating identical traits."
+      "desc": "Fence cards can be played on tiles that already contain a friendly Fence. The Fences merge into one: their maximum Health adds together and the merged Fence is healed to full, and their traits combine without duplicating identical traits."
     },
     "6022": {
       "name": "Wild Shape",
