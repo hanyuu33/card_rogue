@@ -763,6 +763,35 @@ static func relic_display_name(id: int, plays := -1) -> String:
 	return rel.relic_name
 
 
+static func relic_badge_text(id: int) -> String:
+	## 道具图标**右下角角标**的唯一取数口（R809）。返回 "" = 不画角标。
+	## 为什么要有这一层：图标模式下 `_draw_relic_bar` 只画图、不画名字，
+	## 「还剩几次 / 还差几回合」原本只有悬停能看到 —— 触摸端等于看不见。
+	## 口径：
+	##   * 已耗尽（盆碎 / 绳用掉）→ 不画（图标画灰已经说明，再挂个「1」会骗人）。
+	##   * lucky 7（6045）→ 距下次生效还剩几回合；**生效回合不画**
+	##     （转动弧已经在说「就是现在」，再写 7 会被读成「还差 7 回合」）。
+	##   * 火柴（6051）→ 剩余刷新次数，0 也照画（得让玩家看见已经用光）。
+	##   * 洞窟绳（6048）→ 一次性，还在就是 1 次。
+	##   * 雕像（6039）/ 不锈钢盆（6041）→ 剩余次数
+	##     （`relic_display_name` 那对括号只在「缺图、退回文字」时才看得见）。
+	##   * 其余道具 → 没有可数的东西。
+	if not relics.has(id) or is_relic_spent(id):
+		return ""
+	match id:
+		LUCKY7_RELIC_ID:
+			return "" if lucky7_is_due() else str(lucky7_left())
+		MATCH_RELIC_ID:
+			return str(maxi(0, match_charge))
+		CAVE_ROPE_RELIC_ID:
+			return "1"
+		RELIC_STATUE_ID:
+			return str(statue_charge) if statue_charge > 0 else ""
+		BASIN_RELIC_ID:
+			return str(basin_charge) if basin_charge > 0 else ""
+	return ""
+
+
 static func lucky7_tick() -> bool:
 	## R314 lucky 7（6045）：**每开始一个我方回合**调用一次（跨战斗累计，随存档）。
 	## 返回「这一回合是否生效」—— 只在 `lucky7_turns` 是 7 的倍数时为 true。

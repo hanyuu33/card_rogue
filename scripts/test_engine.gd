@@ -73958,6 +73958,7 @@ func _init() -> void:
 	_test_r805()
 	_test_r806()
 	_test_r807()
+	_test_r809()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -79446,6 +79447,102 @@ func _test_r805() -> void:
 	check_src(r804_src.contains("蜂蜜：移动速度 +%d"), "R805 蜂蜜在左侧信息栏有可见来源")
 
 	RunState.relics = r804_none
+
+func _test_r809() -> void:
+	## R809：道具计数角标 —— lucky 7 / 火柴 / 洞窟绳（+ 雕像、盆）在**图标上**就能看到数字。
+	## 修的两件事：
+	##   ① 图标模式不画名字，「还剩几次 / 还差几回合」原本只有悬停能看到（触摸端看不见）；
+	##   ② 战斗道具面板只在「已耗尽」时才补状态注，活着的 lucky 7 / 火柴读不到倒计时
+	##      （地图面板一直是无条件的 —— 同名函数两套口径）。
+	RunState.relics = []
+	RunState.spent_relics = []
+	RunState.lucky7_turns = 0
+	RunState.match_charge = 0
+	RunState.statue_charge = 0
+	RunState.basin_charge = 0
+
+	check(RunState.relic_badge_text(6045) == "",
+			"R809 角标：未持有 lucky 7 → 不画")
+
+	RunState.relics = [6045]
+	for r809_pair in [[0, "7"], [1, "6"], [3, "4"], [6, "1"], [8, "6"], [13, "1"]]:
+		RunState.lucky7_turns = int(r809_pair[0])
+		check(RunState.relic_badge_text(6045) == str(r809_pair[1]),
+				"R809 角标：lucky 7 计数 %d → 「%s」（实际「%s」）" % [
+						int(r809_pair[0]), str(r809_pair[1]),
+						RunState.relic_badge_text(6045)])
+	RunState.lucky7_turns = 7
+	check(RunState.relic_badge_text(6045) == "",
+			"R809 角标：lucky 7 生效回合不画数字（转动弧已经在说「就是现在」）")
+	RunState.lucky7_turns = 14
+	check(RunState.relic_badge_text(6045) == "",
+			"R809 角标：lucky 7 第 14 回合（第二次生效）同样不画")
+
+	RunState.relics = [6051]
+	RunState.match_charge = 2
+	check(RunState.relic_badge_text(6051) == "2",
+			"R809 角标：火柴剩 2 次 → 「2」（实际「%s」）" % RunState.relic_badge_text(6051))
+	RunState.match_charge = 0
+	check(RunState.relic_badge_text(6051) == "0",
+			"R809 角标：火柴用光 → 照画「0」，别让玩家以为还能刷")
+
+	RunState.relics = [6048]
+	RunState.spent_relics = []
+	check(RunState.relic_badge_text(6048) == "1",
+			"R809 角标：洞窟绳只有一个「1」（实际「%s」）" % RunState.relic_badge_text(6048))
+	RunState.spend_relic(6048)
+	check(RunState.relic_badge_text(6048) == "",
+			"R809 角标：洞窟绳用掉（画灰）→ 角标收掉，别留着「1」骗人")
+
+	RunState.relics = [6039, 6041]
+	RunState.spent_relics = []
+	RunState.statue_charge = 3
+	RunState.basin_charge = 7
+	check(RunState.relic_badge_text(6039) == "3" and RunState.relic_badge_text(6041) == "7",
+			"R809 角标：雕像 3 / 盆 7 —— 图标上看得见余量（名字那对括号只在缺图时才露）")
+	RunState.statue_charge = 0
+	RunState.basin_charge = 0
+	check(RunState.relic_badge_text(6039) == "" and RunState.relic_badge_text(6041) == "",
+			"R809 角标：计数归零 → 不画（免得顶着「0」）")
+
+	# 没有可数东西的道具一律不画（别全栏挂上角标）
+	RunState.relics = [6013, 6044]
+	check(RunState.relic_badge_text(6013) == "" and RunState.relic_badge_text(6044) == "",
+			"R809 角标：叠鸭 / 储物箱这种没有「次数」的不画角标")
+
+	# 面板口径：活着的 lucky 7 也要有状态注（旧版只在已耗尽时才补）
+	RunState.relics = [6045]
+	RunState.spent_relics = []
+	RunState.lucky7_turns = 3
+	check(RunState.relic_state_note(6045).contains("4"),
+			"R809 面板：活着的 lucky 7 状态注写「还差 4 回合」（%s）"
+				% RunState.relic_state_note(6045))
+
+	# 源码守卫：面板里那句 note 必须在 `if rspent:` **外面**（缩进 2 个 tab）
+	var r809_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r809_tabs := -1
+	for ln in r809_src.split("\n"):
+		if ln.contains("RunState.relic_state_note(int(ids[i]))"):
+			r809_tabs = 0
+			for ch in ln:
+				if ch == "\t":
+					r809_tabs += 1
+				else:
+					break
+	check_src(r809_tabs == 2,
+			"R809 面板：状态注在 spent 分支外面（缩进 %d 个 tab，应为 2）" % r809_tabs)
+	check_src(r809_src.contains("_draw_relic_badge(rect, int(ids[i]))"),
+			"R809 角标：道具栏每格都接上了 `_draw_relic_badge`")
+	check_src(r809_src.contains("RunState.relic_badge_text(id)"),
+			"R809 角标：绘制口走唯一取数口，不自己算数字")
+
+	RunState.relics = []
+	RunState.spent_relics = []
+	RunState.lucky7_turns = 0
+	RunState.match_charge = 0
+	RunState.statue_charge = 0
+	RunState.basin_charge = 0
+
 
 func _test_r807() -> void:
 	## R807：新诅咒「诅咒娃娃」9276 + 第二层事件「诡异洋房」haunted_house。

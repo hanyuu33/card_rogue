@@ -17776,6 +17776,8 @@ func _draw_relic_bar() -> void:
 		# R577f：唯一动态层 —— 暖黄渐隐拖尾弧，画在蓝边之后，每格错相 22°。
 		if lit577f:
 			_draw_relic_sweep(rect, i)
+		# R809：计数角标 —— 图标模式下不画名字，「还剩几次 / 还差几回合」得有地方露脸。
+		_draw_relic_badge(rect, int(ids[i]))
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")
@@ -17784,6 +17786,31 @@ func _draw_relic_bar() -> void:
 		_draw_string_box_nw(_font_bold, UI_FS_CAPTION,
 				"鸭之低语：%s" % (_whisper_txt if _whisper_txt != "" else "…"),
 				Vector2(draw_z.position.x + 6.0, draw_z.position.y + draw_z.size.y + 20.0), Color("d9a8ff"))
+
+
+func _draw_relic_badge(rect: Rect2, id: int) -> void:
+	## R809：道具图标右下角的计数角标（lucky 7 剩余回合 / 火柴剩余刷新 / 洞窟绳 1 次 /
+	## 雕像与不锈钢盆的余量）。数值唯一口 = `RunState.relic_badge_text()` ——
+	## 界面不另算一遍，免得「角标写 3、悬停说 4」变成两套账。
+	## 样式跟着 UI 的暖金描边走：深底 + 1px 金边 + 浅米字，压在弧与蓝边之上。
+	var txt := RunState.relic_badge_text(id)
+	if txt == "":
+		return
+	var fs := 12
+	var tw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var bw := maxf(14.0, tw + 6.0)
+	var bh := 14.0
+	# 贴图标右下角、往外探 1px：完全内缩时角标会被读成「图标缺了一角」。
+	var br := Rect2(rect.position.x + rect.size.x - bw + 1.0,
+			rect.position.y + rect.size.y - bh + 1.0, bw, bh)
+	draw_rect(br.grow(1.0), Color(0.06, 0.05, 0.04, 0.55), true)   # 外描边：深色图标上也要立得住
+	draw_rect(br, Color(0.11, 0.10, 0.08, 0.94), true)
+	draw_rect(br, Color(0.96, 0.84, 0.48, 1.0), false, 1.0)
+	# ⚠️ `_draw_string_center` 内部已经加了 `px * 0.36` 的基线补偿 ——
+	#   这里传**视觉中心**（框中心），别再加一次偏移，否则数字会贴底被切。
+	_draw_string_center(_font_bold, fs, txt,
+			Vector2(br.position.x + bw * 0.5, br.position.y + bh * 0.5),
+			Color(1.0, 0.96, 0.82), -1)
 
 
 ## R117：这里原本是 `_draw_opponent_hand()`（顶部一排**卡背** + 「（对手手牌区）」占位字）。
@@ -19430,9 +19457,13 @@ func _relic_panel_rows() -> Array:
 			nm += "（已耗尽）"
 			tag = "已耗尽 · " + tag
 			scol = Color("8a8f98")
-			var s_note := RunState.relic_state_note(int(ids[i]))
-			if s_note != "":
-				desc += "  （%s）" % s_note
+		# R809：状态注**不再只给已耗尽的**。旧版把这段写在 `if rspent:` 里面，
+		# 于是活着的 lucky 7 / 火柴在战斗内点开面板看不到倒计时；
+		# 而 `map_scene._relic_panel_rows()` 一直是无条件拼 note —— 同一个名字两套口径。
+		# 已耗尽时 note 本身就是「已耗尽，效果不再生效。」，与旧行为逐字一致。
+		var s_note := RunState.relic_state_note(int(ids[i]))
+		if s_note != "":
+			desc += "  （%s）" % s_note
 		# R343：名字与标签**分开画** —— 传奇道具名要单独换色，混在一整串里就得整串变金
 		#（标签也跟着金，「来源 · 时机」就不好读了）。位置按名字实际宽度顺排。
 		var ncol: Color = rel.name_color(Color("4a3c14")) if rel != null else Color("4a3c14")
