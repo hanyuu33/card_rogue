@@ -22,6 +22,8 @@ RAW = os.path.join(D, "raw")
 GEN = os.path.expanduser(r"~\.codex\generated_images")
 PROXY = "http://127.0.0.1:7897"
 TAG = sys.argv[1] if len(sys.argv) > 1 else "event_dragon_slab"
+# 可选参考图：只借「环境 / 雾气 / 光 / 色调 / 笔触」，主体一律重画（R842c）
+REF = sys.argv[2] if len(sys.argv) > 2 else ""
 
 PAT = re.compile(r"[A-Za-z]:[\\/][^\"\r\n]*?generated_images[\\/][^\"\r\n]*?\.png")
 
@@ -70,10 +72,13 @@ def main():
     env["HTTPS_PROXY"] = env["HTTP_PROXY"] = env["https_proxy"] = env["http_proxy"] = PROXY
 
     t0 = time.time()
-    log("RUN  %s（纯文生图，无参考图）" % TAG)
+    log("RUN  %s（参考图：%s）" % (TAG, os.path.basename(REF) if REF else "无"))
+    cmd = [CODEX_EXE, "exec", "--json", "--skip-git-repo-check", "-C", ROOT]
+    if REF:
+        cmd += ["-i", REF]
     with open(prompt_path, "rb") as pin:
         proc = subprocess.run(
-            [CODEX_EXE, "exec", "--json", "--skip-git-repo-check", "-C", ROOT],
+            cmd,
             stdin=pin, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             env=env, timeout=900)
     text = proc.stdout.decode("utf-8", "replace")

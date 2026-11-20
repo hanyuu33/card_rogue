@@ -1,27 +1,41 @@
-A wide 16:9 background illustration for a fantasy card roguelike event screen, hand-drawn anime
-fantasy style, thick clean dark outlines, flat cel shading with two or three tone steps, warm
-saturated ochre, amber and dusty gold palette, soft painted background.
+A wide 16:9 background illustration for a fantasy card roguelike event screen, painterly fantasy
+game background, hand-painted look with soft visible brushwork, stylized idealized forms, NOT
+photorealistic, NOT a photo, NOT a 3D render, no cartoon outlines. Cool damp forest palette of
+mossy teal-green and grey, with one warm ochre-amber accent on the stone.
 
-Scene: a dry ochre wasteland at low sun. ONE weathered stone slab stands tilted in the
-mid-distance, a little taller than a person, top corner chipped off. Its face is carved with a
-single coiled eastern dragon in shallow relief: the body spirals once around the centre of the
-slab, the head resting near the upper third, worn scales and claws flattened by wind so only the
-raised ridges catch the light. The dragon's eye socket still holds a small hollow of old gold
-paint that glows faintly. Hairline cracks and pale lichen spread across the stone, a thin drift of
-sand piled at its base, dry grass at the edges.
+THE REFERENCE IMAGE is provided ONLY to borrow its environment, mist, light shafts, brushwork and
+overall color balance. Do NOT copy its sword, do NOT copy its broken stone monument, do NOT copy
+its central vertical composition. This is a completely different object in the same forest.
+
+Scene: a misty evergreen forest clearing beside a shallow forest stream. Wide moss-covered trunks
+recede into pale fog, tall ferns and long grass at the edges, small yellow wildflowers, a fallen
+log half sunk in moss, smooth wet stones in the water. A thin veil of low mist drifts over the
+stream. Shafts of soft morning sun slant down through the canopy from the upper left.
+
+Subject: ONE weathered stone slab of ochre-yellow sandstone, standing tilted in the moss near the
+water's edge, a little taller than a person, its top corner chipped off. Its face is carved with a
+single WESTERN dragon in shallow relief: a four-legged wyrm with leathery bat-like wings folded
+along its back, a lizard head with swept-back horns and snarling fanged jaws, a ridged spine, and a
+long barbed tail coiling once around the centre of the slab. The carving is worn almost smooth by
+weather, so only the raised ridges catch the light. One eye socket still holds a small hollow of
+old gold paint that glows faintly warm. Hairline cracks and pale lichen creep across the stone,
+moss climbing the base, water lapping at a few fallen pebbles in front of it.
 
 Composition: the slab sits in the upper right part of the frame, roughly one third of the frame
 height, seen three-quarter from the front so the carved dragon still reads clearly at thumbnail
-size. Low golden side light from the left, long soft shadow falling to the right. The entire lower
-half of the frame is open empty dusty ground fading into warm haze, deliberately calm and almost
-empty, with only faint sand ripples and drifting dust so interface text can be read over it. The
-horizon sits high, around the upper third, with warm hazy sky and a few thin clouds above.
+size. Warm side light from the upper left, soft long shadow falling to the right. The entire lower
+half of the frame is deliberately calm and almost empty — smooth misty forest floor and still
+water fading into cool grey-green haze, with only faint grass and drifting mist — so interface text
+can be read over it. The horizon sits high, around the upper third, dense forest and pale fog above.
 
-Hard constraints: exactly one slab, exactly one coiled dragon carved INTO the stone, exactly one
+Hard constraints: exactly one slab, exactly one WESTERN dragon carved INTO the stone, exactly one
 gold eye. The dragon is a relief on the stone, never a separate living creature.
 
-NOT a sword, NOT a human statue, NOT a temple gate, NOT a flying dragon in the sky, NOT a dragon
-emerging out of the stone, NOT gold coins, NOT neon magic runes covering the surface, NOT a
-pedestal, NOT a busy foreground, NOT a crowd of objects, NOT text of any kind.
+NOT an eastern serpentine dragon, NOT a long snake-like body, NOT an oriental lion-dragon, NOT a
+coiled Chinese dragon, NOT a dragon orb or pearl, NOT cloud-and-wave oriental motifs, NOT a
+desert, NOT a wasteland, NOT sand dunes, NOT dry cracked earth, NOT a temple gate, NOT a human
+statue, NOT a sword, NOT a flying dragon in the sky, NOT a dragon emerging out of the stone, NOT
+gold coins, NOT glowing neon runes covering the surface, NOT a pedestal, NOT a crowd of objects,
+NOT thick cartoon outlines.
 
 no text, no letters, no signature, no watermark, no frame, no border, no UI elements.
