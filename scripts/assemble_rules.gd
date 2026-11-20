@@ -62,7 +62,7 @@ static func valid_effect(fx: Variant) -> bool:
 	if fx.type == "damage":
 		return fx.get("target", "nearest") in ["nearest", "all", "random"]
 	# R584：add_card 带 card_id（目标卡）+ value（数量），两者都必须有效，
-	# 否则产物会印出「将0张衍生物加入你的手卡」这种空动作。
+	# 否则产物会印出「将0张衍生物加入你的手牌」这种空动作。
 	if fx.type == "add_card":
 		var ac_id: Variant = fx.get("card_id", 0)
 		if not ac_id is int and not ac_id is float:
@@ -77,7 +77,7 @@ static func valid_effect(fx: Variant) -> bool:
 		if not ad_id is int and not ad_id is float:
 			return false
 		return int(ad_id) > 0 and int(fx.value) >= 1
-	# R589：「从卡组将一张效果卡加入手卡，费用减少 N」。R690 起水元素改用 add_card
+	# R589：「从抽牌库将一张效果卡加入手牌，费用减少 N」。R690 起水元素改用 add_card
 	# （抓漩涡），这条动作暂无卡使用，但仍是合法素材。
 	# 两个分量都要查：0 张 = 空动作；discount 缺省 0 是合法的（只取牌不减费）。
 	if fx.type == "add_effect_from_deck":
@@ -207,11 +207,11 @@ static func effect_text(fx: Dictionary) -> String:
 		"taunt": return "获得嘲讽"
 		# R583：逐字取自嵌合暴君 8047 的 effect_text（保真锁查两个特征串）。
 		"absorb_linked": return "破坏所有与这张卡接通的己方卡，并将那些卡的力量与生命加到这张卡上"
-		# R584：逐字对应「将一张「升级」加入你的手牌」/「把一张「聚能炮击」加入手卡」。
+		# R584：逐字对应「将一张「升级」加入你的手牌」/「把一张「聚能炮击」加入手牌」。
 		"add_card":
 			if str(fx.get("from", "")) == "deck":
-				return "从卡组把%d张「%s」加入手卡" % [maxi(1, n), card_label(int(fx.get("card_id", 0)))]
-			return "将%d张「%s」加入你的手卡" % [maxi(1, n), card_label(int(fx.get("card_id", 0)))]
+				return "从抽牌库把%d张「%s」加入手牌" % [maxi(1, n), card_label(int(fx.get("card_id", 0)))]
+			return "将%d张「%s」加入你的手牌" % [maxi(1, n), card_label(int(fx.get("card_id", 0)))]
 		"add_card_to_deck": return "将%d张「%s」加入抽牌库" % [maxi(1, n), card_label(int(fx.get("card_id", 0)))]
 		# ── R589：七条「母卡已有实现」的动作。文案逐字对着原卡 effect_text 写，
 		#    `test_assemble._fx_in_text()` 有保真锁 —— 改这里必须连判据一起改。
@@ -219,17 +219,17 @@ static func effect_text(fx: Dictionary) -> String:
 		"next_effect_discount": return "你使用的下一张效果卡费用减少 %d" % n
 		# 斑鸠 9052：「使用后，本回合使用下一个盟友时，费用 -1」
 		"next_ally_discount": return "本回合使用下一个盟友时，费用 -%d" % n
-		# 「从卡组将 N 张效果卡加入手卡，费用减少 X」（R690 起暂无卡使用）
-		"add_effect_from_deck": return "从卡组将%d张效果卡加入手卡，费用减少 %d" % [
+		# 「从抽牌库将 N 张效果卡加入手牌，费用减少 X」（R690 起暂无卡使用）
+		"add_effect_from_deck": return "从抽牌库将%d张效果卡加入手牌，费用减少 %d" % [
 				maxi(1, n), int(fx.get("discount", 0))]
-		# 影魔 8007 前半：「手卡中所有技能牌本回合费用 -1」
-		"hand_skill_discount": return "手卡中所有技能牌本回合费用 -%d" % n
-		# 影魔 8007 后半：「手卡每有一张费用为 0 的技能卡，这张卡获得 +3 生命」
-		"hp_per_zero_skill": return "手卡每有一张费用为 0 的技能卡，这张卡获得 +%d 生命" % n
-		# 巨鼠 9046：「使用后从抽牌库将一张费用最低的盟友加入手卡」
-		"fetch_cheapest_ally": return "从抽牌库将一张费用最低的盟友加入手卡"
-		# 乌鸦 9039：「使用后选择弃牌堆中一张盟友回到手卡」
-		"recall_ally_from_discard": return "选择弃牌堆中一张盟友回到手卡"
+		# 影魔 8007 前半：「手牌中所有技能牌本回合费用 -1」
+		"hand_skill_discount": return "手牌中所有技能牌本回合费用 -%d" % n
+		# 影魔 8007 后半：「手牌每有一张费用为 0 的技能卡，这张卡获得 +3 生命」
+		"hp_per_zero_skill": return "手牌每有一张费用为 0 的技能卡，这张卡获得 +%d 生命" % n
+		# 巨鼠 9046：「使用后从抽牌库将一张费用最低的盟友加入手牌」
+		"fetch_cheapest_ally": return "从抽牌库将一张费用最低的盟友加入手牌"
+		# 乌鸦 9039：「使用后选择弃牌区中一张盟友回到手牌」
+		"recall_ally_from_discard": return "选择弃牌区中一张盟友回到手牌"
 		"summon": return "召唤%d个%s" % [int(fx.get("count", 1)), card_label(int(fx.get("value", 0)))]
 		"upgrade": return "获得改造：+%d力量/+%d生命" % [n, n]
 		"energy": return "回复%d点费用" % n
@@ -238,12 +238,12 @@ static func effect_text(fx: Dictionary) -> String:
 		"stun": return "眩晕最近敌人"
 		"range": return "攻击距离 +%d" % n
 		"purge_curse":
-			return "清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 %d 点伤害" % n
+			return "清除你的抽牌库、手牌、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 %d 点伤害" % n
 		"add_random_effect":
-			var ae_src := "从卡组" if str(fx.get("from", "")) == "deck" else ""
-			return "%s随机将%d张效果卡加入你的手卡" % [ae_src, maxi(1, n)]
+			var ae_src := "从抽牌库" if str(fx.get("from", "")) == "deck" else ""
+			return "%s随机将%d张效果卡加入你的手牌" % [ae_src, maxi(1, n)]
 		"hand_upgrade":
-			return "手卡中的盟友获得改造：生命 +%d" % n
+			return "手牌中的盟友获得改造：生命 +%d" % n
 		"hand_discount":
 			return "随机一张手牌本回合费用 -%d" % n
 		# ── R570：六条「母卡已有实现」的动作。文案全部逐字对着原卡写，
@@ -254,11 +254,11 @@ static func effect_text(fx: Dictionary) -> String:
 			return "剩余费用每有 1 点，这张卡获得 %d 点力量和 %d 点生命" % [
 					int(fx.get("atk", 0)), int(fx.get("hp", 0))]
 		"heal_per_energy":
-			return "回复 X 点生命值，X 为自己剩余费用（每 1 点剩余费用回复 %d 点生命，不超过生命上限）" % n
+			return "回复 X 点生命，X 为自己剩余费用（每 1 点剩余费用回复 %d 点生命，不超过生命上限）" % n
 		"draw_random_skill":
-			return "从卡组随机抽取一张技能牌，该卡本回合费用 -%d" % n
+			return "从抽牌库随机抽取一张技能牌，该卡本回合费用 -%d" % n
 		"hand_cost_raise":
-			return "本回合手卡中所有卡费用 +%d" % n
+			return "本回合手牌中所有卡费用 +%d" % n
 		"add_copy":
 			return "手牌增加一张此卡的「短暂复制」"
 		"buff_allies_atk":
@@ -268,8 +268,8 @@ static func effect_text(fx: Dictionary) -> String:
 			return "每拥有一层改造，这张卡获得 +%d 生命" % n
 		"fetch_skill":
 			if fx.get("if_third", false):
-				return "若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡"
-			return "从卡组将一张随机技能卡加入手卡"
+				return "若包含这张卡本回合打出的卡达到 3 张，从抽牌库将一张随机技能卡加入手牌"
+			return "从抽牌库将一张随机技能卡加入手牌"
 		"self_destruct":
 			return "这张卡破坏"
 	return ""

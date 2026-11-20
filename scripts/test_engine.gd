@@ -13576,9 +13576,9 @@ func _init() -> void:
 
 	check(kiln_c.effect_text.contains("少于3只时") and kiln_c.effect_text.contains("只召唤1只")
 
-			and kiln_c.effect_text.contains("所有陶瓷鸭+1血量"),
+			and kiln_c.effect_text.contains("所有陶瓷鸭+1生命"),
 
-			"R259：鸭子窑卡面写明 <3 只照旧、>=3 只只召唤 1 只且全体 +1 血量")
+			"R259：鸭子窑卡面写明 <3 只照旧、>=3 只只召唤 1 只且全体 +1 生命")
 
 	# ① 场上 0 只（<3）→ 原逻辑：相邻空格各刷 1 只
 
@@ -41818,7 +41818,7 @@ func _init() -> void:
 
 			and r223_fatigue.traits.has("疲惫")
 
-			and r223_fatigue.effect_text == "打出无效果。在手卡时，所有技能卡费用 +1。",
+			and r223_fatigue.effect_text == "打出无效果。在手牌时，所有技能卡费用 +1。",
 
 			"R223 疲惫 9149：1 费诅咒（rarity 6 = 新分类）/ class 留空 / 无目标 / 文案")
 
@@ -44387,7 +44387,7 @@ func _init() -> void:
 
 	check(r245_pot != null and r245_pot.kind == "即时"
 
-			and r245_pot.desc.contains("2 件奖励道具") and r245_pot.desc.contains("罐子"),
+			and r245_pot.desc.contains("2 件互不重复的奖励道具") and r245_pot.desc.contains("罐子"),
 
 			"R245 陶罐：即时类初始道具，文案写明 2 件奖励道具 + 罐子")
 
@@ -52162,13 +52162,13 @@ func _init() -> void:
 
 			"R313 风妖精 / 快速符文 已进奖励池（%d 件）" % r313_repo.reward_ids().size())
 
-	check(r313_wf.desc.contains("第五张") and r313_wf.desc.contains("4"),
+	check(r313_wf.desc.contains("第 5 张") and r313_wf.desc.contains("4"),
 
 			"R313 风妖精文案：写明「第五张」与 4 点伤害")
 
 	check(r313_rune.desc.contains("5") and r313_rune.desc.contains("加倍")
 
-			and r313_rune.desc.contains("冰封"),
+			and r313_rune.desc.contains("不能行动"),
 
 			"R313 快速符文文案：写明 5% / 加倍 / 冰封沉睡")
 
@@ -52623,7 +52623,7 @@ func _init() -> void:
 
 			"R314 两件新道具名字正确（储物箱 / lucky 7）")
 
-	check(r314_repo.get_relic(6044).desc.contains("不")
+	check(r314_repo.get_relic(6044).desc.contains("免除")
 
 			and r314_repo.get_relic(6044).desc.contains("手牌"),
 
@@ -65045,11 +65045,11 @@ func _init() -> void:
 
 			% [r405_hand.health, r405_hand.upgrade_stacks])
 
-	check(r405_repo.get_card(8076).effect_text.contains("手卡")
+	check(r405_repo.get_card(8076).effect_text.contains("手牌")
 
 			and not r405_repo.get_card(8076).effect_text.contains("场上"),
 
-			"R523 卡面：改装者只写「手卡中的盟友」（不再提场上）")
+			"R523 卡面：改装者只写「手牌中的盟友」（不再提场上）")
 
 
 
@@ -65391,7 +65391,7 @@ func _init() -> void:
 
 			and r406_c.effect_text.contains("本回合失去 1 点力量")
 
-			and r406_c.effect_text.contains("随机使手卡一张盟友或工事消失")
+			and r406_c.effect_text.contains("随机使手牌一张盟友或工事消失")
 
 			and r406_c.effect_text.contains("降力")
 
@@ -73562,7 +73562,7 @@ func _init() -> void:
 
 	check(r584_rules.valid_effect(r584_fx)
 
-			and r584_rules.effect_text(r584_fx) == "将1张「升级」加入你的手卡"
+			and r584_rules.effect_text(r584_fx) == "将1张「升级」加入你的手牌"
 
 			and not r584_rules.valid_effect({"type": "add_card", "value": 1})
 
@@ -73586,7 +73586,7 @@ func _init() -> void:
 
 	check(r584_built != null
 
-			and r584_built.effect_text == "每次被改造时：将1张「升级」加入你的手卡",
+			and r584_built.effect_text == "每次被改造时：将1张「升级」加入你的手牌",
 
 			"R584：产物卡面 = 扳机 + 加卡文案")
 
@@ -73732,7 +73732,7 @@ func _init() -> void:
 
 	check(r586_rel != null and r586_rel.relic_name == "正义背刺"
 
-			and str(r586_rel.desc).contains("对满血的敌人伤害加倍")
+			and str(r586_rel.desc).contains("满血敌方单位造成的伤害加倍")
 
 			and r586_rel.locked and r586_rel.tier == "一般",
 
@@ -74069,6 +74069,7 @@ func _init() -> void:
 	_test_r829()
 	_test_r830()
 	_test_r832()
+	_test_r833()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -81423,3 +81424,48 @@ func _test_r830() -> void:
 			"R830 首饰盒：获得即随机一张史诗卡加入卡组（%s）"
 			% (r830_c.card_name if r830_c != null else "?"))
 
+
+func _test_r833() -> void:
+	## R833：多来源文案同源检查 —— 玩家看到的中文（cards.json / relics.json）必须与
+	## 译文的母本（zh_canonical / noncard_zh_canonical）逐字一致；否则中文玩家与
+	## 英日西玩家会看到两种说法（历史事故：46 张卡 + 47 件道具停在旧术语，
+	## 中文写「从卡组」而英文写 "from your Draw Pile"）。
+	var r833_cards_raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://cards.json"))
+	var r833_zh: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/zh_canonical.json"))
+	var r833_zh_cards: Dictionary = r833_zh.get("cards", {}) if r833_zh is Dictionary else {}
+	var r833_bad: Array[String] = []
+	for r833_c: Dictionary in (r833_cards_raw.get("cards", []) if r833_cards_raw is Dictionary else []):
+		var r833_id := str(int(r833_c.get("id", 0)))
+		var r833_ent: Variant = r833_zh_cards.get(r833_id)
+		if not (r833_ent is Dictionary):
+			r833_bad.append("%s 无 canonical" % r833_id)
+			continue
+		if str(r833_ent.get("effect_text", "")) != str(r833_c.get("effect_text", "")):
+			r833_bad.append("%s %s 效果文" % [r833_id, str(r833_c.get("name", ""))])
+		if str(r833_ent.get("name", "")) != str(r833_c.get("name", "")):
+			r833_bad.append("%s 卡名" % r833_id)
+	check(r833_bad.is_empty(),
+			"R833 卡面中文与 zh_canonical 逐字一致（%d 条不符：%s）"
+			% [r833_bad.size(), ", ".join(r833_bad.slice(0, 5))])
+
+	var r833_rel_raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://relics.json"))
+	var r833_nz: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/noncard_zh_canonical.json"))
+	var r833_nz_rel: Dictionary = r833_nz.get("relics", {}) if r833_nz is Dictionary else {}
+	var r833_badr: Array[String] = []
+	for r833_r: Dictionary in (r833_rel_raw.get("relics", []) if r833_rel_raw is Dictionary else []):
+		var r833_rid := str(int(r833_r.get("id", 0)))
+		var r833_rent: Variant = r833_nz_rel.get(r833_rid)
+		if not (r833_rent is Dictionary):
+			r833_badr.append("%s 无 canonical" % r833_rid)
+			continue
+		if str(r833_rent.get("desc", "")) != str(r833_r.get("desc", "")):
+			r833_badr.append("%s %s 描述" % [r833_rid, str(r833_r.get("name", ""))])
+		if str(r833_rent.get("name", "")) != str(r833_r.get("name", "")):
+			r833_badr.append("%s 道具名" % r833_rid)
+	check(r833_badr.is_empty(),
+			"R833 道具中文与 noncard_zh_canonical 逐字一致（%d 条不符：%s）"
+			% [r833_badr.size(), ", ".join(r833_badr.slice(0, 5))])

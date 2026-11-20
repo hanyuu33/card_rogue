@@ -92,6 +92,9 @@ func _init() -> void:
 func _fx_in_text(fx: Dictionary, text: String) -> bool:
 	## 单个组合动作是否能在原卡文本里找到出处（R565 保真判据）。
 	var n := int(fx.get("value", 0))
+	# R833：卡面已统一术语，判据先归一化再比对（旧写法也不会误判）。
+	text = text.replace("手卡", "手牌").replace("弃牌堆", "弃牌区")
+	text = text.replace("抽牌堆", "抽牌库").replace("生命值", "生命")
 	match str(fx.type):
 		"heal": return text.contains("%d 点生命" % n)
 		"damage": return text.contains("%d 点伤害" % n)
@@ -123,9 +126,9 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		# R584：出处 = 原句点名这张卡，且写「加入…手牌/手卡」。错卡名不放过。
 		"add_card":
 			var ac_ok := text.contains("「" + Rules.card_label(int(fx.get("card_id", 0))) + "」") \
-					and (text.contains("加入你的手牌") or text.contains("加入手卡"))
+					and (text.contains("加入你的手牌") or text.contains("加入手牌"))
 			if str(fx.get("from", "")) == "deck":
-				return ac_ok and text.contains("从卡组")
+				return ac_ok and (text.contains("从抽牌库") or text.contains("从卡组"))
 			return ac_ok
 		# R585：入库句的出处必须写「加入抽牌库」，光有卡名不算。
 		"add_card_to_deck":
@@ -136,15 +139,15 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"next_effect_discount": return text.contains("下一张效果卡费用减少 %d" % n)
 		"next_ally_discount": return text.contains("下一个盟友时，费用 -%d" % n)
 		"add_effect_from_deck":
-			return text.contains("从卡组") and text.contains("效果卡加入手卡") \
+			return (text.contains("从抽牌库") or text.contains("从卡组")) and text.contains("效果卡加入手牌") \
 					and text.contains("费用减少 %d" % int(fx.get("discount", 0)))
 		"hand_skill_discount": return text.contains("所有技能牌本回合费用 -%d" % n)
 		"hp_per_zero_skill":
 			return text.contains("费用为 0 的技能卡") and text.contains("+%d 生命" % n)
 		"fetch_cheapest_ally":
-			return text.contains("费用最低的盟友") and text.contains("加入手卡")
+			return text.contains("费用最低的盟友") and text.contains("加入手牌")
 		"recall_ally_from_discard":
-			return text.contains("弃牌堆") and text.contains("盟友回到手卡")
+			return text.contains("弃牌区") and text.contains("盟友回到手牌")
 		# ── R775：补 summon 保真（鸭妈妈）+ 三条新动作。每条都要有判据，
 		#    不写就落到 return true 零校验（R583 踩过的坑）。
 		"summon":
@@ -229,7 +232,7 @@ func _test_r565_fidelity() -> void:
 	r585_base.attack_range = 1
 	var r585_built: CardData = Rules.build(r585_base, r585_up, r585_gun.lower_effect)
 	check(r585_built != null
-			and r585_built.effect_text == "入场时，将2张「聚能炮击」加入抽牌库。每次被改造时：从卡组把1张「聚能炮击」加入手卡"
+			and r585_built.effect_text == "入场时，将2张「聚能炮击」加入抽牌库。每次被改造时：从抽牌库把1张「聚能炮击」加入手牌"
 			and (r585_built.assemble.get("enter_effects", []) as Array).size() == 1
 			and str(r585_built.assemble.get("trigger", "")) == "upgraded"
 			and (r585_built.assemble.get("lower_effects", []) as Array).size() == 1,
@@ -244,7 +247,7 @@ func _test_r565_fidelity() -> void:
 	check(_fx_in_text({"type": "add_card", "card_id": 9145, "value": 1, "from": "deck"}, r584_gun_t)
 			and _fx_in_text({"type": "add_card_to_deck", "card_id": 9145, "value": 2}, r584_gun_t)
 			and not _fx_in_text({"type": "add_card", "card_id": 8027, "value": 1, "from": "deck"}, r584_inf_t),
-			"R585：保真判据认「从卡组」与「加入抽牌库」，错来源不放过")
+			"R585：保真判据认「从抽牌库」与「加入抽牌库」，错来源不放过")
 	# 复制通道：enter_effects 必须随 from_dict 一起走，漏了组合卡一被复制就丢入场段。
 	var r585_copy := CardData.from_dict(r585_built.to_dict())
 	check((r585_copy.assemble.get("enter_effects", []) as Array).size() == 1,
@@ -791,7 +794,7 @@ func _test_combo() -> void:
 			and fox_prod.per_kill_damage == 0 and fox_prod.growth_power == 0
 			and fox_prod.upper_effect.is_empty() and fox_prod.lower_effect.is_empty(),
 			"R637 组合：traits / affixes / 各类效果字段一律不继承")
-	check(fox_prod.effect_text.find("从卡组随机抽取") < 0,
+	check(fox_prod.effect_text.find("从抽牌库随机抽取") < 0,
 			"R637 组合：卡面不再写母卡效果")
 	# 行为锁：产物上场 → 牌库不减少（赤狐的「抽一张技能牌」不触发）；真赤狐照旧触发
 	var fox_st := FieldState.new([], 20, 20, -1, "测试", false)
@@ -929,7 +932,7 @@ func _test_r569_purge() -> void:
 			and (fire.upper_effect.get("effects", []) as Array).is_empty(),
 			"R569：火元素上半 = 纯钩子「入场时」")
 	check(Rules.body_text(fire.lower_effect)
-			== "清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害",
+			== "清除你的抽牌库、手牌、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害",
 			"R569：火元素下半逐字 = 原卡效果（实际「%s」）" % Rules.body_text(fire.lower_effect))
 	# 产物文本：扳机只印一次，整条效果跟在后面
 	var base := CardData.new()
@@ -940,7 +943,7 @@ func _test_r569_purge() -> void:
 	base.attack_range = 1
 	var prod := Rules.build(base, fire.upper_effect, fire.lower_effect)
 	check(prod != null and prod.effect_text.count("入场时") == 1
-			and prod.effect_text.begins_with("入场时：清除你的抽牌堆"),
+			and prod.effect_text.begins_with("入场时：清除你的抽牌库"),
 			"R569：产物 = 一个「入场时：」+ 整条效果（实际「%s」）"
 			% (prod.effect_text if prod != null else "null"))
 	# 结算：三个区域的诅咒全清，每清 1 张 → 随机敌人 2 伤
@@ -1745,7 +1748,7 @@ func _test_r775_materials() -> void:
 	check(cat != null and str(cat.upper_effect.get("trigger", "")) == "use"
 			and (cat.lower_effect.effects[0] as Dictionary).get("if_third", false) == true,
 			"R775：影子猫切分 = use + fetch_skill(if_third)")
-	check(cat != null and cat.effect_text.begins_with("使用时"), "R775：影子猫描述改为「使用时」")
+	check(cat != null and cat.effect_text.begins_with("打出时"), "R775：影子猫描述改为「打出时」")
 	# ④ 幽灵：death 主扳机 + turn_start_effects 自毁段 + fetch_skill
 	var ghost: CardData = repo.get_card(8008)
 	var g_ts: Array = (ghost.upper_effect.get("turn_start_effects", []) as Array) if ghost != null else []
