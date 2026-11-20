@@ -6,6 +6,7 @@ extends SceneTree
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const OUT := "res://art_src/2026-11-20_card_face_redesign/card_style.png"
 const OUT_I18N := "res://art_src/2026-11-20_card_face_redesign/card_style_i18n.png"
+const OUT_CLASSES := "res://art_src/2026-11-20_card_face_redesign/card_style_classes.png"
 
 
 class Sheet extends Node2D:
@@ -116,4 +117,31 @@ func _run() -> void:
 	var lang_img := root.get_texture().get_image()
 	var lang_err := lang_img.save_png(OUT_I18N)
 	print("I18N SHOT OK ", ProjectSettings.globalize_path(OUT_I18N), " err=", lang_err)
-	quit(0 if lang_err == OK else 1)
+	if lang_err != OK:
+		quit(1)
+		return
+
+	# R843e：六种归属各出紧凑 / 详情两档，检查一体框比例、透明窗与文字安全区。
+	lang_sheet.queue_free()
+	var class_sheet := Sheet.new()
+	class_sheet.face = UiTheme.font()
+	class_sheet.bold = UiTheme.font_bold()
+	root.add_child(class_sheet)
+	var classes: Array[String] = ["森林精魄", "暗影刺客", "机械之心", "吟游诗人", "", "敌人"]
+	for i in classes.size():
+		var card := _clone(repo, 9040)
+		card.card_class = classes[i]
+		if classes[i] == "敌人":
+			card.group = "enemy"
+		var label: String = "公用" if classes[i].is_empty() else classes[i]
+		class_sheet.labels.append({"at": Vector2(45 + i * 200, 50), "text": label})
+		class_sheet.items.append({"card": card, "rect": Rect2(45 + i * 200, 75, 99, 119),
+				"name_only": true, "adventure": true})
+		class_sheet.items.append({"card": card, "rect": Rect2(25 + i * 200, 260, 160, 193)})
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var class_img := root.get_texture().get_image()
+	var class_err := class_img.save_png(OUT_CLASSES)
+	print("CLASS SHOT OK ", ProjectSettings.globalize_path(OUT_CLASSES), " err=", class_err)
+	quit(0 if class_err == OK else 1)

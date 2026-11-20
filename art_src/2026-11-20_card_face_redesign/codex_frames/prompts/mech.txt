@@ -1,0 +1,7 @@
+Generate one production-oriented 2D game UI asset: a single integrated fantasy card frame for the Mechanical Heart class, combining the upper artwork window frame and the immediately connected lower rarity plaque into ONE continuous object.
+
+Geometry: straight-on orthographic front view; wide horizontal rectangle; perfectly symmetrical. A large empty rectangular artwork opening occupies the upper 76 percent, filled flat pure magenta #FF00FF for later cutout. Directly beneath it with no gap is a shallow same-width rarity plaque, a blank warm dark-brown enamel cartouche with a thin brass inner lip. Keep its center empty for UI text. Clean rectangular outer silhouette, no protruding ornaments, no detached ribbon, no perspective.
+
+Class materials: hand-painted aged brass and warm copper with dark walnut reinforcement, tiny rivets, restrained miniature gear details at the corners, small cream enamel accents, sturdy whimsical workshop craftsmanship. Japanese fantasy game UI blended with western storybook fantasy, polished hand-painted cel shading, crisp at small size, warm golden highlights, cozy cute fantasy rather than industrial realism.
+
+Technical: isolated on uniform flat pure magenta #FF00FF including the artwork opening; no text, letters, numbers, logo, watermark, exterior shadow or glow, scenery, or illustration. The asset itself must contain no magenta, pink, or purple resembling the chroma key.

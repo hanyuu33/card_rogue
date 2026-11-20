@@ -258,6 +258,15 @@ art_frame_enemy.png     卡图区窄边框 · 敌人（红框）
         —— 换图时改比例会被压扁/拉长。
   ⚠️ 缺图回退：同色细线框（不空白、不报错）。程序生成脚本
      `art_src/tools/_gen_art_frames.py`（改设计改脚本重跑，别手改 PNG）。
+
+art_rarity_frame_<kind>.png          卡图框 + 稀有度底托一体素材 · 详情 728 × 552（R843e）
+art_rarity_frame_<kind>_compact.png  同上一体式素材 · 手牌 / 选卡 728 × 630
+· kind = forest / shadow / mech / bard / common / enemy，归属判定沿用 `CardFace.art_frame_kind()`。
+  森林精魄 = 木质藤蔓 + 边角小白花；其余职业使用各自材质。素材由 Codex 生成，
+  原始图与抠底 / 双比例处理脚本存于 `art_src/2026-11-20_card_face_redesign/codex_frames/`。
+· 一体框与卡图窗口同宽、同左缘，下端接稀有度行；不再用纯色矩形延伸到卡牌外轮廓。
+  卡图窗口必须透明；中央底托不得写入文字，稀有度仍由程序按译文缩字并纵向居中。
+  两种比例分别出图，禁止把详情素材直接纵向拉成紧凑素材。
 frame_0.png             普通（黑）                   58 × 70 基准（⚠️ R153 起弃用：卡面边框改程序描边 + 右上小旗，frame_* 不再被消费，留库待清理）
 frame_1.png             稀有（蓝）
 frame_2.png             史诗（紫）

@@ -1,0 +1,7 @@
+Generate one production-oriented 2D game UI asset: a single integrated fantasy card frame for neutral common cards, combining the upper artwork window frame and the immediately connected lower rarity plaque into ONE continuous object.
+
+Geometry: straight-on orthographic front view; wide horizontal rectangle; perfectly symmetrical. A large empty rectangular artwork opening occupies the upper 76 percent, filled flat pure magenta #FF00FF for later cutout. Directly beneath it with no gap is a shallow same-width rarity plaque, a blank warm dark-taupe parchment cartouche with a thin pale antique-gold inner lip. Keep its center empty for UI text. Clean rectangular outer silhouette, no protruding ornaments, no detached ribbon, no perspective.
+
+Materials: hand-painted warm walnut wood, restrained ivory inlay and small antique-gold corner fittings, simple neutral storybook craftsmanship with no class emblem. Japanese fantasy game UI blended with western storybook fantasy, polished hand-painted cel shading, crisp at small size, cozy cute fantasy.
+
+Technical: isolated on uniform flat pure magenta #FF00FF including the artwork opening; no text, letters, numbers, logo, watermark, exterior shadow or glow, scenery, or illustration. The asset itself must contain no magenta, pink, or purple resembling the chroma key.

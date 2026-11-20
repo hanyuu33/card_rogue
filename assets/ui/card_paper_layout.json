@@ -1,5 +1,5 @@
 {
-  "note": "card_paper.png R843d 轻量版分区坐标（归一化）；稀有度整行同卡宽，文字带不画横向金线",
+  "note": "R843e 分区坐标（归一化）；职业卡图框 + 稀有度底托使用一体素材，文字带不画横向金线",
   "art_ratio": 0.495,
   "art_window": {
     "x0": 0.045,
@@ -14,7 +14,8 @@
     "y1": 0.600,
     "height_mode": "fixed_ratio",
     "width_mode": "localized_text_adaptive_center_tag",
-    "row_width_mode": "card_full_width_gold"
+    "row_width_mode": "class_integrated_art_window_width_asset",
+    "asset": "art_rarity_frame_<kind>.png / art_rarity_frame_<kind>_compact.png"
   },
   "nameplate": {
     "x0": 0.06,

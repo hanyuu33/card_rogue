@@ -1,0 +1,18 @@
+Generate one production-oriented 2D game UI asset: a single integrated fantasy card frame for the Forest Spirit class, combining the upper artwork window frame and the immediately connected lower rarity plaque into ONE continuous object.
+
+Composition and geometry are critical:
+- Straight-on orthographic front view, wide horizontal rectangular asset, perfectly symmetrical left and right.
+- A large empty rectangular artwork opening occupies the upper 76 percent. Show this opening as flat solid pure magenta #FF00FF so it can be cut out later.
+- Directly attached beneath it, with no gap, is a shallow horizontal rarity plaque spanning exactly the same width as the artwork frame. Its center is a calm dark forest-green parchment cartouche with a thin antique-gold inner lip, left completely blank for later UI text.
+- The outer silhouette must remain a clean rectangle. No ornaments may protrude beyond the outer rectangle. No floating separate ribbon, no detached pieces, no perspective, no card illustration inside the opening.
+
+Forest Spirit material and decoration:
+- Hand-painted dark walnut wood intertwined with restrained living green vines and small leaves, antique brass corner fittings, subtle handcrafted texture.
+- Add a few delicate small WHITE five-petal flowers with pale yellow centers around the lower left and lower right corners of the rarity plaque and where the side rails meet the plaque. The white flowers must be clearly visible but sparse and elegant, never covering the blank center text area.
+- Japanese fantasy game UI blended with western storybook fantasy, polished hand-painted cel shading, crisp readable silhouette at small size, restrained detail, consistent warm golden highlights.
+- Match a cozy cute fantasy card game rather than a grim realistic medieval interface.
+
+Technical output:
+- Isolated on a uniform flat pure magenta #FF00FF background, including the artwork opening.
+- No text, no letters, no numbers, no rarity words, no logo, no watermark, no drop shadow outside the asset, no glow outside the outer rectangle, no background scenery.
+- The frame itself must not contain magenta, pink, or purple, so chroma-key extraction will be clean.

@@ -725,8 +725,9 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		_draw_center(canvas, font_bold, int(minf(box.size.x, box.size.y) * 0.9),
 				_display_name(card).substr(0, 1), box.get_center(), glyph)
 	# R498：卡图区窄边框（按归属分色）—— 卡图之后、待确认角标之前（角标要压在最上层）。
-	# 有图无图都画：无图回退的渐变横幅同样需要一圈边框，否则那一档卡看起来「没做完」。
-	_draw_art_frame(canvas, card, box, k)
+	# R843e：有一体素材时由稀有度绘制口一次铺完图框 + 底托，避免双层框线互压。
+	if UiAssets.art_rarity_frame(art_frame_kind(card), compact) == null:
+		_draw_art_frame(canvas, card, box, k)
 	# R478：未确认卡图打角标（AI 生成、待人工确认）。
 	if tex != null and is_pending_art(card.pic_id()):
 		_draw_pending_mark(canvas, box, k)
@@ -1114,6 +1115,15 @@ static func rarity_row_rect(rect: Rect2, compact := false) -> Rect2:
 			Vector2(rect.size.x, rect.size.y * (bottom_ratio - top_ratio)))
 
 
+static func integrated_frame_rect(rect: Rect2, compact := false) -> Rect2:
+	## 一体框与卡图窗口同宽、同左缘，下端接稀有度行；不再画到卡牌外轮廓上。
+	var row := rarity_row_rect(rect, compact)
+	var top_left := rect.position + Vector2(rect.size.x * UiTheme.CARD_ART_INSET_X,
+			rect.size.y * UiTheme.CARD_ART_INSET_TOP)
+	return Rect2(top_left, Vector2(rect.size.x * (1.0 - 2.0 * UiTheme.CARD_ART_INSET_X),
+			row.end.y - top_left.y))
+
+
 static func centered_text_baseline(font: Font, size: int, box: Rect2) -> float:
 	## 按字体真实 ascent / descent 居中墨迹，不再用 size * 0.36 估算。
 	return box.position.y + (box.size.y + float(font.get_ascent(size))
@@ -1122,7 +1132,7 @@ static func centered_text_baseline(font: Font, size: int, box: Rect2) -> float:
 
 static func rarity_tag_layout(text: String, rect: Rect2, font_bold: Font,
 		compact := false) -> Dictionary:
-	## 中央色签固定高度、按译文伸缩；字号同时受可用宽高约束，不省略译文。
+	## 稀有度文字安全区固定高度、按译文伸缩；字号受可用宽高约束，不省略译文。
 	var k: float = scale_of(rect)
 	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
 	var row := rarity_row_rect(rect, compact)
@@ -1156,6 +1166,21 @@ static func _draw_rarity_tag(canvas: CanvasItem, card: CardData, rect: Rect2,
 	var L := rarity_tag_layout(txt, rect, f, compact)
 	var row: Rect2 = L["row"]
 	var box: Rect2 = L["box"]
+	var integrated: Texture2D = UiAssets.art_rarity_frame(art_frame_kind(card), compact)
+	var fs: int = int(L["fs"])
+	var text_w: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	if integrated != null:
+		## 素材垫在文字下方；职业图框与稀有度底托只画这一层，不再叠加纯色矩形 / 色签。
+		canvas.draw_texture_rect(UiAssets.filtered(integrated, ceili(maxf(rect.size.x,
+				rect.size.y) * maxf(1.5, canvas.get_viewport_transform().get_scale().x))),
+				integrated_frame_rect(rect, compact), false)
+		var origin := Vector2(box.get_center().x - text_w * 0.5,
+				centered_text_baseline(f, fs, box))
+		canvas.draw_string_outline(f, origin, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
+				maxi(1, roundi(float(fs) * 0.10)), Color(0.08, 0.065, 0.045, 0.92))
+		canvas.draw_string(f, origin, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
+				Color(1.0, 0.96, 0.86))
+		return
 	canvas.draw_rect(row, UiTheme.ADVENTURE_BRASS)
 	var x: float = box.position.x
 	var top: float = box.position.y
@@ -1169,8 +1194,6 @@ static func _draw_rarity_tag(canvas: CanvasItem, card: CardData, rect: Rect2,
 	canvas.draw_colored_polygon(pts, col.darkened(0.16))
 	pts.append(pts[0])
 	canvas.draw_polyline(pts, col.lightened(0.40), maxf(0.8, 0.65 * k), true)
-	var fs: int = int(L["fs"])
-	var text_w: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	canvas.draw_string(f, Vector2(box.get_center().x - text_w * 0.5,
 			centered_text_baseline(f, fs, box)), txt,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1.0, 0.96, 0.86))

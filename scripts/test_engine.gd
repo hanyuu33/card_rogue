@@ -48170,10 +48170,14 @@ func _init() -> void:
 			and r843_starter_box.size.x > r843_rare_box.size.x,
 			"R843c 稀有度：标签固定高度、按译文自适应宽度")
 	var r843_row: Rect2 = r843_rare["row"]
-	check(is_equal_approx(r843_row.position.x, r843_rect.position.x)
-			and is_equal_approx(r843_row.size.x, r843_rect.size.x)
-			and r843_row.encloses(r843_rare_box),
-			"R843d 稀有度：金色底与卡同宽，中央原色签完整留在整行内")
+	var r843_integrated := CardFace.integrated_frame_rect(r843_rect, true)
+	check(is_equal_approx(r843_integrated.position.x,
+			r843_rect.size.x * UiTheme.CARD_ART_INSET_X)
+			and is_equal_approx(r843_integrated.size.x,
+			r843_rect.size.x * (1.0 - 2.0 * UiTheme.CARD_ART_INSET_X))
+			and is_equal_approx(r843_integrated.end.y, r843_row.end.y)
+			and r843_integrated.encloses(r843_rare_box),
+			"R843e 一体框：与卡图窗同宽并接稀有度底托，不溢出外框")
 	var r843_baseline: float = CardFace.centered_text_baseline(
 			r281_font, int(r843_rare["fs"]), r843_rare_box)
 	var r843_ink_top: float = r843_baseline - r281_font.get_ascent(int(r843_rare["fs"])) - r843_rare_box.position.y
@@ -48208,6 +48212,10 @@ func _init() -> void:
 	check(CardFace.stats_bar_rect(r843_rect).end.y <= r843_rect.end.y
 			and UiTheme.CARD_COMPACT_NAME_BOTTOM < UiTheme.CARD_BODY_BOTTOM,
 			"R843c 下部黑底：三行顺序排列且属性栏完整留在卡框内")
+	for r843_kind in ["forest", "shadow", "mech", "bard", "common", "enemy"]:
+		check(UiAssets.art_rarity_frame(r843_kind, false) != null
+				and UiAssets.art_rarity_frame(r843_kind, true) != null,
+				"R843e 职业一体框：%s 详情 / 紧凑双比例素材齐全" % r843_kind)
 
 	check(CardFace.marquee_offset(50.0, 60.0, 1234) == 0.0,
 

@@ -13,6 +13,7 @@ class_name UiAssets
 ##   稀有度边框     frame_<0..5>.png  下标同 CardData.RARITY_COLORS
 ##   卡图区边框     art_frame_<归属>.png  归属 = forest / shadow / mech / common / enemy
 ##                  （R498：卡图窗上的窄边框，按卡牌归属分色）
+##   职业一体框     art_rarity_frame_<归属>[_compact].png（R843e：图框 + 稀有度底托）
 ##   稀有度缎带     ribbon_<0..5>.png 下标同上（R170：稀有度的**主通道**，挂在卡面右上角）
 ##   面板羊皮纸     panel_parchment.png（R170：白底面板的统一底，平铺自适应任意大小）
 ##   羊皮卷面板底   scroll_parchment.png（R191：奖励面板的卷轴底，九宫格自适应、无边框）
@@ -298,6 +299,12 @@ static func art_frame(kind: String) -> Texture2D:
 	## 中心全透明、最外 1px 不透明 —— 直接盖在卡图之上即可，既不遮图也不在纸底上露缝。
 	## 缺图返回 null，`CardFace` 回退成同色细线框（不空白、不报错）。
 	return get_tex("art_frame_" + kind)
+
+
+static func art_rarity_frame(kind: String, compact := false) -> Texture2D:
+	## R843e：卡图框 + 稀有度底托的职业一体素材。详情 / 紧凑各有独立比例，禁止跨比例拉伸。
+	## 卡图窗口透明、中央文字区为空白底托；缺图时 CardFace 回退到旧窄框 + 程序稀有度签。
+	return get_tex("art_rarity_frame_" + kind + ("_compact" if compact else ""))
 
 
 static func rarity_ribbon(rarity: int) -> Texture2D:
