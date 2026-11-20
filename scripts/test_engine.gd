@@ -945,6 +945,149 @@ func _init() -> void:
 
 
 
+	# ================= R840：火墙入场灼烧 + 技能抗性「最终不超过 3」 =================
+
+	# 店长口径 ①：「在火墙留下的火焰范围内入场的卡也需要受到伤害」——
+	# 判据挂在 `FieldState.place()` 的落位回调上（手牌打出 / 召唤 / 孵化 的唯一口）。
+
+	var r840_e := _new_engine([], 30, 30, -1, false)
+
+	r840_e.start_game(0)
+
+	r840_e.state.hand = [repo.get_card(9084)]
+
+	r840_e.state.energy = 5
+
+	r840_e.use_spell(0, Vector2i(1, 2))     # 第 1 行点起来（此刻是空行）
+
+	check(r840_e.fire_wall_rows().has(1),
+
+			"R840 火墙：第 1 行进入燃烧状态（%s）" % str(r840_e.fire_wall_rows()))
+
+	var r840_in := r840_e.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_SELF)
+
+	check(r840_in != null
+			and r840_in.health == r840_in.card.health - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：入场即灼烧 —— 召唤到燃烧横行的单位 -%d（%d→%d）" % [
+			GameEngine.FIRE_WALL_PASS_DMG, 30, r840_in.health])
+
+	var r840_out := r840_e.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+
+	check(r840_out != null and r840_out.health == 30,
+
+			"R840 火墙：不在燃烧横行的入场不受伤（%d）" % r840_out.health)
+
+	var r840_foe := r840_e.state.place(
+			CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	check(r840_foe != null
+			and r840_foe.health == r840_foe.card.health - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：不分敌我 —— 敌方单位入场同样 -%d（%d→%d）" % [
+			GameEngine.FIRE_WALL_PASS_DMG, r840_foe.card.health, r840_foe.health])
+
+	r840_e._clear_fire_walls(GameEngine.SIDE_SELF)
+
+	var r840_late := r840_e.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(1, 2), GameEngine.SIDE_SELF)
+
+	check(r840_late != null and r840_late.health == 30,
+
+			"R840 火墙：火焰熄灭后入场不受伤（%d）" % r840_late.health)
+
+	# 入场灼烧同样过减伤链：技能抗性的单位踏进火线 → 7 点被压到 3
+
+	var r840_e2 := _new_engine([], 30, 30, -1, false)
+
+	r840_e2.start_game(0)
+
+	r840_e2.state.hand = [repo.get_card(9084)]
+
+	r840_e2.state.energy = 5
+
+	r840_e2.use_spell(0, Vector2i(1, 0))
+
+	var r840_im := r840_e2.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	check(r840_im != null and r840_im.health == 60 - GameEngine.SPELL_RESIST_CAP,
+
+			"R840 火墙：入场灼烧也吃技能抗性 → 7 压到 %d（%d）" % [
+			GameEngine.SPELL_RESIST_CAP, r840_im.health])
+
+	# 店长口径 ②：「限制 3 伤害应该是伤害最终不超过 3」——
+	# 封顶必须落在**最终落地值**（正义背刺 ×2 之后），不是减伤链的中间值。
+
+	var r840_cap := _new_engine([], 30, 200, -1, false)
+
+	r840_cap.start_game(0)
+
+	var r840_giant := r840_cap.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+
+	r840_cap.self_relics = [6064]     # 正义背刺：对满血敌人 ×2
+
+	var r840_g_hp := r840_giant.health
+
+	r840_cap._hit_unit(r840_giant, 20, "技能")
+
+	check(r840_giant.health == r840_g_hp - GameEngine.SPELL_RESIST_CAP,
+
+			"R840 技能抗性：20 点技能 × 正义背刺 → 最终仍只 -%d（%d→%d）" % [
+			GameEngine.SPELL_RESIST_CAP, r840_g_hp, r840_giant.health])
+
+	# 单目标技能那条扣血口（`_op_deal_damage`，不走 `_hit_unit`）同口径
+
+	var r840_cap2 := _new_engine([], 30, 200, -1, false)
+
+	r840_cap2.start_game(0)
+
+	var r840_giant2 := r840_cap2.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+
+	r840_cap2.self_relics = [6064]
+
+	r840_cap2.state.hand = [repo.get_card(9003)]     # 火焰箭：17 点单目标技能
+
+	r840_cap2.state.energy = 5
+
+	var r840_g2_hp := r840_giant2.health
+
+	r840_cap2.use_spell(0, Vector2i(0, 1))
+
+	check(r840_giant2.health == r840_g2_hp - GameEngine.SPELL_RESIST_CAP,
+
+			"R840 技能抗性：火焰箭 17 × 正义背刺 → 最终仍只 -%d（%d→%d）" % [
+			GameEngine.SPELL_RESIST_CAP, r840_g2_hp, r840_giant2.health])
+
+	# 反向守卫：技能抗性**不碰普通攻击**，新封顶不许误伤这一条
+
+	var r840_atk := _new_engine([], 30, 200, -1, false)
+
+	r840_atk.start_game(0)
+
+	var r840_g3 := r840_atk.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+
+	var r840_g3_hp := r840_g3.health
+
+	r840_atk._hit_unit(r840_g3, 10, "战斗", true, true)
+
+	check(r840_g3.health == r840_g3_hp - 10,
+
+			"R840 技能抗性：普通攻击照旧全额 -10（%d→%d）" % [r840_g3_hp, r840_g3.health])
+
 	# R247：不分敌我 —— 施放即烧到该行**所有单位**（含施放方自己人）
 
 	var eng_fw4 := _new_engine([], 30, 30, -1, false)

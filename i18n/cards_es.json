@@ -684,7 +684,7 @@
   },
   "9084": {
    "name": "Muro de Fuego",
-   "effect_text": "Inflige 14 de daño a todas las unidades de una fila horizontal, tanto aliadas como enemigas. Hasta el comienzo de tu próximo turno, las unidades que atraviesen esa fila reciben 7 de daño; la misma unidad recibe como máximo 14 de daño."
+   "effect_text": "Inflige 14 de daño a todas las unidades de una fila horizontal, tanto aliadas como enemigas. Hasta el comienzo de tu próximo turno, las unidades que atraviesen o entren en esa fila reciben 7 de daño; la misma unidad recibe como máximo 14 de daño."
   },
   "9085": {
    "name": "Carga de Poder",

@@ -684,7 +684,7 @@
   },
   "9084": {
    "name": "Wall of Fire",
-   "effect_text": "Deal 14 damage to all units in a horizontal row, friend and foe alike. Until the start of your next turn, units passing through that row take 7 damage; the same unit takes at most 14 damage."
+   "effect_text": "Deal 14 damage to all units in a horizontal row, friend and foe alike. Until the start of your next turn, units passing through or entering that row take 7 damage; the same unit takes at most 14 damage."
   },
   "9085": {
    "name": "Charge Up",

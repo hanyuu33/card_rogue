@@ -294,6 +294,11 @@ var _x_spell_value:= 0
 # 由施放时的实际伤害算出（R387）—— 附魔加伤会把上限一起抬高。
 # 熄灭时机 = 施放方的下次回合开始（_begin_turn → _clear_fire_walls）。
 var _fire_walls: Array = []
+## R840：`place()` 落位回调投递进来的待结算单位（见 `_flush_fire_enter()`）。
+## 用队列而不是直接递归：灼烧里若连锁召唤（护盾生成器 / 死亡召唤），新单位重新入队，
+## 由同一轮 while 继续处理 —— 递归调用会一路爆栈，而且结算顺序会倒过来。
+var _pending_fire_enter: Array = []
+var _fire_enter_busy:= false
 # 蓄力（9085）：该方「下一张技能多结算几次」的待用层数（按阵营记账，用掉即清）。
 # 结算次数 = 1 + 层数（1 层 = 生效 2 次）；见 _charge_add / _charge_take。
 var _charge: Dictionary = {}
@@ -2472,6 +2477,9 @@ const FUNERAL_DRAW:= 1            # 每破坏 1 个单位抽几张
 
 func _init(state_: FieldState) -> void :
 	state = state_
+	# R840：把场地的「落位回调」接到火墙入场灼烧上（唯一口，见 `FieldState.on_unit_placed`）。
+	if state != null:
+		state.on_unit_placed = _on_unit_placed
 
 
 static func manhattan(a: Vector2i, b: Vector2i) -> int:
@@ -5875,6 +5883,64 @@ func _fire_wall_pass(path: Array[Vector2i]) -> void :
 		action.emit("fire_wall_pass", {"cell": path[path.size() - 1],
 				"dmg": real, "card": p.card})
 		if p.health <= 0:
+			_destroy_dead()
+			return
+
+
+func _on_unit_placed(p: Placement) -> void :
+	## `FieldState.place()` 的落位回调（R840）。
+	## 火墙在场期间**新落地**的单位 → 与「走进来」同价挨一次灼烧。
+	## 判据在 `_fire_wall_enter()` 里（`dealt` 账本上没有这个实例 = 刚入场）。
+	if p == null or _fire_walls.is_empty():
+		return
+	_pending_fire_enter.append(p)
+	_flush_fire_enter()
+
+
+func _flush_fire_enter() -> void :
+	## 把队列里的单位逐个结算（防重入）：结算过程中再入队的，由这一轮 while 继续跑完。
+	if _fire_enter_busy:
+		return
+	_fire_enter_busy = true
+	var guard:= 0
+	while not _pending_fire_enter.is_empty() and guard < 64:
+		guard += 1
+		_fire_wall_enter(_pending_fire_enter.pop_front())
+	_pending_fire_enter.clear()
+	_fire_enter_busy = false
+
+
+func _fire_wall_enter(p: Placement) -> void :
+	## R840（店长口径「在火墙留下的火焰范围内入场的卡也需要受到伤害」）：
+	## 火焰持续期间**新入场**的单位 → 挨 `pass_dmg`（与走过火线同价），
+	## 并计入这面火墙的单位上限 `rec["cap"]`（R387 口径）。
+	## 判据 = `rec["dealt"]` 里**没有这个实例**：施放当场就站在这一行的已经记过账
+	## （`_fire_wall_spell()`），走进来的由 `_fire_wall_pass()` 记过账 —— 只剩「刚落地」的没记。
+	## ⚠️ 不分敌我（与施放 / 经过同一口径）。
+	## ⚠️ 走 `_hit_unit()`：减伤链 / 护甲 / 技能抗性封顶 3 照常生效，不能绕过。
+	if p == null or _fire_walls.is_empty() or p.health <= 0:
+		return
+	var cell:= _cell_of(p)
+	if cell.x < 0 or state.unit_at(cell) != p:
+		return
+	for rec in _fire_walls:
+		if int(rec["row"]) != cell.x:
+			continue
+		var map: Dictionary = rec["dealt"]
+		if map.has(p):
+			continue
+		var cap: int = int(rec.get("cap", FIRE_WALL_CAP))
+		var dmg: int = mini(int(rec["pass_dmg"]), cap)
+		if dmg <= 0:
+			continue
+		map[p] = 0   # 先占位：扣血过程中若再触发落位（连锁召唤），不会把这一下重复烧两次
+		var real:= _hit_unit(p, dmg, "火墙")
+		map[p] = real
+		_log("火墙：%s 踏入第 %d 行 → -%d（这面火墙累计 %d/%d）" % [
+				p.card.card_name, int(rec["row"]), real, real, cap])
+		action.emit("fire_wall_pass", {"cell": cell, "dmg": real, "card": p.card})
+		if p.health <= 0:
+			# 与 `_fire_wall_pass()` 同一收尾：击杀记功 / 后排溢出 / 胜负判定都在里面。
 			_destroy_dead()
 			return
 
@@ -14969,6 +15035,25 @@ func _justice_backstab_mult(p: Placement, side_ok: bool) -> int:
 	return JUSTICE_BACKSTAB_MULT
 
 
+func _cap_spell_resist_final(p: Placement, dmg: int, is_attack: bool) -> int:
+	## R840（店长口径「限制 3 伤害应该是伤害最终不超过 3」）：
+	## 「技能抗性」（熔岩巨人 1071）在 `_unit_damage_taken()` ③d 已经封过一次顶 ——
+	## 那一次是**减伤链内**的中间值封顶，位置没错（各种减半要先算完）。
+	## 但两个扣血落地口拿到 `_unit_damage_taken()` 的返回值之后还会
+	## **× 正义背刺倍率（6064，满血敌人 ×2）** → 3 × 2 = 6，
+	## 「最多 3 点」被倍率放大破顶（店长：应该是伤害**最终**不超过 3）。
+	## 所以在倍率之后、`_cap_turn_damage()` 之前再封一次。
+	## ⚠️ 幂等：没有倍率时数值本来就 <= 3，这里直接原样返回（日志不会重复打）。
+	## ⚠️ 只封**技能**（`is_attack == false`）：卡面写的是「技能伤害」，普攻不受影响。
+	if p == null or p.card == null or is_attack or dmg <= SPELL_RESIST_CAP:
+		return dmg
+	if not p.card.traits.has(SPELL_RESIST_TRAIT):
+		return dmg
+	_log("%s：技能抗性（最终）→ 伤害 %d 封顶到 %d" % [
+			p.card.card_name, dmg, SPELL_RESIST_CAP])
+	return SPELL_RESIST_CAP
+
+
 func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= true,
 		is_attack:= false, seq:= -1, seg:= -1) -> int:
 	## R645：`seg` = **同一次效果里的第几段**（0 起）。龙息 4×5 这种「同一目标连打 5 下」
@@ -15049,6 +15134,8 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	var dmg:= _unit_damage_taken(p, amount, "attack" if is_attack else "spell")
 	# R586：所有易伤 / 加算 / 减伤吃完后才乘（与 R580 猫鼠游戏同款乘算口径）。
 	dmg *= jb_mult
+	# R840：技能抗性「最终不超过 3」—— 必须在倍率之后（见 `_cap_spell_resist_final()`）。
+	dmg = _cap_spell_resist_final(p, dmg, is_attack)
 	dmg = _cap_turn_damage(p, dmg)   # R780 赫尔墨斯：本回合累计上限（倍率之后才封顶）
 	p.health -= dmg
 	if dmg > 0:
@@ -16511,6 +16598,8 @@ func _op_deal_damage(side: String, amount: int, target) -> String:
 		amt_spell = _revelator_split(p, amt_spell, "技能")
 		var amount2:= _unit_damage_taken(p, amt_spell, "spell")
 		amount2 *= jb_mult2
+		# R840：技能抗性「最终不超过 3」（与 `_hit_unit` 同一格、同一函数）。
+		amount2 = _cap_spell_resist_final(p, amount2, false)
 		amount2 = _cap_turn_damage(p, amount2)   # R780 赫尔墨斯：同 `_hit_unit` 同一条
 		p.health -= amount2
 		if amount2 > 0:

@@ -84,6 +84,13 @@ var board := {}  # Vector2i -> Placement
 ## R464：本场战斗已经**发放**到第几号入场序号（见 `Placement.entry_seq`）。
 ## 只增不减 —— 单位死掉再召唤回来算「新入场」，序号往后排。
 var entry_counter: int = 0
+## R840：**单位落位回调**（唯一口）。`place()` 是所有上板路径的必经之处
+## （手牌打出 / 各种召唤 / 孵化 / 死亡召唤 / 关卡摆位 / 读档重建），所以「新单位踏上
+## 燃烧的横行要挨烧」这件事只能挂在这里 —— 挂在各个召唤函数上，漏一个入口就漏一种怪。
+## 引擎在 `_init()` 里把它接到 `GameEngine._on_unit_placed()`；
+## 没有引擎的场景（纯数据测试 / 读档重建）保持空 Callable = 什么都不做。
+## ⚠️ 回调里**不得**假设调用方已经拿到返回值：只读 `board` 上已经写好的状态。
+var on_unit_placed: Callable = Callable()
 # 场地效果（R74）：Vector2i -> CardData。**与board 完全分开**——场地不是单位，
 # 不能被攻击、不挡路、也不参与碰撞；它只是「这个格子上挂着一个一次性效果」。
 # **每个格子最多 1 个**（这正是「每个格子只能存在一个效果」的数据保证：
@@ -704,6 +711,10 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	if card.is_ephemeral:
 		card.add_affix(GameEngine.AFFIX_DIMENSION)
 	board[cell] = p
+	# R840：落位回调（火墙的「入场灼烧」挂在这里）。必须在 `board[cell] = p` **之后** ——
+	# 回调要按所在格判「这一行有没有火墙」，格子还没写进去就找不到人。
+	if on_unit_placed.is_valid():
+		on_unit_placed.call(p)
 	return p
 
 
