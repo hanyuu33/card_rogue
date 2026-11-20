@@ -220,6 +220,14 @@
         "STATUE_SMASH_DESC": "You pick up a stone and bring it down on the foreleg.\nA crack runs from the paw up to the goat's head, and the whole statue collapses into white rubble —\nthe pieces that still fit your hand are exactly enough to fill your tool bar."
       }
     },
+    "dragon_slab": {
+      "name": "Dragon Slab",
+      "texts": {
+        "DRAGON_SLAB_DESC": "A slab of ochre stone leans in the wasteland, half a head taller than you.\nA coiled dragon is carved across its face; wind has worn scales and claws into shallow ridges,\nand only the small hollow of its eye still holds gold paint — in the sun it looks awake.\nYou press your palm to it, and something very light breathes under the stone.\nIt says nothing, as if waiting for you to say what kind of dragon it is.\n\"The mighty dragon\": enchant one Ally or Structure with +8 Power;\n\"the noble dragon\": gain the relic \"Rare Value\" — your deck keeps at most 3 copies of each name,\nthe extras are torn out at random, and you lose 5 Health for each card removed this way.\nOr you can take your hand back and leave the slab standing here.",
+        "DRAGON_SLAB_MIGHT_DESC": "The dragon relief flares once, as if a breath had left the stone.\nWhen you look up again your fingertips are dusted with gold, and a thin crack runs across the slab —\nthat dragon has lent a little of its strength to what you carry.",
+        "DRAGON_SLAB_NOBLE_DESC": "The slab splits down the middle and ochre crumbs spill across the ground.\nThere is no dragon inside, only a single scale polished to a hard shine, cold as well water.\nIt counted every surplus thing you carried — and at the fourth, tore it out and dropped it in."
+      }
+    },
     "haunted_house": {
       "name": "The Haunted House",
       "texts": {

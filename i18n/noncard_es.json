@@ -278,7 +278,8 @@
     "6086": {"name": "Caja de música", "desc": "Al inicio de cada combate, añade 3 Notas aleatorias a tu pila de robo."},
     "6087": {"name": "Este es un Sombrero de Copa", "desc": "Tus Aliados y Estructuras obtienen «Muerte»: al ser destruidos, vuelven a tu pila de robo, cuestan 2 menos este combate y obtienen «dimensional»."},
     "6088": {"name": "Caja de joyas", "desc": "Al recoger: añade 1 carta épica aleatoria a tu mazo."},
-    "6089": {"name": "Libro de cuentos vacío", "desc": "Al inicio de cada combate, inflige 0 de daño a todos los enemigos. Este daño aumenta en 1 por cada evento o combate contra un jefe que superes."}
+    "6089": {"name": "Libro de cuentos vacío", "desc": "Al inicio de cada combate, inflige 0 de daño a todos los enemigos. Este daño aumenta en 1 por cada evento o combate contra un jefe que superes."},
+    "6090": {"name": "Valor escaso", "desc": "Al recoger: tu mazo conserva como máximo 3 copias de cada nombre; las sobrantes se retiran al azar hasta dejar solo 3, y pierdes 5 de vida por cada carta retirada por este efecto."}
   },
   "classes": {
     "森林精魄": {

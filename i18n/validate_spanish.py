@@ -194,8 +194,8 @@ for trait in sorted(required_trait_terms):
 # 即时效果只标获得时机，不译成消耗。
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
-check(len(NONCARD_ES["relics"]) == 84 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 84 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R806 +法术卷轴 6080 / R805 +蜂蜜 6079 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087 / R830 +首饰盒 6088 / R835 +空故事书 6089）")
+check(len(NONCARD_ES["relics"]) == 85 and len(NONCARD_ES["classes"]) == 3,
+      "noncard 为 85 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R806 +法术卷轴 6080 / R805 +蜂蜜 6079 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087 / R830 +首饰盒 6088 / R835 +空故事书 6089 / R842 +稀有价值 6090）")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})
@@ -260,7 +260,7 @@ for achievement_id, zh_row in NARRATIVE_ZH["achievements"].items():
 event_zh_rows = flatten_event(EVENT_ZH)
 event_es_rows = flatten_event(EVENT_ES)
 check(set(event_es_rows) == set(event_zh_rows), "event_ui 全部 key 覆盖一致")
-check(len(event_zh_rows) == 181, "event_ui 为 99 选项 + 74 结果 + 5 选货 + 3 动态（R793 +5；R794 +6；R807 +2 +2；R819 +1 占卜代价行）")
+check(len(event_zh_rows) == 194, "event_ui 为 104 选项 + 77 结果 + 10 选货 + 3 动态（R793 +5；R794 +6；R807 +2 +2；R819 +1 占卜代价行；R842 +5 +3 +5）")
 for path, zh_text in event_zh_rows.items():
     check_text("event_ui." + path, zh_text, event_es_rows.get(path))
 dynamic_map = {

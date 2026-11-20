@@ -1,0 +1,24 @@
+A single game illustration for a fantasy card roguelike event, hand-drawn anime fantasy style,
+thick clean dark outlines, flat cel shading with two or three tone steps, warm saturated ochre,
+amber and dusty gold palette, soft painted background.
+
+Subject: ONE weathered stone slab standing tilted in dry wasteland dirt, a little taller than a
+person, top corner chipped off. Its face is carved with a single coiled eastern dragon in shallow
+relief: the dragon's body spirals once around the centre of the slab, its head resting near the
+upper third, worn scales and claws flattened by wind so only the raised ridges catch the light.
+The dragon's eye socket still holds a small hollow of old gold paint that glows faintly in the
+low sun. Hairline cracks and pale lichen spread across the stone, a thin drift of sand piled at
+its base, dry grass at the edges.
+
+Composition: the slab fills the frame slightly right of centre, three-quarter view so the carved
+dragon reads clearly and is not hidden by the slab's edge. Low golden side light from the left,
+long soft shadow to the right, empty dusty horizon and warm hazy sky behind, no other objects.
+
+Hard constraints: exactly one slab, exactly one coiled dragon carved INTO the stone, exactly one
+gold eye. The dragon is a relief on the stone, never a separate living creature.
+
+NOT a sword, NOT a human statue, NOT a temple gate, NOT a flying dragon in the sky, NOT a dragon
+body emerging out of the stone, NOT gold coins, NOT neon magic runes covering the surface,
+NOT a pedestal, NOT text of any kind.
+
+no text, no letters, no signature, no watermark, no frame, no border, no UI elements.

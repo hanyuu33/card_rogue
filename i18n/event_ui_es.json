@@ -141,6 +141,13 @@
       "ALREADY_OWNED_DISABLED": "Ya llevas la «Espada Sagrada» (no hace falta desenvainar otra vez)",
       "LEAVE_THE_SWORD": "Darte la vuelta y marcharte (no toques la espada)"
     },
+    "dragon_slab": {
+      "MIGHT": "«El dragón poderoso»: otorga +8 de Poder a un Aliado o Estructura",
+      "NOBLE": "«El dragón noble»: obtienes «Valor escaso»",
+      "NO_ALLY_DISABLED": "No hay Aliados ni Estructuras en tu mazo que puedan recibir el encantamiento",
+      "LETHAL_DISABLED": "Vida insuficiente (esta elección te mataría)",
+      "LEAVE": "Marcharse (no tocar la losa)"
+    },
     "factory": {
       "FACTORY_STAGE_1": "Probar una (obtienes 1 Chocolate)",
       "FACTORY_STAGE_2": "Otra más (pierdes %d de Vida máxima, obtienes 1 Chocolate)",
@@ -170,6 +177,13 @@
       "confirm_label": "Aceptar la Carga",
       "cancel_label": "Rechazar (plegar)",
       "short": "Encargo de entrega"
+    },
+    "dragon_slab": {
+      "title": "Losa del dragón · Elige un Aliado o Estructura",
+      "note": "Solo Aliados o Estructuras sin encantamiento (uno por carta)",
+      "confirm_label": "Encantar con «Poder +8»",
+      "cancel_label": "Pensarlo mejor (cerrar)",
+      "short": "Losa del dragón"
     }
   },
   "results": {
@@ -272,6 +286,11 @@
     },
     "sword": {
       "SWORD_GAINED": "Has perdido %d de Vida máxima (actual: %d/%d); la «Espada Sagrada» es tuya"
+    },
+    "dragon_slab": {
+      "MIGHT_GAINED": "El encantamiento «Poder +8» ya está grabado en la carta que elegiste (Poder %d → %d)",
+      "NOBLE_GAINED": "«Valor escaso» entra en tus objetos: %d cartas duplicadas arrancadas, %d de vida perdida (ahora %d / %d)",
+      "NOBLE_NONE": "«Valor escaso» entra en tus objetos: ninguna carta superaba las 3 copias, no se arrancó nada"
     },
     "factory": {
       "FACTORY_FREE": "Dulce. Chocolate +1 (ya tienes %d)",

@@ -148,6 +148,13 @@
       "ALREADY_OWNED_DISABLED": "已持有「圣剑」（不必再拔）",
       "LEAVE_THE_SWORD": "转身离开（不碰那把剑）"
     },
+    "dragon_slab": {
+      "MIGHT": "「强力的龙」：为一张盟友或工事附魔力量 +8",
+      "NOBLE": "「尊贵的龙」：获得「稀有价值」",
+      "NO_ALLY_DISABLED": "卡组里没有可附魔的盟友或工事",
+      "LETHAL_DISABLED": "生命不足（这样选会当场倒下）",
+      "LEAVE": "离开（不碰这块石板）"
+    },
     "factory": {
       "FACTORY_STAGE_1": "试吃一块（获得 1 巧克力）",
       "FACTORY_STAGE_2": "再来一块（失去 %d 最大生命，获得 1 巧克力）",
@@ -271,6 +278,11 @@
     "sword": {
       "SWORD_GAINED": "失去 %d 点最大生命（现 %d / %d）——「圣剑」已收进行囊"
     },
+    "dragon_slab": {
+      "MIGHT_GAINED": "附魔「力量 +8」已烤进你选的那张卡（力量 %d → %d）",
+      "NOBLE_GAINED": "「稀有价值」已收进道具栏：撕掉 %d 张同名卡，失去 %d 点生命（现 %d / %d）",
+      "NOBLE_NONE": "「稀有价值」已收进道具栏：没有超过 3 张的同名卡，一张也没撕"
+    },
     "factory": {
       "FACTORY_FREE": "甜的。巧克力 +1（已有 %d 块）",
       "FACTORY_PAID": "用 %d 点最大生命换了一块巧克力（上限 %d / %d，已有 %d 块）",
@@ -311,6 +323,13 @@
       "confirm_label": "接下货物",
       "cancel_label": "不接（收起）",
       "short": "运送委托"
+    },
+    "dragon_slab": {
+      "title": "龙石板 · 挑选一张盟友或工事",
+      "note": "只能选还没附魔的盟友或工事（每张卡只有一个附魔位）",
+      "confirm_label": "附上「力量 +8」",
+      "cancel_label": "再想想（收起）",
+      "short": "龙石板"
     }
   },
   "rest_dynamic": {

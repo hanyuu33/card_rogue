@@ -1489,6 +1489,11 @@
       "en": "Contract Core",
       "ja": "契約コア",
       "note": "动态数值名；与事件契约的核心区分"
+    },
+    "力量 +8": {
+      "en": "Power +8",
+      "ja": "パワー+8",
+      "note": "R842 事件「龙石板」专属附魔；沿用「伤害 +8」的标记外观"
     }
   },
   "zones": {
@@ -2320,6 +2325,11 @@
       "en": "Empty Storybook",
       "ja": "空の絵本",
       "id": 6089
+    },
+    "稀有价值": {
+      "en": "Rare Value",
+      "ja": "希少価値",
+      "id": 6090
     }
   },
   "levels": {
@@ -2634,6 +2644,12 @@
       "en": "The Haunted House",
       "ja": "不気味な洋館",
       "key": "haunted_house"
+    },
+    "龙石板": {
+      "en": "Dragon Slab",
+      "ja": "龍の石板",
+      "key": "dragon_slab",
+      "note": "刻着盘龙的土黄石板；「强力的龙 / 尊贵的龙」是玩家的解读"
     }
   },
   "stories": {

@@ -131,6 +131,7 @@
     "core_contract",
     "delivery",
     "divination",
+    "dragon_slab",
     "factory",
     "flyer",
     "furnace",
@@ -233,7 +234,8 @@
     6086,
     6087,
     6088,
-    6089
+    6089,
+    6090
   ],
   "traps": [
     7001,

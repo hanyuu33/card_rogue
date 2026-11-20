@@ -141,6 +141,13 @@
       "ALREADY_OWNED_DISABLED": "You already carry the \"Holy Sword\" (no need to draw it again)",
       "LEAVE_THE_SWORD": "Turn and walk away (do not touch the sword)"
     },
+    "dragon_slab": {
+      "MIGHT": "\"The mighty dragon\": enchant one Ally or Structure with +8 Power",
+      "NOBLE": "\"The noble dragon\": gain \"Rare Value\"",
+      "NO_ALLY_DISABLED": "No Ally or Structure in your deck can be enchanted",
+      "LETHAL_DISABLED": "Not enough Health (this choice would kill you)",
+      "LEAVE": "Leave (do not touch the slab)"
+    },
     "factory": {
       "FACTORY_STAGE_1": "Taste one (gain 1 Chocolate)",
       "FACTORY_STAGE_2": "Have another (lose %d Max Health, gain 1 Chocolate)",
@@ -170,6 +177,13 @@
       "confirm_label": "Accept the Cargo",
       "cancel_label": "Decline (collapse)",
       "short": "Delivery Request"
+    },
+    "dragon_slab": {
+      "title": "Dragon Slab · Choose an Ally or Structure",
+      "note": "Only Allies or Structures without an enchantment (one enchantment per card)",
+      "confirm_label": "Enchant with \"Power +8\"",
+      "cancel_label": "Think again (collapse)",
+      "short": "Dragon Slab"
     }
   },
   "results": {
@@ -272,6 +286,11 @@
     },
     "sword": {
       "SWORD_GAINED": "Lost %d Max Health (current %d/%d)—the \"Holy Sword\" is yours"
+    },
+    "dragon_slab": {
+      "MIGHT_GAINED": "The enchantment \"Power +8\" is now baked into the card you chose (Power %d → %d)",
+      "NOBLE_GAINED": "\"Rare Value\" goes into your relics: %d duplicate cards torn out, %d Health lost (now %d / %d)",
+      "NOBLE_NONE": "\"Rare Value\" goes into your relics: no name had more than 3 copies, nothing was torn out"
     },
     "factory": {
       "FACTORY_FREE": "Sweet. Chocolate +1 (you have %d now)",

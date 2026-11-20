@@ -18,6 +18,9 @@ extends Control
 ##   * event + gaze     鸭之凝视（**第二层**）：获得事件道具「一袋米抗几楼」，或放弃；
 ##   * event + sword    林中的剑（R793，第一层专属）：拔剑 -13 最大生命 → 道具「圣剑」，
 ##                      或转身离开；
+##   * event + dragon_slab 龙石板（R842，第一层专属）：认为它是「强力的龙」→ 一张盟友 /
+##                      工事附魔力量 +8；认为它是「尊贵的龙」→ 道具「稀有价值」（同名卡
+##                      削到 3 张，每因此效果删一张失 5 点生命，会致死时不可选）；
 ##   * event + arcane   奥秘之泉（第一层专属）：获得道具「奥秘护符」（每回合第一张效果牌费用 -1），
 ##                      或「喝下泉水」从随机 3 张效果 / 技能牌中选 1 张加入卡组（也可什么都不拿）；
 ##                      ⚠️ R147：一次访问只领一份 —— 取走护符后就不能再喝泉水，反之亦然。
@@ -196,6 +199,33 @@ const SWORD_DESC := """空地上立着一块灰白的长石，石缝里插着一
 const SWORD_TAKEN_DESC := """石头从中间裂开。剑离地的那一刻轻得不像话，
 像它一直在等你来拿。
 握柄贴上掌心，林子静了一瞬——「圣剑」已收进行囊。"""
+
+# R842 龙石板（第一层专属）：「雕着龙的土黄石板」——两个选项都是「你认为它是哪种龙」：
+#   · 「强力的龙」→ 卡组里一张**盟友 / 工事**吃附魔「力量 +8」（`brawn`，事件独有：
+#     视觉沿用商店「伤害 +8」那枚标记，但不进商店、不进随机池）；
+#   · 「尊贵的龙」→ 道具「稀有价值」6090：同名卡削到 3 张，**每因此效果删除一张卡**
+#     失去 5 点生命；会当场致死时这个选项不可选（按钮置灰 + 结算口再拦一次）。
+const DRAGON_SLAB_RELIC_ID := 6090
+const DRAGON_ENCHANT_ID := "brawn"
+
+const DRAGON_SLAB_DESC := """荒原上斜插着一块土黄色的石板，比人还高半头。
+正面浮雕着一条盘龙，鳞爪被风磨得只剩起伏的轮廓，
+唯独龙眼那一小窝金漆没被吹走——太阳一照，像还醒着。
+你伸手按上去，石头底下传来一声极轻的呼吸。
+它没有开口，像是在等你先说出：它是一条什么样的龙。
+「强力的龙」：为一张盟友或工事附魔力量 +8；
+「尊贵的龙」：获得道具「稀有价值」——卡组里同名卡最多留 3 张，
+多出来的会被随机撕下，每因此效果删除一张卡，失去 5 点生命。
+也可以收回手，让这块石板继续站在这里。"""
+
+const DRAGON_SLAB_MIGHT_DESC := """石面上的龙纹亮了一瞬，像有一口气从石头里呼出来。
+再抬头时，指尖沾了一层金粉，石板已经裂开一道细缝——
+那条龙把力气分了一点给你带着的东西。"""
+
+const DRAGON_SLAB_NOBLE_DESC := """石板从中间裂开，土黄的碎屑簌簌落了一地。
+裂口里没有龙，只有一枚打磨得极亮的鳞片，凉得像井水。
+你身上那些多余的东西被它一一数过——数到第四件，就撕下来丢进裂缝里。"""
+
 
 # R794 巧克力工厂（第二层专属）：选项 1 可以连点四次 ——
 #   ① 免费得 1 巧克力；② 失 5 最大生命得 1；③ 失 15 得 1；④ 失 25 得卡片「巧克力工厂」。
@@ -439,6 +469,10 @@ var _statue_pick := ""          # R754 奇异雕像：本次选的是 "pray" / "
 var _statue_result := ""        # R754 奇异雕像：收尾那行结果（重绘要能复现）
 var _sword_taken := false       # R793 林中的剑：本次是否已拔剑（拔了就只剩离开）
 var _sword_result := ""         # R793 林中的剑：收尾那行结果（重绘要能复现）
+var _dragon_pick := ""          # R842 龙石板：本次领了哪一份（"" / "might" / "noble"）
+var _dragon_result := ""        # R842 龙石板：收尾那行结果（重绘要能复现）
+var _dragon_cards: Array = []   # R842 龙石板：选卡页网格下标 → deck 下标的映射表
+var _dragon_overlay: PickOverlay = null  # R842 龙石板：选盟友 / 工事的浮层（懒建）
 var _house_done := false        # R807 诡异洋房：本次是否已探索（探索过就只剩离开）
 var _house_result := ""         # R807 诡异洋房：收尾那行结果（重绘要能复现）
 
@@ -594,6 +628,12 @@ func _is_sword() -> bool:
 	return _is_event_node() and _pending_kind() == "sword"
 
 
+func _is_dragon_slab() -> bool:
+	## R842 龙石板（第一层专属）：一块刻着盘龙的土黄石板，你来断定它是哪种龙。
+	## 两个选项都给东西（附魔 / 道具），所以必须留「离开」——不然玩家没法什么都不做。
+	return _is_event_node() and _pending_kind() == "dragon_slab"
+
+
 func _is_choco_factory() -> bool:
 	## R794 巧克力工厂（第二层专属）：试吃巧克力，可连点四次，最后一次给卡。
 	return _is_event_node() and _pending_kind() == "factory"
@@ -699,6 +739,7 @@ func _is_treasure() -> bool:
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
 			and not _is_adventurer() and not _is_furnace() and not _is_core_contract() \
 			and not _is_flyer() and not _is_statue() and not _is_sword() \
+			and not _is_dragon_slab() \
 			and not _is_choco_factory() and not _is_haunted_house()
 
 
@@ -758,6 +799,8 @@ func _kind() -> String:
 		return "statue"
 	if _is_sword():
 		return "sword"
+	if _is_dragon_slab():
+		return "dragon_slab"
 	if _is_choco_factory():
 		return "factory"
 	if _is_haunted_house():
@@ -1340,7 +1383,7 @@ func _kind_tint(kind: String) -> Color:
 			return Color("b5484a")   # 危险：暗红
 		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial", "factory":
 			return Color("c8951c")   # 交易 / 匠人：金
-		"whisper", "divination", "moon", "arcane", "hero", "statue":
+		"whisper", "divination", "moon", "arcane", "hero", "statue", "dragon_slab":
 			return Color("8a7fd4")   # 神秘 / 预兆：紫
 		"pear", "snow_leopard", "adventurer", "cave", "flyer", "sword":
 			return Color("6faa62")   # 自然 / 探索：绿
@@ -1490,6 +1533,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "sword"
+		if args[i] == "--dragonslab":  # R842 演示：伪装 run 龙石板事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "dragon_slab"
 		if args[i] == "--struggle":  # 演示：伪装 run 挣扎事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -2057,6 +2104,41 @@ func _ready() -> void:
 			leave_btn.text = "转身离开（不碰那把剑）"
 			leave_btn.disabled = false
 			result_label.text = ""
+	elif _is_dragon_slab():
+		event_name.text = "龙 石 板"
+		if _dragon_pick == "might":
+			desc.text = DRAGON_SLAB_MIGHT_DESC
+			_collapse_to_leave()
+			result_label.text = _dragon_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		elif _dragon_pick == "noble":
+			desc.text = DRAGON_SLAB_NOBLE_DESC
+			_collapse_to_leave()
+			result_label.text = _dragon_result
+			result_label.add_theme_color_override("font_color", Color("b9a06a"))
+		else:
+			desc.text = DRAGON_SLAB_DESC
+			# R842 选项 1：有合格目标才可点（判据与选卡页同源 `_dragon_targets()`）。
+			rest_btn.visible = true
+			if _dragon_targets().is_empty():
+				rest_btn.text = "卡组里没有可附魔的盟友或工事"
+				rest_btn.disabled = true
+			else:
+				rest_btn.text = "「强力的龙」：为一张盟友或工事附魔力量 +8"
+				rest_btn.disabled = false
+			# R842 选项 2：会当场倒下就置灰（店长口径「如果选此选项会立即死亡则不能选」）。
+			alt_btn.visible = true
+			if RunState.rare_value_lethal(CardRepo.load_json()):
+				alt_btn.text = "生命不足（这样选会当场倒下）"
+				alt_btn.disabled = true
+			else:
+				alt_btn.text = "「尊贵的龙」：获得「稀有价值」"
+				alt_btn.disabled = false
+			bbq_btn.visible = false
+			leave_btn.visible = true
+			leave_btn.text = "离开（不碰这块石板）"
+			leave_btn.disabled = false
+			result_label.text = ""
 	elif _is_haunted_house():
 		event_name.text = "诡 异 洋 房"
 		desc.text = HAUNTED_TAKEN_DESC if _house_done else HAUNTED_DESC
@@ -2317,6 +2399,12 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_dragon_slab():
+		if _dragon_pick != "":
+			_on_leave()
+			return
+		_dragon_take_might()
+		return
 	if _is_haunted_house():
 		_explore_haunted_house()
 		return
@@ -3190,6 +3278,119 @@ func _core_take_core() -> void:
 	_redraw()
 
 
+func _dragon_targets() -> Array:
+	## 「强力的龙」的候选：**还没附魔**的盟友 / 工事（`enchant_ok()` 是资格唯一口）。
+	## 返回 [{idx: deck 下标, card: 带附魔 / 本局成长的卡实例}]，顺序 = 卡组顺序。
+	var repo := CardRepo.load_json()
+	var out: Array = []
+	for i in RunState.deck_ids.size():
+		var c := RunState.card_with_mod(repo, i)
+		if c == null:
+			continue
+		if not RunState.enchant_ok(DRAGON_ENCHANT_ID, c, i):
+			continue
+		out.append({"idx": i, "card": c})
+	return out
+
+
+func _dragon_take_might() -> void:
+	## 选项 1「强力的龙」：开选卡页挑一张盟友 / 工事 → 附魔「力量 +8」。
+	## ⚠️ 走 `PickOverlay` 而不是跳卡组编辑场景：这里只要**一张**、
+	##    且候选已经按 `enchant_ok()` 筛过，没必要把整套编辑 UI 搬过来（运送委托同款用法）。
+	if _dragon_pick != "":
+		_on_leave()
+		return
+	var elig := _dragon_targets()
+	if elig.is_empty():
+		return
+	_dragon_cards = elig
+	var cards: Array = []
+	for e in elig:
+		cards.append(e["card"])
+	if _dragon_overlay == null:
+		_dragon_overlay = PickOverlay.new()
+		_dragon_overlay.confirmed.connect(_on_dragon_confirmed)
+		_dragon_overlay.cancelled.connect(_on_dragon_cancelled)
+		add_child(_dragon_overlay)
+	_dragon_overlay.open({
+		"kind": "dragon_slab",
+		"title": "龙石板 · 挑选一张盟友或工事",
+		"note": "只能选还没附魔的盟友或工事（每张卡只有一个附魔位）",
+		"cards": cards,
+		"counts": [],
+		"max_sel": 1,
+		"min_sel": 1,
+		"confirm_label": "附上「力量 +8」",
+		"cancel_label": "再想想（收起）",
+		"short": "龙石板",
+	})
+
+
+func _on_dragon_cancelled() -> void:
+	## 收起选卡页 = 什么都没发生（不写 `_dragon_pick`），事件页可以再点一次或直接离开。
+	if _dragon_overlay != null:
+		_dragon_overlay.close()
+
+
+func _on_dragon_confirmed(selected: Array) -> void:
+	## 选卡页确认：附魔**当场**烤进那张卡 —— 与商店走同一条 `enchant_deck_card()`。
+	if _dragon_pick != "" or selected.is_empty():
+		return
+	var grid: int = int(selected[0])
+	if grid < 0 or grid >= _dragon_cards.size():
+		return
+	var idx: int = int((_dragon_cards[grid] as Dictionary)["idx"])
+	var repo := CardRepo.load_json()
+	var before := RunState.card_with_mod(repo, idx)
+	if before == null:
+		return
+	var old_power: int = before.power
+	if not RunState.enchant_deck_card(idx, RunState.enchant_mod(DRAGON_ENCHANT_ID)):
+		return
+	if _dragon_overlay != null:
+		_dragon_overlay.close()
+	var after := RunState.card_with_mod(repo, idx)
+	var new_power: int = (after.power if after != null else old_power + 8)
+	_dragon_pick = "might"
+	_claim_reward(rest_btn)   # R147：一次访问只领一份
+	_collapse_to_leave()
+	desc.text = DRAGON_SLAB_MIGHT_DESC
+	# R807：结果行**不插卡名**（动态中文会让 en / ja / es 永远回落中文）—— 只写数值。
+	_dragon_result = "附魔「力量 +8」已烤进你选的那张卡（力量 %d → %d）" % [old_power, new_power]
+	result_label.text = _dragon_result
+	result_label.add_theme_color_override("font_color", Color("c8a86a"))
+	_redraw()
+
+
+func _dragon_take_noble() -> void:
+	## 选项 2「尊贵的龙」：收道具「稀有价值」→ 同名卡削到 3 张，每因此效果删一张失 5 点生命。
+	## ⚠️ 会致死时**不许选**：按钮已置灰，这里再拦一次（R793 的教训：只拦界面 = 没拦）。
+	if _dragon_pick != "":
+		_on_leave()
+		return
+	var repo := CardRepo.load_json()
+	if RunState.rare_value_lethal(repo):
+		return
+	var res: Dictionary = RunState.rare_value_prune(repo)
+	if not bool(res.get("ok", false)):
+		return
+	RunState.gain_relic(DRAGON_SLAB_RELIC_ID)
+	_dragon_pick = "noble"
+	_claim_reward(alt_btn)   # R147
+	_collapse_to_leave()
+	desc.text = DRAGON_SLAB_NOBLE_DESC
+	var deleted: Array = res.get("deleted", [])
+	var dmg: int = int(res.get("damage", 0))
+	if deleted.is_empty():
+		_dragon_result = "「稀有价值」已收进道具栏：没有超过 3 张的同名卡，一张也没撕"
+	else:
+		_dragon_result = "「稀有价值」已收进道具栏：撕掉 %d 张同名卡，失去 %d 点生命（现 %d / %d）" % [
+				deleted.size(), dmg, RunState.hp, RunState.max_hp]
+	result_label.text = _dragon_result
+	result_label.add_theme_color_override("font_color", Color("b9a06a"))
+	_redraw()
+
+
 func _refresh() -> void:
 	# R178：本次访问的奖励已领完 → 任何刷新都保持「只有一个离开」的收尾态
 	#（_on_main 的休息分支等地方会再调 _refresh，不收住会把按钮文案改回去）。
@@ -3203,6 +3404,7 @@ func _refresh() -> void:
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
 			or _is_moon() or _is_snow_leopard() or _is_furnace() \
 			or _is_core_contract() or _is_flyer() or _is_statue() or _is_sword() \
+			or _is_dragon_slab() \
 			or _is_choco_factory() or _is_haunted_house():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
@@ -3387,6 +3589,12 @@ func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
 	## R351 赏月也用它当「拿硬币」的按钮。
 	sfx.play("click")
+	if _is_dragon_slab():
+		if _dragon_pick != "":
+			_on_leave()
+			return
+		_dragon_take_noble()
+		return
 	if _is_core_contract():
 		_core_take_core()
 		return

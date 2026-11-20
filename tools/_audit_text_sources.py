@@ -123,7 +123,7 @@ def E():
     log("E  剧情 / 事件文案")
     ## 结构与 narrative_zh_canonical 不是一一对应（按事件 id 分组），逐字比对交给
     ## `i18n/validate_narrative.py` 与 `i18n/validate_event_ui.py`，本脚本只做提醒。
-    log("  由 validate_narrative.py（30 事件 / 74 条）+ validate_event_ui.py（99 选项 / 74 结果）全量校验")
+    log("  由 validate_narrative.py（31 事件 / 77 条）+ validate_event_ui.py（104 选项 / 77 结果）全量校验")
 
 
 def F():

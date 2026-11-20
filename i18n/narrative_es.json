@@ -220,6 +220,14 @@
         "STATUE_SMASH_DESC": "Recoges una piedra y la estrellas contra la pata delantera.\nUna grieta sube de la pata a la cabeza de cabra y la estatua entera se derrumba en cascotes blancos:\nlos trozos que aún caben en tu mano bastan para llenar la barra de herramientas."
       }
     },
+    "dragon_slab": {
+      "name": "Losa del dragón",
+      "texts": {
+        "DRAGON_SLAB_DESC": "Una losa de piedra ocre se inclina en el yermo, media cabeza más alta que tú.\nEn su cara está tallado un dragón enroscado; el viento gastó escamas y garras hasta dejar solo relieves,\ny únicamente la cuenca de su ojo conserva pintura de oro: bajo el sol parece despierto.\nApoyas la palma y algo muy leve respira bajo la piedra.\nNo dice nada, como si esperara que tú digas qué clase de dragón es.\n«El dragón poderoso»: otorga +8 de Poder a un Aliado o Estructura;\n«el dragón noble»: obtienes el objeto «Valor escaso»; tu mazo conserva como máximo 3 copias de cada nombre,\nlas sobrantes se arrancan al azar y pierdes 5 de vida por cada carta retirada por este efecto.\nTambién puedes retirar la mano y dejar la losa donde está.",
+        "DRAGON_SLAB_MIGHT_DESC": "El relieve del dragón brilla un instante, como si un aliento hubiera salido de la piedra.\nAl levantar la vista tienes los dedos cubiertos de polvo de oro y una grieta fina cruza la losa:\nese dragón le ha prestado un poco de su fuerza a lo que llevas.",
+        "DRAGON_SLAB_NOBLE_DESC": "La losa se parte por la mitad y los fragmentos ocres caen al suelo.\nNo hay ningún dragón dentro, solo una escama pulida hasta brillar, fría como agua de pozo.\nContó una a una las cosas sobrantes que llevabas, y a la cuarta la arrancó y la echó en la grieta."
+      }
+    },
     "haunted_house": {
       "name": "La casa embrujada",
       "texts": {

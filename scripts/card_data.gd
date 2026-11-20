@@ -148,6 +148,12 @@ const ENCHANT_DEFS: Dictionary = {
 	# 由 `enchant_label` 逐卡携带、经 `enchant_title()` 读（见下）。
 	"core": {"label": "契约核心", "icon": "shop_icon_damage", "col": "d06be0",
 			"desc": "这张技能卡的伤害提高，数值等于被献祭的那张技能卡的第一段伤害。"},
+	# R842（店长口径「新增一层事件 龙石板」选项 1）：**事件独有**附魔 —— 给盟友 / 工事
+	# +8 力量。视觉沿用「伤害 +8」那枚标记（同图标、同环色），玩家一眼认得出是「+8」那一类；
+	# 但它不进商店（`shop_scene.ENCHANTS` 里没有）、也不进随机池
+	# （`ENCHANT_RANDOM_EXCLUDE`）—— 只有龙石板发得出来。
+	"brawn": {"label": "力量 +8", "icon": "shop_icon_damage", "col": "f08a5a",
+			"desc": "这张盟友或工事的力量 +8。"},
 }
 
 var id: int = 0
@@ -854,7 +860,9 @@ static func enchant_title(c: CardData) -> String:
 ## 能被**随机**摇到的附魔（牛奶 6028 / 附魔大师 6034 的唯一来源，R458）。
 ## ⚠️ 契约核心（`core`）**不在**里面：它的数值来自「被献祭的那张技能卡」，
 ##    随机给出来的只会是 +0 —— 那就成了一张空附魔，所以随机池必须把它排除。
-const ENCHANT_RANDOM_EXCLUDE := ["core"]
+## R842：`brawn`（力量 +8）同理 —— 它是事件「龙石板」专属，商店与牛奶 / 附魔大师
+##    都不该摇到它（摇到就等于把事件奖励漏进了随机池）。
+const ENCHANT_RANDOM_EXCLUDE := ["core", "brawn"]
 
 
 static func random_enchant_ids() -> Array[String]:
