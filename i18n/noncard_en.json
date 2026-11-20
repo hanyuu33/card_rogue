@@ -209,7 +209,7 @@
     },
     "6054": {
       "name": "Dark Drive",
-      "desc": "At the start of each turn, draw 1 additional card. The cost: you cannot skip card rewards — you must take 1 card on the spot to close the reward screen, and you cannot save the reward for later; you also cannot Remove cards from your Deck at shops."
+      "desc": "At the start of each turn, draw 1 additional card. You cannot skip card rewards — you must take 1 card on the spot to close the reward screen. You also cannot remove cards from your Deck at shops."
     },
     "6055": {
       "name": "Smoking Pipe",
