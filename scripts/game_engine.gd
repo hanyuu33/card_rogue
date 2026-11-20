@@ -3681,8 +3681,11 @@ func _revelator_enter_phase(p: Placement, phase: int) -> void:
 		action.emit("revelator_clear", {"cell": home, "card": squatter.card,
 				"side": squatter.owner})
 		_destroy(home)
+	var rv_path: Array[Vector2i] = []
 	if from_cell.x >= 0 and from_cell != home and state.board.has(from_cell):
 		state.move_unit(from_cell, home)
+		rv_path.append(from_cell)
+		rv_path.append(home)
 	# R371：2 → 3 阶段「破坏场上所有其他单位」（敌我双方全算，只留它自己）。
 	# 走 `_destroy` 唯一口（死亡 / 击杀记功 / 离场记账与别处完全一致）。
 	# ⚠️ 先把格子抄一份再逐个杀 —— `_destroy` 里的死亡可能往 board 里**放新单位**，
@@ -3716,6 +3719,12 @@ func _revelator_enter_phase(p: Placement, phase: int) -> void:
 	var prev_eff_id:= _set_revelator_effect(eff_id)
 	if p.health < 1:
 		p.health = 1
+	# R840b：转阶段退回后排这一下同样算「踏进火里」—— 刻意排在**钳血之后**，
+	# 免得火墙绕过「一次大伤害不该直接把转阶段判死」那条保护。
+	if not rv_path.is_empty() and p.health > 0:
+		_fire_wall_pass(rv_path)
+		if p.health <= 0:
+			return   # 被火墙烧死：收尾已经在 `_destroy_dead()` 里做完，不再发阶段横幅
 	_log("启示者进入第 %d 阶段（剩余生命 %d）" % [phase, p.health])
 	# R357：带上 `from`（退回前的格子）—— 界面要先把它**滑回**后排（`_slides`），
 	# 再播阶段特效，最后才换卡图。没有这个字段，界面就只知道「它已经在后排了」。
@@ -15590,6 +15599,9 @@ func _knockback(side: String, target, steps: int, dir_override:= Vector2i.ZERO) 
 	_log("%s 被击退 %d 格（%s → %s）" % [p.card.card_name, moved, src, cell])
 	action.emit("move", {"src": src, "dst": cell, "card": p.card, 
 		"side": p.owner, "path": kb_path})
+	# R840b：被推着穿过燃烧的横行 → 照样灼烧。走 `_fire_wall_pass()` 同一口，
+	# `dealt` 账本与 `cap` 上限和「自己走过去 / 入场」共用一份 —— 一回合被推几次也不会超上限。
+	_fire_wall_pass(kb_path)
 	return "%s 后退 %d 格" % [p.card.card_name, moved]
 
 
@@ -15656,6 +15668,8 @@ func _vortex_pull(cell: Vector2i) -> void :
 	var v_path: Array[Vector2i] = [src, cell]
 	action.emit("move", {"src": src, "dst": cell, "card": pulled.card,
 		"side": pulled.owner, "path": v_path})
+	# R840b：被漩涡拉过燃烧的横行 → 照样灼烧（与击退 / 走过 / 入场共用一本账）。
+	_fire_wall_pass(v_path)
 
 
 func _goose_dir(attacker: Placement, src: Vector2i, tgt: Vector2i) -> Vector2i:
@@ -15707,6 +15721,8 @@ func _goose_lunge(attacker: Placement, tgt: Vector2i) -> void :
 	var g_path: Array[Vector2i] = [src, nxt]
 	action.emit("move", {"src": src, "dst": nxt, "card": attacker.card,
 		"side": attacker.owner, "path": g_path})
+	# R840b：自己跟进的那一格同样算「踏进火里」（目标被推那一下在 `_knockback()` 里已结算）。
+	_fire_wall_pass(g_path)
 
 
 func _connected_components() -> Array:
@@ -19180,6 +19196,9 @@ func _bounce_unit(p: Placement, prev_cell: Vector2i, t: TrapData) -> void :
 	_log("河豚：%s 被%s（%s → %s）" % [p.card.card_name, why, src, dst])
 	action.emit("trap_bounce", {"from": src, "to": dst, "card": p.card,
 			"id": t.id, "blocked": false})
+	# R840b：被弹开时穿过燃烧的横行 → 照样灼烧（陷阱本身仍不连锁触发，只补火墙这一条）。
+	var b_path: Array[Vector2i] = [src, dst]
+	_fire_wall_pass(b_path)
 
 
 func _sleep_tick(side: String) -> void :

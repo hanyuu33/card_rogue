@@ -1088,6 +1088,73 @@ func _init() -> void:
 
 			"R840 技能抗性：普通攻击照旧全额 -10（%d→%d）" % [r840_g3_hp, r840_g3.health])
 
+	# ② 被推 / 被拉 / 被弹进火墙也要灼烧 —— 与入场共用 `dealt` 账本，同回合累计不超 cap
+
+	var r840_kb := _new_engine([], 30, 30, -1, false)
+
+	r840_kb.start_game(0)
+
+	r840_kb.state.hand = [repo.get_card(9084)]
+
+	r840_kb.state.energy = 5
+
+	r840_kb.use_spell(0, Vector2i(2, 0))     # 第 2 行烧起来
+
+	var r840_kb_u := r840_kb.state.place(
+			CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
+
+	check(r840_kb_u.health == 40,
+
+			"R840 火墙：击退前站在第 3 行（不在火线）不受影响（%d）" % r840_kb_u.health)
+
+	r840_kb._knockback(GameEngine.SIDE_OPPONENT, Vector2i(3, 0), 2, Vector2i(-1, 0))
+
+	check(r840_kb_u.health == 40 - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：被击退穿过火线 → -%d（40→%d）" % [
+			GameEngine.FIRE_WALL_PASS_DMG, r840_kb_u.health])
+
+	r840_kb._knockback(GameEngine.SIDE_OPPONENT, Vector2i(1, 0), 2, Vector2i(1, 0))
+
+	check(r840_kb_u.health == 40 - GameEngine.FIRE_WALL_CAP,
+
+			"R840 火墙：同一回合再被推回 → 只补到上限 %d（%d）" % [
+			GameEngine.FIRE_WALL_CAP, r840_kb_u.health])
+
+	r840_kb._knockback(GameEngine.SIDE_OPPONENT, Vector2i(3, 0), 2, Vector2i(-1, 0))
+
+	check(r840_kb_u.health == 40 - GameEngine.FIRE_WALL_CAP,
+
+			"R840 火墙：吃满上限后再被推过 → 不再掉血（%d）" % r840_kb_u.health)
+
+	# 入场 7 + 被推 7 = 同一面火墙累计 14（入场与位移共用 cap）
+
+	var r840_mix := _new_engine([], 30, 30, -1, false)
+
+	r840_mix.start_game(0)
+
+	r840_mix.state.hand = [repo.get_card(9084)]
+
+	r840_mix.state.energy = 5
+
+	r840_mix.use_spell(0, Vector2i(2, 0))
+
+	var r840_mix_u := r840_mix.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)     # 直接落进火线 → 入场灼烧 7
+
+	check(r840_mix_u.health == 30 - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：入场灼烧 7 点（30→%d）" % r840_mix_u.health)
+
+	r840_mix._knockback(GameEngine.SIDE_SELF, Vector2i(2, 1), 2, Vector2i(0, 1))
+
+	check(r840_mix_u.health == 30 - GameEngine.FIRE_WALL_CAP,
+
+			"R840 火墙：入场 + 被推共用上限 → 合计只到 %d（%d）" % [
+			GameEngine.FIRE_WALL_CAP, r840_mix_u.health])
+
 	# R247：不分敌我 —— 施放即烧到该行**所有单位**（含施放方自己人）
 
 	var eng_fw4 := _new_engine([], 30, 30, -1, false)
