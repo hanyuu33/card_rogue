@@ -210,24 +210,26 @@ const CARD_FS_BADGE := 12.0
 # **缺图回退语义色圆盘**，所以这份版式在零素材时也成立。
 
 
-## R843：卡图 / 名称带 / 正文 / 内嵌属性栏分区。旧版 66.2% 卡图 + 巨型雕花姓名牌
-## 把正文挤没；新版卡图仍占多数，但名称与正文拥有各自稳定的区域。
-const CARD_ART_RATIO := 0.575
+## R843c：卡图下方扩成「稀有度 → 卡名 →（正文）→ 属性」固定分区。
+## 稀有度不再挤进卡名行；详情与紧凑手牌各有卡图高度，但三行语义完全一致。
+const CARD_ART_RATIO := 0.495
 const CARD_ART_INSET_X := 0.045
 const CARD_ART_INSET_TOP := 0.028
-const CARD_NAMEPLATE_TOP := 0.587
-const CARD_NAMEPLATE_BOTTOM := 0.700
+const CARD_RARITY_TOP := 0.505
+const CARD_RARITY_BOTTOM := 0.600
+const CARD_NAMEPLATE_TOP := 0.610
+const CARD_NAMEPLATE_BOTTOM := 0.715
 const CARD_NAMEPLATE_X0 := 0.06
 const CARD_NAMEPLATE_X1 := 0.94
-## 正文 / 属性栏的分界与属性栏下沿。属性不再外挂在卡片四角，而是收进底栏。
-const CARD_BODY_BOTTOM := 0.855
+## 正文 / 属性栏的分界与属性栏下沿。属性栏加高，为整行统一字号留出稳定空间。
+const CARD_BODY_BOTTOM := 0.845
 const CARD_STATS_BOTTOM := 0.972
-## 战斗手牌 / 选卡不画正文：卡图延伸到 66.5%，名称带紧随其下，避免留一块空正文区。
-const CARD_COMPACT_ART_RATIO := 0.665
-const CARD_COMPACT_NAME_TOP := 0.675
-const CARD_COMPACT_NAME_BOTTOM := 0.835
-## 名称带右侧固定留给稀有度标签，长卡名只使用左侧空间。
-const CARD_RARITY_WIDTH := 0.30
+## 战斗手牌 / 选卡不画正文：下部黑底向上扩展，稀有度与卡名分别独占一行。
+const CARD_COMPACT_ART_RATIO := 0.575
+const CARD_COMPACT_RARITY_TOP := 0.585
+const CARD_COMPACT_RARITY_BOTTOM := 0.680
+const CARD_COMPACT_NAME_TOP := 0.690
+const CARD_COMPACT_NAME_BOTTOM := 0.820
 const CARD_PAD := 3.0
 ## 数值图标半径（基准）。R117 从 8.5 提到 9.2 —— 战场卡 k ≈ 1.086
 ## → 实到 10.0（**直径 20**，正是用户口径「徽章直径 17 → 约 20」）。

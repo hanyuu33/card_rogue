@@ -1,22 +1,32 @@
 {
-  "note": "card_paper.png R843 轻量版分区坐标（归一化）；卡图/名称带/正文/属性栏各有固定区域",
-  "art_ratio": 0.575,
+  "note": "card_paper.png R843c 轻量版分区坐标（归一化）；稀有度 / 卡名 / 正文 / 属性栏各有固定区域",
+  "art_ratio": 0.495,
   "art_window": {
     "x0": 0.045,
     "x1": 0.955,
     "y0": 0.028,
-    "y1": 0.575
+    "y1": 0.495
+  },
+  "rarity": {
+    "x0": 0.06,
+    "y0": 0.505,
+    "x1": 0.94,
+    "y1": 0.600,
+    "height_mode": "fixed_ratio",
+    "width_mode": "localized_text_adaptive"
   },
   "nameplate": {
     "x0": 0.06,
-    "y0": 0.587,
+    "y0": 0.610,
     "x1": 0.94,
-    "y1": 0.700
+    "y1": 0.715
   },
-  "body_bottom": 0.855,
+  "body_bottom": 0.845,
   "stats_bottom": 0.972,
-  "rarity_width": 0.30,
-  "compact_art_ratio": 0.665,
-  "compact_name_top": 0.675,
-  "compact_name_bottom": 0.835
+  "stats_font_mode": "shared_per_card_row",
+  "compact_art_ratio": 0.575,
+  "compact_rarity_top": 0.585,
+  "compact_rarity_bottom": 0.680,
+  "compact_name_top": 0.690,
+  "compact_name_bottom": 0.820
 }

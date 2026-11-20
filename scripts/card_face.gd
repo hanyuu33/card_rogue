@@ -88,9 +88,9 @@ static func name_layout(card_name: String, rect: Rect2, font_bold: Font,
 	var k: float = rect.size.y / CARD_H_DESIGN
 	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
 	var pad: float = UiTheme.CARD_PAD * k
-	# R843：名称带右侧固定属于稀有度标签；卡名只在左侧区域内缩字 / 滚动。
+	# R843c：稀有度已经独占上一行，卡名使用名称带的完整宽度。
 	var maxw: float = maxf(12.0, rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
-			- UiTheme.CARD_NAMEPLATE_X0 - UiTheme.CARD_RARITY_WIDTH) - pad * 2.0)
+			- UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0)
 	var sz: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
 	var tw: float = 0.0
 	while true:
@@ -424,6 +424,12 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	var bw := maxf(1.5, 2.0 * k)
 	if not has_paper:
 		canvas.draw_rect(rect.grow(-bw / 2.0), UiTheme.CARD_FRAME, false, bw)
+		var fallback_rarity := Rect2(rect.position + Vector2(rect.size.x * 0.05,
+				rect.size.y * UiTheme.CARD_RARITY_TOP),
+				Vector2(rect.size.x * 0.90, rect.size.y * (UiTheme.CARD_RARITY_BOTTOM
+				- UiTheme.CARD_RARITY_TOP)))
+		canvas.draw_rect(fallback_rarity, UiTheme.PAGE_PAPER.darkened(0.08))
+		canvas.draw_rect(fallback_rarity, UiTheme.CARD_FRAME, false, maxf(1.0, bw * 0.5))
 		var fallback_plate := Rect2(rect.position + Vector2(rect.size.x * 0.05,
 				rect.size.y * UiTheme.CARD_NAMEPLATE_TOP),
 				Vector2(rect.size.x * 0.90, rect.size.y * (UiTheme.CARD_NAMEPLATE_BOTTOM
@@ -434,7 +440,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping, phase, name_only)
 	if name_only:
 		_draw_compact_name_plate(canvas, card, rect)
-	# ④b 稀有度标签（R843）：位于名称带右侧，不再与右上字段槽争位置。
+	# ④b 稀有度标签（R843c）：独占卡图下第一行；第二行只放卡名。
 	_draw_rarity_ribbon(canvas, card, rect, k, pad, 0.0, name_only)
 	# ④c R592：字段标志（贴卡框右上角，多字段轮播；R592d 起压在缎带上层）
 	#     R656：状态槽位（眩晕 / 冰封 / 沉睡 N / 倒数 N / 可发动 / 临时嘲讽）排进同一条队列，
@@ -678,7 +684,7 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 
 
 static func _draw_compact_name_plate(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
-	## 手牌 / 选卡没有正文：名称带占据卡图与属性栏之间的完整区域。
+	## 手牌 / 选卡没有正文：完整黑底向上扩展，第一行稀有度、第二行卡名。
 	var plate := Rect2(rect.position + Vector2(rect.size.x * 0.05,
 			rect.size.y * UiTheme.CARD_COMPACT_ART_RATIO),
 			Vector2(rect.size.x * 0.90, rect.size.y * (UiTheme.CARD_COMPACT_NAME_BOTTOM
@@ -688,6 +694,9 @@ static func _draw_compact_name_plate(canvas: CanvasItem, card: CardData, rect: R
 	canvas.draw_rect(plate, UiTheme.ADVENTURE_BRASS, false, maxf(1.0, rect.size.y * 0.008))
 	canvas.draw_line(plate.position + Vector2(2, 2), Vector2(plate.end.x - 2, plate.position.y + 2),
 			UiTheme.ADVENTURE_BRASS_LIT, maxf(1.0, rect.size.y * 0.005), true)
+	var split_y: float = rect.position.y + rect.size.y * UiTheme.CARD_COMPACT_RARITY_BOTTOM
+	canvas.draw_line(Vector2(plate.position.x + 2, split_y), Vector2(plate.end.x - 2, split_y),
+			UiTheme.ADVENTURE_BRASS, maxf(1.0, rect.size.y * 0.005), true)
 
 
 static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float, pad: float,
@@ -1101,33 +1110,61 @@ static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
 	_draw_ribbon_procedural(canvas, card, rect, k, pad, rh)
 
 
+static func rarity_tag_layout(text: String, rect: Rect2, font_bold: Font,
+		compact := false) -> Dictionary:
+	## R843c：稀有度独占第一行。标签高度只由卡面几何决定，宽度随译文实际字宽伸缩。
+	## 字号同时受固定行高与整行最大宽度约束；支持英语 / 日语 / 西语，不预设两字中文宽度。
+	var k: float = scale_of(rect)
+	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
+	var top_ratio: float = UiTheme.CARD_COMPACT_RARITY_TOP if compact else UiTheme.CARD_RARITY_TOP
+	var bottom_ratio: float = UiTheme.CARD_COMPACT_RARITY_BOTTOM if compact else UiTheme.CARD_RARITY_BOTTOM
+	var vpad: float = maxf(0.5, 0.45 * k)
+	var top: float = rect.position.y + rect.size.y * top_ratio + vpad
+	var bottom: float = rect.position.y + rect.size.y * bottom_ratio - vpad
+	var h: float = maxf(6.0, bottom - top)
+	var text_pad: float = minf(UiTheme.CARD_PAD * k, rect.size.y * 0.025)
+	var max_w: float = maxf(12.0, rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
+			- UiTheme.CARD_NAMEPLATE_X0) - text_pad * 2.0)
+	var fs: int = maxi(6, roundi(7.5 * kt))
+	while fs > 6 and float(fs) * 1.10 > h:
+		fs -= 1
+	var notch: float = minf(4.0 * k, h * 0.28)
+	var ink_pad: float = maxf(1.5, 1.8 * k)
+	var text_w: float = font_bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var wanted_w: float = text_w + notch * 2.0 + ink_pad * 2.0
+	while fs > 6 and wanted_w > max_w:
+		fs -= 1
+		text_w = font_bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		wanted_w = text_w + notch * 2.0 + ink_pad * 2.0
+	var min_w: float = minf(max_w, rect.size.x * 0.22)
+	var w: float = clampf(wanted_w, min_w, max_w)
+	var x: float = rect.position.x + (rect.size.x - w) * 0.5
+	return {"box": Rect2(x, top, w, h), "fs": fs, "notch": notch,
+		"text_w": text_w, "max_w": max_w, "fits": wanted_w <= max_w + 0.5}
+
+
 static func _draw_rarity_tag(canvas: CanvasItem, card: CardData, rect: Rect2,
 		k: float, pad: float, compact := false) -> void:
-	## 名称带右侧的紧凑稀有度签：颜色 + 文本双通道，不再被右上字段槽遮住。
-	var top_ratio: float = UiTheme.CARD_COMPACT_NAME_TOP if compact else UiTheme.CARD_NAMEPLATE_TOP
-	var bottom_ratio: float = UiTheme.CARD_COMPACT_NAME_BOTTOM if compact else UiTheme.CARD_NAMEPLATE_BOTTOM
-	var top: float = rect.position.y + rect.size.y * top_ratio + maxf(1.0, 0.8 * k)
-	var bottom: float = rect.position.y + rect.size.y * bottom_ratio - maxf(1.0, 0.8 * k)
-	var w: float = rect.size.x * UiTheme.CARD_RARITY_WIDTH - minf(pad * 0.35, rect.size.x * 0.025)
-	var h: float = maxf(7.0, bottom - top)
-	var x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X1 - w
-	var box := Rect2(x, top, w, h)
+	## 第一行只画稀有度：居中、固定行高、按译文长度伸缩的双燕尾标签。
+	var f: FontFile = UiTheme.font_bold()
+	var txt: String = card.rarity_name()
+	var L := rarity_tag_layout(txt, rect, f, compact)
+	var box: Rect2 = L["box"]
+	var x: float = box.position.x
+	var top: float = box.position.y
+	var w: float = box.size.x
+	var h: float = box.size.y
+	var notch: float = float(L["notch"])
 	var col: Color = card.rarity_color()
-	var notch: float = minf(4.0 * k, w * 0.16)
 	var pts := PackedVector2Array([
-		Vector2(x + notch, top), Vector2(x + w, top), Vector2(x + w, top + h),
-		Vector2(x + notch, top + h), Vector2(x, top + h * 0.5)])
+		Vector2(x + notch, top), Vector2(x + w - notch, top), Vector2(x + w, top + h * 0.5),
+		Vector2(x + w - notch, top + h), Vector2(x + notch, top + h), Vector2(x, top + h * 0.5)])
 	canvas.draw_colored_polygon(pts, col.darkened(0.16))
 	pts.append(pts[0])
 	canvas.draw_polyline(pts, col.lightened(0.40), maxf(0.8, 0.65 * k), true)
-	var f: FontFile = UiTheme.font_bold()
-	var fs: int = maxi(7, roundi(7.5 * minf(k, UiTheme.CARD_TEXT_SCALE_CAP)))
-	var txt: String = card.rarity_name()
-	while fs > 6 and f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w - notch - 3.0:
-		fs -= 1
-	txt = _ellipsize(f, txt, w - notch - 3.0, fs)
-	_draw_center(canvas, f, fs, txt, box.get_center() + Vector2(notch * 0.20, 0.0),
-			Color(1.0, 0.96, 0.86))
+	var fs: int = int(L["fs"])
+	txt = _ellipsize(f, txt, maxf(4.0, w - notch * 2.0 - 3.0), fs)
+	_draw_center(canvas, f, fs, txt, box.get_center(), Color(1.0, 0.96, 0.86))
 
 
 static func _draw_ribbon_procedural(canvas: CanvasItem, card: CardData, rect: Rect2,
@@ -1202,7 +1239,7 @@ static func text_zone_layout(card: CardData, rect: Rect2, font: Font, font_bold:
 	# R843：正文延伸到独立属性栏上沿；内距有比例上限，大卡不再被大 pad 吃掉。
 	pad = minf(pad, rect.size.y * 0.025)
 	var top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad * 0.25
-	var bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_BODY_BOTTOM - pad
+	var bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_BODY_BOTTOM - pad * 0.25
 	bottom = minf(bottom, text_zone_bottom(rect))
 	if bottom - top < 6.0:
 		return out
@@ -1349,24 +1386,49 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, eff_sz, UiTheme.INK_600)
 
 
+static func stat_icon_side(cell: Rect2) -> float:
+	## 图标大小由属性格统一决定，与当前格的数字位数无关。
+	return maxf(6.0, minf(cell.size.y * 0.58, cell.size.x * 0.34))
+
+
+static func stats_font_size(font_bold: Font, cell: Rect2, values: Array[String]) -> int:
+	## R843c：先量完整属性行，再由最长数值决定**全行共同字号**。
+	## 任何一格需要缩字时，力 / 程 / 速 / 生一起缩，不再出现生命两位数单独变小。
+	var fs: int = maxi(7, roundi(cell.size.y * 0.72))
+	var side: float = stat_icon_side(cell)
+	var gap: float = maxf(0.6, side * 0.10)
+	var pad: float = maxf(0.5, minf(1.5, cell.size.x * 0.025))
+	var available: float = maxf(4.0, cell.size.x - side - gap - pad * 2.0)
+	while fs > 6:
+		var fits: bool = float(fs) * 1.08 <= cell.size.y - 1.0
+		if fits:
+			for value: String in values:
+				if font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > available:
+					fits = false
+					break
+		if fits:
+			break
+		fs -= 1
+	return fs
+
+
 static func _draw_stat_cell(canvas: CanvasItem, font_bold: Font, key: String,
-		value: String, disc: Color, value_col: Color, cell: Rect2) -> void:
-	## R843：图标与数字左右分离。旧式「数字压在图标上」到了手牌尺寸会把剑/弓/鞋/血全盖住。
-	var side: float = maxf(8.0, minf(cell.size.y * 0.62, cell.size.x * 0.38))
-	var icon_box := Rect2(cell.position + Vector2(0.5, (cell.size.y - side) * 0.5), Vector2(side, side))
+		value: String, disc: Color, value_col: Color, cell: Rect2, fs: int) -> void:
+	## 图标 + 数字作为一个整体居中；四格等宽、同图标尺寸、同字号，视觉重心一致。
+	var side: float = stat_icon_side(cell)
+	var gap: float = maxf(0.6, side * 0.10)
+	var text_w: float = font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var group_w: float = side + gap + text_w
+	var start_x: float = cell.position.x + (cell.size.x - group_w) * 0.5
+	var icon_box := Rect2(Vector2(start_x, cell.position.y + (cell.size.y - side) * 0.5),
+			Vector2(side, side))
 	var icon: Texture2D = UiAssets.filtered(UiAssets.badge_icon(key), ceili(side * 2.0))
 	if icon != null:
 		canvas.draw_texture_rect(icon, icon_box, false)
 	else:
 		canvas.draw_circle(icon_box.get_center(), side * 0.44, disc)
-	var text_left: float = icon_box.end.x + 1.0
-	var text_right: float = cell.end.x
-	var text_w: float = maxf(5.0, text_right - text_left)
-	var fs: int = maxi(9, roundi(cell.size.y * 0.76))
-	while fs > 6 and font_bold.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > text_w:
-		fs -= 1
 	_draw_center_outlined(canvas, font_bold, fs, value,
-			Vector2((text_left + text_right) * 0.5, cell.get_center().y), value_col)
+			Vector2(icon_box.end.x + gap + text_w * 0.5, cell.get_center().y), value_col)
 
 
 static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, rect: Rect2,
@@ -1437,9 +1499,11 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	var sr: float = minf(badge_radius(rect) * 0.64,
 			minf(cell_w * 0.36, stats_rect.size.y * 0.48))
 	var stat_y: float = stats_rect.get_center().y
+	var shared_fs: int = stats_font_size(font_bold,
+			stat_cell_rect(rect, 0, keys.size()), values)
 	for i in keys.size():
 		var cell := stat_cell_rect(rect, i, keys.size())
-		_draw_stat_cell(canvas, font_bold, keys[i], values[i], discs[i], value_cols[i], cell)
+		_draw_stat_cell(canvas, font_bold, keys[i], values[i], discs[i], value_cols[i], cell, shared_fs)
 	# 护甲仍与生命同轴，常驻显示；尺寸不随紧凑属性栏一起缩成不可读的小点。
 	if armor > 0:
 		var health_center := Vector2(stats_rect.position.x + cell_w * (float(keys.size()) - 0.5), stat_y)

@@ -48155,6 +48155,38 @@ func _init() -> void:
 
 			% [float(r281_info_short["text_w"]), float(r281_info_short["maxw"])])
 
+	# ---- R843c：稀有度 / 卡名分行；多语言标签定高伸缩；属性整行统一字号 ----
+	var r843_rect := Rect2(Vector2.ZERO, Vector2(99, 119))
+	var r843_rare := CardFace.rarity_tag_layout("Rare", r843_rect, r281_font, true)
+	var r843_starter := CardFace.rarity_tag_layout("Starter", r843_rect, r281_font, true)
+	var r843_japanese := CardFace.rarity_tag_layout("エピック", r843_rect, r281_font, true)
+	var r843_spanish := CardFace.rarity_tag_layout("Maldición", r843_rect, r281_font, true)
+	check(bool(r843_rare["fits"]) and bool(r843_starter["fits"])
+			and bool(r843_japanese["fits"]) and bool(r843_spanish["fits"]),
+			"R843c 稀有度：英 / 日 / 西长译文都完整落在第一行")
+	var r843_rare_box: Rect2 = r843_rare["box"]
+	var r843_starter_box: Rect2 = r843_starter["box"]
+	check(is_equal_approx(r843_rare_box.size.y, r843_starter_box.size.y)
+			and r843_starter_box.size.x > r843_rare_box.size.x,
+			"R843c 稀有度：标签固定高度、按译文自适应宽度")
+	var r843_name := CardFace.name_layout("量产型赫卡同克瑞斯", r843_rect, r281_font, 12.0)
+	var r843_name_w: float = r843_rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
+			- UiTheme.CARD_NAMEPLATE_X0) - UiTheme.CARD_PAD * (r843_rect.size.y / 70.0) * 2.0
+	check(is_equal_approx(float(r843_name["maxw"]), r843_name_w),
+			"R843c 卡名：独占第二行，不再为稀有度固定扣除 30% 宽度")
+	var r843_cell := CardFace.stat_cell_rect(r843_rect, 0, 4)
+	var r843_short: Array[String] = ["7", "1", "2", "3"]
+	var r843_long: Array[String] = ["7", "1", "2", "123"]
+	var r843_all_long: Array[String] = ["123", "123", "123", "123"]
+	var r843_short_fs := CardFace.stats_font_size(r281_font, r843_cell, r843_short)
+	var r843_shared_fs := CardFace.stats_font_size(r281_font, r843_cell, r843_long)
+	check(r843_shared_fs < r843_short_fs and r843_shared_fs == CardFace.stats_font_size(
+			r281_font, r843_cell, r843_all_long),
+			"R843c 属性：最长生命决定整行共同字号，不再只有生命格单独缩字")
+	check(CardFace.stats_bar_rect(r843_rect).end.y <= r843_rect.end.y
+			and UiTheme.CARD_COMPACT_NAME_BOTTOM < UiTheme.CARD_BODY_BOTTOM,
+			"R843c 下部黑底：三行顺序排列且属性栏完整留在卡框内")
+
 	check(CardFace.marquee_offset(50.0, 60.0, 1234) == 0.0,
 
 		"R281 滚动：不超宽时偏移恒为 0")

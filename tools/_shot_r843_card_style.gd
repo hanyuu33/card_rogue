@@ -5,6 +5,7 @@ extends SceneTree
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const OUT := "res://art_src/2026-11-20_card_face_redesign/card_style.png"
+const OUT_I18N := "res://art_src/2026-11-20_card_face_redesign/card_style_i18n.png"
 
 
 class Sheet extends Node2D:
@@ -17,7 +18,9 @@ class Sheet extends Node2D:
 		for item: Dictionary in labels:
 			draw_string(bold, item["at"], item["text"], HORIZONTAL_ALIGNMENT_LEFT,
 					-1, 18, Color("e8dfc8"))
+		var previous_language := GameSettings.language
 		for item: Dictionary in items:
+			GameSettings.language = String(item.get("lang", previous_language))
 			var card: CardData = item["card"]
 			var rect: Rect2 = item["rect"]
 			CardFace.draw(self, card, rect, int(item.get("hp", card.health)),
@@ -28,6 +31,7 @@ class Sheet extends Node2D:
 				CardFace._draw_affix_badges(self, card, rect,
 						rect.size.y / CardFace.CARD_H_DESIGN,
 						bool(item.get("board", false)), 0)
+		GameSettings.language = previous_language
 
 
 func _initialize() -> void:
@@ -86,4 +90,30 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT.get_base_dir()))
 	var err := img.save_png(OUT)
 	print("SHOT OK ", ProjectSettings.globalize_path(OUT), " ", img.get_size(), " err=", err)
-	quit(0 if err == OK else 1)
+	if err != OK:
+		quit(1)
+		return
+
+	# R843c：同一张工具再出四语 × 七档稀有度，验证标签定高、随译文伸缩。
+	sheet.queue_free()
+	var lang_sheet := Sheet.new()
+	lang_sheet.face = UiTheme.font()
+	lang_sheet.bold = UiTheme.font_bold()
+	root.add_child(lang_sheet)
+	var langs: Array[String] = ["en", "ja", "es", "zh"]
+	var titles: Array[String] = ["EN · 7 rarities", "JA · 7 rarities", "ES · 7 rarities", "ZH · 7 rarities"]
+	for row in langs.size():
+		lang_sheet.labels.append({"at": Vector2(30, 42 + row * 165), "text": titles[row]})
+		for rarity in 7:
+			var card := _clone(repo, 9040)
+			card.rarity = rarity
+			lang_sheet.items.append({"card": card,
+					"rect": Rect2(40 + rarity * 170, 58 + row * 165, 99, 119),
+					"name_only": true, "adventure": true, "lang": langs[row]})
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var lang_img := root.get_texture().get_image()
+	var lang_err := lang_img.save_png(OUT_I18N)
+	print("I18N SHOT OK ", ProjectSettings.globalize_path(OUT_I18N), " err=", lang_err)
+	quit(0 if lang_err == OK else 1)
