@@ -218,10 +218,11 @@ const CARD_ART_INSET_TOP := 0.024
 const CARD_RARITY_TOP := 0.550
 const CARD_RARITY_BOTTOM := 0.660
 const CARD_NAMEPLATE_TOP := 0.670
-const CARD_NAMEPLATE_BOTTOM := 0.765
+## R843h：详情也不再写效果，卡名在稀有度下沿至属性栏上沿整块居中。
+const CARD_NAMEPLATE_BOTTOM := 0.845
 const CARD_NAMEPLATE_X0 := 0.06
 const CARD_NAMEPLATE_X1 := 0.94
-## 正文 / 属性栏的分界与属性栏下沿。属性栏加高，为整行统一字号留出稳定空间。
+## 卡名区 / 属性栏的分界与属性栏下沿。R843h 起详情卡名独占至 CARD_BODY_BOTTOM。
 const CARD_BODY_BOTTOM := 0.845
 const CARD_STATS_BOTTOM := 0.972
 ## 战斗手牌 / 选卡不画正文：卡图同样增高，稀有度与卡名分别独占一行。

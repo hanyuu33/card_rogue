@@ -1093,7 +1093,9 @@ func _test_r569_pool_forms() -> void:
 	# 源码锁：超框缩字号（用户口径「文字应该增加自适应大小，超框需要缩小」）
 	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 	check(cf.find("func fit_text_lines") >= 0, "R569 源码锁：卡面有「超框缩字号」公共口")
-	check(cf.find("fit_text_lines(font, eff") >= 0, "R569 源码锁：卡面效果文字走自适应")
+	check(cf.find("fit_text_lines(font, eff") < 0
+			and cf.find("name_layout(_display_name(card)") >= 0,
+			"R569/R843h 源码锁：卡面效果正文已移除，卡名走自适应")
 	var ao := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
 	check(ao.find("CardFace.fit_text_lines") >= 0,
 			"R569 源码锁：组合页上/下效果框也走自适应（犀牛那三行不再顶出框底）")

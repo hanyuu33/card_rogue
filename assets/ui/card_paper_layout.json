@@ -1,5 +1,5 @@
 {
-  "note": "R843g 分区坐标（归一化）；统一六职业内窗，回收重复卡种行，卡图顶部优先裁切",
+  "note": "R843h 分区坐标（归一化）；详情与缩略图都只写卡名，旧姓名牌背景内框已清除",
   "art_ratio": 0.540,
   "art_window": {
     "x0": 0.035,
@@ -22,10 +22,13 @@
     "x0": 0.06,
     "y0": 0.670,
     "x1": 0.94,
-    "y1": 0.765,
-    "preferred_font_factor": 1.28
+    "y1": 0.845,
+    "background_frame": "removed_from_card_paper_png",
+    "preferred_font_mode": "largest_fitting_single_line",
+    "vertical_anchor": "center_using_real_font_metrics"
   },
   "detail_kind_row": "removed; non-unit kinds remain in the localized bottom black bar",
+  "detail_effect_row": "removed; full effects remain in detail overlays and reward detail strips",
   "body_bottom": 0.845,
   "stats_bottom": 0.972,
   "stats_font_mode": "shared_per_card_row",

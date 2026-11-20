@@ -77,7 +77,7 @@ func _run() -> void:
 		var r := Rect2(50 + i * 150, 260, 77, 92)
 		sheet.items.append({"card": samples[i], "rect": r,
 				"board": true, "fixed_badges": true})
-	sheet.labels.append({"at": Vector2(30, 420), "text": "详情 198×238 · 大卡名 / 效果正文（不重复卡种）"})
+	sheet.labels.append({"at": Vector2(30, 420), "text": "详情 198×238 · 无边框大卡名（不写效果正文）"})
 	var detail_samples: Array[CardData] = [samples[0], samples[1], samples[2], samples[5]]
 	for i in detail_samples.size():
 		var r := Rect2(60 + i * 275, 450, 198, 238)
@@ -123,7 +123,7 @@ func _run() -> void:
 		quit(1)
 		return
 
-	# R843g：四语详情补验长卡名、效果正文与非单位底部卡种译文。
+	# R843h：四语详情补验最大完整卡名、纵向居中与非单位底部卡种译文。
 	lang_sheet.queue_free()
 	var detail_sheet := Sheet.new()
 	detail_sheet.face = UiTheme.font()

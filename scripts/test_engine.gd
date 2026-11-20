@@ -48219,15 +48219,26 @@ func _init() -> void:
 	var r843_detail_card := CardRepo.load_json().get_card(9040)
 	var r843_detail := CardFace.text_zone_layout(r843_detail_card, r843_detail_rect,
 			UiTheme.font(), r281_font, 3.0)
-	check(bool(r843_detail["ok"]) and not bool(r843_detail["has_meta"]),
-			"R843g 详情：盟友卡种不再重复占用卡名与正文之间的一整行")
-	var r843_name_ink_bottom: float = float(r843_detail["base_name"]) + r281_font.get_descent(
-			int(r843_detail["name_sz"]))
-	var r843_effect_ink_top: float = float(r843_detail["eff_base0"]) - UiTheme.font().get_ascent(
-			int(r843_detail["eff_sz"]))
-	check(r843_effect_ink_top >= r843_name_ink_bottom - 0.5,
-			"R843g 详情：卡名 descent 与正文首行 ascent 不重叠（%.2f / %.2f）"
-			% [r843_name_ink_bottom, r843_effect_ink_top])
+	check(bool(r843_detail["ok"]) and not bool(r843_detail["has_meta"])
+			and str(r843_detail["eff_text"]).is_empty()
+			and (r843_detail["eff_lines"] as Array).is_empty()
+			and int(r843_detail["eff_n"]) == 0,
+			"R843h 详情：只写卡名，卡种行与效果正文都不再占卡面")
+	var r843_name_ascent: float = r281_font.get_ascent(int(r843_detail["name_sz"]))
+	var r843_name_descent: float = r281_font.get_descent(int(r843_detail["name_sz"]))
+	var r843_name_ink_center: float = float(r843_detail["base_name"]) + (
+			r843_name_descent - r843_name_ascent) * 0.5
+	var r843_name_zone_center: float = (float(r843_detail["top"])
+			+ float(r843_detail["bottom"])) * 0.5
+	check(absf(r843_name_ink_center - r843_name_zone_center) <= 0.6
+			and bool((r843_detail["ninfo"] as Dictionary)["fits"]),
+			"R843h 详情：卡名按真实墨迹在整个名称区纵向居中且不溢出")
+	var r843_old_preferred: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT
+			* minf(r843_detail_rect.size.y / CardFace.CARD_H_DESIGN,
+			UiTheme.CARD_TEXT_SCALE_CAP) * 1.28))
+	check(int(r843_detail["name_sz"]) > r843_old_preferred,
+			"R843h 详情：回收正文空间后短卡名确实放大（%d > %d）"
+			% [int(r843_detail["name_sz"]), r843_old_preferred])
 	for r843_kind in ["forest", "shadow", "mech", "bard", "common", "enemy"]:
 		for r843_compact in [false, true]:
 			var r843_tex := UiAssets.art_rarity_frame(r843_kind, r843_compact)
@@ -48272,6 +48283,16 @@ func _init() -> void:
 			"R843g 卡图：增高窗口采用顶部优先裁切，不再居中削掉耳尖 / 头顶")
 	check(r281_cf_src.contains("var kind_text: String = GameI18n.source(card.kind)"),
 			"R843g 底部黑框：非单位卡种必须走多语译文，不留中文原文")
+	check(not r281_cf_src.contains("fallback_plate")
+			and not r281_cf_src.contains("for i in eff_n"),
+			"R843h 源码：详情效果绘制循环与带框姓名牌回退均已移除")
+	var r843_paper := UiAssets.card_paper().get_image()
+	var r843_frame_dark := 0
+	for r843_x in range(40, 600, 4):
+		if r843_paper.get_pixel(r843_x, 552).get_luminance() < 0.55:
+			r843_frame_dark += 1
+	check(r843_frame_dark == 0,
+			"R843h 纸底：旧姓名牌横向框线已清除，不再给大卡名套背景框")
 	var r843_old_lang := GameSettings.language
 	for r843_lang in ["en", "ja", "es", "zh"]:
 		GameSettings.language = r843_lang
@@ -63936,9 +63957,9 @@ func _init() -> void:
 
 			and r702_dos.find("CardText.naturalize_detail(_card)") >= 0
 
-			and r702_cfs.find("CardText.naturalize_card(card") >= 0,
+			and r702_cfs.find("CardText.naturalize_card(card") < 0,
 
-			"R702 源码：卡组浏览 / 详情浮层 / 卡面正文同口径")
+			"R702/R843h 源码：卡组浏览与详情浮层同口径；卡面不再绘制正文")
 
 	# R771（店长报「暗影刺客不少卡牌弹出的详细和卡不匹配」）：详情页必须给**全文**。
 	# 卡面格子小 → 继续藏补注；但「点开看全文」的四处（选卡详情 / 卡组浏览 / 图鉴 / 战斗左栏）
@@ -63967,11 +63988,11 @@ func _init() -> void:
 
 			"R771 源码：图鉴右栏 / 选卡详情 / 战斗左栏都走详情口")
 
-	# R703：卡面窄 → **不带**括号（多那几个字会挤掉末行），只写当前值
+	# R703 的卡面正文已被 R843h 移除；当前值与括号补注仍由详情口承担。
 
-	check_src(r702_cfs.find("CardText.HIDE_PARENS, false)") >= 0,
+	check_src(r702_cfs.find("CardText.HIDE_PARENS, false)") < 0,
 
-			"R703 源码：卡面用 with_note=false（只写当前值，括号留给左侧详细面板）")
+			"R703/R843h 源码：卡面正文已移除，数值与括号留给详细面板")
 
 	# 战斗中击杀 → `growth_damage` 必须同步（只抬 value 的话，面板还印 22）
 
