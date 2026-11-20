@@ -861,8 +861,9 @@ static func relic_badge_text(id: int, clock_left := -1) -> String:
 	##     （`relic_display_name` 那对括号只在「缺图、退回文字」时才看得见）。
 	##   * 缺陷时钟（6084，R832）→ 本场**还差几张牌**触发。它的计数在引擎里，
 	##     由战斗界面当第二参 `clock_left` 递进来；没有战斗上下文（图鉴 / 商店 / 奖励页）
-	##     时是默认的 -1 → 不画。本场已触发过 → 「0」照画（跟火柴同口径：得让玩家
-	##     看见这一场已经用光了）。
+	##     时是默认的 -1 → 不画。
+	##     ⚠️ R836（用户口径）：**触发之后本场就不再画角标**，直到下一场重新数 ——
+	##        画「0」会被读成「还差 0 张、马上再来一次」，反而骗人。
 	##   * 其余道具 → 没有可数的东西。
 	if not relics.has(id) or is_relic_spent(id):
 		return ""
@@ -882,7 +883,8 @@ static func relic_badge_text(id: int, clock_left := -1) -> String:
 		BASIN_RELIC_ID:
 			return str(basin_charge) if basin_charge > 0 else ""
 		DEFECT_CLOCK_BADGE_ID:
-			return str(clock_left) if clock_left >= 0 else ""
+			# R836：0 也**不画**（本场已经触发过，这一场不会再来了）。
+			return str(clock_left) if clock_left > 0 else ""
 	return ""
 
 

@@ -814,6 +814,16 @@ var _hp_pending: Dictionary = {} # 尚未在「命中演出」中体现的待扣
 								 #   单位卡面 / HP 横幅 把显示数字冻结在「实际值 + 未演出伤害之和」，
 								 #   等对应的 hit / hp_hit 定时特效触发时才移除这一笔，数字才往下掉。
 var _bursts: Array = []         # {pos, start, dur, col, big}                 打击爆点（扩散环+火花）
+## R836：缺陷时钟「时针转动」演出 —— 棋盘正中的一只大钟面，指针转一整圈后卡住抖两下。
+## 时长 1.15s：引擎侧 `end_turn(true)` 是**同步**跑完的（丢手牌 + 起新回合同一帧），
+## 这段动画只负责把「时间被跳过去」演出来，不排队、不延迟、不碰时序。
+## `{pos, sc, start, dur}` —— 与 `_bursts` 同一套 `_fx_pos()` 取位（跟棋盘滚动补正）。
+const CLOCK_FX_MS := 1150
+const CLOCK_FX_D := 240.0       # 表盘直径（棋盘坐标，随棋盘缩放）
+## 素材里轴座相对纹理中心偏 (+6, +9)（512 空间，程序测的质心）——
+## 绘制时整张表盘反向平移这点偏移，指针从**轴座**出发而不是从几何中心出发。
+const CLOCK_FACE_PIVOT := Vector2(6.0, 9.0) / 512.0
+var _clock_fx := {}
 ## R430：流星雨（9083）逐颗坠落 —— 引擎一批同步发 N 条 `meteor`，节奏只能在演出侧排：
 ## 按 `idx` 把落地时刻依次错开，每颗从屏幕上方飞 `METEOR_FLY_MS`，
 ## **落地那一帧**才出爆点 / 飘字 / 掉血（`_apply_delayed` 的 `meteor_land`）。
@@ -9924,6 +9934,7 @@ func _draw() -> void:
 	_draw_laser_aim()        # R722：激光巨炮的两列瞄准提示线（整列警告，压在准星同层）
 	_draw_highlights()
 	_draw_bursts()
+	_draw_clock_fx()     # R836：缺陷时钟的时针转动（压在爆点之上）
 	_draw_trap_fx()      # R669：陷阱触发素材图（压在卡牌之上、通用光带之下）
 	_draw_battle_fx()    # R670：通用特效素材图（断链 / 技能通用 / B 档）
 	_draw_primal_fx()
@@ -14946,6 +14957,8 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_shake(6.0, 320)
 			_bursts.append({"pos": Vector2(GRID_X + GRID_W * 0.5, GRID_Y + GRID_H * 0.5),
 					"start": n, "dur": 780, "col": Color("e8d08a"), "big": true})
+			# R836：棋盘正中浮起一只大钟面，指针转一整圈（用户要求「时针转动的小动画」）
+			_start_clock_fx()
 			_say("⏳ 缺陷时钟：本场第 %d 张牌 → 回合结束，立即开始新的我方回合" % int(data.get("at", 0)))
 		"boss_phase":
 			# R356 启示者转阶段 —— 用户口径「转换阶段需要有明确的动画提示，并重新弹出
@@ -16148,6 +16161,93 @@ func _draw_bursts() -> void:
 			var dir := Vector2(cos(ang), sin(ang))
 			var lcol := Color(col.r, col.g, col.b, 0.9 * (1.0 - t))
 			draw_line(pos + dir * near, pos + dir * far, lcol, 2.0 if big else 1.5)
+
+
+func _start_clock_fx() -> void:
+	## R836：缺陷时钟的「时针转动」演出起点（用户口径：战斗区域正中）。
+	## ⚠️ 与回合结算的关系写在这里，免得以后有人来「补齐时序」：
+	##    引擎 `end_turn(true)` 是同步完成的（弃手牌 / 超负荷 / 起新回合都在同一帧里跑完），
+	##    这一段动画**只是把它演出来**。不延迟换牌、不排队等动画 ——
+	##    玩家看到的就是「钟开始转的那一下，手牌已经换了」，正是「同步进行」的意思。
+	_clock_fx = {"start": _now(), "dur": CLOCK_FX_MS,
+			"pos": Vector2(GRID_X + GRID_W * 0.5, GRID_Y + GRID_H * 0.5),
+			"sc": _grid_scroll}
+
+
+func _draw_clock_fx() -> void:
+	## R836：缺陷时钟的时针转动。三段节奏：
+	##   0.00~0.16  钟面弹入（0.84 → 1.0）+ 金色光晕环
+	##   0.16~0.74  指针顺时针转**整整一圈**（ease-out，末段越来越慢）
+	##   0.74~1.00  卡住抖两下（坏掉的钟）+ 整体淡出
+	## 指针用代码画：连续旋转贴图会有像素偏移与描边锯齿，角度也对不上表盘刻度。
+	if _clock_fx.is_empty():
+		return
+	var t := float(_now() - int(_clock_fx.get("start", 0))) / float(int(_clock_fx.get("dur", 1)))
+	if t < 0.0 or t >= 1.0:
+		return
+	var c := _fx_pos(_clock_fx)
+	# 弹入 + 收尾淡出
+	var s := 1.0
+	if t < 0.16:
+		var p := t / 0.16
+		s = lerpf(0.84, 1.0, 1.0 - pow(1.0 - p, 3.0))
+	var a := 1.0
+	# 淡出压到 92% 才开始：抖动那两下（74%~100%）得在还看得清的时候发生
+	if t > 0.92:
+		a = maxf(0.0, 1.0 - (t - 0.92) / 0.08)
+	var d := CLOCK_FX_D * s
+	# ① 外光晕：三层金色软环，往外越来越淡（把钟面从棋盘底里托出来）
+	for i in 3:
+		var gr := Color("e8d08a")
+		gr.a = 0.20 * a * (1.0 - float(i) * 0.3)
+		draw_arc(c, d * (0.5 + 0.040 * float(i + 1)), 0.0, TAU, 48, gr, 5.5 - float(i) * 1.6)
+	# ② 表盘（缺图 → 程序化）
+	var tex := UiAssets.clock_face()
+	if tex != null:
+		var fc := c - CLOCK_FACE_PIVOT * d      # 轴座落在 c：整张表盘反向平移
+		draw_texture_rect(tex, Rect2(fc - Vector2(d, d) * 0.5, Vector2(d, d)), false,
+				Color(1.0, 1.0, 1.0, a))
+	else:
+		_draw_clock_face_fallback(c, d, a)
+	# ③ 指针：从 12 点位置转一整圈回到 12 点，末段卡顿抖两下
+	var spin := clampf((t - 0.16) / 0.58, 0.0, 1.0)
+	var ang := -PI * 0.5 + TAU * (1.0 - pow(1.0 - spin, 2.2))
+	if spin >= 1.0:
+		var jt := clampf((t - 0.74) / 0.26, 0.0, 1.0)
+		ang += sin(jt * 34.0) * 0.085 * (1.0 - jt)
+	var dir := Vector2(cos(ang), sin(ang))
+	# 时针比例（用户口径「时针」）：短而粗，长度落在刻度内圈之内，不压刻度
+	var tip := c + dir * (d * 0.29)
+	var tail := c - dir * (d * 0.08)
+	var hb := Color(0.16, 0.13, 0.09, a)
+	var hg := Color(0.85, 0.66, 0.25, a)
+	# 先深褐描边再压金芯 —— 与卡面同一套「细黑描边 + 平涂」
+	draw_line(tail, tip, hb, maxf(1.0, 8.0 * s), true)
+	draw_line(c - dir * (d * 0.05), tip - dir * 1.5, hg, maxf(1.0, 4.6 * s), true)
+	# 针尖小菱形（时针的读法）：先深褐外廓、再金芯，才有描边感
+	var side := Vector2(-dir.y, dir.x)
+	draw_colored_polygon(PackedVector2Array([
+			tip + dir * (6.0 * s), tip + side * (4.4 * s),
+			tip - dir * (3.6 * s), tip - side * (4.4 * s)]), hb)
+	draw_colored_polygon(PackedVector2Array([
+			tip + dir * (4.0 * s), tip + side * (2.5 * s),
+			tip - dir * (2.2 * s), tip - side * (2.5 * s)]), hg)
+	# ④ 中心轴帽
+	draw_circle(c, maxf(1.0, 6.4 * s), Color(0.16, 0.13, 0.09, a))
+	draw_circle(c, maxf(0.5, 4.2 * s), Color(0.94, 0.90, 0.82, a))
+
+
+func _draw_clock_face_fallback(c: Vector2, d: float, a: float) -> void:
+	## R836：钟面素材缺失时的程序化表盘（暗底 + 金环 + 12 个刻度）。
+	## 项目纪律：特效缺图必须能退化，不能黑屏也不能刷报错。
+	draw_circle(c, d * 0.5, Color(0.13, 0.11, 0.09, 0.88 * a))
+	draw_arc(c, d * 0.5, 0.0, TAU, 48, Color(0.85, 0.66, 0.25, a), 3.0)
+	draw_circle(c, d * 0.42, Color(0.94, 0.90, 0.82, 0.92 * a))
+	for i in 12:
+		var ta := -PI * 0.5 + TAU * float(i) / 12.0
+		var tv := Vector2(cos(ta), sin(ta))
+		draw_line(c + tv * (d * 0.33), c + tv * (d * 0.39),
+				Color(0.16, 0.13, 0.09, a), 3.2 if i % 3 == 0 else 2.0)
 
 
 func _draw_trap_fx() -> void:

@@ -90,6 +90,14 @@ func _initialize() -> void:
 						{"row1": [[8001, 0, 0]], "row2": [], "row3": []})
 				RunState.shop_mark_revisit(RunState.current_node_id),
 			_check_r825_map_context],
+		# R836（用户口径）：缺陷时钟触发时战斗区正中要播「时针转动」，且触发之后
+		#   本场不再显示计数。纯绘制 + 一个 fx 字典，只有真场景能验位置与入口。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r836_clock_fx],
 		["res://scenes/battle.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -6534,3 +6542,51 @@ func _check_r825_map_context(scene: Variant) -> void:
 			_smoke_fail("R825 同店返回：不许推进地图或作废待领奖励")
 			return
 	print("SMOKE OK R825 地图：奖励 / 同店双返回按钮、codex 纹理、奖励开关与同店无推进守卫")
+
+
+func _check_r836_clock_fx(scene) -> void:
+	## R836（用户口径）：缺陷时钟触发 → 战斗区正中播「时针转动」的小动画；
+	## 角标在**触发之后本场不再显示**（下一场重新数）。
+	## 断言四件事：① 素材真的在（缺图会静默退化成程序化表盘，出货不能靠兜底）
+	## ② fx 起在棋盘正中、时长对 ③ 起始入口只在触发分支里被调 ④ 角标口径。
+	if UiAssets.clock_face() == null:
+		_smoke_fail("R836 钟面：assets/fx/clock_face.png 没被导入（会退化成程序化表盘）")
+		return
+	var clk_ids: Array[int] = [6084]      # ⚠️ 必须是 Array[int]：self_relics 有类型
+	RunState.relics = clk_ids
+	RunState.spent_relics = []
+	scene.engine.self_relics = clk_ids
+	scene._clock_fx = {}
+	scene._start_clock_fx()
+	if scene._clock_fx.is_empty():
+		_smoke_fail("R836 时针动画：触发后没有起 fx")
+		return
+	var cp: Vector2 = scene._clock_fx["pos"]
+	var want := Vector2(scene.GRID_X + scene.GRID_W * 0.5, scene.GRID_Y + scene.GRID_H * 0.5)
+	if cp.distance_to(want) > 0.5:
+		_smoke_fail("R836 时针动画：没画在战斗区正中（%s vs %s）" % [str(cp), str(want)])
+		return
+	if int(scene._clock_fx["dur"]) != 1150:
+		_smoke_fail("R836 时针动画：时长漂移（%d）" % int(scene._clock_fx["dur"]))
+		return
+	# 角标口径：>0 才画；0（本场已触发）/ -1（没有战斗上下文）都不画
+	if RunState.relic_badge_text(6084, 0) != "":
+		_smoke_fail("R836 角标：触发后本场不该再显示计数")
+		return
+	if RunState.relic_badge_text(6084) != "":
+		_smoke_fail("R836 角标：无战斗上下文时不该画")
+		return
+	if RunState.relic_badge_text(6084, 7) != "7":
+		_smoke_fail("R836 角标：未触发时应画「7」（实际「%s」）"
+				% RunState.relic_badge_text(6084, 7))
+		return
+	# 入口守卫：绘制与起始都必须接在这个文件里（别被后来的改动悄悄摘掉）
+	var src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	if not src.is_empty():
+		if not src.contains("\t_draw_clock_fx()"):
+			_smoke_fail("R836 守卫：`_draw()` 里没有接 `_draw_clock_fx()`")
+			return
+		if not src.contains("\t\t\t_start_clock_fx()"):
+			_smoke_fail("R836 守卫：defect_clock 分支没有起动画")
+			return
+	print("SMOKE OK R836 缺陷时钟：时针动画起在棋盘正中 / 素材在位 / 角标触发后不画")

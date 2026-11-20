@@ -81377,8 +81377,9 @@ func _test_r832() -> void:
 				% [r832_t0, r832_e.turn_number, r832_e.opp_turns])
 	check(r832_e.defect_clock_left() == 0,
 			"R832 缺陷时钟：触发后还差 0 张（实际 %d）" % r832_e.defect_clock_left())
-	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "0",
-			"R832 角标：触发后画「0」（本场用光）")
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "",
+			"R836 角标：触发后本场**不画**（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
 
 	# ⑤ 触发之后**计数就停住**（R832b，用户追问「是不是不再计数」）：
 	#    原先只是靠 `== 12` 去重，`_clock_plays` 会一路涨到 25 —— 谁把判据改成 `>=`
@@ -81402,8 +81403,9 @@ func _test_r832() -> void:
 	check(r832_e.turn_number == r832_t1 and r832_e.opp_turns == 0,
 			"R832 缺陷时钟：再打 6 张一次都不换回合（turn %d / opp %d）"
 				% [r832_e.turn_number, r832_e.opp_turns])
-	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "0",
-			"R832 角标：再打 6 张仍画「0」")
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "",
+			"R836 角标：再打 6 张仍然不画（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
 
 	# ⑥ 下一场（新引擎）→ 回到 12（每场复位是设计口径，不是漏清）
 	var r832_e2 := _new_engine([], 40, 40)
@@ -81411,6 +81413,9 @@ func _test_r832() -> void:
 	r832_e2._begin_turn(GameEngine.SIDE_SELF)
 	check(r832_e2.defect_clock_left() == 12,
 			"R832 缺陷时钟：下一场重新数到 12（实际 %d）" % r832_e2.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e2.defect_clock_left()) == "12",
+			"R836 角标：下一场重新出现（画「12」，实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e2.defect_clock_left()))
 
 	# ⑦ 没这件道具 → 不画（传了引擎值也不画）
 	RunState.relics = []

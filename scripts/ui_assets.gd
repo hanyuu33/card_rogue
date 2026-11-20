@@ -220,6 +220,21 @@ static func trap_fx_path(id: int) -> String:
 	return "res://assets/fx/trap_fx_%d.png" % id
 
 
+static func clock_face_path() -> String:
+	## R836：缺陷时钟「时针转动」演出用的**大钟面**（无指针 —— 指针由 battle_scene 画，
+	## 要连续旋转，贴图转会有像素偏移与描边锯齿）。
+	## 与 UI 贴图分目录：它是战斗特效、不是界面元件（R669 陷阱特效的先例）。
+	## 缺图返回 null → `_draw_clock_face_fallback()` 画程序化表盘，不空白不报错。
+	return "res://assets/fx/clock_face.png"
+
+
+static func clock_face() -> Texture2D:
+	## R836：钟面**唯一取图口**；`_load()` 兼容已导入与刚落盘未导入的 PNG。
+	if not _cache.has("clock_face"):
+		_cache["clock_face"] = _load(clock_face_path())
+	return _cache["clock_face"]
+
+
 static func trap_fx(id: int) -> Texture2D:
 	## R669：陷阱触发特效**唯一取图口**；`_load()` 兼容已导入与刚落盘未导入的 PNG。
 	var key := "trap_fx_%d" % id
