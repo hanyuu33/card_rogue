@@ -612,16 +612,12 @@ const PEACH_MAX_HP_GAIN:= 1     # 黄桃罐头：每次战斗结束最大生命 
 const DUCK_EYE_RELIC_ID:= 6009  # 鸭之眼：己方技能伤害 +X（X = 该技能卡的原始费用）
 const EARRING_RELIC_ID:= 6015
 const EARRING_AUTOPLAY_MAX:= 20
-# R824 鸭子闹钟（6085，二层起始池 · 鸭绅士）：**第 2 个我方回合** +1 费 + 多抽 1 张；
-#   **第 5 个我方回合起**技能伤害 +1。
-# 两条都只读 `turn_number`（本场战斗内计数），**不落存档、不加新字段** ——
-# 读档续战由引擎快照里已有的 turn_number 还原，与鹿首标本同口径。
+# R844 鸭子闹钟（6085，二层起始池 · 鸭绅士）：原第 2 回合加费抽牌、
+# 第 5 回合起技能 +1 全部删除；只在第 5 个我方回合对全体敌方单位各造成 33 点伤害。
+# 只读本场 `turn_number`，不加存档字段；恰好第 5 回合触发一次，第 6 回合不会续发。
 const DUCK_ALARM_RELIC_ID:= 6085
-const DUCK_ALARM_TURN:= 2
-const DUCK_ALARM_ENERGY:= 1
-const DUCK_ALARM_DRAW:= 1
-const DUCK_ALARM_SPELL_FROM:= 5
-const DUCK_ALARM_SPELL:= 1
+const DUCK_ALARM_TURN:= 5
+const DUCK_ALARM_DMG:= 33
 # R826 音乐盒（6086，二层起始池 · 卷卷）：每场战斗开始，把 MUSIC_BOX_DRAW 张随机音符
 #   加入**抽牌库**（不是手卡 —— 卡面写「加入卡组」）。
 # 音符卡（9277~9283）是吟游诗人职业的**特例**：class = 吟游诗人（隐藏职业）→ 不进
@@ -2781,17 +2777,6 @@ func _begin_turn(side: String) -> void :
 			state.energy += earring_energy
 			_log("鸭语耳环：本回合费用 +1")
 
-		# R824 鸭子闹钟（6085）：**第 2 个我方回合**发一次 —— +1 费、多抽 1 张。
-		# 费用与鸭翼 / 鸭语耳环同一条 `state.energy` 发放口；抽牌走 `extra_draw`
-		# （唯一抽牌口 `_draw_many`，所以必须在它之前加）。判据只看 `turn_number`。
-		if self_relics.has(DUCK_ALARM_RELIC_ID) and turn_number == DUCK_ALARM_TURN:
-			state.energy += DUCK_ALARM_ENERGY
-			extra_draw += DUCK_ALARM_DRAW
-			_log("鸭子闹钟：第 %d 回合，费用 +%d、多抽 %d 张"
-					% [DUCK_ALARM_TURN, DUCK_ALARM_ENERGY, DUCK_ALARM_DRAW])
-			action.emit("relic", {"id": DUCK_ALARM_RELIC_ID,
-					"text": "鸭子闹钟：第 %d 回合费用 +%d / 多抽 %d 张"
-							% [DUCK_ALARM_TURN, DUCK_ALARM_ENERGY, DUCK_ALARM_DRAW]})
 
 		# R810 新月耳饰（6081）：每 3 场战斗，**在该场第一回合**多给 1 点费用。
 		# 推进计数的口只有这里（`turn_number == 1` 每场只成立一次）——
@@ -2987,6 +2972,11 @@ func _begin_turn(side: String) -> void :
 		# 也保证回合头那条总日志之前场内已经稳定（被打死的不会在日志里还挂着）。
 		# ⚠️ 打完可能把战斗直接结束 → 立刻 `return`，别让后面的回合头日志写一场已结束的仗。
 		_sun_ring_tick()
+		if over:
+			return
+		# R844 鸭子闹钟：排在召唤 / 成长 / 战吼之后，这一刻在场的全体敌人都吃。
+		# 若 33 伤直接清场，和太阳指环一样立刻收尾，不再写一条已结束战斗的回合头。
+		_duck_alarm_tick()
 		if over:
 			return
 		_log("── 我方第 %d 回合：费用重置为 %d%s%s%s%s%s%s%s%s（共 %d），抽 %d 张" % [
@@ -7680,6 +7670,35 @@ func _wind_fairy_tick(side: String) -> void:
 	_log("风妖精：本回合第 %d 张牌 → 对所有敌人造成 %d 点伤害（%d 个目标）"
 			% [WIND_FAIRY_AT, WIND_FAIRY_DMG, hit])
 	action.emit("wind_fairy", {"dmg": WIND_FAIRY_DMG, "hits": hit, "cells": wf_cells})
+
+
+func _duck_alarm_tick() -> void:
+	## R844 鸭子闹钟（6085）：只在第 5 个我方回合触发一次，对全体敌方单位各 33 点伤害。
+	## 不走 `_spell_dmg()`：它不是技能，不吃技能加伤 / 快速符文；护盾、减伤与光环照常。
+	## 格子先排序，命中与死亡结算同太阳指环 / 风妖精；只打单位，不直击敌方 HP。
+	if not self_relics.has(DUCK_ALARM_RELIC_ID) or turn_number != DUCK_ALARM_TURN:
+		return
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var q: Placement = state.board[cell]
+		if q != null and q.owner == SIDE_OPPONENT and q.health > 0:
+			cells.append(cell)
+	if cells.is_empty():
+		_log("鸭子闹钟：第 5 回合，场上没有敌方单位，效果落空")
+		return
+	cells.sort()
+	var hits: Array[Vector2i] = []
+	for c: Vector2i in cells:
+		var q2: Placement = state.board.get(c, null)
+		if q2 == null or q2.health <= 0:
+			continue
+		_hit_unit(q2, DUCK_ALARM_DMG, "鸭子闹钟")
+		hits.append(c)
+	_destroy_dead()
+	_log("鸭子闹钟：第 5 回合，对 %d 名敌人各造成 %d 点伤害"
+			% [hits.size(), DUCK_ALARM_DMG])
+	action.emit("relic", {"id": DUCK_ALARM_RELIC_ID,
+			"text": "鸭子闹钟：全体敌人 -%d" % DUCK_ALARM_DMG})
 
 
 func _sun_ring_tick() -> int:
@@ -15411,10 +15430,6 @@ func _spell_dmg(side: String, base: int, card: CardData = null,
 	out += turn_spell_bonus
 	out += turn_dmg_bonus
 	out += deer_bonus   # R341 鹿首标本：每回合 +1（本场累计）
-	# R824 鸭子闹钟（6085）：第 5 个我方回合**起**技能伤害 +1（固定值，不是累计层数）。
-	# 与鹿首标本 / 骑士剑同属固定加成，会被后面的快速符文百分比一起放大。
-	if self_relics.has(DUCK_ALARM_RELIC_ID) and turn_number >= DUCK_ALARM_SPELL_FROM:
-		out += DUCK_ALARM_SPELL
 	# R383 骑士剑（6053）：本场第一次击杀之后，己方技能伤害 +1（固定值，只加一次）。
 	if _knight_sword_active():
 		out += KNIGHT_SWORD_SPELL

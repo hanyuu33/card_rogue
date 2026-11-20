@@ -274,7 +274,7 @@
     "6082": {"name": "Anillo solar", "desc": "Una vez por batalla, infliges 3 de daño a todas las unidades enemigas."},
     "6083": {"name": "Arpón de sirena", "desc": "Dentro del mismo turno, cada 3.ª vez que infliges daño a un enemigo, le infliges 4 de daño."},
     "6084": {"name": "Reloj defectuoso", "desc": "La 12.ª carta que juegas en cada combate termina tu turno actual y comienza de inmediato un nuevo turno tuyo (el turno enemigo no ocurre)."},
-    "6085": {"name": "Despertador de pato", "desc": "En el 2.º turno de cada combate, roba 1 carta y obtén 1 de Coste. A partir del 5.º turno, el daño de habilidad +1."},
+    "6085": {"name": "Despertador de pato", "desc": "En el 5.º turno de cada combate, inflige 33 de daño a todos los enemigos."},
     "6086": {"name": "Caja de música", "desc": "Al inicio de cada combate, añade 3 Notas aleatorias a tu pila de robo."},
     "6087": {"name": "Este es un Sombrero de Copa", "desc": "Tus Aliados y Estructuras obtienen «Muerte»: al ser destruidos, vuelven a tu pila de robo, cuestan 2 menos este combate y obtienen «dimensional»."},
     "6088": {"name": "Caja de joyas", "desc": "Al recoger: añade 1 carta épica aleatoria a tu mazo."},

@@ -74393,6 +74393,7 @@ func _init() -> void:
 	_test_r832()
 	_test_r833()
 	_test_r842()
+	_test_r844()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -81135,12 +81136,9 @@ func _test_r822() -> void:
 
 func _test_r824() -> void:
 
-	## R824（店长口径）：① 试玩版**改为也出鸭绅士**；② 新增二层鸭绅士道具「鸭子闹钟」6085 ——
-	## 每场战斗的第 2 回合抽 1 张卡并获得 1 点费用；第 5 回合起技能伤害 +1。
-	##
-	## 两条最容易写漏的：
-	##   · 6085 归鸭绅士之后，卷卷池必须**不含**它 —— 否则归属白分，两边都抽得到；
-	##   · 「第 5 回合起」是**从第 5 回合开始一直有效**，不是「只在第 5 回合」。
+	## R824：试玩版也出鸭绅士；新增二层鸭绅士道具「鸭子闹钟」6085。
+	## R844：6085 的旧双效果全部删除，改为第 5 回合对全体敌人各造成 33 点伤害。
+	## 这里继续守数据 / 池子 / 试玩可达性；新机制的完整时序由 `_test_r844()` 守。
 
 	var r824_repo := RelicRepo.load_json()
 
@@ -81156,21 +81154,17 @@ func _test_r824() -> void:
 
 			% [r824_rel.kind, r824_rel.source, r824_rel.tier])
 
-	check(r824_rel.desc.contains("第 2 回合") and r824_rel.desc.contains("第 5 回合")
+	check(r824_rel.desc == "每场战斗的第 5 回合，对所有敌人造成 33 点伤害。",
 
-			and r824_rel.desc.contains("技能伤害 +1"),
+			"R844 文案：第 5 回合 / 全体敌人 / 33 伤（%s）" % r824_rel.desc)
 
-			"R824 文案：写着第 2 回合 / 第 5 回合起技能 +1（%s）" % r824_rel.desc)
+	# 常量为唯一数值来源：5 / 33 与卡面一致，旧的 ENERGY / DRAW / SPELL 常量均删除。
 
-	# 常量为唯一数值来源：文案里的 2 / 5 / +1 与引擎常量必须一致
+	check(GameEngine.DUCK_ALARM_RELIC_ID == 6085 and GameEngine.DUCK_ALARM_TURN == 5
 
-	check(GameEngine.DUCK_ALARM_RELIC_ID == 6085 and GameEngine.DUCK_ALARM_TURN == 2
+			and GameEngine.DUCK_ALARM_DMG == 33,
 
-			and GameEngine.DUCK_ALARM_ENERGY == 1 and GameEngine.DUCK_ALARM_DRAW == 1
-
-			and GameEngine.DUCK_ALARM_SPELL_FROM == 5 and GameEngine.DUCK_ALARM_SPELL == 1,
-
-			"R824 常量：6085 / 第 2 回合 / +1 费 / 抽 1 / 第 5 回合起技能 +1")
+			"R844 常量：6085 / 第 5 回合 / 全体 33 伤")
 
 	# 图标（每个道具都必须有 relic_icon_<id>.png，缺一张 R577b 就红）
 
@@ -81220,117 +81214,7 @@ func _test_r824() -> void:
 
 	RunState.run_seed = r824_demo_backup
 
-	# ── ③ 引擎：第 1 回合不发，第 2 回合 +1 费 + 多抽 1 张，第 3 回合恢复 ──
-
-	var r824_eng := _new_engine(_ordered_deck(), 40, 40, -1, false)
-
-	r824_eng.self_relics = [6085]
-
-	r824_eng.start_game()
-
-	check(r824_eng.state.energy == FieldState.ENERGY_PER_TURN,
-
-			"R824 引擎：第 1 回合不多给费（实际 %d）" % r824_eng.state.energy)
-
-	check(r824_eng.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
-
-			"R824 引擎：第 1 回合不多抽（实际 %d）" % r824_eng.state.hand.size())
-
-	r824_eng.end_turn()
-
-	r824_eng.end_turn()
-
-	check(r824_eng.turn_number == 2,
-
-			"R824 引擎：两次 end_turn 后是我方第 2 回合（实际 %d）" % r824_eng.turn_number)
-
-	check(r824_eng.state.energy == FieldState.ENERGY_PER_TURN + 1,
-
-			"R824 引擎：第 2 回合费用 +1（%d + 1，实际 %d）"
-
-			% [FieldState.ENERGY_PER_TURN, r824_eng.state.energy])
-
-	check(r824_eng.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 1,
-
-			"R824 引擎：第 2 回合多抽 1 张（%d + 1，实际 %d）"
-
-			% [FieldState.HAND_DRAW_PER_TURN, r824_eng.state.hand.size()])
-
-	r824_eng.end_turn()
-
-	r824_eng.end_turn()
-
-	check(r824_eng.state.energy == FieldState.ENERGY_PER_TURN,
-
-			"R824 引擎：第 3 回合不再给费（实际 %d）" % r824_eng.state.energy)
-
-	check(r824_eng.state.hand.size() == FieldState.HAND_DRAW_PER_TURN,
-
-			"R824 引擎：第 3 回合不再多抽（实际 %d）" % r824_eng.state.hand.size())
-
-	# ── ④ 技能伤害：第 3 / 4 回合不加，第 5 回合起 +1 且一直有效 ──
-
-	check(r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
-
-			"R824 技能：第 3 回合仍是 10（实际 %d）"
-
-			% r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10))
-
-	r824_eng.end_turn()
-
-	r824_eng.end_turn()
-
-	check(r824_eng.turn_number == 4 and r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
-
-			"R824 技能：第 4 回合仍是 10（回合 %d）" % r824_eng.turn_number)
-
-	r824_eng.end_turn()
-
-	r824_eng.end_turn()
-
-	check(r824_eng.turn_number == 5,
-
-			"R824 技能：推进到我方第 5 回合（实际 %d）" % r824_eng.turn_number)
-
-	check(r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 11,
-
-			"R824 技能：第 5 回合起 +1（10 → 实际 %d）"
-
-			% r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10))
-
-	r824_eng.end_turn()
-
-	r824_eng.end_turn()
-
-	check(r824_eng.turn_number == 6 and r824_eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 11,
-
-			"R824 技能：第 6 回合仍然 +1（回合 %d）" % r824_eng.turn_number)
-
-	# 对照组：不拿鸭子闹钟 → 第 5 回合也是 10（加成只来自这件道具）
-
-	var r824_ctrl := _new_engine(_ordered_deck(), 40, 40, -1, false)
-
-	r824_ctrl.start_game()
-
-	for _r824_i in 4:
-
-		r824_ctrl.end_turn()
-
-		r824_ctrl.end_turn()
-
-	check(r824_ctrl.turn_number == 5
-
-			and r824_ctrl._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
-
-			"R824 技能：对照组第 5 回合仍是 10（回合 %d）" % r824_ctrl.turn_number)
-
-	# ── ⑤ 敌方侧不受影响（加成只给己方）──
-
-	check(r824_eng._spell_dmg(GameEngine.SIDE_OPPONENT, 10) == 10,
-
-			"R824 技能：敌方技能伤害不吃这件道具（实际 %d）"
-
-			% r824_eng._spell_dmg(GameEngine.SIDE_OPPONENT, 10))
+	# ── ③ 机制：R844 已删除旧双效果，完整时序 / 多目标 / 对照组见 `_test_r844()` ──
 
 func _test_r825() -> void:
 	## R825：战斗 / 奖励 / 商店共用存档的真实写盘 + 读盘，不只测 snapshot 字典。
@@ -82156,3 +82040,110 @@ func _test_r835() -> void:
 	RunState.map_cells = r835_saved_cells
 	RunState.current_node_id = r835_saved_cn
 	RunState.boss_beaten = r835_saved_boss
+
+
+func _test_r844() -> void:
+	## R844（店长口径）：鸭子闹钟 6085 原效果全部删除，改为每场战斗第 5 回合
+	## 对所有敌人造成 33 点伤害。这里锁：第 2 回合不再加费抽牌、第 5 回合只发一次、
+	## 第 6 回合不续发、技能不再 +1、多目标与己方不误伤、无道具对照不触发、致死清场。
+	var repo := CardRepo.load_json()
+	var eng := _new_engine(_ordered_deck(), 100, 100, -1, false)
+	eng.self_relics = [GameEngine.DUCK_ALARM_RELIC_ID]
+	eng.start_game()
+
+	# 两个敌方靶子 + 一个己方靶子； traits 清空，排除嘲讽 / 亡语 / 减伤干扰。
+	var pa := repo.get_card(1013).to_dict()
+	pa["traits"] = []
+	var pb := repo.get_card(1051).to_dict()
+	pb["traits"] = []
+	var pc := repo.get_card(8003).to_dict()
+	pc["traits"] = []
+	var foe_a: Placement = eng.state.place(CardData.from_dict(pa),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var foe_b: Placement = eng.state.place(CardData.from_dict(pb),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var friend: Placement = eng.state.place(CardData.from_dict(pc),
+			Vector2i(5, 0), GameEngine.SIDE_SELF)
+	check(foe_a != null and foe_b != null and friend != null,
+			"R844 布场：两个敌人与一个己方单位都上场")
+	foe_a.health = 100
+	foe_b.health = 100
+	friend.health = 100
+
+	# 第 2 回合：旧的 +1 费 / 多抽 1 张必须彻底消失，也不能提前造成伤害。
+	eng.end_turn()
+	eng.end_turn()
+	check(eng.turn_number == 2 and eng.state.energy == RunState.energy_per_turn(),
+			"R844 旧效果：第 2 回合不再加费（实际 %d）" % eng.state.energy)
+	check(eng.state.hand.size() == RunState.hand_draw_per_turn(),
+			"R844 旧效果：第 2 回合不再多抽（实际 %d 张）" % eng.state.hand.size())
+	check(foe_a.health == 100 and foe_b.health == 100 and friend.health == 100,
+			"R844 时序：第 2 回合没有提前敲响")
+
+	# 第 4 回合仍无伤害、无技能加成。
+	for _r844_i in 2:
+		eng.end_turn()
+		eng.end_turn()
+	check(eng.turn_number == 4 and foe_a.health == 100 and foe_b.health == 100,
+			"R844 时序：第 4 回合敌人仍未掉血")
+	check(eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R844 旧效果：第 4 回合技能仍为 10")
+
+	# 第 5 回合：两个敌人各 -33，己方不动，技能也不再加 1。
+	eng.end_turn()
+	eng.end_turn()
+	check(eng.turn_number == 5 and foe_a.health == 67 and foe_b.health == 67,
+			"R844 主效果：第 5 回合全体敌人各 33 伤（%d / %d）"
+			% [foe_a.health, foe_b.health])
+	check(friend.health == 100, "R844 主效果：己方单位不误伤")
+	check(eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R844 旧效果：第 5 回合技能不再 +1（实际 %d）"
+			% eng._spell_dmg(GameEngine.SIDE_SELF, 10))
+	check(eng.state.energy == RunState.energy_per_turn()
+			and eng.state.hand.size() == RunState.hand_draw_per_turn(),
+			"R844 主效果：第 5 回合只造成伤害，不附带费用或抽牌")
+
+	# 第 6 回合不续发，更不是「第 5 回合起每回合」。
+	eng.end_turn()
+	eng.end_turn()
+	check(eng.turn_number == 6 and foe_a.health == 67 and foe_b.health == 67,
+			"R844 次数：第 6 回合不再造成 33 伤（%d / %d）"
+			% [foe_a.health, foe_b.health])
+	check(eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R844 旧效果：第 6 回合也没有技能 +1")
+
+	# 无道具对照：同样推进到第 5 回合，靶子必须满血。
+	var ctrl := _new_engine([], 100, 100, -1, false)
+	ctrl.start_game()
+	var cp := repo.get_card(1013).to_dict()
+	cp["traits"] = []
+	var ctrl_foe: Placement = ctrl.state.place(CardData.from_dict(cp),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	ctrl_foe.health = 100
+	for _r844_j in 4:
+		ctrl.end_turn()
+		ctrl.end_turn()
+	check(ctrl.turn_number == 5 and ctrl_foe.health == 100,
+			"R844 对照：没有闹钟时第 5 回合不掉血")
+
+	# 33 血靶子会被打到 0，并由统一死亡收口移除；不会留一具 0 血单位在场上。
+	var lethal := _new_engine([], 100, 100, -1, false)
+	lethal.self_relics = [GameEngine.DUCK_ALARM_RELIC_ID]
+	lethal.start_game()
+	var lp := repo.get_card(1013).to_dict()
+	lp["traits"] = []
+	var lethal_foe: Placement = lethal.state.place(CardData.from_dict(lp),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	lethal_foe.health = 33
+	for _r844_k in 4:
+		lethal.end_turn()
+		lethal.end_turn()
+	check(lethal.turn_number == 5 and lethal_foe.health <= 0
+			and lethal.state.unit_at(Vector2i(1, 0)) == null,
+			"R844 死亡：33 伤致死会走统一清场")
+
+	# 源码锁：旧常量与旧日志不能留在引擎里，避免只改卡面而机制仍暗跑。
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(not src.contains("DUCK_ALARM_ENERGY") and not src.contains("DUCK_ALARM_DRAW")
+			and not src.contains("DUCK_ALARM_SPELL") and not src.contains("DUCK_ALARM_SPELL_FROM"),
+			"R844 源码锁：加费 / 抽牌 / 技能加伤的旧常量全部删除")
