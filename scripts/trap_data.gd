@@ -66,6 +66,15 @@ var direct_damage := 0
 ## 把它当成一件已布置的陷阱（同格不许再放），`_trigger_trap()` 又永远等不到人踩。
 ## 与 `bounce` / `blast` / `fill_hand` 同一条思路：一个工具只说明自己「怎么生效」。
 var block_turns := 0
+## R841：锤子 7018 —— 拖到**敌方单位**身上，使其中招后眩晕 N 个回合（1 = 下个回合不能行动）。
+## 与石头 7012 的 `direct_damage` 共用同一个落点口（`trap_drop_cells()` → `trap_target_cells()`），
+## 区别只在结算：那个走 `_hit_unit`，这个走 `_apply_stun`（眩晕的唯一入口，别另开一条）。
+## 刻意**不进** `is_usable()` —— 它要选目标，走拖放那条路，不是「轻点即结算」。
+var direct_stun := 0
+## R841：润滑油 7019 —— 选卡型里「选一张**手卡**，本场战斗内费用 -N」。
+## 只在 `pick_kind == "hand_down"` 时被读；落地走 `state.hand_cost_delta`
+## （手卡内减费的唯一口径：卡一旦离手就自动恢复原价，再抓回手里又生效）。
+var cost_down := 0
 ## R754：「不受随机获得影响」—— 石头只从事件「奇异雕像」的摧毁选项拿，
 ## 混进掉落 / 工具箱就会变成「打怪掉石头」，把事件的选择变成笑话。
 ## 只影响 `TrapRepo.random_traps()`；商店本来就不收没有售价的（见 `in_shop()`）。
@@ -114,5 +123,7 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.blast = int(d.get("blast", 0))
 	t.direct_damage = int(d.get("direct_damage", 0))
 	t.block_turns = int(d.get("block_turns", 0))
+	t.direct_stun = int(d.get("direct_stun", 0))
+	t.cost_down = int(d.get("cost_down", 0))
 	t.no_drop = bool(d.get("no_drop", false))
 	return t

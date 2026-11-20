@@ -70,6 +70,14 @@
   "7017": {
    "name": "Ajo",
    "desc": "Arrástrala a una casilla vacía del campo de batalla para colocarla. Esa casilla no se puede usar durante 3 de tus turnos: ninguna unidad puede entrar ni pasar por ella; después, la herramienta se consume."
+  },
+  "7018": {
+   "name": "Mazo",
+   "desc": "Arrástralo sobre una unidad enemiga para golpearla. El objetivo queda aturdido un turno (no puede actuar en su siguiente turno); después, la herramienta se consume."
+  },
+  "7019": {
+   "name": "Aceite lubricante",
+   "desc": "Tócala dos veces para usarla; no hace falta arrastrarla al campo de batalla. Elige una carta de tu mano: su coste se reduce en 3 durante el resto de este combate; después, la herramienta se consume."
   }
  }
 }

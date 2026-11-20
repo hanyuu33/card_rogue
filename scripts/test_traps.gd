@@ -60,7 +60,8 @@ func _init() -> void:
 	# R797：新增河豚 7015（**放置型**：踩到回弹一格 + 3 伤）→ 15 件
 	# R801：新增爆炸蘑菇 7016（**放置型**：踩到炸一圈 15 伤，不分敌我）→ 16 件
 	# R839：新增大蒜 7017（**放置型**：把一格封住 3 个我方回合）→ 17 件
-	check(repo.size() == 17, "traps.json 恰好 17 件工具（7 放置 + 1 直接伤害 + 9 使用型）")
+	# R841：新增锤子 7018（**直击型**：砸一个敌方单位眩晕 1 回合）/ 润滑油 7019（使用型，选手卡 -3 费）→ 19 件
+	check(repo.size() == 19, "traps.json 恰好 19 件工具（7 放置 + 2 直击 + 10 使用型）")
 	var bomb: TrapData = repo.get_trap(7001)
 	var frost: TrapData = repo.get_trap(7002)
 	var poison: TrapData = repo.get_trap(7003)
@@ -90,8 +91,8 @@ func _init() -> void:
 	check(bbq != null and bbq.trap_name == "烤肉" and bbq.heal_pct == 25
 			and bbq.is_usable() and bbq.rest_only and bbq.price == 0,
 			"烤肉：回复 25% 最大生命 / 使用型 / rest_only（非卖品）")
-	check(repo.random_traps().size() == 15 and repo.get_trap(7007) != null,
-			"烤肉：`random_traps()` 把它排除（15 件可随机），全量仍是 17 件")
+	check(repo.random_traps().size() == 17 and repo.get_trap(7007) != null,
+			"烤肉：`random_traps()` 把它排除（17 件可随机），全量仍是 19 件")
 	# R752：野性图腾售价按店长口径 45 → 30；R797 全体 -5 → 25
 	check(repo.get_trap(7008).price == 25, "野性图腾：商店售价 25")
 	# R752：三件新工具 —— 都是使用型、都没有售价（= 不进商店）
@@ -112,9 +113,9 @@ func _init() -> void:
 	var shop_ids: Array[int] = []
 	for sp: TrapData in shop_pool:
 		shop_ids.append(int(sp.id))
-	check(shop_pool.size() == 12 and not shop_ids.has(7007)
+	check(shop_pool.size() == 14 and not shop_ids.has(7007)
 			and not shop_ids.has(7009) and not shop_ids.has(7010) and not shop_ids.has(7011),
-			"`shop_traps()` = 12 件有售价的（烤肉与三件非卖品都被排除；R796/R797/R801/R839 新工具都有售价）")
+			"`shop_traps()` = 14 件有售价的（烤肉与三件非卖品都被排除；R796/R797/R801/R839/R841 新工具都有售价）")
 	check(shop_ids.has(7008), "野性图腾售价 25 → 仍在商店货架上")
 	# R754 石头 7012：事件「奇异雕像」的摧毁选项给的，**直接伤害型**
 	var stone: TrapData = repo.get_trap(7012)
@@ -170,10 +171,16 @@ func _init() -> void:
 		for tid in ["7001", "7002", "7003", "7004", "7015", "7016", "7017"]:
 			if not str(raw_rows.get(tid, "")).contains("拖到战场空格上放置"):
 				op_bad += "%s 缺拖放说明 " % tid
+		# R841：**直击型**（石头 7012 / 锤子 7018）也走拖放，但落点是敌方单位、不是空格 ——
+		# 措辞必须与放置型分开判：塞进上面那一组会逼文案写成「拖到战场空格上放置」，
+		# 而那是错的引导（玩家拖到空格砸不出东西）。
+		for tid in ["7012", "7018"]:
+			if not str(raw_rows.get(tid, "")).contains("拖到敌方单位身上"):
+				op_bad += "%s 缺直击拖放说明 " % tid
 		# R752：交互改成「点两下」（第一下弹出「使用」，第二下才结算），
 		# 所以使用型工具的说明也统一写成「轻点两下即可使用」。
 		for tid in ["7005", "7006", "7007", "7008", "7009", "7010", "7011",
-				"7013", "7014"]:
+				"7013", "7014", "7019"]:
 			var d := str(raw_rows.get(tid, ""))
 			if not d.contains("轻点两下即可使用") or not d.contains("无需拖到战场格子上"):
 				op_bad += "%s 缺轻点说明 " % tid
@@ -463,6 +470,71 @@ func _init() -> void:
 	check(int(e18.state.sealed_cells.get(Vector2i(4, 2), 0)) == 2,
 			"大蒜：读档后剩余回合原样恢复（3 → 2）")
 	check(e18.state.is_cell_sealed(Vector2i(4, 2)), "大蒜：读档后该格仍然不可使用")
+
+	# ---- ⑥g R841：锤子 7018（直击眩晕）/ 润滑油 7019（选手卡减费）----
+	var ham: TrapData = repo.get_trap(7018)
+	check(ham != null and ham.trap_name == "锤子" and ham.direct_stun == 1
+			and ham.price == 40 and not ham.is_usable() and not ham.no_drop,
+			"锤子 7018：直击眩晕 1 回合 / 40 金 / 不是使用型（要选目标，走拖放）")
+	check(shop_ids.has(7018) and drop_ids.has(7018),
+			"锤子 7018：既进商店货架、也进随机掉落池")
+	var e19 := _engine()
+	var foe19: Placement = _unit(1011, 40, GameEngine.SIDE_OPPONENT)
+	e19.state.board[Vector2i(3, 1)] = foe19
+	var hp19 := foe19.health
+	check(e19.trap_drop_cells(7018).has(Vector2i(3, 1)),
+			"锤子：落点 = 敌方单位格（与石头 7012 同一个口）")
+	check(not e19.trap_drop_cells(7018).has(Vector2i(0, 0)),
+			"锤子：空格不是落点（照抄放置型的话会高亮一片空格）")
+	check(e19.use_tool_on_unit(7018, Vector2i(3, 1)), "锤子：砸中目标返回 true")
+	check(foe19.health == hp19, "锤子：只眩晕、不掉血（仍是 %d）" % foe19.health)
+	check(foe19.stun_left == 1 and foe19.cannot_act_next_turn(),
+			"锤子：目标眩晕（stun_left=1 → 下回合不能行动）")
+	check(not e19.use_tool_on_unit(7018, Vector2i(0, 0)),
+			"锤子：砸空格无效（不该消耗一个消耗品）")
+	check(e19.state.unit_at(Vector2i(3, 1)) == foe19,
+			"锤子：把敌方单位眩晕后它仍在场上（不像石头那样扣血致死）")
+
+	var oil: TrapData = repo.get_trap(7019)
+	check(oil != null and oil.trap_name == "润滑油" and oil.pick_kind == "hand_down"
+			and oil.cost_down == 3 and oil.price == 30 and oil.is_usable(),
+			"润滑油 7019：pick_kind=hand_down / 本场 -3 费 / 30 金 / 使用型")
+	check(shop_ids.has(7019) and drop_ids.has(7019),
+			"润滑油 7019：既进商店货架、也进随机掉落池")
+	var e20 := _engine()
+	var oil_card := CardData.new()
+	oil_card.id = 9006
+	oil_card.card_name = "上油测试卡"
+	oil_card.cost = 5
+	e20.state.hand = [oil_card]
+	var cost20 := e20.cost_of(oil_card)
+	check(cost20 == 5, "润滑油：起手 5 费（%d）" % cost20)
+	check(e20.begin_tool_pick(7019), "润滑油：begin_tool_pick 进入选卡")
+	check(e20.tool_pick_cards().size() == 1 and e20.tool_pick_cards()[0] == oil_card,
+			"润滑油：候选就是手牌里的那一张（不是抽牌库）")
+	check(e20.tool_pick_confirm(0), "润滑油：确认返回 true")
+	check(e20.cost_of(oil_card) == 2, "润滑油：费用 -3（5 → 2，实际 %d）" % e20.cost_of(oil_card))
+	check(int(e20.state.hand_cost_delta.get(oil_card, 0)) == 3,
+			"润滑油：落地走 hand_cost_delta（手卡内减费唯一口径）")
+	e20.state.hand = []
+	check(e20.cost_of(oil_card) == 5, "润滑油：卡离手后恢复原价（5）")
+	e20.state.hand = [oil_card]
+	check(e20.cost_of(oil_card) == 2, "润滑油：卡回到手里减费继续生效（2）")
+
+	# 手牌满时的闸门：润滑油不改手牌张数 → 照样能用；万能牌要往手里加卡 → 不让用
+	var e21 := _engine()
+	var full_hand: Array[CardData] = []   # ⚠️ 必须带元素类型：FieldState.hand 是 Array[CardData]
+	for fi in FieldState.HAND_LIMIT:
+		var fc := CardData.new()
+		fc.id = 9006
+		fc.card_name = "填手卡%d" % fi
+		fc.cost = 4
+		full_hand.append(fc)
+	e21.state.hand = full_hand
+	check(e21.state.hand_full(), "润滑油：测例前提 —— 手牌确实是满的")
+	check(e21.begin_tool_pick(7019), "润滑油：手牌满也能用（不改张数）")
+	e21.tool_pick_cancel()
+	check(not e21.begin_tool_pick(7009), "万能牌：手牌满时不让用（要往手里加卡）")
 
 	# ---- ⑥b R690：使用型工具的结算（小血瓶回 20% 上限、法力药剂回 2 费）----
 	var e7 := _engine()

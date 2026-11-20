@@ -70,6 +70,14 @@
   "7017": {
    "name": "Garlic",
    "desc": "Drag it onto an empty battlefield cell to place it. That cell cannot be used for 3 of your turns — no unit can enter or pass through it; the tool is then used up."
+  },
+  "7018": {
+   "name": "Mallet",
+   "desc": "Drag it onto an enemy unit to strike it. The target is stunned for one turn (it cannot act on its next turn); the tool is then used up."
+  },
+  "7019": {
+   "name": "Lubricant Oil",
+   "desc": "Tap it twice to use; no dragging onto the battlefield is needed. Choose a card in your hand: its cost is reduced by 3 for the rest of this battle; the tool is then used up."
   }
  }
 }

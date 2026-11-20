@@ -58012,9 +58012,9 @@ func _init() -> void:
 
 			"R745 工具：野性图腾是使用型、且不是休息处专属（能掉落 / 能上架）")
 
-	check(r744_trepo.random_traps().size() == 15,
+	check(r744_trepo.random_traps().size() == 17,
 
-			"R745 工具池：可随机 14 件（烤肉 7007 仍被 rest_only 排除；R797 +河豚 7015 / R801 +爆炸蘑菇 7016）")
+			"R745 工具池：可随机 17 件（烤肉 7007 被 rest_only、石头 7012 被 no_drop 排除；R841 +锤子 7018 / +润滑油 7019）")
 
 	# ② 工具箱：获得即给一个工具；满栏不硬塞、转进待领奖励（不吞玩家的东西）。
 	#    ⚠️ 发工具会改全局 RunState，测完逐个还原，别把后面的用例带歪。
@@ -80692,8 +80692,8 @@ func _test_r817() -> void:
 	check(DemoScope.baseline_count("relics") == r817_relics.all_relics().size(),
 			"R817 基线：道具 = relics.json 全量 %d 件（试玩版一件不裁）"
 			% r817_relics.all_relics().size())
-	check(DemoScope.baseline_count("traps") == 16,
-			"R817 基线：工具 = 16 件（实际 %d）" % DemoScope.baseline_count("traps"))
+	check(DemoScope.baseline_count("traps") == 18,
+			"R817 基线：工具 = 18 件（R841 锤子 7018 / 润滑油 7019 进试玩，实际 %d）" % DemoScope.baseline_count("traps"))
 	check(DemoScope.baseline_count("events") == 25,
 			"R817 基线：事件 = 25 种子类型（一层 13 + 二层 16，去重后 25，实际 %d）"
 			% DemoScope.baseline_count("events"))

@@ -6676,6 +6676,17 @@ func _build_pick_cfg(k: String) -> Dictionary:
 						"note": "点卡选中，再点确认 —— 复制品费用 0、回合结束消失",
 						"cards": tp_cards, "max_sel": 1, "confirm_label": "确认复制",
 						"cancel_label": "不使用"}
+			# R841 润滑油 7019：候选是**手牌本身**（不是抽牌库），改的是这张卡的当场所价。
+			if engine.tool_pick_kind == "hand_down":
+				var tp_down := 3
+				if tp_data != null:
+					tp_down = maxi(1, tp_data.cost_down)
+				return {"kind": k, "short": tp_name, "opts": tp_opts,
+						"title": "%s：选择一张手牌，它的费用本场 -%d（手牌 %d 张）"
+								% [tp_name, tp_down, tp_cards.size()],
+						"note": "点卡选中，再点确认 —— 确认后工具才会从工具栏移除",
+						"cards": tp_cards, "max_sel": 1, "confirm_label": "确认上油",
+						"cancel_label": "不使用"}
 			return {"kind": k, "short": tp_name, "opts": tp_opts,
 					"title": "%s：从这 3 张里选一张加入手卡" % tp_name,
 					"note": "点卡选中，再点确认 —— 本回合它的费用为 0",
@@ -7009,6 +7020,10 @@ func _on_pick_confirmed(sel: Array) -> void:
 			# R752：确认 → 引擎结算（复制 / 入手 + 费用 0），**成功才摘槽**。
 			# 失败（手牌在面板打开后被别的东西塞满之类）→ 工具留在工具栏里。
 			var tp_all: Array = engine.tool_pick_cards()
+			# R841：**确认前**先把 kind / 数据取下来 —— `tool_pick_confirm()` 成功后会
+			# 立刻 `tool_pick_cancel()` 把这两个字段清空，之后再读就永远是空。
+			var tp_kind := engine.tool_pick_kind
+			var tp_td: TrapData = TrapRepo.load_json().get_trap(engine.tool_pick_id)
 			var tp_pick := int(opts[sel[0]])
 			var tp_nm := ""
 			if tp_pick >= 0 and tp_pick < tp_all.size():
@@ -7018,8 +7033,17 @@ func _on_pick_confirmed(sel: Array) -> void:
 			if engine.tool_pick_confirm(tp_pick):
 				if tp_slot >= 0:
 					RunState.consume_trap(tp_slot)
-				status_text = "工具：%s 加入手卡（本回合费用 0）" % tp_nm
-				_say("「%s」加入手牌" % tp_nm)
+				# R841：hand_down（润滑油）不是「加入手卡」——照抄万能牌那句会告诉玩家
+				# 「加入手卡（费用 0）」，其实什么都没加，只是把手里那张改便宜了。
+				if tp_kind == "hand_down":
+					var tp_down := 3
+					if tp_td != null:
+						tp_down = maxi(1, tp_td.cost_down)
+					status_text = "工具：%s 的费用本场 -%d" % [tp_nm, tp_down]
+					_say("「%s」上油了：这张卡在本场战斗中 -%d 费" % [tp_nm, tp_down])
+				else:
+					status_text = "工具：%s 加入手卡（本回合费用 0）" % tp_nm
+					_say("「%s」加入手牌" % tp_nm)
 			else:
 				status_text = "工具没有生效 —— 栏位保留"
 				_say("卡没能进入手牌，工具留在工具栏里")
@@ -10464,11 +10488,11 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	# 放置型要的是**空格**，两种都在 `GameEngine.trap_drop_cells()` 里分。
 	_trap_drag_cells = engine.trap_drop_cells(RunState.trap_at(slot))
 	if _trap_drag_cells.is_empty():
-		if t0 != null and t0.direct_damage > 0:
+		if t0 != null and (t0.direct_damage > 0 or t0.direct_stun > 0):
 			_say("场上没有可以砸的敌人")
 		else:
 			_say("没有可以放置工具的空格")
-	elif t0 != null and t0.direct_damage > 0:
+	elif t0 != null and (t0.direct_damage > 0 or t0.direct_stun > 0):
 		status_text = "「%s」：拖到高亮的敌方单位身上砸出去" % t0.trap_name
 	else:
 		# R763c（用户口径「陷阱类工具，需要可以放到对方场地上」）：
@@ -10552,14 +10576,17 @@ func _finish_trap_drag(pos: Vector2) -> void:
 		return
 	var c2 := Vector2i(int(cell.x), int(cell.y))
 	var td: TrapData = TrapRepo.load_json().get_trap(id)
-	# R754 石头（7012）：落点是**敌方单位**，砸下去当场结算，不埋进格子。
-	# 伤害与致死收尾都在 `use_tool_on_unit()`（唯一口）；这里只负责摘槽与提示。
-	if td != null and td.direct_damage > 0:
+	# R754 石头（7012）/ R841 锤子（7018）：落点是**敌方单位**，砸下去当场结算，不埋进格子。
+	# 效果与致死收尾都在 `use_tool_on_unit()`（唯一口）；这里只负责摘槽与提示。
+	if td != null and (td.direct_damage > 0 or td.direct_stun > 0):
 		if not engine.use_tool_on_unit(id, c2):
 			_say("这一下没砸到人（要有敌方单位才砸得下去）")
 			return
 		RunState.consume_trap(slot)
-		_say("「%s」砸中目标：%d 点伤害" % [td.trap_name, td.direct_damage])
+		if td.direct_stun > 0:
+			_say("「%s」砸中目标：眩晕 %d 回合" % [td.trap_name, td.direct_stun])
+		else:
+			_say("「%s」砸中目标：%d 点伤害" % [td.trap_name, td.direct_damage])
 		queue_redraw()
 		return
 	if not engine.place_trap(id, c2):

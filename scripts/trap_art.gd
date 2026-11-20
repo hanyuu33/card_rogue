@@ -30,6 +30,9 @@ static func color_of(id: int) -> Color:
 		7016: return Color(0.86, 0.32, 0.28)   # 爆炸蘑菇 · 蘑菇红
 		# R839 大蒜 7017 —— 蒜苗青（不用蒜白：蒜白在米色格底上几乎看不见）。
 		7017: return Color(0.76, 0.82, 0.52)
+		# R841 锤子 —— 木槌的黄褐；润滑油 —— 琥珀油色。
+		7018: return Color(0.80, 0.62, 0.34)
+		7019: return Color(0.95, 0.72, 0.25)
 	return Color(0.80, 0.76, 0.66)
 
 
