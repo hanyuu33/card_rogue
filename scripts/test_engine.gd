@@ -48199,9 +48199,9 @@ func _init() -> void:
 	check(r281_cf_src.find("wrap_text(font_bold, card.card_name") < 0,
 
 		"R843d 卡名：卡面**不再对卡名折行**（单行 + 自适应缩放，防回退）")
-	check(r281_cf_src.contains("cover_region_anchored(tex.get_size(), box, 0.0)"),
+	check_src(r281_cf_src.contains("cover_region_anchored(tex.get_size(), box, 0.0)"),
 			"R843i-3 卡图：顶部零裁切锚点，纵向余量全让底部（宁可裁脚，不裁头）")
-	check(r281_cf_src.contains("var kind_text: String = GameI18n.source(card.kind)"),
+	check_src(r281_cf_src.contains("var kind_text: String = GameI18n.source(card.kind)"),
 			"R843g 底部黑框：非单位卡种必须走多语译文，不留中文原文")
 	check(not r281_cf_src.contains("fallback_plate")
 			and not r281_cf_src.contains("for i in eff_n"),
