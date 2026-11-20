@@ -81267,6 +81267,20 @@ func _test_r829() -> void:
 	check(not rrepo.initial_ids().has(6087) and not rrepo.reward_ids().has(6087)
 			and not rrepo.event_ids().has(6087), "R829 池：不进初始 / 奖励 / 事件池")
 	check(DemoScope.allows_relic(6087), "R829 试玩版：6087 在 demo_scope 基线里")
+	# R834（店长口径「本对话新增的两样道具要进试玩版」）：上面那条只证明「在基线表里」，
+	# 锁不住「demo 下发放池会不会被裁掉」。这里注入 demo 后按**真实发放池**再核一遍 ——
+	# 起点三选一读的是 `start_ids_for_layer()`，只查 `layer2_ids_for()` 会漏掉场景那一层。
+	# ⚠️ 必须复位成 -1：后面的用例全部依赖「自动判定 = 测试版」的口径。
+	GameBuild.set_test_demo(1)
+	var r834_demo_duck: Array[int] = rrepo.layer2_ids_for(RunState.LAYER2_HOST_DUCK)
+	var r834_demo_start2: Array[int] = rrepo.start_ids_for_layer(2, RunState.LAYER2_HOST_DUCK)
+	var r834_demo_all: int = rrepo.all_relics().size()
+	GameBuild.set_test_demo(-1)
+	check(r834_demo_duck.has(6087) and r834_demo_start2.has(6087),
+			"R829 试玩版：demo 下鸭绅士池（%d 件）与二层起点池都含礼帽 6087"
+			% r834_demo_duck.size())
+	check(r834_demo_all == 83,
+			"R829 试玩版：demo 下 all_relics 仍是 83（道具档「全部登陆」）")
 
 	# ── ③ 引擎：礼帽 —— 己方盟友死亡 → 洗回抽牌库 + 本局 -2 费 + 次元 ──
 	var r828_e := _new_engine([], 40, 40, -1, false)
@@ -81412,6 +81426,17 @@ func _test_r830() -> void:
 	check(not rrepo.reward_ids().has(6088) and not rrepo.event_ids().has(6088)
 			and not rrepo.layer2_ids().has(6088), "R830 池：不进奖励 / 事件 / 二层起始池")
 	check(DemoScope.allows_relic(6088), "R830 试玩版：6088 在 demo_scope 基线里")
+	# R834：同 R829 —— demo 下「发得出来」才算数（初始池 + 第一层起点池两处都要有）。
+	GameBuild.set_test_demo(1)
+	var r834_demo_init: Array[int] = rrepo.initial_ids()
+	var r834_demo_start1: Array[int] = rrepo.start_ids_for_layer(1)
+	var r834_demo_reward: Array[int] = rrepo.reward_ids()
+	GameBuild.set_test_demo(-1)
+	check(r834_demo_init.has(6088) and r834_demo_start1.has(6088),
+			"R830 试玩版：demo 下初始池（%d 件）与第一层起点池都含首饰盒 6088"
+			% r834_demo_init.size())
+	check(not r834_demo_reward.has(6088),
+			"R830 试玩版：demo 下首饰盒仍不进奖励池（来源口径不变）")
 
 	# ── ③ 逻辑：获得即随机一张史诗卡加入卡组 ──
 	RunState.deck_ids = [8001, 8002]
