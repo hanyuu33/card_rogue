@@ -268,9 +268,11 @@ static func effect_text(fx: Dictionary) -> String:
 		"bonus_hp_per_upgrade":
 			return "每拥有一层改造，这张卡获得 +%d 生命" % n
 		"fetch_skill":
-			if fx.get("if_third", false):
-				return "若包含这张卡本回合打出的卡达到 3 张，从抽牌库将一张随机技能卡加入手牌"
 			return "从抽牌库将一张随机技能卡加入手牌"
+		"draw_if_third":
+			# R846：影子猫 8006 的下半句。3 = GameEngine.SHADOW_CAT_NEED（这里不能 preload
+			# 引擎，静态类会成环）—— 改常量时连这里一起改，`_test_r846` 有对应源码锁。
+			return "若本回合已经使用过 3 张其他卡，抽%d张牌" % n
 		"self_destruct":
 			return "这张卡破坏"
 	return ""

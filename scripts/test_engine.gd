@@ -19812,65 +19812,45 @@ func _init() -> void:
 
 
 
-	# 回转（9089）：抽 X 张（X = 本回合已用数），本回合结束不弃
-
+	# 回转（9089，R846 用户口径）：对一个目标造成 X 伤 + 抽 X 张
+	# （X = 本回合**其他**卡张数），抽到的牌本回合结束不弃。
 	var r45_sp := _new_engine([], 30, 30)
-
+	var r45_sp_foe := r45_sp.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 	r45_sp.state.self_card_plays = 2
-
 	r45_sp.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
-
 	r45_sp.state.deck.append(_card(9097, "预判", "技能", 0, 0, 0, 0, 0))
-
 	r45_sp.state.hand.append(repo.get_card(GameEngine.SPIN_DRAW_ID))
-
-	r45_sp.use_spell(0, null)
-
+	r45_sp.use_spell(0, Vector2i(2, 1))
 	check(r45_sp.state.hand.size() == 2, "回转：X=2 → 抽 2 张（实际 %d）" % r45_sp.state.hand.size())
-
+	check(r45_sp_foe.health == 55 - 2,
+			"回转：X=2 → 对一个目标造成 2 伤（R846 新增伤害，55 → %d）" % r45_sp_foe.health)
 	var r45_sp_k1: CardData = r45_sp.state.hand[0]
-
 	var r45_sp_k2: CardData = r45_sp.state.hand[1]
-
 	r45_sp.end_turn()
-
 	check(r45_sp.state.hand.has(r45_sp_k1) and r45_sp.state.hand.has(r45_sp_k2),
-
 			"回转：回合结束抽到的 2 张仍留在手里（弃牌区只剩回转自己）")
 
 
 
-	# 影子猫（8006）：含此卡本回合第 3 张打出 → 卡组随机技能卡入手
-
+	# 影子猫（8006，R846 用户口径）：本回合已使用 3 张**其他**卡 → 抽 2 张
 	var r45_sc := _new_engine([], 30, 30)
-
-	r45_sc.state.self_card_plays = 2
-
+	r45_sc.state.self_card_plays = 3
 	r45_sc.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
-
+	r45_sc.state.deck.append(_card(9097, "预判", "技能", 0, 0, 0, 0, 0))
 	r45_sc.state.hand.append(repo.get_card(GameEngine.SHADOW_CAT_ID))
-
 	r45_sc.play_from_hand(0, Vector2i(4, 1))
-
-	check(r45_sc.state.hand.size() == 1
-
-			and r45_sc.state.hand[0].kind == "技能",
-
-			"影子猫：含此卡本回合第 3 张 → 卡组随机技能卡入手")
-
+	check(r45_sc.state.hand.size() == GameEngine.SHADOW_CAT_DRAW,
+			"影子猫：其他卡已满 %d 张 → 抽 %d 张（实际 %d）" % [
+					GameEngine.SHADOW_CAT_NEED, GameEngine.SHADOW_CAT_DRAW,
+					r45_sc.state.hand.size()])
 	var r45_sc2 := _new_engine([], 30, 30)
-
-	r45_sc2.state.self_card_plays = 1
-
+	r45_sc2.state.self_card_plays = 2
 	r45_sc2.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
-
 	r45_sc2.state.hand.append(repo.get_card(GameEngine.SHADOW_CAT_ID))
-
 	r45_sc2.play_from_hand(0, Vector2i(4, 1))
-
 	check(r45_sc2.state.hand.is_empty() and r45_sc2.state.deck.size() == 1,
-
-			"影子猫：只有第 2 张 → 效果落空，卡组不动")
+			"影子猫：只有 2 张其他卡 → 效果落空，牌库不动")
 
 
 
@@ -20986,6 +20966,8 @@ func _init() -> void:
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
 
 	# R845：本能 9176 由技能改效果卡 → 技能 118 → 117，伤害判据不变。
+	# R846：回转 9089 从「只抽牌」改成「对一个目标造成 X 伤 + 抽 X 张」→ 伤害判据 +1（48 → 49）；
+	#       闪躲 9103 从「全员嘲讽」改成「对敌方降力」，仍然不含「造成」二字 → 技能数不变。
 	# 判据唯一口 `CardData.is_damage_spell()`：103 张玩家技能卡里恰好 42 张能直接造成伤害（R721 击退新增条件伤害 +1）（R582 +2 技能 / +1 伤害判据；R580 +2 技能 / +1 伤害判据）
 
 	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R777 彩虹诗 9269 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
@@ -21012,7 +20994,7 @@ func _init() -> void:
 
 			r226_leak.append(r226_card.card_name)
 
-	check(r226_skills == 117 and r226_dmg == 48 and r226_leak.is_empty(),
+	check(r226_skills == 117 and r226_dmg == 49 and r226_leak.is_empty(),
 
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 
@@ -21223,12 +21205,9 @@ func _init() -> void:
 			"回响 9102：1 费**稀有**暗影刺客技能（R329 由史诗降回稀有），不用选目标")
 
 	check(r48_dodge_c != null and r48_dodge_c.card_name == "闪躲" and r48_dodge_c.cost == 0
-
-			and r48_dodge_c.rarity == 0 and r48_dodge_c.card_class == PlayerClass.ROGUE
-
-			and r48_dodge_c.kind == "技能" and r48_dodge_c.target_mode == "none",
-
-			"闪躲 9103：0 费普通暗影刺客技能，不用选目标")
+			and r48_dodge_c.rarity == 1 and r48_dodge_c.card_class == PlayerClass.ROGUE
+			and r48_dodge_c.kind == "技能" and r48_dodge_c.target_mode == "unit",
+			"闪躲 9103：0 费**稀有**暗影刺客技能，要选一个敌方单位（R846：普通→稀有 + 改效果）")
 
 
 
@@ -21356,123 +21335,61 @@ func _init() -> void:
 
 
 
-	# 闪躲：本回合所有友方单位获得嘲讽（含后上场的单位，R542 改效果）
-
-	check(r48_dodge_c.effect_text.contains("所有友方单位获得嘲讽"),
-
-			"闪躲：卡面文案 = 本回合所有友方单位获得嘲讽（%s）" % r48_dodge_c.effect_text)
+	# 闪躲（9103，R846 用户口径）：使一个敌方单位力量 -X，X = 本回合打出的牌数
+	check(r48_dodge_c.effect_text.contains("力量 -X")
+			and r48_dodge_c.effect_text.contains("本回合打出的牌数"),
+			"闪躲：卡面文案 = 使一个敌方单位力量 -X（%s）" % r48_dodge_c.effect_text)
 
 	var r48_d := _new_engine([], 30, 30)
-
-	var r48_d_ally := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
-			Vector2i(4, 1), GameEngine.SIDE_SELF)
-
-	var r48_d_fort := r48_d.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6, 0, 0),
-
-			Vector2i(4, 2), GameEngine.SIDE_SELF)
-
-	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
-
-	r48_d.use_spell(0, null)
-
-	check(r48_d.taunt_all_active(GameEngine.SIDE_SELF) and r48_d.state.energy == 5,
-
-			"闪躲：0 费；打出后「全员嘲讽」窗口开启（费用仍是 %d）" % r48_d.state.energy)
-
-	check(r48_d.unit_has_taunt(r48_d_ally) and r48_d.unit_has_taunt(r48_d_fort),
-
-			"闪躲：盟友与工事都获得嘲讽（unit_has_taunt 判据）")
-
-	# 后上场的单位也实时获得（不是一次性快照）
-
-	var r48_d_late := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
-			Vector2i(4, 0), GameEngine.SIDE_SELF)
-
-	check(r48_d.unit_has_taunt(r48_d_late),
-
-			"闪躲：窗口内后上场的单位也获得嘲讽")
-
-	# 敌方单位不受影响（只保我方单位）
-
 	var r48_d_foe := r48_d.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r48_d.state.self_card_plays = 3
+	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	r48_d.use_spell(0, Vector2i(2, 1))
+	check(r48_d_foe.effective_power() == 5 and r48_d_foe.debuff_stage == 1,
+			"闪躲：本回合已打 3 张 → 敌方力量 8 → %d（debuff_stage 1，它回合结束清）"
+			% r48_d_foe.effective_power())
+	check(r48_d.state.energy == 5, "闪躲：0 费（费用 5 → %d）" % r48_d.state.energy)
 
-	check(not r48_d.unit_has_taunt(r48_d_foe),
+	# 第二张继续叠：本回合第 4 张 → 再 -4
+	r48_d.state.self_card_plays = 4
+	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	r48_d.use_spell(0, Vector2i(2, 1))
+	check(r48_d_foe.effective_power() == 1,
+			"闪躲：第二张再 -4 → 力量 %d（降力可叠加，与敲晕 / 威慑同源）"
+			% r48_d_foe.effective_power())
 
-			"闪躲：敌方单位不获得嘲讽（只保我方）")
-
-	# 敌人射程内全是嘲讽单位 → 不能直击 HP（taunt_in_range 判据）
-
-	var r48_d3 := _new_engine([], 30, 30)
-
-	var r48_d3_ally := r48_d3.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
-			Vector2i(3, 1), GameEngine.SIDE_SELF)
-
-	var r48_d3_foe := r48_d3.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
-			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
-	r48_d3.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
-
-	r48_d3.use_spell(0, null)
-
-	check(r48_d3.taunt_in_range(Vector2i(2, 1), GameEngine.SIDE_OPPONENT, r48_d3_foe.card),
-
-			"闪躲：敌人射程内全是嘲讽 → 只能打单位，不能直击 HP")
-
-
-
-	# 闪躲：窗口在自己下个回合开始到期（含中间的敌方回合）
-
-	var r48_d2 := _new_engine([], 30, 30)
-
-	var r48_d2_ally := r48_d2.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
+	# 指到自己的单位 → 落空（不白降）
+	var r48_d_own := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	var r48_d_msg := str(r48_d.use_spell(r48_d.state.hand.size() - 1, Vector2i(4, 1)))
+	check(r48_d_own.effective_power() == 3 and r48_d_msg.contains("敌方单位"),
+			"闪躲：指到己方单位 → 落空（己方力量仍是 %d，返回「%s」）"
+			% [r48_d_own.effective_power(), r48_d_msg])
 
-	r48_d2.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	# 本回合第一张就打它 → X=0，力量不变
+	var r48_d0 := _new_engine([], 30, 30)
+	var r48_d0_foe := r48_d0.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r48_d0.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	r48_d0.use_spell(0, Vector2i(2, 1))
+	check(r48_d0_foe.effective_power() == 8,
+			"闪躲：本回合还没打出别的卡 → X=0，力量不变（%d）"
+			% r48_d0_foe.effective_power())
 
-	r48_d2.use_spell(0, null)
-
-	r48_d2._begin_turn(GameEngine.SIDE_SELF)      # 下个回合开始 → 到期
-
-	check(not r48_d2.taunt_all_active(GameEngine.SIDE_SELF)
-
-			and not r48_d2.unit_has_taunt(r48_d2_ally),
-
-			"闪躲：自己下个回合开始时窗口到期，嘲讽随之消失")
-
-
-
-	# 闪躲：敌方 AI 打出无效
-
+	# 敌方 AI 打出无效
 	var r48_d5 := _new_engine([], 30, 30)
+	var r48_d5_msg := str(r48_d5._run_spell_effect(r48_dodge_c, null, GameEngine.SIDE_OPPONENT))
+	check(r48_d5_msg.contains("敌方 AI"),
+			"闪躲：敌方 AI 打出无效（%s）" % r48_d5_msg)
 
-	r48_d5._run_spell_effect(r48_dodge_c, null, GameEngine.SIDE_OPPONENT)
-
-	check(not r48_d5.taunt_all_active(GameEngine.SIDE_OPPONENT)
-
-			and not r48_d5.taunt_all_active(GameEngine.SIDE_SELF),
-
-			"闪躲：敌方 AI 打出无效（只保我方窗口）")
-
-
-
-	# R542 源码锁：嘲讽判定统一走 unit_has_taunt，闪躲窗口用 _taunt_all_active
-
-	var r542_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-
-	check_src(r542_src.find("func unit_has_taunt(p: Placement) -> bool:") >= 0
-
-			and r542_src.find("unit_has_taunt(q)") >= 0
-
-			and r542_src.find("var _taunt_all_active:= false") >= 0,
-
-			"R542 源码：闪躲全员嘲讽走 unit_has_taunt() 唯一判据（_taunt_targets 也读它）")
+	# R846 源码锁：全员嘲讽那条机制整条删除，嘲讽只剩「卡面自带」一个来源
+	var r846_dodge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r846_dodge_src.find("func _dodge_spell(side: String, card: CardData, target)") >= 0
+			and r846_dodge_src.find("var _taunt_all_active") < 0
+			and r846_dodge_src.find("func taunt_all_active") < 0,
+			"R846 源码：闪躲只做敌方降力，全员嘲讽窗口（_taunt_all_active）已删除")
 
 
 
@@ -21859,14 +21776,10 @@ func _init() -> void:
 	var r55_vit := repo.get_card(9110)
 
 	check(r55_cat != null and r55_cat.card_name == "地狱猫" and r55_cat.kind == "盟友"
-
-			and r55_cat.cost == 0 and r55_cat.power == 1 and r55_cat.health == 1
-
+			and r55_cat.cost == 0 and r55_cat.power == 0 and r55_cat.health == 1
 			and r55_cat.attack_range == 1 and r55_cat.move_speed == 1
-
 			and r55_cat.rarity == 1 and r55_cat.card_class == PlayerClass.ROGUE,
-
-			"R243 地狱猫 8019：0 费**稀有**暗影刺客盟友 1/1 程1 速1")
+			"R243 地狱猫 8019：0 费**稀有**暗影刺客盟友 0/1 程1 速1（R846 初始力量 1 → 0）")
 
 	check(r55_fort != null and r55_fort.card_name == "鲜血堡垒" and r55_fort.kind == "工事"
 
@@ -21907,41 +21820,23 @@ func _init() -> void:
 	r55_a._end_turn_surplus(GameEngine.SIDE_SELF)
 
 	check(r55_cat_p.end_atk == 3 and r55_cat_p.health == 1 + 3 * 2
-
-			and r55_cat_p.effective_power() == 4,
-
-			"地狱猫：剩余 3 点 → 力量 1→4、生命 1→7（实际 力%d 生%d）"
-
+			and r55_cat_p.effective_power() == 3,
+			"地狱猫：剩余 3 点 → 力量 0→3、生命 1→7（实际 力%d 生%d）"
 			% [r55_cat_p.effective_power(), r55_cat_p.health])
-
 	check(r55_fort_p.end_atk == 3 and r55_fort_p.health == 1 + 3 * 3
-
 			and r55_fort_p.effective_power() == 3,
-
 			"鲜血堡垒：剩余 3 点 → 力量 0→3、生命 1→10（实际 力%d 生%d）"
-
 			% [r55_fort_p.effective_power(), r55_fort_p.health])
 
-
-
 	# 成长是**永久**的：第二次结算继续累加，回合结束不清零
-
 	r55_a.state.energy = 2
-
 	r55_a._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 6
-
+	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 5
 			and r55_cat_p.health == 1 + 5 * 2,
-
-			"地狱猫：成长累加不清零（再 +2 → 力量 6、生命 11）")
-
+			"地狱猫：成长累加不清零（再 +2 → 力量 5、生命 11）")
 	r55_a.state.energy = 0
-
 	r55_a.state.reset_units(GameEngine.SIDE_SELF)
-
-	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 6,
-
+	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 5,
 			"地狱猫：reset_units 不会清掉回合结束成长（仍为 5）")
 
 
@@ -22218,10 +22113,8 @@ func _init() -> void:
 
 	r56_a._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r56_cat_p.end_atk == 6 and r56_cat_p.effective_power() == 7,
-
-			"黑暗领主优先结算：地狱猫读到 1+5=6 点（力量 1 → %d）"
-
+	check(r56_cat_p.end_atk == 6 and r56_cat_p.effective_power() == 6,
+			"黑暗领主优先结算：地狱猫读到 1+5=6 点（力量 0 → %d）"
 			% r56_cat_p.effective_power())
 
 
@@ -22266,65 +22159,37 @@ func _init() -> void:
 
 
 
-	# 暗影之刃：X = 本回合**已花掉**的费用（不是剩余费用）
-
+	# 暗影之刃（R846）：X = 本回合**已使用的卡牌张数**（不再看花了多少费用）
 	var r56_d := _new_engine([], 30, 30)
-
 	r56_d.state.effects.append(CardData.from_dict(r56_blade.to_dict()))
-
 	var r56_foe := r56_d.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 30, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
 	r56_d.state.energy = 5
-
-	r56_d.state.pay_energy(4, GameEngine.SIDE_SELF)   # 花掉 4，剩 1
-
+	r56_d.state.self_card_plays = 4
 	r56_d._end_turn_surplus(GameEngine.SIDE_SELF)
-
 	check(r56_foe.health == 30 - 4,
+			"暗影之刃：本回合已用 4 张卡 → 随机敌人受 4 伤（30 → %d）" % r56_foe.health)
 
-			"暗影之刃：已花 4 费 → 随机敌人受 4 伤（30 → %d）" % r56_foe.health)
-
-
-
-	# 钱刚好花光（剩余 0）时暗影之刃**仍然结算** —— 这是它最常见的触发场景
-
+	# 一点费用都没花（剩 5）也照样按张数结算 —— 与「已花费用」口径彻底脱钩
 	var r56_e := _new_engine([], 30, 30)
-
 	r56_e.state.effects.append(CardData.from_dict(r56_blade.to_dict()))
-
 	var r56_foe2 := r56_e.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 30, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
 	r56_e.state.energy = 5
-
-	r56_e.state.pay_energy(5, GameEngine.SIDE_SELF)   # 全部花光
-
+	r56_e.state.self_card_plays = 2
 	r56_e._end_turn_surplus(GameEngine.SIDE_SELF)
+	check(r56_foe2.health == 28 and r56_e.state.energy == 5,
+			"暗影之刃：费用一分没花（剩 %d）也按 2 张卡结算（30 → %d）" % [
+					r56_e.state.energy, r56_foe2.health])
 
-	check(r56_foe2.health == 25,
-
-			"暗影之刃：剩余费用 0 也不被跳过（已花 5 → 30 → %d）" % r56_foe2.health)
-
-
-
-	# 没花过费用 → 效果落空，不造成伤害
-
+	# 本回合一张卡都没用过 → 落空
 	var r56_f := _new_engine([], 30, 30)
-
 	r56_f.state.effects.append(CardData.from_dict(r56_blade.to_dict()))
-
 	var r56_foe3 := r56_f.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 30, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
 	r56_f.state.energy = 5
-
 	r56_f._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r56_foe3.health == 30, "暗影之刃：本回合没花钱 → 落空（敌人 30 血不变）")
+	check(r56_foe3.health == 30, "暗影之刃：本回合没用过卡 → 落空（敌人 30 血不变）")
 
 
 
@@ -48334,8 +48199,8 @@ func _init() -> void:
 	check(r281_cf_src.find("wrap_text(font_bold, card.card_name") < 0,
 
 		"R843d 卡名：卡面**不再对卡名折行**（单行 + 自适应缩放，防回退）")
-	check(r281_cf_src.contains("cover_region_anchored(tex.get_size(), box, 0.08)"),
-			"R843g 卡图：增高窗口采用顶部优先裁切，不再居中削掉耳尖 / 头顶")
+	check(r281_cf_src.contains("cover_region_anchored(tex.get_size(), box, 0.0)"),
+			"R843i-3 卡图：顶部零裁切锚点，纵向余量全让底部（宁可裁脚，不裁头）")
 	check(r281_cf_src.contains("var kind_text: String = GameI18n.source(card.kind)"),
 			"R843g 底部黑框：非单位卡种必须走多语译文，不留中文原文")
 	check(not r281_cf_src.contains("fallback_plate")
@@ -73212,11 +73077,11 @@ func _init() -> void:
 
 	check(r580_cm != null and r580_cm.card_name == "猫鼠游戏"
 
-			and r580_cm.is_spell() and r580_cm.cost == 5 and r580_cm.rarity == 0
+			and r580_cm.is_spell() and r580_cm.cost == 4 and r580_cm.rarity == 0
 
 			and r580_cm.card_class == PlayerClass.ROGUE and r580_cm.locked,
 
-			"R580 卡数据：猫鼠游戏 = 5 费普通技能 · 暗影刺客 · locked")
+			"R580 卡数据：猫鼠游戏 = 4 费普通技能 · 暗影刺客 · locked（R846：5 → 4）")
 
 	check(r580_df != null and r580_df.card_name == "黑暗嵌合"
 
@@ -74279,6 +74144,7 @@ func _init() -> void:
 	_test_r842()
 	_test_r844()
 	_test_r845()
+	_test_r846()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -75509,7 +75375,8 @@ func _test_r592b() -> void:
 
 			and is_equal_approx(slot.size.x, want_d)
 
-			and is_equal_approx(slot.size.x, 2.0 * UiTheme.CARD_BADGE_R * kc),
+			# R843i：badge_radius 统一缩到 78%，槽位直径同步（半径唯一口不变）。
+			and is_equal_approx(slot.size.x, 2.0 * UiTheme.CARD_BADGE_R * kc * 0.78),
 
 			"R592e：槽位是正方形、直径 = 费用徽章（实际 %s / 期望 %.2f）"
 
@@ -79815,8 +79682,8 @@ func _test_r805() -> void:
 	r804_e.state.hand.append(CardData.from_dict(r804_cards.get_card(9028).to_dict()))
 	var r804_p1 := r804_e.play_from_hand(0, Vector2i(5, 1))
 	var r804_p2 := r804_e.play_from_hand(0, Vector2i(4, 1))
-	check(r804_p1 != null and r804_p1.effective_speed() == 6,
-			"R805 蜂蜜：影子猫移速 5 → 6（实得 %d）"
+	check(r804_p1 != null and r804_p1.effective_speed() == 3,
+			"R805 蜂蜜：影子猫移速 2 → 3（R846 从 5 降；实得 %d）"
 			% (r804_p1.effective_speed() if r804_p1 != null else -1))
 	check(r804_p2 != null and r804_p2.effective_speed() == 2,
 			"R805 蜂蜜：第二个盟友也 +1（速 1 → 2，不是「只有第一个」）")
@@ -79836,8 +79703,8 @@ func _test_r805() -> void:
 	r804_e2.state.hand.clear()
 	r804_e2.state.hand.append(CardData.from_dict(r804_cards.get_card(8006).to_dict()))
 	var r804_p4 := r804_e2.play_from_hand(0, Vector2i(5, 1))
-	check(r804_p4 != null and r804_p4.effective_speed() == 5 and r804_p4.honey_spd == 0,
-			"R805 没蜂蜜：移速保持 5（加成不烤进 CardData 留残留）")
+	check(r804_p4 != null and r804_p4.effective_speed() == 2 and r804_p4.honey_spd == 0,
+			"R805 没蜂蜜：移速保持 2（加成不烤进 CardData 留残留）")
 
 	# ④ 与板甲 6070 叠加：板甲的「移速变为 1」是 mini，压在上面 —— 蜂蜜 +1 后仍是 1
 	var r804_plate: Array[int] = [6070, 6079]
@@ -79853,8 +79720,8 @@ func _test_r805() -> void:
 			% (r804_p5.effective_speed() if r804_p5 != null else -1))
 
 	# ⑤ 卡库不被写脏：加速只发生在 Placement 上
-	check(r804_cards.get_card(8006).move_speed == 5,
-			"R805 卡库里的影子猫仍是 5 速（蜂蜜没烤进共享 CardData）")
+	check(r804_cards.get_card(8006).move_speed == 2,
+			"R805 卡库里的影子猫仍是 2 速（R846 从 5 降；蜂蜜没烤进共享 CardData）")
 
 	# ⑥ 源码守卫：走唯一出口，别在 `_move_bfs` / AI 里另写分支
 	var r804_src := FileAccess.get_file_as_string("res://scripts/placement.gd")
@@ -82172,3 +82039,126 @@ func _test_r845() -> void:
 	check_src(src.contains("\"damage_per_energy\":"),
 			"R845 源码锁：组合素材 `damage_per_energy` 有对应实现口")
 
+
+func _test_r846() -> void:
+	## R846：暗影刺客七张卡（影子猫 / 地狱猫 / 噩兆 / 回转 / 闪躲 / 猫鼠游戏 / 暗影之刃）。
+	## 行为细节分散在 R45 / R48 / R55 / R56 各自的块里；这里钉**数据口径 + 素材类型 + 源码锁**。
+	var repo := CardRepo.load_json()
+
+	# ① 影子猫 8006：移速 2 + 下半句改成 draw_if_third(2)
+	var cat := repo.get_card(8006)
+	check(cat != null and cat.kind == "盟友" and cat.cost == 1 and cat.move_speed == 2
+			and cat.power == 1 and cat.health == 1,
+			"R846 影子猫：1 费盟友 1/1，移速 5 → 2")
+	check(cat.effect_text.contains("3 张其他卡") and cat.effect_text.contains("抽 2 张牌"),
+			"R846 影子猫文案：本回合已用过 3 张其他卡 → 抽 2 张（%s）" % cat.effect_text)
+	var cat_fx: Dictionary = cat.lower_effect.effects[0]
+	check(str(cat_fx.get("type", "")) == "draw_if_third" and int(cat_fx.get("value", 0)) == 2,
+			"R846 影子猫素材：draw_if_third(2)（不再是 fetch_skill + if_third）")
+	check(CardData.ASSEMBLE_EFFECT_TYPES.has("draw_if_third"),
+			"R846 影子猫素材类型已进组合动作白名单")
+
+	# ② 地狱猫 8019：初始力量 0
+	var hell := repo.get_card(8019)
+	check(hell != null and hell.power == 0 and hell.health == 1 and hell.cost == 0,
+			"R846 地狱猫：0 费 0/1（初始力量 1 → 0，成长规则不变）")
+	check(hell.effect_text.contains("剩余费用每有 1 点"),
+			"R846 地狱猫文案不变（仍按剩余费用 +1 力 +2 血）")
+
+	# ③ 噩兆 9231：使用时若无标记 → 随机标一个格子（已有标记则不动）
+	var omen := repo.get_card(9231)
+	check(omen != null and omen.effect_text.begins_with("使用时，若场上没有标记"),
+			"R846 噩兆文案：新增「使用时若场上没有标记 → 随机标记一个格子」")
+	var oe := _new_engine([], 30, 30, -1, false)
+	oe.start_game(1)
+	check(not oe.state.has_mark(), "R846 噩兆：开局场上本来没有标记")
+	oe.state.energy = 9
+	oe.state.hand.append(CardData.from_dict(omen.to_dict()))
+	oe.use_effect(0)
+	check(oe.state.has_mark(), "R846 噩兆：使用时场上没有标记 → 随机标出一个")
+	var oe_cell := oe.state.mark_cell()
+	check(oe_cell.x >= 0 and oe_cell.x < FieldState.BOARD_ROWS and oe_cell.y >= 0
+			and oe_cell.y < FieldState.BOARD_COLS
+			and oe_cell.x != oe.back_row(GameEngine.SIDE_SELF),
+			"R846 噩兆：标记落在棋盘内且不占己方 HP 行（%s）" % str(oe_cell))
+	oe.state.energy = 9
+	oe.state.hand.append(CardData.from_dict(omen.to_dict()))
+	oe.use_effect(0)
+	check(oe.state.mark_cell() == oe_cell, "R846 噩兆：已有标记时不再随机标记（不挪走原格）")
+
+	# ④ 回转 9089：要选目标；没给目标就只回提示
+	var rot := repo.get_card(9089)
+	check(rot != null and rot.target_mode == "unit" and rot.cost == 2,
+			"R846 回转：2 费技能，改成一个目标")
+	var re := _new_engine([], 30, 30)
+	re.state.self_card_plays = 2
+	re.state.hand.append(CardData.from_dict(rot.to_dict()))
+	var re_msg := str(re.use_spell(0, null))
+	check(re_msg.contains("指定"),
+			"R846 回转：没给目标 → 只回一句提示，不结算（%s）" % re_msg)
+
+	# ⑤ 闪躲 9103：稀有 + 敌方降力
+	var dod := repo.get_card(9103)
+	check(dod != null and dod.rarity == 1 and dod.cost == 0 and dod.target_mode == "unit",
+			"R846 闪躲：0 费**稀有**技能，要选一个敌方单位")
+	check(not dod.effect_text.contains("嘲讽"), "R846 闪躲：卡面不再提嘲讽")
+
+	# ⑥ 猫鼠游戏 9190：4 费
+	var cm := repo.get_card(9190)
+	check(cm != null and cm.cost == 4 and cm.locked, "R846 猫鼠游戏：5 费 → 4 费（仍 locked）")
+
+	# ⑦ 暗影之刃 9111：X = 已使用卡牌张数
+	var blade := repo.get_card(9111)
+	check(blade != null and blade.effect_text.contains("已使用的卡牌张数"),
+			"R846 暗影之刃：X = 本回合已使用的卡牌张数（%s）" % blade.effect_text)
+
+	# ⑧ 源码锁：新常量 / 素材分支在、旧机制不在
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(src.contains("const SHADOW_CAT_NEED:= 3")
+			and src.contains("const SHADOW_CAT_DRAW:= 2"),
+			"R846 源码：影子猫走 SHADOW_CAT_NEED / SHADOW_CAT_DRAW 两个常量")
+	check_src(src.contains("\"draw_if_third\":") and src.contains("_auto_mark_if_none(\"噩兆\", true)"),
+			"R846 源码：组合分支 draw_if_third + 噩兆自动标记都落在实现口")
+	check_src(src.contains("var blade_n: int = state.self_card_plays if side == SIDE_SELF")
+			and not src.contains("state.energy_spent_of(side)\n\t\tif spent"),
+			"R846 源码：暗影之刃改读卡牌张数，旧的「已花费用」取值已删")
+	check_src(src.find("var _taunt_all_active") < 0 and src.find("func taunt_all_active") < 0,
+			"R846 源码：闪躲的全员嘲讽机制整条删除")
+
+	# ⑨ 三语文本：五张改了文案的卡都要有对应译文
+	var i18n_want := {
+		"8006": "3 other cards",
+		"9231": "randomly Mark a tile",
+		"9089": "Deal X damage to a target",
+		"9103": "Reduce an enemy unit",
+		"9111": "number of cards you have used this turn",
+	}
+	var raw_en: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/cards_en.json"))
+	var en_cards: Dictionary = (raw_en as Dictionary).get("cards", {}) if raw_en is Dictionary else {}
+	for cid: String in i18n_want.keys():
+		var row: Variant = en_cards.get(cid, {})
+		var txt := "" if not row is Dictionary else str((row as Dictionary).get("effect_text", ""))
+		check(txt.find(str(i18n_want[cid])) >= 0,
+				"R846 英文文案（%s）已同步：%s" % [cid, txt])
+	var i18n_ok := true
+	for lang: String in ["ja", "es", "zh_canonical"]:
+		var raw_l: Variant = JSON.parse_string(
+				FileAccess.get_file_as_string("res://i18n/%s.json" % (
+						"cards_" + lang if lang != "zh_canonical" else lang)))
+		if not raw_l is Dictionary:
+			i18n_ok = false
+			continue
+		var rows: Dictionary = (raw_l as Dictionary).get("cards", {})
+		for cid: String in i18n_want.keys():
+			if not rows.has(cid):
+				i18n_ok = false
+	check(i18n_ok, "R846 文本：ja / es / zh_canonical 七张卡都还在（缺 key 会立刻红）")
+
+	# ⑩ 图鉴口径没被顺手改动：344 张、暗影刺客 67 张
+	var rogue := 0
+	for c: CardData in repo.all_cards():
+		if c.card_class == PlayerClass.ROGUE:
+			rogue += 1
+	check(repo.all_cards().size() == 344 and rogue == 67,
+			"R846：卡总数 344 / 暗影刺客 67 不变（只改数值与文案，没增删卡）")

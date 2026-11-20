@@ -70,7 +70,7 @@
   },
   "8006": {
    "name": "Shadow Cat",
-   "effect_text": "When used, if this is the 3rd card you have played this turn, add a random Skill card from your Draw Pile to your Hand."
+   "effect_text": "When played, if you have already used 3 other cards this turn, draw 2 cards."
   },
   "8007": {
    "name": "Shadow Fiend",
@@ -704,7 +704,7 @@
   },
   "9089": {
    "name": "Revolution",
-   "effect_text": "Draw X cards, where X is the number of cards you have used this turn; those cards are not discarded at the end of this turn."
+   "effect_text": "Deal X damage to a target and draw X cards, where X is the number of other cards you have used this turn. Those cards are not discarded at the end of this turn."
   },
   "9090": {
    "name": "Ambush",
@@ -760,7 +760,7 @@
   },
   "9103": {
    "name": "Dodge",
-   "effect_text": "This turn, all friendly units gain Taunt."
+   "effect_text": "Reduce an enemy unit's Power by X, where X is the number of cards you have played this turn."
   },
   "9104": {
    "name": "Coup de Grace",
@@ -772,7 +772,7 @@
   },
   "9111": {
    "name": "Shadow Blade",
-   "effect_text": "At the end of your turn, deal X damage to a random enemy, where X is the Cost you have spent this turn. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the end of your turn, deal X damage to a random enemy, where X is the number of cards you have used this turn. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9112": {
    "name": "Shadow Chains",
@@ -1200,7 +1200,7 @@
   },
   "9231": {
    "name": "Ill Omen",
-   "effect_text": "At the end of your turn, enemies on Marked tiles take 4X damage. X is the number of copies of this card in the Effect Zone."
+   "effect_text": "When used, if there is no Mark on the field, randomly Mark a tile. At the end of your turn, enemies on Marked tiles take 4X damage. X is the number of copies of this card in the Effect Zone."
   },
   "9232": {
    "name": "Herald of Doom",

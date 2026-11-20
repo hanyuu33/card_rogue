@@ -478,7 +478,6 @@
       "BATTLE_VICTORY_TITLE": "Victory",
       "BATTLE_ENERGY_AVAILABLE": "Available Cost",
       "BATTLE_ENERGY_CHARGE": "Charge %d · Skills ×%d",
-      "BATTLE_ENERGY_DODGE": "Dodge: allies gain Taunt",
       "BATTLE_EFFECTS": "Effect Zone %d",
       "BATTLE_BATTLE_START": "%s%s begins!",
       "TIER_NORMAL_EASY": "Normal Enemy - Easy",

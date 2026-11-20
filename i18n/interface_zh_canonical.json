@@ -2306,10 +2306,6 @@
         "source": "scripts/battle_energy_hud.gd:40",
         "zh": "蓄力%d · 技能×%d"
       },
-      "BATTLE_ENERGY_DODGE": {
-        "source": "scripts/battle_energy_hud.gd:46",
-        "zh": "闪躲：友军嘲讽"
-      },
       "BATTLE_EFFECTS": {
         "source": "scripts/battle_scene.gd:15978",
         "zh": "效果区 %d"
@@ -3789,7 +3785,7 @@
     "shop": 72,
     "reward": 125,
     "map": 245,
-    "battle": 80,
+    "battle": 79,
     "shell": 222,
     "shared": 92
   }

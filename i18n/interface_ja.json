@@ -478,7 +478,6 @@
       "BATTLE_VICTORY_TITLE": "戦闘勝利",
       "BATTLE_ENERGY_AVAILABLE": "使用可能コスト",
       "BATTLE_ENERGY_CHARGE": "チャージ%d · スキル×%d",
-      "BATTLE_ENERGY_DODGE": "回避：味方に挑発",
       "BATTLE_EFFECTS": "効果ゾーン %d",
       "BATTLE_BATTLE_START": "%s%s 開始！",
       "TIER_NORMAL_EASY": "通常敵-簡単",

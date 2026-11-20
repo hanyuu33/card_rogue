@@ -2601,19 +2601,21 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--dodge" in args and engine != null:
-		# 演示（2026-10-02，R48；R542 改效果）：闪躲（9103）—— 0 费普通；本回合所有友方单位获得嘲讽。
+		# 演示（2026-10-02，R48；R846 改效果）：闪躲（9103）—— 0 费**稀有**；
+		#   使一个敌方单位力量 -X，X = 本回合打出的牌数。先垫 3 张牌再打它 → X = 3。
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DODGE_ID).to_dict()))
-		engine.state.energy = 5
+		engine.state.energy = 9
 		engine.state.place(CardData.from_dict(repo.get_card(8005).to_dict()),
 				Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-		engine.use_spell(0, null)                  # 闪躲：全员嘲讽
+		engine.state.self_card_plays = 3           # 本回合已经打过 3 张
+		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DODGE_ID).to_dict()))
+		engine.use_spell(0, Vector2i(2, 1))        # 闪躲：敌方力量 -3
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "闪躲：本回合所有友方单位获得嘲讽（含后上场的单位）"
+		status_text = "闪躲：敌方力量 -X（X = 本回合已打出的牌数）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--finisher" in args and engine != null:
@@ -7416,7 +7418,10 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 		for x in FieldState.BOARD_ROWS:
 			for y in FieldState.BOARD_COLS:
 				out.append(Vector2i(x, y))
-	elif card.id == 9004 or card.id == GameEngine.DRAGON_BREATH_ID:
+	elif card.id == 9004 or card.id == GameEngine.DRAGON_BREATH_ID \
+			or card.id == GameEngine.DODGE_ID or card.id == GameEngine.SPIN_DRAW_ID:
+		# R846：闪躲（使敌方单位降力）/ 回转（对目标造成 X 伤）也只列**敌方单位** ——
+		# 默认分支会把己方单位一起高亮，点上去引擎只会回一句「需要指定一个敌方单位」。
 		for c: Vector2i in engine.state.board:
 			if engine.state.board[c].owner == GameEngine.SIDE_OPPONENT:
 				out.append(c)
@@ -8101,8 +8106,6 @@ func _on_hover(pos: Vector2) -> void:
 			var charge := engine.charge_count(GameEngine.SIDE_SELF)
 			if charge > 0:
 				tip += "；蓄力 %d：下一张技能结算 %d 次" % [charge, charge + 1]
-			if engine.taunt_all_active(GameEngine.SIDE_SELF):
-				tip += "；闪躲：友军嘲讽"
 	if _hover_card == null:
 		var merged_eff := _merged_effects(engine.state.effects)
 		for i in merged_eff.size():
@@ -10887,8 +10890,8 @@ func _state_slots(p: Placement, cell: Vector2i) -> Array:
 	##    要等 1.8 秒才轮到，等于没提示。它改由 `_draw_activate_callout()` 单独画在
 	##    卡框上沿正中，并且是**动态**的：选中后放大到卡心。
 	## ⚠️ 嘲讽默认**不在这里**：它是卡面字段（`AFFIX_DEFS.嘲讽`），字段队列已经会画图标。
-	##    只有两种「卡面没写嘲讽、此刻却生效」的情况要补：嘲讽来自 traits，或闪躲 9103 的
-	##    全员嘲讽窗口 —— 否则那个橙色环就成了唯一线索，等于没说明。
+	##    唯一要补的是「嘲讽来自 traits」（卡面字段没写）—— 否则那个橙色环就成了唯一线索。
+	##    ⚠️ R846：闪躲 9103 改成敌方降力后，不再有任何「卡面外临时嘲讽」的窗口。
 	## ⚠️ 沉睡 / 倒数的 `count` 是**决策信息**（还剩几下 / 几回合），不是文字标记，必须带。
 	var out: Array = []
 	if p == null or p.card == null:
@@ -13967,12 +13970,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("回响：%s -%d，力量 -%d" % [ec_name, int(data.get("dmg", 0)),
 					int(data.get("amount", 0))])
 		"dodge":
+			# 闪躲（9103，R846）：敌方单位力量 -X —— 与敲晕 / 威慑同一条降力表现（紫字 + 暗影图）。
+			var dd_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var dd_n := int(data.get("amount", 0))
 			sfx.play("spell")
-			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 62),
-					"text": "闪躲：所有友方单位获得嘲讽",
-					"col": UiTheme.KIND_EFFECT, "size": 16, "outline": 6,
-					"start": n, "dur": 2200})
-			_say("闪躲：本回合所有友方单位获得嘲讽")
+			if dd_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(dd_cell) + Vector2(0, -6),
+						"sc": _grid_scroll, "text": "力量 -%d" % dd_n,
+						"col": Color("b06ad0"), "size": 16, "start": n, "dur": 1400})
+			_say("闪躲：敌方力量 -%d（本回合已打出 %d 张）" % [dd_n, dd_n])
 		"finisher":
 			# 收尾（9104）：手卡里仅剩它 → 22 伤（金色大飘字）；平时 6 伤（普通飘字）。
 			var fn_last := bool(data.get("last", false))
@@ -14802,8 +14808,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 不眠（9101）：没手牌时补抽
 			_say("🌙 不眠：手里没牌 → 抽 1 张「%s」" % str(data["card"].card_name))
 		"shadow_cat":
-			var sc_c = data.get("card")
-			_say("🐈 影子猫：%s" % (("「%s」加入手卡" % sc_c.card_name) if sc_c != null else "卡组里没有技能卡"))
+			# 影子猫（8006，R846）：本回合其他卡满 3 张 → 抽 2 张；不满就落空。
+			var sc_got := int(data.get("draw", 0))
+			if sc_got > 0:
+				_say("🐈 影子猫：本回合已打 %d 张 → 抽 %d 张" % [
+						int(data.get("plays", 0)), sc_got])
+			else:
+				_say("🐈 影子猫：本回合其他卡不足 3 张 → 没有抽牌")
 		"shadow_demon":
 			# 影魔（8007）：技能牌 -1 费 + 0 费技能卡加生命
 			_say("😈 影魔：手卡技能牌本回合 -1 费；0 费技能卡 %d 张 → 生命 +%d（当前 %d）" % [
@@ -18050,7 +18061,7 @@ func _draw_cost_zone() -> void:
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	preload("res://scripts/battle_energy_hud.gd").draw(self, _font_bold,
 			_roll("energy", state.energy), engine.max_energy(), epanel,
-			engine.charge_count(GameEngine.SIDE_SELF), engine.taunt_all_active(GameEngine.SIDE_SELF))
+			engine.charge_count(GameEngine.SIDE_SELF))
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	BattleHudMaterial.draw(self, Rect2(zone.position, Vector2(zone.size.x, minf(zone.size.y, 46 + 58 * maxi(1, _merged_effects(state.effects).size())))))

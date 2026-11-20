@@ -156,9 +156,10 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"bonus_hp_per_upgrade":
 			return text.contains("+%d 生命" % n)
 		"fetch_skill":
-			if fx.get("if_third", false):
-				return text.contains("达到 3 张") and text.contains("随机技能卡")
 			return text.contains("随机技能卡")
+		# R846：影子猫 8006 的下半句改成「其他卡满 3 张 → 抽 N 张」。
+		"draw_if_third":
+			return text.contains("3 张其他卡") and text.contains("抽 %d 张牌" % n)
 		"self_destruct":
 			return text.contains("这张卡破坏")
 	return true
@@ -1750,11 +1751,12 @@ func _test_r775_materials() -> void:
 			and int((duck.lower_effect.effects[0] as Dictionary).get("value", 0)) == 9251
 			and int((duck.lower_effect.effects[0] as Dictionary).get("count", 1)) == 2,
 			"R775：鸭妈妈切分 = use + summon(9251 ×2)")
-	# ③ 影子猫：use + fetch_skill(if_third) + 描述改「使用时」
+	# ③ 影子猫：use + draw_if_third(2)（R846 从 fetch_skill + if_third 改过来）
 	var cat: CardData = repo.get_card(8006)
 	check(cat != null and str(cat.upper_effect.get("trigger", "")) == "use"
-			and (cat.lower_effect.effects[0] as Dictionary).get("if_third", false) == true,
-			"R775：影子猫切分 = use + fetch_skill(if_third)")
+			and str((cat.lower_effect.effects[0] as Dictionary).get("type", "")) == "draw_if_third"
+			and int((cat.lower_effect.effects[0] as Dictionary).get("value", 0)) == 2,
+			"R775/R846：影子猫切分 = use + draw_if_third(2)")
 	check(cat != null and cat.effect_text.begins_with("打出时"), "R775：影子猫描述改为「打出时」")
 	# ④ 幽灵：death 主扳机 + turn_start_effects 自毁段 + fetch_skill
 	var ghost: CardData = repo.get_card(8008)
@@ -1765,8 +1767,9 @@ func _test_r775_materials() -> void:
 			and str((ghost.lower_effect.effects[0] as Dictionary).get("type", "")) == "fetch_skill",
 			"R775：幽灵切分 = death + turn_start 自毁 + fetch_skill")
 	# ⑤ 四个新动作都在白名单（含补保真的 summon）
-	for t in ["summon", "bonus_hp_per_upgrade", "fetch_skill", "self_destruct"]:
-		check(CardData.ASSEMBLE_EFFECT_TYPES.has(t), "R775：动作 %s 已登记白名单" % t)
+	for t in ["summon", "bonus_hp_per_upgrade", "fetch_skill", "self_destruct",
+			"draw_if_third"]:
+		check(CardData.ASSEMBLE_EFFECT_TYPES.has(t), "R775/R846：动作 %s 已登记白名单" % t)
 	# ⑥ 堡垒产物行为：upgraded 扳机触发 bonus_hp_per_upgrade(3) → 额外 +3 生命（不加力量）
 	var base := CardData.new()
 	base.card_name = "测试底座"

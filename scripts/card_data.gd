@@ -388,6 +388,8 @@ const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"fetch_cheapest_ally", "recall_ally_from_discard",
 	# R775：三条新动作 —— 堡垒「每层改造 +生命」/ 影子猫·幽灵「从卡组随机技能卡入手」/ 幽灵「自毁」。
 	"bonus_hp_per_upgrade", "fetch_skill", "self_destruct",
+	# R846：影子猫 8006 的下半句改成「其他卡满 3 张 → 抽 N 张」（原来是 fetch_skill + if_third）。
+	"draw_if_third",
 ]
 
 
@@ -695,7 +697,8 @@ func is_damage_spell() -> bool:
 	## * 为什么用文案判据：cards.json 没有「是否造成伤害」字段，而当前 68 张玩家技能卡里，
 	##   能直接造成伤害的 25 张都写成「造成 … 伤害」；提「受到 / 承受伤害」的防御卡
 	##   （森林守护 9037 / 风暴屏障 9060 / 坚固围栏 9071 / 能量屏障 8033）与闪躲 9103
-	##   （R542 起改为全员嘲讽）都不含「造成」二字 → 天然排除（R226 已逐张核对，零误判）。
+	##   （R846 起改为「对一个敌方单位降力」）都不含「造成」二字 → 天然排除（R226 逐张核对）。
+	##   反过来：R846 回转 9089 加了「对一个目标造成 X 点伤害」→ 自动进判据（伤害数 48 → 49）。
 	## ⚠️ 以后新增「造成伤害」的技能卡，effect_text 必须带「造成…伤害」四个字，否则附魔
 	##    选不中它；回归里 `is_damage_spell` 有守卫（engine 计数 + 抽查）。
 	return kind == "技能" and effect_text.contains("造成") and effect_text.contains("伤害")

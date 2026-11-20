@@ -70,7 +70,7 @@
   },
   "8006": {
    "name": "Gato Sombrío",
-   "effect_text": "Al usarse, si esta es la 3.ª carta que se juega este turno, añade una carta de Habilidad aleatoria de la pila de robo a la mano."
+   "effect_text": "Al jugarse, si ya has usado otras 3 cartas este turno, roba 2 cartas."
   },
   "8007": {
    "name": "Demonio Sombrío",
@@ -704,7 +704,7 @@
   },
   "9089": {
    "name": "Revolución",
-   "effect_text": "Roba X cartas, donde X es el número de cartas que has usado este turno; esas cartas no se descartan al final de este turno."
+   "effect_text": "Inflige X de daño a un objetivo y roba X cartas, donde X es el número de otras cartas que has usado este turno. Esas cartas no se descartan al final de este turno."
   },
   "9090": {
    "name": "Emboscada",
@@ -760,7 +760,7 @@
   },
   "9103": {
    "name": "Evasión",
-   "effect_text": "Este turno, todas las unidades aliadas obtienen Provocar."
+   "effect_text": "Reduce el Poder de una unidad enemiga en X, donde X es el número de cartas que has jugado este turno."
   },
   "9104": {
    "name": "Golpe de Gracia",
@@ -772,7 +772,7 @@
   },
   "9111": {
    "name": "Hoja de las Sombras",
-   "effect_text": "Al final de tu turno, inflige X de daño a un enemigo aleatorio, donde X es el Coste que has gastado este turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Al final de tu turno, inflige X de daño a un enemigo aleatorio, donde X es el número de cartas que has usado este turno. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9112": {
    "name": "Cadenas de las Sombras",
@@ -1200,7 +1200,7 @@
   },
   "9231": {
    "name": "Mal Augurio",
-   "effect_text": "Al final de tu turno, los enemigos en casillas marcadas reciben 4X de daño. X es el número de copias de esta carta en la zona de Efectos."
+   "effect_text": "Al usarse, si no hay ninguna Marca en el campo, marca una casilla al azar. Al final de tu turno, los enemigos en casillas marcadas reciben 4X de daño. X es el número de copias de esta carta en la zona de Efectos."
   },
   "9232": {
    "name": "Heraldo de la Perdición",
