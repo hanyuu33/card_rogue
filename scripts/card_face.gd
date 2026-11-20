@@ -96,10 +96,16 @@ static func name_layout(card_name: String, rect: Rect2, font_bold: Font,
 	var pad: float = UiTheme.CARD_PAD * k
 	var maxw: float = maxf(12.0, rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
 			- UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0)
-	var preferred: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.15))
+	# R843g：重复卡种行已回收，短卡名优先放大；长译文仍由宽高双约束继续缩字。
+	var preferred: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT * kt * 1.28))
 	var sz: int = fitted_font_size(font_bold, card_name, maxw, max_h, preferred)
+	# 字号估算只负责初筛；最终必须容纳字体真实 ascent + descent。
+	while sz > 1 and max_h > 0.0 and float(font_bold.get_ascent(sz)
+			+ font_bold.get_descent(sz)) > max_h + 0.5:
+		sz -= 1
 	var tw: float = font_bold.get_string_size(card_name, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
-	var fits_h: bool = max_h <= 0.0 or float(sz) * 1.12 <= max_h + 0.5
+	var fits_h: bool = max_h <= 0.0 or float(font_bold.get_ascent(sz)
+			+ font_bold.get_descent(sz)) <= max_h + 0.5
 	return {"sz": sz, "maxw": maxw, "text_w": tw, "need_scroll": false,
 		"fits": tw <= maxw + 0.5 and fits_h}
 
@@ -674,7 +680,8 @@ static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 	var sz: int = int(info["sz"])
 	var maxw: float = float(info["maxw"])
 	var text_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + text_pad
-	var baseline: float = zone_top + (zone_bottom - zone_top + float(sz) * 0.72) * 0.5
+	var baseline: float = centered_text_baseline(font_bold, sz,
+			Rect2(Vector2(text_x, zone_top), Vector2(maxw, zone_bottom - zone_top)))
 	canvas.draw_string(font_bold, Vector2(text_x, baseline), _display_name(card),
 			HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
 
@@ -712,9 +719,11 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 	var tex := art_for(card.pic_id(), sleeping, phase)
 	# R637：取图认 `pic_id()` —— 组合产物 id 归 0，卡图仍要出属性槽那张。
 	if tex != null:
-		# 覆盖式铺满（cover）：卡图出血到卡边、不留白（R165 开放式卡图）。
+		# R843g：覆盖式铺满但不拉伸；略向顶部锚定，优先保住角色耳尖 / 头顶。
+		# 不使用未逐张验收的生成原图，避免旧平台水印回流；有干净原图的卡先重制成净图。
 		tex = UiAssets.filtered(tex, ceili(maxf(box.size.x, box.size.y) * 1.5))
-		canvas.draw_texture_rect_region(tex, box, cover_region(tex.get_size(), box), Color.WHITE)
+		canvas.draw_texture_rect_region(tex, box,
+				cover_region_anchored(tex.get_size(), box, 0.08), Color.WHITE)
 	else:
 		# 无图回退（R165）：卡种/职业色的**淡彩竖向渐变横幅**代替「粗暴纯色块」——
 		# 自然、按卡分色（职业优先，中立回落卡种）。
@@ -1136,7 +1145,7 @@ static func rarity_tag_layout(text: String, rect: Rect2, font_bold: Font,
 	var k: float = scale_of(rect)
 	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
 	var row := rarity_row_rect(rect, compact)
-	var vpad: float = maxf(0.5, 0.45 * k)
+	var vpad: float = maxf(0.5, 0.65 * k)
 	var top: float = row.position.y + vpad
 	var bottom: float = row.end.y - vpad
 	var h: float = maxf(6.0, bottom - top)
@@ -1147,7 +1156,7 @@ static func rarity_tag_layout(text: String, rect: Rect2, font_bold: Font,
 	var ink_pad: float = maxf(1.5, 1.8 * k)
 	var text_max_w: float = maxf(4.0, max_w - notch * 2.0 - ink_pad * 2.0)
 	var fs: int = fitted_font_size(font_bold, text, text_max_w, h,
-			maxi(6, roundi(7.5 * kt)), 1.10)
+			maxi(6, roundi(8.0 * kt)), 1.10)
 	var text_w: float = font_bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var wanted_w: float = text_w + notch * 2.0 + ink_pad * 2.0
 	var min_w: float = minf(max_w, rect.size.x * 0.22)
@@ -1278,17 +1287,20 @@ static func text_zone_layout(card: CardData, rect: Rect2, font: Font, font_bold:
 	var kt: float = minf(scale_of(rect), UiTheme.CARD_TEXT_SCALE_CAP)
 	var sz: int = maxi(7, roundi(UiTheme.CARD_FS_TEXT * kt))
 	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
-	# FontFile 的 get_height 在小字号会跳变；卡面基线用紧凑字号步进，避免一行吃掉整个正文区。
-	var row_h: float = float(sz)
-	var desc: float = minf(float(font.get_descent(sz)), float(sz) * 0.32)
 	var name_bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_BOTTOM - pad * 0.25
 	var ninfo := name_layout(_display_name(card), rect, font_bold, name_bottom - top)
 	var nsz: int = int(ninfo["sz"])
-	var base_name: float = top + (name_bottom - top + float(nsz) * 0.72) * 0.5
-	var base_meta: float = name_bottom + row_h
-	var has_meta: bool = base_meta + desc <= bottom
-	var meta_sz: int = fitted_font_size(font, card.kind, maxw, row_h, sz)
-	var eff_base0: float = base_meta + row_h
+	var base_name: float = centered_text_baseline(font_bold, nsz,
+			Rect2(Vector2(rect.position.x, top), Vector2(rect.size.x, name_bottom - top)))
+	# R843g：详情不再重复写卡种。「盟友」按店长口径移除；技能 / 效果 / 诅咒等
+	# 仍由底部黑框显示译文。省下的整行分给更高的卡图、卡名与效果正文。
+	var base_meta: float = name_bottom
+	var has_meta: bool = false
+	var meta_sz: int = 0
+	# 正文先确定真实矩形顶边：卡名墨迹底 + 1px 净间距。首行基线随后由
+	# 当前字号的真实 ascent 求出；宽高都不再用「字号 × 百分比」假装字体度量。
+	var eff_top: float = base_name + float(font_bold.get_descent(nsz)) + 1.0
+	var eff_base0: float = eff_top
 	# R702：正文走 `naturalize_card()` —— 本局成长（猎杀 +4/击杀）已经把 value 抬上去了，
 	# 这里读 `effect_text` 原文会一直印基础伤害，与左栏详情 / 卡组浏览写两套数。
 	# ⚠️ R703：卡面**不带**成长括号（`with_note = false`）—— 卡面窄，`30（22＋8）` 多出来的
@@ -1300,19 +1312,24 @@ static func text_zone_layout(card: CardData, rect: Rect2, font: Font, font_bold:
 	var line_h: float = sz * 1.16
 	var eff_n: int = 0
 	if eff != "":
-		# R569：**超框缩字号**；R631：① 缩到 6px（原来 7px + 只降 5 档，长文案必截断）；
-		# ② `last_line_descent = true` → 判据改成「末行墨迹底」，与下面算 eff_n 的公式**同一套**。
-		var avail_h: float = bottom - eff_base0
-		# 卡面只承诺「排得下当前可见行」，不为了一次塞完整段把正文缩成微字；
-		# 超出部分仍由 `_draw_text_zone` 在末行补省略号，完整说明看详情面板。
-		var visible_limit: int = maxi(1, mini(6, int(floor(avail_h / maxf(1.0, float(sz) * 1.22))) + 1))
-		var fit := fit_text_lines(font, eff, maxw, avail_h, sz, maxi(6, sz - 8), visible_limit, true, true)
+		var avail_h: float = maxf(0.0, bottom - eff_top)
+		# 先让首行完整的 ascent + descent 进框，再让折行器决定后续可见行。
+		var fs_cap: int = sz
+		while fs_cap > 6 and float(font.get_ascent(fs_cap)
+				+ font.get_descent(fs_cap)) > avail_h + 0.5:
+			fs_cap -= 1
+		# 卡面只承诺「排得下当前可见行」，完整说明仍由详情面板承担。
+		var visible_limit: int = maxi(1, mini(6, int(floor(avail_h
+				/ maxf(1.0, float(fs_cap) * 1.22))) + 1))
+		var fit := fit_text_lines(font, eff, maxw, avail_h, fs_cap,
+				maxi(6, fs_cap - 8), visible_limit, true, true)
 		eff_sz = int(fit["fs"])
 		eff_lines = fit["lines"]
 		line_h = float(fit["line_h"])
-		if avail_h > 0.0:
-			var dh: float = minf(float(font.get_descent(eff_sz)), float(eff_sz) * 0.32)
-			eff_n = maxi(0, int(floor((avail_h - dh) / line_h)) + 1)
+		eff_base0 = eff_top + float(font.get_ascent(eff_sz))
+		var first_h: float = float(font.get_ascent(eff_sz) + font.get_descent(eff_sz))
+		if avail_h + 0.5 >= first_h:
+			eff_n = 1 + maxi(0, int(floor((avail_h - first_h) / line_h)))
 		eff_n = mini(eff_lines.size(), eff_n)
 	return {
 		"ok": true, "top": top, "bottom": bottom, "maxw": maxw,
@@ -1356,47 +1373,12 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 		return
 	var maxw: float = float(L["maxw"])
 	var cx: float = rect.position.x + rect.size.x * (UiTheme.CARD_NAMEPLATE_X0 + UiTheme.CARD_NAMEPLATE_X1) / 2.0
-	var sz: int = int(L["meta_sz"])
-	var kind_col: Color = UiTheme.kind_color(card.kind)
-	var meta_a: String = card.kind
-	# R592：**字段改走右上角标志**（`_draw_affix_badges`），这一行只剩卡种。
-	# 字段名不再出现在文字里 —— 用户口径「所有贴在卡上的 buff 都不再用纯文字」。
-	# `card.affix_line()` / `field_affix_line()` 保留：它们是数据层口径
-	# （悬停浮层 / 战场徽标 / 测试仍在用），只是卡面不再画。
-	var affix_txt: String = ""
-	var meta_b: String = (" · " + affix_txt) if affix_txt != "" else ""
 	var nsz: int = int(L["name_sz"])
 	var base_name: float = float(L["base_name"])
-	var base_meta: float = float(L["base_meta"])
 	# ── 画字（**不描边**）───────────────────────────────────────────────
-	# R203：卡名横幅（R165 的 banner 渐变条）已去掉 —— 用户口径「卡名后面垫着的那条
-	# 绿色长方形直接去掉，卡名直接放在上面就好」；卡名直接画在羊皮卷/木板底衬上。
-	# R843d：卡名恒单行，宽高任一不足就继续缩字；不折行、不滚动、不省略。
+	# 卡名独占一行；R843g 起不再重复绘制卡种，字段仍由右上角图标承担。
 	_draw_center(canvas, font_bold, nsz, _display_name(card),
 		Vector2(cx, base_name - nsz * 0.36), UiTheme.INK_900)
-	if bool(L["has_meta"]):
-		var wa: float = font.get_string_size(meta_a, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
-		var wb: float = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
-		# ⚠️⚠️ 这里踩过一个**让整个游戏未响应**的坑，改这一行前务必读完：
-		#   起初写的是 `meta_b = meta_b.substr(0, meta_b.length() - 1) + "…"` ——
-		#   去掉最后一个字符再补一个 `…`，**长度恒定不变**；而且末位一旦是 `…`，
-		#   下一轮会得到**完全相同的字符串**（末位被换成 `…`，再砍一位又补回 `…`）。
-		#   于是只要「种类 + 长字段」一开始就超宽，这个循环**永远退不出来**。
-		#   它在 `_draw()` 里 → 整帧不返回 → 游戏直接未响应。图鉴会画全部卡
-		#   （里面有带字段的），所以必中、必卡死，表现为「一打开就卡住」。
-		#   两条保险：① 每次砍 **2** 个字符（长度严格递减）；② 再加一个硬上限兜底
-		#   —— 绘制代码里的循环**绝不允许**只依赖「条件终将不成立」来退出。
-		var meta_guard := 0
-		while meta_b != "" and wa + wb > maxw and meta_b.length() > 2 and meta_guard < 64:
-			meta_b = meta_b.substr(0, meta_b.length() - 2) + "…"
-			wb = font.get_string_size(meta_b, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
-			meta_guard += 1
-		var mx: float = cx - (wa + wb) / 2.0
-		canvas.draw_string(font, Vector2(mx, base_meta), meta_a,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, sz, kind_col)
-		if meta_b != "":
-			canvas.draw_string(font, Vector2(mx + wa, base_meta), meta_b,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, sz, UiTheme.STAT_POWER)
 	# R631：效果文整行**不传 width** —— `draw_string` 的 width 会把超出部分直接裁掉，
 	# 贴边的那半个词（幻影斗篷的「力量 -1」）会凭空消失。宽度由折行保证，这里只管画。
 	var eff_lines: Array = L["eff_lines"]
@@ -1490,10 +1472,11 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 				Vector2(rect.size.x * 0.92,
 				rect.size.y * (UiTheme.CARD_STATS_BOTTOM - UiTheme.CARD_BODY_BOTTOM)))
 		canvas.draw_rect(kind_rect, Color(0.075, 0.065, 0.055, 0.95))
-		var kind_fs: int = fitted_font_size(font_bold, card.kind,
+		var kind_text: String = GameI18n.source(card.kind)
+		var kind_fs: int = fitted_font_size(font_bold, kind_text,
 				kind_rect.size.x - 4.0, kind_rect.size.y - 2.0,
 				maxi(8, roundi(8.0 * minf(kc, UiTheme.CARD_TEXT_SCALE_CAP))))
-		_draw_center(canvas, font_bold, kind_fs, card.kind, kind_rect.get_center(), UiTheme.ADVENTURE_LIGHT)
+		_draw_center(canvas, font_bold, kind_fs, kind_text, kind_rect.get_center(), UiTheme.ADVENTURE_LIGHT)
 		return
 	# ── R843：四项属性收进卡内底栏，等距单排；不再向左右出血或挤压名称带 ──
 	var bv := base_stats(card)

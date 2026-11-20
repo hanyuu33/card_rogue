@@ -6,6 +6,11 @@ func _initialize() -> void:
 func _run() -> void:
 	ProfileData.set_test_mode()
 	RunSave.set_test_mode()
+	# R843g：奖励页验收不播新手教程；否则卷卷会盖住奖励列表与三选一卡面。
+	for tutorial_id in [TutorialScript.ID_MAP_WALK, TutorialScript.ID_MAP_CHOCO,
+			TutorialScript.ID_BATTLE_BASIC, TutorialScript.ID_BATTLE_ALLY,
+			TutorialScript.ID_TOOL_PLACE, TutorialScript.ID_TOOL_USE]:
+		ProfileData.mark_tutorial_seen(tutorial_id)
 	change_scene_to_file("res://scenes/class_pick.tscn")
 	await process_frame
 	await create_timer(0.6).timeout
@@ -27,7 +32,19 @@ func _run() -> void:
 	await _shot(panel._root, "reward_list")
 	panel._scroll = panel._max_scroll()
 	await _shot(panel._root, "reward_list_bottom")
-	print("REWARD ICONS VISUAL PASS: actual battle reward panel and class selection 0/5/10")
+	# R843g：走真实列表入口进入三选一，不能只改 _view 或拿列表页冒充验收。
+	panel._scroll = 0.0
+	panel._open_entry(0)
+	await create_timer(0.4).timeout
+	if panel._view != RewardPanel.VIEW_CARDS or panel._sel != 0:
+		printerr("REWARD ICONS VISUAL FAIL: 卡牌奖励未进入真实三选一视图")
+		quit(1)
+		return
+	await _shot(panel._root, "reward_cards")
+	panel._hover_card = 1
+	panel._root.queue_redraw()
+	await _shot(panel._root, "reward_cards_detail")
+	print("REWARD ICONS VISUAL PASS: actual battle reward list / card pick and class selection 0/5/10")
 	quit()
 
 func _shot(canvas, name: String) -> void:

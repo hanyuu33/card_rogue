@@ -6,6 +6,7 @@ extends SceneTree
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const OUT := "res://art_src/2026-11-20_card_face_redesign/card_style.png"
 const OUT_I18N := "res://art_src/2026-11-20_card_face_redesign/card_style_i18n.png"
+const OUT_I18N_DETAIL := "res://art_src/2026-11-20_card_face_redesign/card_style_i18n_detail.png"
 const OUT_CLASSES := "res://art_src/2026-11-20_card_face_redesign/card_style_classes.png"
 
 
@@ -76,10 +77,11 @@ func _run() -> void:
 		var r := Rect2(50 + i * 150, 260, 77, 92)
 		sheet.items.append({"card": samples[i], "rect": r,
 				"board": true, "fixed_badges": true})
-	sheet.labels.append({"at": Vector2(30, 420), "text": "详情 198×238 · 名称 / 卡种 / 效果正文"})
-	for i in 4:
+	sheet.labels.append({"at": Vector2(30, 420), "text": "详情 198×238 · 大卡名 / 效果正文（不重复卡种）"})
+	var detail_samples: Array[CardData] = [samples[0], samples[1], samples[2], samples[5]]
+	for i in detail_samples.size():
 		var r := Rect2(60 + i * 275, 450, 198, 238)
-		sheet.items.append({"card": samples[i], "rect": r})
+		sheet.items.append({"card": detail_samples[i], "rect": r})
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -121,8 +123,40 @@ func _run() -> void:
 		quit(1)
 		return
 
-	# R843e：六种归属各出紧凑 / 详情两档，检查一体框比例、透明窗与文字安全区。
+	# R843g：四语详情补验长卡名、效果正文与非单位底部卡种译文。
 	lang_sheet.queue_free()
+	var detail_sheet := Sheet.new()
+	detail_sheet.face = UiTheme.font()
+	detail_sheet.bold = UiTheme.font_bold()
+	root.add_child(detail_sheet)
+	for i in langs.size():
+		var cell := Vector2((i % 2) * 640, (i / 2) * 360)
+		detail_sheet.labels.append({"at": cell + Vector2(28, 32), "text": titles[i] + " · detail"})
+		var long_card := _clone(repo, 8074)
+		long_card.rarity = 2
+		detail_sheet.items.append({"card": long_card, "lang": langs[i],
+				"rect": Rect2(cell + Vector2(38, 55), Vector2(198, 238))})
+		var effect_card := _clone(repo, 9056)
+		effect_card.rarity = 3
+		detail_sheet.items.append({"card": effect_card, "lang": langs[i],
+				"rect": Rect2(cell + Vector2(280, 65), Vector2(170, 205))})
+		var compact_card := _clone(repo, 9040)
+		compact_card.rarity = 3
+		detail_sheet.items.append({"card": compact_card, "lang": langs[i],
+				"rect": Rect2(cell + Vector2(490, 85), Vector2(99, 119)),
+				"name_only": true, "adventure": true})
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var detail_img := root.get_texture().get_image()
+	var detail_err := detail_img.save_png(OUT_I18N_DETAIL)
+	print("I18N DETAIL SHOT OK ", ProjectSettings.globalize_path(OUT_I18N_DETAIL), " err=", detail_err)
+	if detail_err != OK:
+		quit(1)
+		return
+
+	# R843e：六种归属各出紧凑 / 详情两档，检查一体框比例、透明窗与文字安全区。
+	detail_sheet.queue_free()
 	var class_sheet := Sheet.new()
 	class_sheet.face = UiTheme.font()
 	class_sheet.bold = UiTheme.font_bold()

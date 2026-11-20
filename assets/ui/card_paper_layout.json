@@ -1,34 +1,37 @@
 {
-  "note": "R843e 分区坐标（归一化）；职业卡图框 + 稀有度底托使用一体素材，文字带不画横向金线",
-  "art_ratio": 0.495,
+  "note": "R843g 分区坐标（归一化）；统一六职业内窗，回收重复卡种行，卡图顶部优先裁切",
+  "art_ratio": 0.540,
   "art_window": {
-    "x0": 0.045,
-    "x1": 0.955,
-    "y0": 0.028,
-    "y1": 0.495
+    "x0": 0.035,
+    "x1": 0.965,
+    "y0": 0.024,
+    "y1": 0.540,
+    "crop_anchor_y": 0.08
   },
   "rarity": {
     "x0": 0.06,
-    "y0": 0.505,
+    "y0": 0.550,
     "x1": 0.94,
-    "y1": 0.600,
-    "height_mode": "fixed_ratio",
+    "y1": 0.660,
+    "height_mode": "fixed_ratio_matches_96px_asset_band",
     "width_mode": "localized_text_adaptive_center_tag",
     "row_width_mode": "class_integrated_art_window_width_asset",
     "asset": "art_rarity_frame_<kind>.png / art_rarity_frame_<kind>_compact.png"
   },
   "nameplate": {
     "x0": 0.06,
-    "y0": 0.610,
+    "y0": 0.670,
     "x1": 0.94,
-    "y1": 0.715
+    "y1": 0.765,
+    "preferred_font_factor": 1.28
   },
+  "detail_kind_row": "removed; non-unit kinds remain in the localized bottom black bar",
   "body_bottom": 0.845,
   "stats_bottom": 0.972,
   "stats_font_mode": "shared_per_card_row",
-  "compact_art_ratio": 0.575,
-  "compact_rarity_top": 0.585,
-  "compact_rarity_bottom": 0.680,
-  "compact_name_top": 0.690,
-  "compact_name_bottom": 0.820
+  "compact_art_ratio": 0.600,
+  "compact_rarity_top": 0.610,
+  "compact_rarity_bottom": 0.715,
+  "compact_name_top": 0.725,
+  "compact_name_bottom": 0.835
 }

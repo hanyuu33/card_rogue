@@ -29,51 +29,130 @@ def alpha_key(im):
     return im.crop(bbox)
 
 
+def longest_transparent_run(values):
+    """Return the longest transparent half-open run, retaining the image object upstream."""
+    best = (0, 0)
+    start = None
+    for i, transparent in enumerate(list(values) + [False]):
+        if transparent and start is None:
+            start = i
+        elif not transparent and start is not None:
+            if i - start > best[1] - best[0]:
+                best = (start, i)
+            start = None
+    return best
+
+
+def opening_box(im):
+    """Locate the central art opening, not the transparent outside corners."""
+    alpha = im.getchannel("A")
+    px = alpha.load()
+    w, h = im.size
+    vertical = (0, 0)
+    for xf in (0.50, 0.42, 0.58, 0.35, 0.65):
+        run = longest_transparent_run(px[round(w * xf), y] < 24 for y in range(h))
+        if run[1] - run[0] > vertical[1] - vertical[0]:
+            vertical = run
+    if vertical[1] - vertical[0] < h * 0.25:
+        raise RuntimeError("art opening vertical run not found: %s" % (vertical,))
+    cy = (vertical[0] + vertical[1]) // 2
+    horizontal = longest_transparent_run(px[x, cy] < 24 for x in range(w))
+    if horizontal[1] - horizontal[0] < w * 0.35:
+        raise RuntimeError("art opening horizontal run not found: %s" % (horizontal,))
+    return horizontal[0], vertical[0], horizontal[1], vertical[1]
+
+
+def warp_opening(im, target_size, target_opening):
+    """Nine-region warp: all classes share inner-window coordinates without losing ornaments."""
+    source_opening = opening_box(im)
+    sw, sh = im.size
+    tw, th = target_size
+    sx0, sy0, sx1, sy1 = source_opening
+    tx0, ty0, tx1, ty1 = target_opening
+    if not (0 <= sx0 < sx1 <= sw and 0 <= sy0 < sy1 <= sh):
+        raise RuntimeError("invalid source opening: %s" % (source_opening,))
+    xs = [0, sx0, sx1, sw]
+    ys = [0, sy0, sy1, sh]
+    txs = [0, tx0, tx1, tw]
+    tys = [0, ty0, ty1, th]
+    out = Image.new("RGBA", target_size, (0, 0, 0, 0))
+    for row in range(3):
+        for col in range(3):
+            src_box = (xs[col], ys[row], xs[col + 1], ys[row + 1])
+            dst_box = (txs[col], tys[row], txs[col + 1], tys[row + 1])
+            src_w, src_h = src_box[2] - src_box[0], src_box[3] - src_box[1]
+            dst_w, dst_h = dst_box[2] - dst_box[0], dst_box[3] - dst_box[1]
+            if min(src_w, src_h, dst_w, dst_h) <= 0:
+                continue
+            piece = im.crop(src_box).resize((dst_w, dst_h), Image.Resampling.LANCZOS)
+            out.alpha_composite(piece, (dst_box[0], dst_box[1]))
+    return out
+
+
+def plaque_start(master):
+    """Find the first opaque row below the art opening; try symmetric columns for ornaments."""
+    alpha = master.getchannel("A")
+    px = alpha.load()
+    w, h = master.size
+    found = []
+    for xf in (0.50, 0.42, 0.58, 0.35, 0.65):
+        x = round(w * xf)
+        candidates = [y for y in range(round(h * 0.48), h) if px[x, y] > 40]
+        if candidates:
+            found.append(candidates[0])
+    if not found:
+        raise RuntimeError("rarity plaque not found")
+    found.sort()
+    return found[len(found) // 2]
+
+
 def main():
     kind = sys.argv[1] if len(sys.argv) > 1 else "forest"
     raw = Image.open(D / "raw" / (kind + ".png"))
     master = alpha_key(raw)
+    # Normalize the real outer edge before measuring the inner window. A second crop after
+    # warping would move the canonical opening again (the R843f partial-fix trap).
+    solid = master.getchannel("A").point(lambda value: 255 if value >= 128 else 0)
+    outer = solid.getbbox()
+    if outer is None:
+        raise RuntimeError("empty integrated frame")
+    master = master.crop(outer)
     master.save(D / "raw" / (kind + "_alpha.png"))
-    # Locate the plaque at the center column: first opaque pixel after the opening.
-    cx = master.width // 2
-    alpha = master.getchannel("A")
-    ap = alpha.load()
-    candidates = [y for y in range(master.height // 2, master.height) if ap[cx, y] > 40]
-    if not candidates:
-        raise RuntimeError("rarity plaque not found")
-    band_y = candidates[0]
+    band_y = plaque_start(master)
     width = 728
     scaled_h = round(master.height * width / master.width)
     base = master.resize((width, scaled_h), Image.Resampling.LANCZOS)
     scaled_band_y = round(band_y * width / master.width)
-    upper = base.crop((0, 0, width, scaled_band_y))
+    # Keep a short tail below the detected plaque start so classes whose bottom border
+    # crosses that row still have real pixels for the canonical lower frame segment.
+    upper = base.crop((0, 0, width, min(scaled_h, scaled_band_y + 24)))
     band = base.crop((0, scaled_band_y, width, scaled_h))
-    band_h = 126
+    band_alpha = band.getchannel("A")
+    band_px = band_alpha.load()
+    band_cx = width // 2
+    band_gap = next((y for y in range(band.height) if band_px[band_cx, y] >= 24), 0)
+    if 0 < band_gap < band.height // 3:
+        band = band.crop((0, band_gap, width, band.height))
+    # 96 / 552 and 96 / 630 match the two code-side rarity rows after R843g.
+    band_h = 96
     band = band.resize((width, band_h), Image.Resampling.LANCZOS)
-    for suffix, height in (("", 552), ("_compact", 630)):
+    for suffix, height, opening_top in (("", 552, 52), ("_compact", 630, 62)):
+        upper_h = height - band_h
+        top = warp_opening(upper, (width, upper_h),
+                (34, opening_top, 694, upper_h - 10))
         frame = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        top = upper.resize((width, height - band_h), Image.Resampling.LANCZOS)
         frame.alpha_composite(top, (0, 0))
-        frame.alpha_composite(band, (0, height - band_h))
-        # Lanczos 会在全透明窗口留下 alpha=1 的采样残迹；统一归零，避免导入后薄雾。
-        frame.putalpha(frame.getchannel("A").point(lambda value: 0 if value < 6 else value))
-        # R843f：抠底原图的透明安全边并不一致。若不二次归一，详情大卡会把几像素的
-        # 顶部余量放大成「职业框没对齐」。以实际不透明外框为准重新贴齐同一画布；
-        # 不能只信 alpha_key 的 getbbox，因为微弱品红残迹也会把 bbox 往外撑。
-        solid = frame.getchannel("A").point(lambda value: 255 if value >= 24 else 0)
-        outer = solid.getbbox()
-        if outer is None:
-            raise RuntimeError("empty integrated frame")
-        frame = frame.crop(outer).resize((width, height), Image.Resampling.LANCZOS)
+        frame.alpha_composite(band, (0, upper_h))
+        # Remove only imperceptible Lanczos residue; flowers and opaque ornamental edges stay.
         frame.putalpha(frame.getchannel("A").point(lambda value: 0 if value < 6 else value))
         actual = frame.getchannel("A").point(lambda value: 255 if value >= 24 else 0).getbbox()
-        # 重采样后最外一圈可能只剩淡抗锯齿；源图 1px 在最大详情卡上也不足 0.3px。
         if actual is None or actual[0] > 1 or actual[1] > 1 \
                 or actual[2] < width - 1 or actual[3] < height - 1:
             raise RuntimeError("integrated frame bounds not normalized: %s" % (actual,))
         path = OUT / ("art_rarity_frame_" + kind + suffix + ".png")
         frame.save(path)
-        print("OK", path, frame.size, "band_y", band_y, "outer", outer, flush=True)
+        print("OK", path, frame.size, "band_y", band_y, "opening", opening_box(top),
+                "outer", actual, flush=True)
 
 
 if __name__ == "__main__":

@@ -48212,6 +48212,22 @@ func _init() -> void:
 	check(CardFace.stats_bar_rect(r843_rect).end.y <= r843_rect.end.y
 			and UiTheme.CARD_COMPACT_NAME_BOTTOM < UiTheme.CARD_BODY_BOTTOM,
 			"R843c 下部黑底：三行顺序排列且属性栏完整留在卡框内")
+	check(UiTheme.CARD_ART_RATIO >= 0.540 and UiTheme.CARD_COMPACT_ART_RATIO >= 0.600
+			and UiTheme.CARD_RARITY_BOTTOM - UiTheme.CARD_RARITY_TOP >= 0.109,
+			"R843g 空间重排：回收重复卡种行后，卡图增高且稀有度底托加厚")
+	var r843_detail_rect := Rect2(Vector2.ZERO, Vector2(198, 238))
+	var r843_detail_card := CardRepo.load_json().get_card(9040)
+	var r843_detail := CardFace.text_zone_layout(r843_detail_card, r843_detail_rect,
+			UiTheme.font(), r281_font, 3.0)
+	check(bool(r843_detail["ok"]) and not bool(r843_detail["has_meta"]),
+			"R843g 详情：盟友卡种不再重复占用卡名与正文之间的一整行")
+	var r843_name_ink_bottom: float = float(r843_detail["base_name"]) + r281_font.get_descent(
+			int(r843_detail["name_sz"]))
+	var r843_effect_ink_top: float = float(r843_detail["eff_base0"]) - UiTheme.font().get_ascent(
+			int(r843_detail["eff_sz"]))
+	check(r843_effect_ink_top >= r843_name_ink_bottom - 0.5,
+			"R843g 详情：卡名 descent 与正文首行 ascent 不重叠（%.2f / %.2f）"
+			% [r843_name_ink_bottom, r843_effect_ink_top])
 	for r843_kind in ["forest", "shadow", "mech", "bard", "common", "enemy"]:
 		for r843_compact in [false, true]:
 			var r843_tex := UiAssets.art_rarity_frame(r843_kind, r843_compact)
@@ -48223,6 +48239,14 @@ func _init() -> void:
 				var r843_used := r843_img.get_used_rect()
 				check(r843_used == Rect2i(Vector2i.ZERO, r843_img.get_size()),
 						"R843f 一体框：%s 实际外缘贴齐画布，详情不再被透明余量推偏（compact=%s）"
+						% [r843_kind, r843_compact])
+				# 42% 处避开暗影中央垂下的宝石；它是有意装饰，不是窗口偏移。
+				var r843_cx := roundi(r843_img.get_width() * 0.42)
+				var r843_opening_top := 62 if r843_compact else 52
+				var r843_band_top := r843_img.get_height() - 96
+				check(r843_img.get_pixel(r843_cx, r843_opening_top + 2).a < 0.10
+						and r843_img.get_pixel(r843_cx, r843_band_top + 2).a > 0.50,
+						"R843g 一体框：%s 内窗顶边与 96px 底托采用统一坐标（compact=%s）"
 						% [r843_kind, r843_compact])
 
 	check(CardFace.marquee_offset(50.0, 60.0, 1234) == 0.0,
@@ -48244,6 +48268,20 @@ func _init() -> void:
 	check(r281_cf_src.find("wrap_text(font_bold, card.card_name") < 0,
 
 		"R843d 卡名：卡面**不再对卡名折行**（单行 + 自适应缩放，防回退）")
+	check(r281_cf_src.contains("cover_region_anchored(tex.get_size(), box, 0.08)"),
+			"R843g 卡图：增高窗口采用顶部优先裁切，不再居中削掉耳尖 / 头顶")
+	check(r281_cf_src.contains("var kind_text: String = GameI18n.source(card.kind)"),
+			"R843g 底部黑框：非单位卡种必须走多语译文，不留中文原文")
+	var r843_old_lang := GameSettings.language
+	for r843_lang in ["en", "ja", "es", "zh"]:
+		GameSettings.language = r843_lang
+		var r843_kind_text := GameI18n.source("效果")
+		var r843_kind_fs := CardFace.fitted_font_size(r281_font, r843_kind_text,
+				160.0, 24.0, 18)
+		check(r281_font.get_string_size(r843_kind_text, HORIZONTAL_ALIGNMENT_LEFT,
+				-1, r843_kind_fs).x <= 160.5,
+				"R843g 卡种译文：%s 完整缩放落在底部黑框" % r843_lang)
+	GameSettings.language = r843_old_lang
 
 
 
@@ -75751,7 +75789,7 @@ func _test_r592b() -> void:
 
 	var cfs := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-	check_src(cfs.contains('var affix_txt: String = ""'),
+	check_src(not cfs.contains("var affix_txt") and not cfs.contains("meta_b"),
 
 			"R592b：文字区不再把字段名拼进「种类 · 字段」那行")
 
