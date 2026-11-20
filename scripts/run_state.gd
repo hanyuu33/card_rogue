@@ -552,6 +552,43 @@ const CAVE_ROPE_RELIC_ID := 6048
 # R830 新道具：首饰盒（6088，初始池）—— 获得时随机一张**史诗卡**加入卡组。
 # 与湖中仙女·诚实共用同一条抽卡口（LAKE_EPIC_RARITY = 2 = 史诗）；随机源走 run_rng。
 const JEWELRY_BOX_RELIC_ID := 6088
+# R835 空故事书（6089，第一层初始池）：战斗开始时对**全体敌人**造成 story_book_pages 点伤害；
+# 每经过一个事件房 / 打赢一个首领 → +1 页（页数就是伤害值）。
+# ⚠️ 只累计「**持有期间**的经历」—— 没这道具时走过的事件 / 首领不补记，否则捡到就是一大叠页数。
+# ⚠️ 页数跨战斗、跨换层、跨读档都要接着算 → 进 RunSave。
+const STORY_BOOK_RELIC_ID := 6089
+static var story_book_pages := 0
+## 已记过页的事件节点 id —— `complete_current()` 会被事件场景多处重复调用，靠它做幂等
+## （不看 `cleared_ids`：战斗 / 地图场景会各自 append，顺序不可依赖）。
+static var story_book_nodes: Array = []
+
+
+static func story_book_add_page() -> bool:
+	## R835 空故事书：一条「经历」= 一个事件房 / 一个首领战 → 页数 +1。
+	## 幂等不在这一步做（事件按节点 id、首领按 `boss_beaten` 每层一次）。
+	## 没这道具 → 不累计、返回 false（捡到之前的经历不算）。
+	## 返回 bool 而不是页数：调用方要靠它决定「这一步算不算发生过」——
+	## 事件那边只有**真的加了页**才登记节点 id，否则没书时走过的事件会先占住 id，
+	## 之后拿到书再经过同一个节点就永远补不上了（R835 首版就是这个 bug）。
+	if not relics.has(STORY_BOOK_RELIC_ID):
+		return false
+	story_book_pages += 1
+	return true
+
+
+static func _note_story_book_event(node_id: int) -> void:
+	## R835：事件房结算完成 → 记一页。判据只有「这一格的 type 是 event」一条 ——
+	## 宝箱 / 商店 / 休息 / 战斗都不算（卡面写的是「事件」）。
+	if node_id < 0 or node_id >= map_cells.size():
+		return
+	if story_book_nodes.has(node_id):
+		return
+	var cell: Dictionary = map_cells[node_id]
+	if str(cell.get("type", "")) != "event":
+		return
+	if not story_book_add_page():
+		return            # 没这道具 → 连「记过」都不算
+	story_book_nodes.append(node_id)
 # R342 采集刀（6050，**传奇**奖励池）：「战斗后额外获得一份卡牌奖励」。
 # 唯一消费点 = `queue_battle_card_rewards()` —— 战斗胜利的卡牌奖励只从那里入队。
 const HARVEST_KNIFE_RELIC_ID := 6050
@@ -1377,6 +1414,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	pending_deck_edit = ""
 	statue_charge = 0          # R307 雕像：新的一局从 0 开始数
 	basin_charge = 0           # R311 不锈钢盆：新的一局没有盆（重拿时再灌满）
+	story_book_pages = 0       # R835 空故事书：新的一局是一本空书
+	story_book_nodes = []
 	match_charge = 0           # R342 火柴：新的一局没有火柴（重拿时再灌满 3 次）
 	spent_relics.clear()       # R367：新的一局没有「已耗尽」的道具
 	pipe_ready = false          # R446：新的一局 → 烟斗从头（没拿到就是灭的）
@@ -1519,6 +1558,8 @@ static func end_run(clear_save: bool = true) -> void:
 	seen_ids = []                 # R207：本局结束 → 迷雾记忆清掉
 	chocolate = 0
 	gold = 0                      # R181：本局结束 → 金币清掉
+	story_book_pages = 0          # R835：本局结束 → 故事书合上
+	story_book_nodes = []
 	boss_pending = false
 	boss_beaten = false       # R339：一局结束 → 标记回到初值
 	# R339：本局已收尾（地图场景据此不再兜底开新局）。
@@ -3704,6 +3745,10 @@ static func advance(node_id: int) -> Dictionary:
 static func complete_current() -> void:
 	## 当前房间内容结算完成（战斗胜利 / 休息 / 事件 / 大宝箱）。
 	## 进房时已经标过「已走过」，这里是幂等的兜底口。
+	## ⚠️ R835 空故事书的「事件 +1 页」挂在**这里**：事件完成的调用点散在 event_scene
+	##    十余处，唯一共同收口就是本函数。它自己按 `story_book_nodes` 去重，
+	##    因此不受 `cleared_ids` 是否已被别的场景 append 影响。
+	_note_story_book_event(current_node_id)
 	if current_node_id >= 0 and not cleared_ids.has(current_node_id):
 		cleared_ids.append(current_node_id)
 	reveal_known()                # R207：幂等刷新（房间结算完的视野也记进 seen）
@@ -3846,8 +3891,14 @@ static func mark_boss_beaten() -> void:
 	## R339：本层 Boss 已击破 —— 唯一置位口。
 	## 顺带清掉 `boss_pending`：Boss 战打完时这条「等房间结算完就入夜」的待触发必须失效，
 	## 否则回地图就可能再开一次（原先只靠 `map_scene._start_boss_battle` 提前清，是个单点依赖）。
+	## R835 空故事书：每个首领 +1 页。`boss_beaten` 是**按层**标志（换层复位），
+	## 天然做到「同一层的同一只首领只记一次、下一层的新首领再记一次」。
+	if boss_beaten:
+		boss_pending = false
+		return
 	boss_beaten = true
 	boss_pending = false
+	story_book_add_page()
 
 
 static func elite_tier_for_chocolate(choco: int) -> int:

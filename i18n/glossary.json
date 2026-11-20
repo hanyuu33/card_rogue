@@ -2315,6 +2315,11 @@
       "en": "Jewelry Box",
       "ja": "宝石箱",
       "id": 6088
+    },
+    "空故事书": {
+      "en": "Empty Storybook",
+      "ja": "空の絵本",
+      "id": 6089
     }
   },
   "levels": {

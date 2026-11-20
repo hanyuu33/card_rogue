@@ -15963,11 +15963,11 @@ func _init() -> void:
 
 	var relic_repo := RelicRepo.load_json()
 
-	check(relic_repo.initial_ids().size() == 11 and relic_repo.get_relic(6001) != null
+	check(relic_repo.initial_ids().size() == 12 and relic_repo.get_relic(6001) != null
 
 			and relic_repo.get_relic(6004) != null and relic_repo.get_relic(6021) != null,
 
-			"道具库：11 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048 / R745 工具箱 6068 / R830 首饰盒 6088）")
+			"道具库：12 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048 / R745 工具箱 6068 / R830 首饰盒 6088 / R835 空故事书 6089）")
 
 	RunState.choose_start_relic(6001)
 
@@ -43144,9 +43144,9 @@ func _init() -> void:
 
 	var r244_pack := r244_repo.get_relic(6030)
 
-	check(r244_init.size() == 11 and r244_init.has(6030) and not r244_init.has(6003),
+	check(r244_init.size() == 12 and r244_init.has(6030) and not r244_init.has(6003),
 
-			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R830 后共 11 个）")
+			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R835 后共 12 个）")
 
 	check(r244_pack != null and r244_pack.source == "初始"
 
@@ -44044,9 +44044,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 83,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 84,
 
-			"R577b 保真锁：83 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087 / R830 +首饰盒 6088）")
+			"R577b 保真锁：84 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087 / R830 +首饰盒 6088 / R835 +空故事书 6089）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -44375,7 +44375,7 @@ func _init() -> void:
 
 	var r245_pot := r245_rrepo.get_relic(6032)
 
-	check(r245_init.size() == 11 and r245_init.has(6031) and r245_init.has(6032),
+	check(r245_init.size() == 12 and r245_init.has(6031) and r245_init.has(6032),
 
 			"R245 初始道具池：勇气徽章 6031 / 陶罐 6032 已在池内（%d 个）" % r245_init.size())
 
@@ -74068,6 +74068,7 @@ func _init() -> void:
 	_test_r826()
 	_test_r829()
 	_test_r830()
+	_test_r835()
 	_test_r832()
 	_test_r833()
 
@@ -80023,7 +80024,7 @@ func _test_r810() -> void:
 			r810_bad.append("%d 不在奖励池" % r810_id)
 	check(r810_bad.is_empty(), "R810 数据层：四件都在库 · 战斗类 · 奖励来源 · 进奖励池（%s）"
 			% str(r810_bad))
-	check(r810_repo.all_relics().size() == 83, "R824 数据层：道具总数 83 件（+鸭子闹钟 6085 / R826 音乐盒 6086 / R829 这是礼帽 6087 / R830 首饰盒 6088）")
+	check(r810_repo.all_relics().size() == 84, "R824 数据层：道具总数 84 件（+鸭子闹钟 6085 / R826 音乐盒 6086 / R829 这是礼帽 6087 / R830 首饰盒 6088 / R835 空故事书 6089）")
 	check(r810_repo.normal_reward_ids().size() == 30
 			and r810_repo.legendary_reward_ids().size() == 6,
 			"R810/R813 数据层：奖励池 30 一般 + 6 传奇 = 36")
@@ -81279,8 +81280,8 @@ func _test_r829() -> void:
 	check(r834_demo_duck.has(6087) and r834_demo_start2.has(6087),
 			"R829 试玩版：demo 下鸭绅士池（%d 件）与二层起点池都含礼帽 6087"
 			% r834_demo_duck.size())
-	check(r834_demo_all == 83,
-			"R829 试玩版：demo 下 all_relics 仍是 83（道具档「全部登陆」）")
+	check(r834_demo_all == 84,
+			"R829 试玩版：demo 下 all_relics 仍是 84（道具档「全部登陆」）")
 
 	# ── ③ 引擎：礼帽 —— 己方盟友死亡 → 洗回抽牌库 + 本局 -2 费 + 次元 ──
 	var r828_e := _new_engine([], 40, 40, -1, false)
@@ -81511,3 +81512,109 @@ func _test_r833() -> void:
 	check(r833_badr.is_empty(),
 			"R833 道具中文与 noncard_zh_canonical 逐字一致（%d 条不符：%s）"
 			% [r833_badr.size(), ", ".join(r833_badr.slice(0, 5))])
+
+func _test_r835() -> void:
+	## R835（店长口径）：新增一层初始道具「空故事书」6089 ——
+	## 战斗开始时对全体敌人造成「页数」点伤害；每经过一个事件房 / 打赢一个首领 +1 页。
+	var repo := CardRepo.load_json()
+	var rrepo := RelicRepo.load_json()
+
+	# ── ① 数据层 ──
+	var r835_sb := rrepo.get_relic(6089)
+	check(r835_sb != null and r835_sb.relic_name == "空故事书"
+			and r835_sb.kind == "战斗" and r835_sb.source == "初始" and r835_sb.tier == "一般",
+			"R835 数据：6089 空故事书（战斗 · 初始 · 一般）")
+	check(r835_sb.desc.contains("0 伤害") and r835_sb.desc.contains("+1")
+			and r835_sb.desc.contains("首领战") and r835_sb.desc.contains("事件"),
+			"R835 文案：写着 0 伤害 / 事件 / 首领战 / +1（%s）" % r835_sb.desc)
+	check(GameEngine.STORY_BOOK_RELIC_ID == 6089 and RunState.STORY_BOOK_RELIC_ID == 6089,
+			"R835 常量：引擎与局状态两个常量都认 6089")
+
+	# ── ② 池子 ──
+	check(rrepo.initial_ids().has(6089), "R835 池：空故事书在一层初始池")
+	check(not rrepo.reward_ids().has(6089) and not rrepo.event_ids().has(6089)
+			and not rrepo.layer2_ids().has(6089), "R835 池：不进奖励 / 事件 / 二层起始池")
+	check(DemoScope.allows_relic(6089), "R835 试玩版：6089 在 demo_scope 基线里")
+	GameBuild.set_test_demo(1)
+	var r835_demo_init: Array[int] = rrepo.initial_ids()
+	var r835_demo_start1: Array[int] = rrepo.start_ids_for_layer(1)
+	var r835_demo_all: int = rrepo.all_relics().size()
+	GameBuild.set_test_demo(-1)
+	check(r835_demo_init.has(6089) and r835_demo_start1.has(6089) and r835_demo_all == 84,
+			"R835 试玩版：demo 下初始池（%d 件）与第一层起点池都含 6089，all_relics 仍 84"
+			% r835_demo_init.size())
+
+	# ── ③ 计数：没这道具时走过的事件不补记 ──
+	var r835_saved_relics := RunState.relics
+	var r835_saved_pages := RunState.story_book_pages
+	var r835_saved_nodes := RunState.story_book_nodes
+	var r835_saved_cells := RunState.map_cells
+	var r835_saved_cn := RunState.current_node_id
+	var r835_saved_boss := RunState.boss_beaten
+	RunState.relics = []
+	RunState.story_book_pages = 0
+	RunState.story_book_nodes = []
+	RunState.map_cells = [{"id": 0, "type": "event", "layer": 1}]
+	RunState.current_node_id = 0
+	RunState._note_story_book_event(0)
+	check(RunState.story_book_pages == 0,
+			"R835 计数：没这道具时经过事件不累计（捡到之前的经历不算）")
+
+	# ── ④ 计数：事件 +1 · 同节点幂等 · 非事件房不计 ──
+	RunState.relics = [6089]
+	RunState._note_story_book_event(0)
+	check(RunState.story_book_pages == 1, "R835 计数：经过一个事件房 → 1 页")
+	RunState._note_story_book_event(0)
+	check(RunState.story_book_pages == 1, "R835 计数：同一事件重复结算只记 1 页")
+	RunState.map_cells = [{"id": 1, "type": "chest", "layer": 1}]
+	RunState._note_story_book_event(1)
+	check(RunState.story_book_pages == 1, "R835 计数：宝箱不算事件（只有 event 房记页）")
+
+	# ── ⑤ 计数：首领 —— 每层一次，换层再记 ──
+	RunState.boss_beaten = false
+	RunState.mark_boss_beaten()
+	check(RunState.story_book_pages == 2, "R835 计数：打赢一个首领 → 再 +1 页")
+	RunState.mark_boss_beaten()
+	check(RunState.story_book_pages == 2, "R835 计数：同一层的首领重复结算不翻倍")
+	RunState.boss_beaten = false
+	RunState.mark_boss_beaten()
+	check(RunState.story_book_pages == 3, "R835 计数：换层之后新首领再 +1 页")
+
+	# ── ⑥ 接线：complete_current 是「事件记页」的收口 ──
+	var r835_src := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r835_src.contains("_note_story_book_event(current_node_id)"),
+			"R835 接线：complete_current 里调 _note_story_book_event（事件场景十余处都汇到它）")
+
+	# ── ⑦ 机制：0 页不掉血；N 页对全体敌人各 N 伤 ──
+	var r835_e := _new_engine([], 40, 40, -1, false)
+	r835_e.self_relics = [GameEngine.STORY_BOOK_RELIC_ID]
+	# 靶子用灰烬龙副本**清空 traits**：嘲讽 / 死亡（亡语）/ 减伤都不参与，
+	# 只留下「一个会掉血的敌方单位」这一件事。
+	var r835_pa := repo.get_card(1013).to_dict()
+	r835_pa["traits"] = []
+	var r835_pb := repo.get_card(1051).to_dict()
+	r835_pb["traits"] = []
+	var r835_a := r835_e.state.place(CardData.from_dict(r835_pa),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r835_b := r835_e.state.place(CardData.from_dict(r835_pb),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	check(r835_a != null and r835_b != null, "R835 机制：两个敌方单位上场")
+	var r835_a0 := r835_a.health
+	var r835_b0 := r835_b.health
+	RunState.story_book_pages = 0
+	r835_e._story_book_tick()
+	check(r835_a.health == r835_a0 and r835_b.health == r835_b0,
+			"R835 机制：0 页时一个都不掉血（空书）")
+	RunState.story_book_pages = 3
+	r835_e._story_book_tick()
+	check(r835_a.health == r835_a0 - 3 and r835_b.health == r835_b0 - 3,
+			"R835 机制：3 页 → 全体敌人各 -3（%d→%d / %d→%d）"
+			% [r835_a0, r835_a.health, r835_b0, r835_b.health])
+
+	# ── 还原全局状态（后面的用例不该看到这本测试用的书）──
+	RunState.relics = r835_saved_relics
+	RunState.story_book_pages = r835_saved_pages
+	RunState.story_book_nodes = r835_saved_nodes
+	RunState.map_cells = r835_saved_cells
+	RunState.current_node_id = r835_saved_cn
+	RunState.boss_beaten = r835_saved_boss
