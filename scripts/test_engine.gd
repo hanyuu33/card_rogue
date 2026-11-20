@@ -23678,8 +23678,10 @@ func _init() -> void:
 		var r643_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
 		check(r643_rp.find("_layer_image(\"14\"") < 0,
 				"R643 奖励页不许按稀有度手挑缎带（款式只能由 UiAssets.rarity_ribbon 决定）")
-		check(r643_rp.find("CardFace._draw_rarity_ribbon(") >= 0,
-				"R643 奖励页的缎带必须走 CardFace 的唯一口")
+		check(r643_rp.find("CardFace.draw(") >= 0,
+				"R843 奖励页主卡面必须走 CardFace 唯一口（费用 / 稀有度 / 四属性不再另画）")
+		check(r643_rp.find("_layer_badge(") < 0,
+				"R843 奖励页不再维护旧圆形数值徽章")
 		var r643_missing := ""
 		for r643_i in 6:
 			if UiAssets.rarity_ribbon(r643_i) == null:

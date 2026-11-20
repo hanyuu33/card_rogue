@@ -176,10 +176,9 @@ const TOOL_BAR_BTN_H := 32.0
 const TOOL_BAR_GAP := 6.0
 const TOOL_BAR_PAD := 5.0
 const TOOL_BAR_OFFSET := 10.0     ## 按钮栏右缘与槽左缘的间距
-# ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
-# 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
-# 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
-# 卡顶下移 → 卡看着更贴底、也更大；沉出去的那截只有底部留白（内容按可见高度重锚）。
+# ---- 手牌：比战场小卡大一号，R843 起完整露出底部属性栏 ----
+# 空间账：手牌区只有 592~720 这 128px。卡高 119，卡顶 601；
+# 悬停只抬 10px（卡顶 591），因此既不遮战场，也不再把属性数字裁出窗口。
 const COL_FRAME_STONE := Color("221a10")       # 边框直边的暗石底（与角花素材的深色石头同系）
 const COL_FRAME_GOLD := Color("b9924a")        # 边框外沿金线
 const COL_FRAME_GOLD_DIM := Color("6b5426")    # 边框外沿内侧的暗金细线
@@ -214,8 +213,8 @@ const COL_FIELD_PERSIST := Color("5ad0e6")      # 持续型场地（R83：清泉
 const HAND_CARD_SCALE := 1.565                  # ≈ 119 / 76
 const HAND_CARD_W := CARD_W * HAND_CARD_SCALE   # ≈ 98.6
 const HAND_CARD_H := CARD_H * HAND_CARD_SCALE   # ≈ 119.0（整张，含沉出屏幕的部分）
-const HAND_CROP_BOTTOM := 18.0                  # 卡底沉到窗口下沿之外多少像素
-const OWN_HAND_Y := WINDOW_H - HAND_CARD_H + HAND_CROP_BOTTOM   # = 619（卡顶）
+const HAND_CROP_BOTTOM := 0.0                   # R843：属性栏必须完整可见，不再裁掉卡底
+const OWN_HAND_Y := WINDOW_H - HAND_CARD_H + HAND_CROP_BOTTOM   # = 601（卡顶）
 # ---- 手牌扇形布局 ----
 # 手牌整体可用宽度：卡变宽（98.6）后要留神右边 x=900 起的道具栏 —— 最右那张会绕底部中心
 # 转出去（sin12° × 露出高度 ≈ 21px），356 是「满手也不越界」的上限（见 test_smoke 的越界断言）。
@@ -241,7 +240,7 @@ const HAND_BASE_H := WINDOW_H - HAND_BASE_Y
 const HAND_FAN_MIN_STEP := 0.40   # 最小步进 = 卡宽 × 此比例（即最多 60% 重叠）
 const HAND_FAN_MAX_DEG := 12.0    # 两端最大倾角（度）
 const HAND_FAN_DEG_PER := 4.0     # 相邻两张的倾角差（度）
-const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（正好把底边框沉掉）
+const HAND_FAN_DROP := 3.0        # 两端略下沉；最外侧属性栏仍完整露出
 # R114：数值徽章改成**骑在卡框上**（圆心在框线、一半露在框外）之后，
 # 沉在窗口下沿之外的那截从「底部留白」变成了「四个数值徽章」——
 # 抬手高度必须补上徽章外露的一个半径（手牌 k=1.7 → 约 12px）才看得见。
@@ -249,7 +248,7 @@ const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（�
 #     OWN_HAND_Y - HAND_FAN_HOVER_LIFT >= GRID_Y + GRID_H - 2   （= 590）
 #   即「抬手后的卡顶不能盖住战场下沿」。619 - 28 = 591 ≥ 590 ✓ —— 28 就是安全上限，
 #   不要为了露出更多徽章而调大它（会盖住棋盘单位）。徽章此时约 92% 可见，数字读得全。
-const HAND_FAN_HOVER_LIFT := 28.0 # 悬停时抬手高度（纯显示，不影响命中判定）
+const HAND_FAN_HOVER_LIFT := 10.0 # R843：601 - 10 = 591，仍不盖战场下沿 592
 const HAND_SELECT_RAISE := 28.0   # 选中手牌时抬起的高度
 const HAND_SELECT_SCALE := 1.30   # 选中手牌时整张卡放大倍率（点击选中 / 拖拽均生效）
 const INFO_X := 8.0
@@ -5481,7 +5480,7 @@ func _hand_vis_h(i: int) -> float:
 
 func _hand_rect(i: int) -> Rect2:
 	## 手牌第 i 张的**未旋转**矩形；命中判定 / 拖拽起点 / 引导框都基于它。
-	## 卡底会落在窗口下沿之外（HAND_CROP_BOTTOM）：卡面照整张排版画，多出的那截由视口裁掉。
+	## R843：HAND_CROP_BOTTOM=0，底栏不再靠裁切换空间；命中与绘制仍共用同一矩形。
 	var n := engine.state.hand.size()
 	var step := _hand_step(n)
 	var total: float = step * (n - 1) + HAND_CARD_W
@@ -18457,7 +18456,8 @@ func _draw_hand() -> void:
 func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> void:
 	## 按扇形角度画一张手牌：绕卡牌**底部中心**旋转。
 	## lift 只是视觉抬手（不改 _hand_rect，所以命中判定不会因为抬手而抖）。
-	## 卡底沉出窗口下沿：卡面照常整张排版，多出来的那截由视口裁掉（不补偿、不挪数值）。
+	## R843：底部是常驻属性栏，整张手牌留在窗口内；lift 只负责轻微抬手。
+	## 选中放大仍允许临时覆盖战场，命中判定继续跟随真实绘制几何。
 	var r := _hand_rect(i)
 	r.position.y -= lift
 	# R151 P1-6/7：回合归属 —— 敌方回合手牌整体下沉 +6；我方回合上浮 −3（纯显示，不动命中）
@@ -18519,9 +18519,12 @@ func _draw_pow_fx() -> void:
 		var ctr := _display_center(p, f["cell"])
 		var w := BOARD_CARD_W
 		var h := BOARD_CARD_H
-		var bc := Vector2(ctr.x - w / 2.0, ctr.y + h / 2.0)   # 力量徽章圆心（左下，压左框线）
-		var br := UiTheme.CARD_BADGE_R * BOARD_SCALE
-		var bfs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * BOARD_SCALE))
+		var card_rect := Rect2(ctr - Vector2(w, h) * 0.5, Vector2(w, h))
+		var cell := CardFace.stat_cell_rect(card_rect, 0, 4 if p.card.kind == "盟友" else 3)
+		# R843：力量已进底部属性栏第一格，跳字跟随该格，不再找旧版左下外溢徽章。
+		var bc := cell.get_center()
+		var br: float = minf(cell.size.y * 0.46, cell.size.x * 0.30)
+		var bfs: int = maxi(8, roundi(cell.size.y * 0.76))
 		var sc := 1.0 + 0.35 * sin(t * PI)
 		CardFace.draw_badge(self, _font_bold, bc, br * sc, bfs, "power",
 				str(p.effective_power()), UiTheme.BADGE_POWER)

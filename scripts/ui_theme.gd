@@ -210,16 +210,25 @@ const CARD_FS_BADGE := 12.0
 # **缺图回退语义色圆盘**，所以这份版式在零素材时也成立。
 
 
-## 卡图占卡片高度的比例 —— **上半卡图 / 下半文字，对半分**（就是需求原话）。
-## ⚠️ 这个值不是「好看就行」：下半要同时装下**卡名 + 种类·字段 + 效果文字**三样。
-## 数值不占内部空间（它们骑在卡框上，见 `CARD_BLEED`），所以 0.50 是安全的；
-## 但 R114 实测 0.52 时 k=1.7 的手牌上「种类」会被挤掉 —— 想调大先按最坏情况算一遍。
-const CARD_ART_RATIO := 0.662  ## R193：对齐 card_paper.png v4 底图的卡图/姓名牌分隔金条
-const CARD_NAMEPLATE_TOP := 0.745    ## 姓名牌内框上沿（归一化）
-const CARD_NAMEPLATE_BOTTOM := 0.94  ## 姓名牌内框下沿
-const CARD_NAMEPLATE_X0 := 0.06      ## 姓名牌内框左沿
-const CARD_NAMEPLATE_X1 := 0.94      ## 姓名牌内框右沿
-const CARD_PAD := 3.0             ## 卡面内距（基准）
+## R843：卡图 / 名称带 / 正文 / 内嵌属性栏分区。旧版 66.2% 卡图 + 巨型雕花姓名牌
+## 把正文挤没；新版卡图仍占多数，但名称与正文拥有各自稳定的区域。
+const CARD_ART_RATIO := 0.575
+const CARD_ART_INSET_X := 0.045
+const CARD_ART_INSET_TOP := 0.028
+const CARD_NAMEPLATE_TOP := 0.587
+const CARD_NAMEPLATE_BOTTOM := 0.700
+const CARD_NAMEPLATE_X0 := 0.06
+const CARD_NAMEPLATE_X1 := 0.94
+## 正文 / 属性栏的分界与属性栏下沿。属性不再外挂在卡片四角，而是收进底栏。
+const CARD_BODY_BOTTOM := 0.855
+const CARD_STATS_BOTTOM := 0.972
+## 战斗手牌 / 选卡不画正文：卡图延伸到 66.5%，名称带紧随其下，避免留一块空正文区。
+const CARD_COMPACT_ART_RATIO := 0.665
+const CARD_COMPACT_NAME_TOP := 0.675
+const CARD_COMPACT_NAME_BOTTOM := 0.835
+## 名称带右侧固定留给稀有度标签，长卡名只使用左侧空间。
+const CARD_RARITY_WIDTH := 0.30
+const CARD_PAD := 3.0
 ## 数值图标半径（基准）。R117 从 8.5 提到 9.2 —— 战场卡 k ≈ 1.086
 ## → 实到 10.0（**直径 20**，正是用户口径「徽章直径 17 → 约 20」）。
 ## ⚠️ 上限仍由**底部一排**决定：力量/生命挪到卡框左右两角之后，约束是

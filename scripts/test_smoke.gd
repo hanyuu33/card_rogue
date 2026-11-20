@@ -3475,19 +3475,21 @@ func _check_hand_fan(scene: Variant) -> void:
 	if scene.HAND_CARD_H <= scene.CARD_H * 1.4:
 		_smoke_fail("手牌尺寸：应比战场卡大 1.4 倍以上，实际 %.1f / %.1f（×%.2f）"
 				% [scene.HAND_CARD_H, scene.CARD_H, scene.HAND_CARD_H / scene.CARD_H])
-	# 卡底**沉出**窗口下沿：底部那截被裁掉。卡面仍是整张排版（不重锚、不补偿），
-	# 所以这里只管「沉出量符合预期」和「别沉过头把卡片淹了」，不再断言内容必须可见。
+	# R843：属性栏是常驻决策信息，卡底不再沉出窗口；扇形两端下沉也不许裁到属性栏。
 	var bottom: float = scene.OWN_HAND_Y + scene.HAND_CARD_H
-	if scene.HAND_CROP_BOTTOM <= 0.0:
-		_smoke_fail("手牌位置：卡底没有沉出窗口下沿（HAND_CROP_BOTTOM=%.1f）"
+	if scene.HAND_CROP_BOTTOM != 0.0:
+		_smoke_fail("手牌位置：R843 起卡底不再沉出窗口（HAND_CROP_BOTTOM=%.1f）"
 				% scene.HAND_CROP_BOTTOM)
-	if absf((bottom - scene.WINDOW_H) - scene.HAND_CROP_BOTTOM) > 0.5:
-		_smoke_fail("手牌位置：沉出量应为 %.1f，实际 %.1f"
-				% [scene.HAND_CROP_BOTTOM, bottom - scene.WINDOW_H])
+	if absf(bottom - scene.WINDOW_H) > 0.5:
+		_smoke_fail("手牌位置：卡底应落在窗口下沿，实际 %.1f / 期望 %.1f"
+				% [bottom, scene.WINDOW_H])
 	# 沉出量不能吃掉半张卡（否则手牌看着只剩一条边）
 	var vis_min := 99999.0
 	for i in n:
 		vis_min = minf(vis_min, scene._hand_vis_h(i))
+	if vis_min + 0.01 < scene.HAND_CARD_H * UiTheme.CARD_STATS_BOTTOM:
+		_smoke_fail("手牌位置：扇形端点裁到了属性栏（露出 %.1f，需要 %.1f）"
+				% [vis_min, scene.HAND_CARD_H * UiTheme.CARD_STATS_BOTTOM])
 	if vis_min < scene.HAND_CARD_H * 0.5:
 		_smoke_fail("手牌位置：露出高度只有 %.1f（卡高 %.1f 的一半以下），沉得太狠"
 				% [vis_min, scene.HAND_CARD_H])
@@ -3521,8 +3523,8 @@ func _check_hand_fan(scene: Variant) -> void:
 		var msg := "SMOKE OK 扇形手牌：满手 %d 张，%.0f×%.0f（战场卡 %.0f×%.0f 的 %.2f 倍，" % [
 				n, scene.HAND_CARD_W, scene.HAND_CARD_H, scene.CARD_W, scene.CARD_H,
 				scene.HAND_CARD_H / scene.CARD_H]
-		msg += "卡底沉出下沿 %.0f，露出 %.0f）" % [
-				bottom - scene.WINDOW_H, vis_min]
+		msg += "卡底留边 %.0f，端点露出 %.0f）" % [
+				scene.WINDOW_H - bottom, vis_min]
 		msg += " / 倾角 左 %.1f° 右 %.1f° / 横向 %.0f~%.0f（不越界）" % [
 				left_deg, right_deg, el.x, er.y]
 		print(msg)

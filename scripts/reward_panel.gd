@@ -2000,33 +2000,12 @@ func _draw_reward_heading(pr: Rect2) -> void:
 	_root.draw_string(_font_bold, rr.position + Vector2(112, 47), GameI18n.ui("reward", "REWARD_CARD_HEADING", "卡牌奖励"), HORIZONTAL_ALIGNMENT_LEFT, 180, 30, Color("f1ddb1"))
 
 
-func _layer_badge(center: Vector2, value: String, gold := false) -> void:
-	_layer_image("12" if gold else "11", Rect2(center - Vector2(23, 23), Vector2(46, 46)))
-	_root.draw_string(_font_bold, center + Vector2(-23, 9), value, HORIZONTAL_ALIGNMENT_CENTER, 46, 26, Color("fff6e4"))
-
-
 func _draw_layer_card(card: CardData, rr: Rect2, selected: bool) -> void:
-	var ar := Rect2(rr.position + rr.size * Vector2(0.055, 0.035), rr.size * Vector2(0.89, 0.74))
-	_root.draw_rect(ar, Color("e9dfca"))
-	var art := CardFace.art_for(card.pic_id())   # R637：产物 id 归 0，取图认 pic_id
-	if art != null:
-		_root.draw_texture_rect_region(art, ar, CardFace.cover_region(art.get_size(), ar))
-	else:
-		_root.draw_string(_font_bold, ar.position + Vector2(0, ar.size.y * 0.62), card.card_name.left(1), HORIZONTAL_ALIGNMENT_CENTER, ar.size.x, 82, Color("c7bda7"))
+	## R843：奖励主卡面也走 CardFace 唯一口，不再维护另一套卡图 / 卡名 / 四属性布局。
+	## 旧分层框仅作为外侧舞台装饰；费用、稀有度、附魔与属性全部由共享卡面绘制。
 	_layer_image("06" if selected else "05", rr.grow(6.0))
-	_root.draw_string(_font_bold, rr.position + Vector2(16, rr.size.y * 0.846), card.card_name, HORIZONTAL_ALIGNMENT_CENTER, rr.size.x - 32, 22, Color("40392e"))
-	# R643：缎带**只由稀有度决定** —— 走 CardFace 的唯一口，不再在这里挑素材。
-	# 原先按 `rarity == 2` 手挑「金 / 紫」两档素材，于是稀有 / 初始 /
-	# 怪物 / 事件全挂金缎带，跟卡下方那块写着稀有度名的铭牌直接打架。
-	CardFace._draw_rarity_ribbon(_root, card, rr, rr.size.y / CardFace.CARD_H_DESIGN,
-			UiTheme.CARD_PAD * rr.size.y / CardFace.CARD_H_DESIGN, rr.size.y * 0.327)
-	_layer_badge(rr.position + Vector2(12, 10), "X" if card.x_cost else str(card.cost))
-	if card.health > 0:
-		_layer_badge(Vector2(rr.position.x + 8, rr.end.y - 7), str(card.power))
-		_layer_badge(Vector2(rr.position.x + 46, rr.end.y - 7), str(card.attack_range), true)
-		_layer_badge(rr.end - Vector2(45, 7), str(card.move_speed))
-		_layer_badge(rr.end - Vector2(7, 7), str(card.health))
-	CardFace._draw_enchant_mark(_root, card, rr, _font_bold)
+	CardFace.draw(_root, card, rr, card.health, selected, false, _font, _font_bold,
+			-1, false, false, false, 0, -1, -1, false, true)
 	CardFace._draw_growth_mark(_root, card, rr, _font_bold)
 
 
