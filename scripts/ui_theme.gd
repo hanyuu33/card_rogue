@@ -217,19 +217,19 @@ const CARD_ART_INSET_X := 0.035
 const CARD_ART_INSET_TOP := 0.024
 const CARD_RARITY_TOP := 0.550
 const CARD_RARITY_BOTTOM := 0.660
-const CARD_NAMEPLATE_TOP := 0.670
+const CARD_NAMEPLATE_TOP := 0.660
 ## R843h：详情也不再写效果，卡名在稀有度下沿至属性栏上沿整块居中。
 const CARD_NAMEPLATE_BOTTOM := 0.845
-const CARD_NAMEPLATE_X0 := 0.06
-const CARD_NAMEPLATE_X1 := 0.94
+const CARD_NAMEPLATE_X0 := 0.080
+const CARD_NAMEPLATE_X1 := 0.920
 ## 卡名区 / 属性栏的分界与属性栏下沿。R843h 起详情卡名独占至 CARD_BODY_BOTTOM。
 const CARD_BODY_BOTTOM := 0.845
-const CARD_STATS_BOTTOM := 0.972
+const CARD_STATS_BOTTOM := 0.940
 ## 战斗手牌 / 选卡不画正文：卡图同样增高，稀有度与卡名分别独占一行。
 const CARD_COMPACT_ART_RATIO := 0.600
 const CARD_COMPACT_RARITY_TOP := 0.610
 const CARD_COMPACT_RARITY_BOTTOM := 0.715
-const CARD_COMPACT_NAME_TOP := 0.725
+const CARD_COMPACT_NAME_TOP := 0.715
 const CARD_COMPACT_NAME_BOTTOM := 0.835
 const CARD_PAD := 3.0
 ## 数值图标半径（基准）。R117 从 8.5 提到 9.2 —— 战场卡 k ≈ 1.086

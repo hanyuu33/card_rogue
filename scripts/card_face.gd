@@ -347,18 +347,19 @@ static func ui_scale_of(rect: Rect2) -> float:
 
 
 static func badge_radius(rect: Rect2) -> float:
-	return UiTheme.CARD_BADGE_R * ui_scale_of(rect)
+	## R843i：完整外圈之内不再挂大圆；费用 / 字段 / 附魔统一缩小到 78%。
+	return UiTheme.CARD_BADGE_R * ui_scale_of(rect) * 0.78
 
 
 static func badge_font(rect: Rect2) -> int:
-	return maxi(7, roundi(UiTheme.CARD_FS_BADGE * ui_scale_of(rect)))
+	return maxi(6, roundi(UiTheme.CARD_FS_BADGE * ui_scale_of(rect) * 0.88))
 
 
 static func stats_bar_rect(rect: Rect2) -> Rect2:
 	## 内嵌属性栏唯一几何口；战斗跳字等叠加层也必须读这里。
-	return Rect2(rect.position + Vector2(rect.size.x * 0.04,
+	return Rect2(rect.position + Vector2(rect.size.x * 0.07,
 			rect.size.y * UiTheme.CARD_BODY_BOTTOM),
-			Vector2(rect.size.x * 0.92,
+			Vector2(rect.size.x * 0.86,
 			rect.size.y * (UiTheme.CARD_STATS_BOTTOM - UiTheme.CARD_BODY_BOTTOM)))
 
 
@@ -374,6 +375,8 @@ static func cost_badge_center(rect: Rect2) -> Vector2:
 	## R115 起「力量」的圆心在**左下角**，与这个点同一条竖线 —— 两者左右对齐。
 	## battle_scene 的「动态减费」要在同位置重画绿色数字，所以这里对外暴露 ——
 	## 它是费用徽章位置的**唯一口**。
+	## R843i-2：店长口径——费用依然压在**左上角框线上**（圆心=卡片左上角，
+	## 一半露在框外），和缩略图同一手感；背后的角部宝石放大后会从徽章边缘露出。
 	return rect.position
 
 
@@ -444,6 +447,7 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping, phase, name_only)
 	if name_only:
 		_draw_compact_name_plate(canvas, card, rect)
+	_draw_outer_frame(canvas, card, rect, name_only)              # R843i：外圈垫在所有文字下层
 	# ④b 稀有度标签（R843c）：独占卡图下第一行；第二行只放卡名。
 	_draw_rarity_ribbon(canvas, card, rect, k, pad, 0.0, name_only)
 	# ④c R592：字段标志（贴卡框右上角，多字段轮播；R592d 起压在缎带上层）
@@ -544,6 +548,7 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
 	_draw_art(canvas, card, rect, k, pad, false, font_bold, false, 0, true)
 	_draw_compact_name_plate(canvas, card, rect)
+	_draw_outer_frame(canvas, card, rect, true)                   # R843i：外圈垫在所有文字下层
 	_draw_rarity_ribbon(canvas, card, rect, k, pad, 0.0, true)
 	_draw_affix_badges(canvas, card, rect, k, false)   # R592：字段标志
 	_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold, true)   # 紧凑名称带（只留卡名）
@@ -700,6 +705,15 @@ static func _draw_compact_name_plate(canvas: CanvasItem, card: CardData, rect: R
 			UiTheme.ADVENTURE_BRASS, edge_w, true)
 
 
+static func _draw_outer_frame(canvas: CanvasItem, card: CardData, rect: Rect2, compact: bool) -> void:
+	## R843i 预览：外圈垫在文字与符号下层；安全区保证它们不会骑压框体。
+	var tex: Texture2D = UiAssets.card_outer_frame(art_frame_kind(card), compact)
+	if tex == null:
+		return
+	canvas.draw_texture_rect(UiAssets.filtered(tex, ceili(maxf(rect.size.x,
+			rect.size.y) * maxf(1.5, canvas.get_viewport_transform().get_scale().x))), rect, false)
+
+
 static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float, pad: float,
 		is_tapped: bool, font_bold: Font, sleeping := false, phase := 0, compact := false) -> void:
 	## 卡图区 = 卡片上半（R114 起）。R165：卡图**开放**——左/右/上直接出血到卡边，
@@ -720,8 +734,11 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		# R843g：覆盖式铺满但不拉伸；略向顶部锚定，优先保住角色耳尖 / 头顶。
 		# 不使用未逐张验收的生成原图，避免旧平台水印回流；有干净原图的卡先重制成净图。
 		tex = UiAssets.filtered(tex, ceili(maxf(box.size.x, box.size.y) * 1.5))
+		# R843i-3：锚点 0.0 = 顶端对齐、**顶部零裁切**。0.08 时全卡库 339/344 张被削 5~9px，
+		# 主体贴顶的卡（老虎 9038 耳尖）直接被切掉；纵向余量全部让给底部（宁可裁脚，不裁头，
+		# 与 cover_region_top 同一口径）。
 		canvas.draw_texture_rect_region(tex, box,
-				cover_region_anchored(tex.get_size(), box, 0.08), Color.WHITE)
+				cover_region_anchored(tex.get_size(), box, 0.0), Color.WHITE)
 	else:
 		# 无图回退（R165）：卡种/职业色的**淡彩竖向渐变横幅**代替「粗暴纯色块」——
 		# 自然、按卡分色（职业优先，中立回落卡种）。
@@ -836,6 +853,7 @@ static func affix_badge_center(rect: Rect2) -> Vector2:
 	## 与 `cost_badge_center()`（左上角）关于卡面竖直中轴对称 —— 店长口径
 	## 「放到和费用对应的位置」：左上读费用、右上读字段，视线只用记住一对角。
 	## 圆心压在框线上（一半露在卡外），与费用徽章完全一样的手感。
+	## R843i-2：费用回到左上角后，字段标志随之镜像回右上角。
 	return Vector2(rect.end.x, rect.position.y)
 
 
@@ -1177,10 +1195,11 @@ static func _draw_rarity_tag(canvas: CanvasItem, card: CardData, rect: Rect2,
 	var fs: int = int(L["fs"])
 	var text_w: float = f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	if integrated != null:
-		## 素材垫在文字下方；职业图框与稀有度底托只画这一层，不再叠加纯色矩形 / 色签。
-		canvas.draw_texture_rect(UiAssets.filtered(integrated, ceili(maxf(rect.size.x,
-				rect.size.y) * maxf(1.5, canvas.get_viewport_transform().get_scale().x))),
-				integrated_frame_rect(rect, compact), false)
+		## 有整卡外圈时只写稀有度，旧一体框不再重复铺；缺新素材才回退旧一体框。
+		if UiAssets.card_outer_frame(art_frame_kind(card), compact) == null:
+			canvas.draw_texture_rect(UiAssets.filtered(integrated, ceili(maxf(rect.size.x,
+					rect.size.y) * maxf(1.5, canvas.get_viewport_transform().get_scale().x))),
+					integrated_frame_rect(rect, compact), false)
 		var origin := Vector2(box.get_center().x - text_w * 0.5,
 				centered_text_baseline(f, fs, box))
 		canvas.draw_string_outline(f, origin, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
@@ -1298,7 +1317,7 @@ static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt:
 		k: float, pad: float, sep_y: float, hp: int, font: Font, font_bold: Font,
 		on_board: bool, is_tapped := false, name_only := false) -> void:
 	## 所有卡面都只画卡名。紧凑卡沿用既有名称带；详情 / 图鉴使用完整文字区居中。
-	## 不铺程序底衬、不画名称框线；背景只保留清理过旧姓名牌框线的 card_paper。
+	## R843i：文字限制在整卡外圈的内侧安全区，绘制层不再叠任何名称框线。
 	if name_only:
 		_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold, true)
 		return
@@ -1371,8 +1390,8 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	# R387（用户口径「启示者 2 阶段减 1 速度的显示正常吗？」）：程 / 速 与力量同一口径 ——
 	# 战场单位传 `effective_range()` / `effective_speed()`，徽章写**真正生效的数**，
 	# 并按卡库原型染色（2 → 1 = 红）。手牌 / 图鉴 / 选卡页不传，保持卡面粉数值。
-	var r: float = UiTheme.CARD_BADGE_R * kc
-	var fs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * kc))
+	var r: float = badge_radius(rect)
+	var fs: int = badge_font(rect)
 	# ── ① 左上角：费用（水晶）—— 圆心压在卡框左上角上 ──
 	# X 费卡（流星雨 9083）：费用不是定值 → 徽章上直接画「X」
 	# R373：**不能打出**的诅咒（麻痹 9185）把费用位打成「×」——
@@ -1386,10 +1405,7 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 	var is_unit: bool = card.kind == "盟友"
 	if not is_unit and card.kind != "工事":
 		# 技能 / 效果 / 诅咒没有四属性，底栏改显示卡种，避免手牌下方留一条无意义空框。
-		var kind_rect := Rect2(rect.position + Vector2(rect.size.x * 0.04,
-				rect.size.y * UiTheme.CARD_BODY_BOTTOM),
-				Vector2(rect.size.x * 0.92,
-				rect.size.y * (UiTheme.CARD_STATS_BOTTOM - UiTheme.CARD_BODY_BOTTOM)))
+		var kind_rect := stats_bar_rect(rect)
 		canvas.draw_rect(kind_rect, Color(0.075, 0.065, 0.055, 0.95))
 		var kind_text: String = GameI18n.source(card.kind)
 		var kind_fs: int = fitted_font_size(font_bold, kind_text,

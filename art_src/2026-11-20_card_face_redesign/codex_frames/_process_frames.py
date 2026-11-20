@@ -29,6 +29,29 @@ def alpha_key(im):
     return im.crop(bbox)
 
 
+def denoise_magenta(im):
+    """Zero the alpha of still-semi-transparent pure-magenta pixels.
+
+    R843i: the bard frame was keyed by an older gradient that left pure magenta
+    (240,0,240) at alpha 6..127 inside the art window — those speckles render
+    over the card art. Opaque art (alpha >= 128) is never touched, and the
+    strict pure-magenta test keeps shadow gem edges and drape anti-aliasing.
+    """
+    px = im.load()
+    ap = im.getchannel("A").load()
+    cleaned = 0
+    for y in range(im.height):
+        for x in range(im.width):
+            a = ap[x, y]
+            if 6 <= a < 128:
+                r, g, b, _ = px[x, y]
+                if min(r, b) > 140 and g < 60 and abs(r - b) < 80:
+                    px[x, y] = (r, g, b, 0)
+                    cleaned += 1
+    print("denoise_magenta cleaned", cleaned, flush=True)
+    return im
+
+
 def longest_transparent_run(values):
     """Return the longest transparent half-open run, retaining the image object upstream."""
     best = (0, 0)
@@ -145,6 +168,7 @@ def main():
         frame.alpha_composite(band, (0, upper_h))
         # Remove only imperceptible Lanczos residue; flowers and opaque ornamental edges stay.
         frame.putalpha(frame.getchannel("A").point(lambda value: 0 if value < 6 else value))
+        frame = denoise_magenta(frame)
         actual = frame.getchannel("A").point(lambda value: 255 if value >= 24 else 0).getbbox()
         if actual is None or actual[0] > 1 or actual[1] > 1 \
                 or actual[2] < width - 1 or actual[3] < height - 1:

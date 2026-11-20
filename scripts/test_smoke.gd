@@ -4165,8 +4165,8 @@ func _check_enchant_mark(scene: Variant) -> void:
 		var rr := Rect2(Vector2(40, 60), sz)
 		var cost_c := CardFace.cost_badge_center(rr)
 		var ench_c := CardFace.enchant_badge_center(rr)
-		var r: float = UiTheme.CARD_BADGE_R \
-				* minf(sz.y / CardFace.CARD_H_DESIGN, UiTheme.CARD_BADGE_SCALE_CAP)
+		# R843i：半径必须走 badge_radius() 唯一口（含 78% 缩放），别再自己复算旧公式。
+		var r: float = CardFace.badge_radius(rr)
 		if absf(ench_c.x - cost_c.x) > 0.01 or absf(ench_c.y - cost_c.y - 2.0 * r) > 0.01:
 			geo_bad = "%s → 费用 %s / 附魔 %s" % [sz, cost_c, ench_c]
 	if geo_bad != "":

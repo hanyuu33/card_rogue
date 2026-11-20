@@ -307,6 +307,12 @@ static func art_rarity_frame(kind: String, compact := false) -> Texture2D:
 	return get_tex("art_rarity_frame_" + kind + ("_compact" if compact else ""))
 
 
+static func card_outer_frame(kind: String, compact := false) -> Texture2D:
+	## R843i 预览：覆盖整张卡外圈的职业框，含贯通侧边与底框。
+	## 详情 / 紧凑各自匹配稀有度位置；中央透明，不覆盖文字安全区。
+	return get_tex("card_outer_frame_" + kind + ("_compact" if compact else ""))
+
+
 static func rarity_ribbon(rarity: int) -> Texture2D:
 	## 稀有度缎带（R170）：挂在卡面**右上角**的锦旗，稀有度的主通道
 	## （取代「底部框线涂稀有度色 + 色块小旗」—— 用户口径：不要粗暴的颜色块/颜色条）。
