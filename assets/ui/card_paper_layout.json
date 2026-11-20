@@ -1,5 +1,5 @@
 {
-  "note": "card_paper.png R843c 轻量版分区坐标（归一化）；稀有度 / 卡名 / 正文 / 属性栏各有固定区域",
+  "note": "card_paper.png R843d 轻量版分区坐标（归一化）；稀有度整行同卡宽，文字带不画横向金线",
   "art_ratio": 0.495,
   "art_window": {
     "x0": 0.045,
@@ -13,7 +13,8 @@
     "x1": 0.94,
     "y1": 0.600,
     "height_mode": "fixed_ratio",
-    "width_mode": "localized_text_adaptive"
+    "width_mode": "localized_text_adaptive_center_tag",
+    "row_width_mode": "card_full_width_gold"
   },
   "nameplate": {
     "x0": 0.06,

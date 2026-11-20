@@ -48131,7 +48131,7 @@ func _init() -> void:
 
 		"R281 超负荷：0 血在己方回合结束死亡（与卡面「0 或以下」一致）")
 
-	# ---- ④ 卡名恒单行：宽度/高度双约束 + 超宽横向滚动（唯一判定口 name_layout）----
+	# ---- ④ 卡名恒单行：R843d 起宽高双约束完整缩放，不再滚动 ----
 
 	var r281_font := UiTheme.font_bold()
 
@@ -48139,11 +48139,11 @@ func _init() -> void:
 
 	var r281_info_long := CardFace.name_layout("量产型赫卡同克瑞斯", r281_cell, r281_font, 8.4)
 
-	check(bool(r281_info_long["need_scroll"])
+	check(bool(r281_info_long["fits"]) and not bool(r281_info_long["need_scroll"])
 
-			and int(r281_info_long["sz"]) == CardFace.CARD_NAME_MIN_SZ,
+			and float(r281_info_long["text_w"]) <= float(r281_info_long["maxw"]) + 0.5,
 
-		"R281 卡名：超长名在 77×92 上缩到最小号后转横向滚动（sz=%d）"
+		"R843d 卡名：长名自动缩放后完整落在 77×92 名称行（sz=%d）"
 
 			% int(r281_info_long["sz"]))
 
@@ -48169,6 +48169,21 @@ func _init() -> void:
 	check(is_equal_approx(r843_rare_box.size.y, r843_starter_box.size.y)
 			and r843_starter_box.size.x > r843_rare_box.size.x,
 			"R843c 稀有度：标签固定高度、按译文自适应宽度")
+	var r843_row: Rect2 = r843_rare["row"]
+	check(is_equal_approx(r843_row.position.x, r843_rect.position.x)
+			and is_equal_approx(r843_row.size.x, r843_rect.size.x)
+			and r843_row.encloses(r843_rare_box),
+			"R843d 稀有度：金色底与卡同宽，中央原色签完整留在整行内")
+	var r843_baseline: float = CardFace.centered_text_baseline(
+			r281_font, int(r843_rare["fs"]), r843_rare_box)
+	var r843_ink_top: float = r843_baseline - r281_font.get_ascent(int(r843_rare["fs"])) - r843_rare_box.position.y
+	var r843_ink_bottom: float = r843_rare_box.end.y - r843_baseline - r281_font.get_descent(int(r843_rare["fs"]))
+	check(is_equal_approx(r843_ink_top, r843_ink_bottom),
+			"R843d 稀有度：文字按字体真实 ascent / descent 纵向居中")
+	var r843_extra_long := CardFace.rarity_tag_layout(
+			"Evento aleatorio excepcionalmente largo", r843_rect, r281_font, true)
+	check(bool(r843_extra_long["fits"]),
+			"R843d 稀有度：超长译文继续缩字，不省略、不出框")
 	var r843_name := CardFace.name_layout("量产型赫卡同克瑞斯", r843_rect, r281_font, 12.0)
 	var r843_name_w: float = r843_rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
 			- UiTheme.CARD_NAMEPLATE_X0) - UiTheme.CARD_PAD * (r843_rect.size.y / 70.0) * 2.0
@@ -48183,6 +48198,13 @@ func _init() -> void:
 	check(r843_shared_fs < r843_short_fs and r843_shared_fs == CardFace.stats_font_size(
 			r281_font, r843_cell, r843_all_long),
 			"R843c 属性：最长生命决定整行共同字号，不再只有生命格单独缩字")
+	var r843_huge: Array[String] = ["7", "1", "2", "123456789"]
+	var r843_huge_fs := CardFace.stats_font_size(r281_font, r843_cell, r843_huge)
+	var r843_side := CardFace.stat_icon_side(r843_cell)
+	var r843_available: float = r843_cell.size.x - r843_side - maxf(0.6, r843_side * 0.10) - 3.0
+	check(r281_font.get_string_size("123456789", HORIZONTAL_ALIGNMENT_LEFT, -1, r843_huge_fs).x
+			<= r843_available + 0.5,
+			"R843d 属性：极端长数字也继续统一缩字，不冲出属性格")
 	check(CardFace.stats_bar_rect(r843_rect).end.y <= r843_rect.end.y
 			and UiTheme.CARD_COMPACT_NAME_BOTTOM < UiTheme.CARD_BODY_BOTTOM,
 			"R843c 下部黑底：三行顺序排列且属性栏完整留在卡框内")
@@ -48205,7 +48227,7 @@ func _init() -> void:
 
 	check(r281_cf_src.find("wrap_text(font_bold, card.card_name") < 0,
 
-		"R281 卡名：卡面**不再对卡名折行**（单行 + 滚动，防回退）")
+		"R843d 卡名：卡面**不再对卡名折行**（单行 + 自适应缩放，防回退）")
 
 
 
