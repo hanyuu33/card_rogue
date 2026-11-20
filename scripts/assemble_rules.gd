@@ -90,7 +90,7 @@ static func valid_effect(fx: Variant) -> bool:
 	# R569：「加卡 / 减费 / 改造」三个动作的数值必须 ≥1 —— 0 张 / 减 0 费 / 改造 +0
 	# 等于一个空动作，卡面却会写出来，玩家会以为自己拿到了东西。
 	if fx.type in ["add_random_effect", "hand_discount", "hand_upgrade",
-			"buff_per_ally", "heal_per_energy", "draw_random_skill",
+			"buff_per_ally", "damage_per_energy", "draw_random_skill",
 			"hand_cost_raise", "add_copy", "buff_allies_atk",
 			# R589：减 0 费 / 每张 +0 生命同样是空动作。
 			"next_effect_discount", "next_ally_discount",
@@ -253,8 +253,9 @@ static func effect_text(fx: Dictionary) -> String:
 		"buff_per_energy":
 			return "剩余费用每有 1 点，这张卡获得 %d 点力量和 %d 点生命" % [
 					int(fx.get("atk", 0)), int(fx.get("hp", 0))]
-		"heal_per_energy":
-			return "回复 X 点生命，X 为自己剩余费用（每 1 点剩余费用回复 %d 点生命，不超过生命上限）" % n
+		"damage_per_energy":
+			# R845：夜蚀 8062 改成群体伤害后，这条跟着换 —— 文案对着新卡面写。
+			return "对所有敌人造成 X 点伤害，X 为自己剩余费用（每 1 点剩余费用造成 %d 点伤害）" % n
 		"draw_random_skill":
 			return "从抽牌库随机抽取一张技能牌，该卡本回合费用 -%d" % n
 		"hand_cost_raise":

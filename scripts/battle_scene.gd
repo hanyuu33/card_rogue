@@ -2917,26 +2917,6 @@ func _ready() -> void:
 		_clear_hover_state()
 		selection = null
 		print("[R361] 就绪：模式 %s" % _r361_mode)
-	if "--r332instinct" in args and engine != null:
-		# 演示（R332）：本能 9176 —— 牌库里只放 3 张 ≤1 费技能 + 4 张高费干扰，
-		# 截图上能直接看出「1 费的被打出去、2 费的还留在牌库」。
-		# ⚠️ 出牌动作**不在这里**：放在截图前 40 帧（见 `_demo_tick`），
-		#    否则 `--shotframe 600` 时状态栏播报与「本能 · …」飘字早就过去了。
-		RunState.player_class = PlayerClass.ROGUE
-		engine.state.hand.clear()
-		engine.state.deck.clear()
-		engine.state.energy = 6
-		for _sid in [9094, 9103, 9087, 9095, 9098, 9095, 9098]:
-			engine.state.deck.append(CardData.from_dict(repo.get_card(_sid).to_dict()))
-		for _cell in [Vector2i(2, 1), Vector2i(2, 3)]:
-			var _foe: Placement = engine.state.place(
-					CardData.from_dict(repo.get_card(8003).to_dict()),
-					_cell, GameEngine.SIDE_OPPONENT)
-			_foe.health = 30
-		engine.state.hand.append(CardData.from_dict(repo.get_card(9176).to_dict()))
-		_hover_hand = -1
-		_shot_t0 = _now()
-		queue_redraw()
 	if "--r326chimera" in args and engine != null:
 		# 演示（R326）：嵌合暴君入场「融合」→ **每破坏 1 张回复 1 费**（这条不写进卡面文本）。
 		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（费用 6 → 4）。
@@ -3821,13 +3801,6 @@ func _demo_tick() -> void:
 		engine._destroy_dead()
 		# 窗口开局时系统鼠标会投一次 MouseMotion（正好压在树人身上）→ 左栏详情
 		# 会盖住「效果区」。出图前把悬停 + 选中一起清掉（左栏也认 `selection` 兜底）。
-		_clear_hover_state()
-		selection = null
-	if _shot_pending and "--r332instinct" in _demo_args \
-			and _demo_frame == _shot_frame - 40 and engine != null:
-		# R332 出图：截图前 40 帧才打本能 —— 躲过开局横幅，又让状态栏播报 +
-		# 「本能 · 卡名列表」飘字还在屏上（1700ms 生命周期）。
-		engine.use_spell(0, null)
 		_clear_hover_state()
 		selection = null
 	if _shot_pending and "--deckfly" in _demo_args \
@@ -12531,7 +12504,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		if pg_cell is Vector2i and (pg_cell as Vector2i).x >= 0 and not _shot_pending:
 			_pow_fx.append({"cell": pg_cell, "start": grow_at, "dur": 300})
 	# R151 P2-14：格上治疗事件族 → 上升光点（与伤害的扩散爆点对称）
-	if kind in ["heal", "regen", "charge_heal", "self_repair", "night_erosion"]:
+	if kind in ["heal", "regen", "charge_heal", "self_repair"]:
 		var hl_cell = data.get("cell")
 		if hl_cell is Vector2i and (hl_cell as Vector2i).x >= 0 and not _shot_pending:
 			for hf_i in 4:
@@ -12803,19 +12776,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							"say": "⚔ %s 攻击 %s！" % [data.get("atk_name", "?"),
 									data.get("def_name", "?")]}})
 		"soul_harvest":
-			# R679 灵魂收割者 9233：击杀单位后**生命回满**。引擎从 `_reap()` 之后发，
-			# 界面一直是「零臂」—— 玩家只看见自己那张卡的血条突然涨回去，没有任何
-			# 因果提示（R504 上线以来一直如此）。这里补一张暗影图 + 一行飘字。
+			# R679 → R845 灵魂收割者 9233：击杀单位后原来是「生命回满」，R845 起改成
+			# 「回复 2 点费用 + 抽 2 张牌」。演出沿用 R679 补的那张暗影图。
+			# ⚠️ 文案必须短：飘字是 `_draw_string_box_center` **居中**画的，
+			# 且 x 方向没有兜底。灵魂收割发生在敌方行，敌方格可能贴着棋盘左沿，
+			# 长句会有一半被画到棋盘外。「+2 费 抽2」七个字宽 ≈ 84px，最左列也落得下。
 			var sh_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			if sh_cell.x >= 0:
 				var sh_pos := _cell_center(sh_cell)
 				_fx_push_cell(FxArt.SKILL_SHADOW, sh_cell, n, BATTLE_FX_MS, 148.0)
-				# ⚠️ 文案必须短：飘字是 `_draw_string_box_center` **居中**画的，
-				# 且 x 方向没有兜底。灵魂收割发生在敌方行，敌方格可能贴着棋盘左沿，
-				# 11 个字的长句会有一半被画到棋盘外（y 那边有 `maxf(pos.y,44)`，
-				# x 这边没有）。「↑ 回满 N」五个字宽 ≈ 60px，最左列也落得下。
 				_floaters.append({"pos": sh_pos + Vector2(0, 6), "sc": _grid_scroll,
-						"text": "↑ 回满 %d" % int(data.get("health", 0)),
+						"text": "+%d 费 抽%d" % [int(data.get("energy", 0)), int(data.get("draw", 0))],
 						"col": Color("c07ad0"), "size": 16, "start": n, "dur": 1500})
 		"hp":
 			# 攻击方 side；被打的是对面 → 飘字/爆点落在对应 HP 横幅。
@@ -13656,11 +13627,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": rg_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
 					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
 		"night_erosion":
-			# 夜蚀 8062（R103）：回合结束按剩余费用回复生命 —— 绿色回血飘字（同自我修复口径）。
-			var ne_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": ne_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
-					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
-			sfx.play("heal")
+			# 夜蚀 8062（R103 → R845）：从「按剩余费用回血」改成「对所有敌人造成 X 点伤害」，
+			# 演出对齐黑暗扩散 9113 —— 暗影图落在棋盘正中 + 一行「剩余 N 费 → 全体 -M」，
+			# 逐格伤害数字由 `_hit_unit` 自己那条 `fx_impact` 出，这里不再逐格贴图。
+			var ne_dmg := int(data.get("amount", 0))
+			_fx_push_pos(FxArt.SKILL_SHADOW,
+					Vector2(GRID_X + GRID_W / 2.0, GRID_Y + GRID_H / 2.0), n, 640, 224.0)
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 24),
+					"text": "夜蚀 · 剩余 %d 费用 → 全体敌人 -%d"
+						% [int(data.get("left", 0)), ne_dmg],
+					"col": Color("5a2a8a"), "start": n, "dur": 2000})
+			sfx.play("attack")
 		"batch_upgrade":
 			# 集体改造 8031（R86 → R394）：手牌 + 卡组里所有盟友/工事各 +3 生命。
 			var bu_n: int = int(data.get("count", 0))
@@ -14915,17 +14892,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# R331 惊喜运单 8079：回合开始开面板（由 `_sync_pick` 自动弹）。
 			_say("◈ 惊喜运单：从卡组选一张卡 → 变成随机卡并加入手卡")
 		"instinct":
-			# R332 本能 9176：随机打出抽牌库中 3 张 ≤1 费技能卡（免费打出）。
-			# 状态栏只写张数（264px ≈ 19 全角字），卡名列表走飘字。
-			var in_cards: Array = data.get("cards", [])
-			_say("◈ 本能：随机打出 %d 张技能卡" % in_cards.size())
-			if not in_cards.is_empty():
-				var in_names: Array[String] = []
-				for _in in in_cards:
-					in_names.append(str(_in))
-				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
-						"text": "本能 · " + "、".join(in_names),
-						"col": Color("b9a6ff"), "size": 15, "start": n, "dur": 1700})
+			# R845 本能 9176（改成 2 费效果卡）：接下来一次 >1 的伤害变 1，然后抽 2 张。
+			# 引擎在 `_damage_player()` 里发，此时 HP 飘字已经由 `hp` 事件自己出，
+			# 这里只补一句因果 + 顶部飘字，别在 HP 横幅上再叠一层数字。
+			_say("◈ 本能：挡下 %d 点伤害 → 变为 %d，抽 %d 张"
+					% [int(data.get("blocked", 0)), int(data.get("capped", 0)),
+					int(data.get("draw", 0))])
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+					"text": "本能 · 挡下 %d 点" % int(data.get("blocked", 0)),
+					"col": Color("b9a6ff"), "size": 15, "start": n, "dur": 1700})
 		"surprise_pick":
 			# R331 惊喜运单 8079：选完一张。
 			var sp_c: CardData = data.get("card", null)

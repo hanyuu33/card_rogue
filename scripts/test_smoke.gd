@@ -4756,8 +4756,8 @@ func _check_lighten(scene: Variant) -> void:
 		return
 	var repo := CardRepo.load_json()
 	var lt: CardData = repo.get_card(GameEngine.LIGHTEN_ID)
-	if lt == null or lt.cost != 0 or lt.rarity != 2:
-		_smoke_fail("负重减轻：卡面应是 0 费史诗技能")
+	if lt == null or lt.cost != 0 or lt.rarity != 1:
+		_smoke_fail("负重减轻：卡面应是 0 费稀有技能")
 		return
 	var ov: PickOverlay = scene._pick
 	if ov == null:

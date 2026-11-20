@@ -2136,7 +2136,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对目标造成 4 点伤害，随机将一张费用为 0 的技能卡从抽牌库加入手牌。",
+      "effect_text": "对目标造成 5 点伤害，随机将一张费用为 0 的技能卡从抽牌库加入手牌。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -2154,7 +2154,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对目标造成 3 点伤害，目标本回合失去 3 点力量。",
+      "effect_text": "对目标造成 2 点伤害，目标本回合失去 3 点力量。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -2230,7 +2230,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "造成 5 点伤害，若目标处于满血状态则改为造成 12 点伤害。",
+      "effect_text": "造成 4 点伤害，若目标处于满血状态则改为造成 10 点伤害。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -2248,7 +2248,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "每使用一张卡，随机对一个敌人造成 2 点伤害。效果区多张本卡不可叠加。",
+      "effect_text": "同一个回合内每使用 3 张卡，对一个随机敌人造成 8 点伤害，并使其力量 -1。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "color": "水风",
       "image": ""
@@ -3763,7 +3763,7 @@
       "health": 0,
       "attack_range": 0,
       "move_speed": 0,
-      "rarity": 2,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
@@ -4230,12 +4230,12 @@
         "夜蚀"
       ],
       "affixes": [],
-      "effect_text": "自己回合结束时，回复 X 点生命，X 为自己剩余费用（每 1 点剩余费用回复 1 点生命，不超过生命上限）。",
+      "effect_text": "自己回合结束时，对所有敌人造成 X 点伤害，X 为自己剩余费用。",
       "target_mode": "none",
       "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "effects": []},
-      "lower_effect": {"effects": [{"type": "heal_per_energy", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "damage_per_energy", "value": 1}]}
     },
     {
       "id": 9119,
@@ -4251,7 +4251,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "对目标造成 4 点伤害，然后抽 1 张卡。",
+      "effect_text": "对目标造成 5 点伤害，然后抽 1 张卡。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -4289,7 +4289,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "对目标造成 8 点伤害，然后从**弃牌区任选一张卡**返回你的手卡。",
+      "effect_text": "对目标造成 13 点伤害，然后从**弃牌区任选一张卡**返回你的手卡。",
       "target_mode": "unit",
       "color": "暗影",
       "image": ""
@@ -5100,7 +5100,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "抽 5 张牌。这回合结束为止，你不能使用盟友和工事卡。",
+      "effect_text": "抽 4 张牌。这回合结束为止，你不能使用盟友和工事卡。",
       "target_mode": "none",
       "color": "",
       "image": ""
@@ -5149,7 +5149,7 @@
     {
       "id": 9176,
       "name": "本能",
-      "kind": "技能",
+      "kind": "效果",
       "cost": 2,
       "power": 0,
       "health": 0,
@@ -5162,7 +5162,7 @@
         "本能"
       ],
       "affixes": [],
-      "effect_text": "随机打出抽牌库中 3 张费用 1 或以下的技能卡。",
+      "effect_text": "接下来一次你受到的大于 1 的伤害变为 1，然后抽 2 张牌。",
       "target_mode": "none",
       "color": "",
       "image": ""
@@ -6235,7 +6235,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "每次对被标记的敌人造成伤害，此卡费用本局 -1。这张卡击杀单位时，这张卡回满生命。",
+      "effect_text": "每次对被标记的敌人造成伤害，此卡费用本局 -1。这张卡击杀单位时，回复 2 点费用并抽 2 张牌。",
       "target_mode": "none",
       "color": "暗影",
       "image": "",

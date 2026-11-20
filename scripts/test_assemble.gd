@@ -114,7 +114,8 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"buff_per_energy":
 			return text.contains("剩余费用每有 1 点") \
 					and text.contains("%d 点生命" % int(fx.get("hp", 0)))
-		"heal_per_energy": return text.contains("剩余费用") and text.contains("回复 %d 点生命" % n)
+		"damage_per_energy":
+			return text.contains("剩余费用") and text.contains("对所有敌人造成")
 		"draw_random_skill":
 			return text.contains("技能牌") and text.contains("本回合费用 -%d" % n)
 		"hand_cost_raise": return text.contains("费用 +%d" % n)
@@ -1167,16 +1168,18 @@ func _test_r570_actions() -> void:
 	eng2b._assemble_execute(p2b, Vector2i(3, 0), "turn_end")
 	check(p2b.health == hp2b and p2b.end_atk == 0, "R570：剩余费用 0 时 `buff_per_energy` 不结算")
 
-	# ③ heal_per_energy（夜蚀 8062）：剩余 5 费、只差 2 血 → 回 2（不超过上限）
+	# ③ damage_per_energy（夜蚀 8062，R845 换成群体伤害）：剩余 5 费 → 对所有敌人各 5 伤
 	var eng3 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
 	eng3.ai_enabled = false
 	var p3 := _probe_unit(eng3, "turn_end", Vector2i(3, 0))
-	p3.card.assemble = {"trigger": "turn_end", "effects": [{"type": "heal_per_energy", "value": 1}]}
-	p3.health = p3.card.health - 2
+	p3.card.assemble = {"trigger": "turn_end", "effects": [{"type": "damage_per_energy", "value": 1}]}
+	var foe3 := eng3.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var foe3_hp := foe3.health
 	eng3.state.energy = 5
 	eng3._assemble_execute(p3, Vector2i(3, 0), "turn_end")
-	check(p3.health == p3.card.health,
-			"R570：剩余 5 费、只差 2 血 → 回满且不越界（实际 %d / %d）" % [p3.health, p3.card.health])
+	check(foe3.health == foe3_hp - 5,
+			"R845：剩余 5 费 → 组合的夜蚀对所有敌人各 5 伤（%d → %d）" % [foe3_hp, foe3.health])
 
 	# ④ draw_random_skill（赤狐 9034）：牌库 -1、手牌 +1，且只有那张本回合 -1 费
 	var skill: CardData = null
@@ -1286,8 +1289,10 @@ func _test_r570_actions() -> void:
 			"R570 源码锁：自我复制只有 `_spawn_self_clone` 一个实现口（野兔 + 组合）")
 	check(gs.find("func _buff_other_allies_atk") >= 0 and gs.count("_buff_other_allies_atk(") >= 3,
 			"R570b 源码锁：其他盟友加攻只有 `_buff_other_allies_atk` 一个实现口（老虎 + 组合）")
-	check(gs.count("_night_erosion_heal(") >= 3,
-			"R570 源码锁：按剩余费用回血只有 `_night_erosion_heal` 一个实现口（夜蚀 + 组合）")
+	check(gs.count("_night_erosion_strike(") >= 3,
+			"R845 源码锁：按剩余费用群伤只有 `_night_erosion_strike` 一个实现口（夜蚀 + 组合）")
+	check(gs.count("_night_erosion_heal(") == 0,
+			"R845 源码锁：旧的按费回血实现（`_night_erosion_heal`）已整条删除")
 
 
 func _test_r571_no_cancel() -> void:

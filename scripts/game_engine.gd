@@ -765,11 +765,12 @@ const RAPID_PER_ZERO:= 1
 # R316 激光扫射（9172，机械之心 2 费稀有技能）：对所有敌人造成 9 点伤害。
 const LASER_SWEEP_ID:= 9172
 const LASER_SWEEP_DMG:= 9
-# R317 身法（9173，暗影刺客 1 费普通技能）：抽 5 张；**这回合结束为止不能使用盟友和工事卡**。
+# R317 身法（9173，暗影刺客 1 费普通技能）：抽 REFLEX_DRAW 张；**这回合结束为止不能使用盟友和工事卡**。
+#   R845（用户口径）：抽 5 → 抽 4。
 #   锁的判据放在 `can_use_card()`（显示 / UI / 引擎同一口）+ `play_from_hand()` 兜底；
 #   只锁**盟友 / 工事**，场地卡与技能 / 效果卡照旧能打。
 const REFLEX_ID:= 9173
-const REFLEX_DRAW:= 5
+const REFLEX_DRAW:= 4
 # R317 淘汰（9174，机械之心 1 费史诗技能）：从**卡组**选一张盟友或工事 → 变成「素体」，抽 4 张。
 #   选牌走 `eliminate_pending` + `eliminate_pick()`（UI kind = "eliminate"），
 #   ⚠️ 抽 4 张在**打开面板之前**就结算 —— 取消面板只是放弃「变素体」，
@@ -1382,12 +1383,14 @@ const PHANTOM_CLOAK_EVERY:= 2     # R60：每 2 张牌触发一次（原为每 1
 
 # ── 暗影刺客扩展（R45，2026-10-02）──
 # 终结（9086，原「突袭」只改名）：4+X 伤，X = 本回合该方已使用的卡牌数（RAID_* 常量沿用）。
-# 连刺（9087 技能）：1 费；对目标 4 伤；卡组随机 0 费技能卡入手。
+# 连刺（9087 技能）：1 费；对目标 GOUGE_DMG 伤；卡组随机 0 费技能卡入手。
+# R845（用户口径）：4 → 5 伤。
 const GOUGE_ID:= 9087
-const GOUGE_DMG:= 4
-# 敲晕（9088 技能）：0 费；对目标 3 伤 + 本回合力量 -3（atk_debuff / debuff_stage=1，与威慑同源）。
+const GOUGE_DMG:= 5
+# 敲晕（9088 技能）：0 费；对目标 STUN_BLOW_DMG 伤 + 本回合力量 -3
+# （atk_debuff / debuff_stage=1，与威慑同源）。R845（用户口径）：3 → 2 伤，降力不变。
 const STUN_BLOW_ID:= 9088
-const STUN_BLOW_DMG:= 3
+const STUN_BLOW_DMG:= 2
 const STUN_BLOW_DEBUFF:= 3
 # 独行（9189 技能，R406，暗影刺客 · 2 费）：对一个敌人造成 LONE_WALK_DMG 伤 + 本回合
 #   力量 -LONE_WALK_DEBUFF；**随机让手卡一张盟友 / 工事「消失」**（本场对战移除），
@@ -1410,12 +1413,20 @@ const SHADOW_CAT_NEED:= 3
 const SHADOW_DEMON_ID:= 8007
 const SHADOW_DEMON_HP_PER:= 3
 # 偷袭（9090 技能）：0 费；5 伤，目标满血 → 12 伤。
+# R845（用户口径）：5 → 4 伤，满血档 12 → 10 伤。
 const SNEAK_ID:= 9090
-const SNEAK_DMG:= 5
-const SNEAK_FULL_DMG:= 12
-# 疾风（9091 效果）：每使用一张卡 → 随机对一个敌人 2 伤（没有敌方单位 → 直击对方 HP）。
+const SNEAK_DMG:= 4
+const SNEAK_FULL_DMG:= 10
+# 疾风（9091 效果，R845 重做）：**同一个回合内每使用 GALE_NEED 张卡** → 对一个随机敌人
+#   GALE_DMG 伤 + 本回合力量 -GALE_DEBUFF；没有敌方单位 → 直击对方 HP（那一档没有降力对象）。
+#   * 计数读 `self_card_plays` / `opp_card_plays`（出牌唯一收尾口累加，回合开始清零）——
+#     与终结 9086 / 回转 9089 同一个计数器，所以「含本卡」也成立；
+#   * 「不可叠加」= 效果区**有没有**（多张也只结算一次），与致命 9226 的 `_zone_has()` 同口径；
+#   * 降力与敲晕同源（atk_debuff + debuff_stage=1，到它自己回合结束清除）。
 const GALE_ID:= 9091
-const GALE_DMG:= 2
+const GALE_DMG:= 8
+const GALE_NEED:= 3
+const GALE_DEBUFF:= 1
 # 潜伏（9092 效果）：回合开始多抽 1 张；抽到 0 费 → 再抽 1 张（只多这一次）。
 const LATENT_ID:= 9092
 # 幽灵（8008 盟友）：自己回合开始时自行破坏；破坏时卡组随机技能卡入手（走 _deathrattle）。
@@ -2022,18 +2033,20 @@ const HIDDEN_ENERGY_RANGE:= 1
 #   并加入手卡。效果区几张就结算几次（与创意 / 新生同口径）；敌方不做选牌决策 → 落空。
 const SURPRISE_ID:= 8079
 
-# ── R332：暗影刺客稀有技能「本能」9176 ──
-# 2 费：**随机打出抽牌库中 3 张费用 ≤1 的技能卡**。
-#   * 候选 = `state.deck` 里 `is_spell()` 且 `cost_of(card, side) <= INSTINCT_MAX_COST`；
-#     X 费卡（流星雨 9083）**显式排除** —— 0 费用时它也算「可打出」，等于白丢一张；
-#     本能自身也排除，防止被减费后自我递归。
-#   * 打出走 `use_spell(..., free_cast = true)`：**不向玩家收费**，但保留全部既有守卫
-#     （夜行出牌上限 / 两段式技能打不出 / 没有合法目标 / 选牌面板）——
-#     打不出的卡**放回牌库原位**，不占「3 张」配额。
-#   * 随机源只用引擎 `rng`（RunState.run_seed）：先取下标再删牌 → 回放一致。
+# ── R332 → R845：暗影刺客稀有**效果卡**「本能」9176 ──
+# R845（用户口径）：从「2 费稀有技能 · 随机打出抽牌库里 3 张 ≤1 费技能卡」整条改成
+# 「2 费稀有效果卡：接下来一次你受到的大于 1 的伤害变为 1，之后抽 2 张牌」。
+#   * 挂在 `_damage_player()` 的 SIDE_SELF 分支（`_instinct_absorb`）：
+#     位置在 `_hp_damage_taken()` **之后**（减伤链走完再看真正要掉的血）、不锈钢盆**之前**
+#     —— 先压到 1，再让盆按 1 去接；
+#   * **只挡「大于 1」**：最终伤害 ≤1 时不动、也不消耗这张卡（不能拿 1 点小伤骗掉它）；
+#   * 一次性：触发后把这张卡从效果区摘掉、进弃牌区，再抽 INSTINCT_DRAW 张；
+#   * 「多张各挡一次」：一次性消耗后下一张继续生效 → 所以**允许叠加**
+#     （与致命 9226 的「只认有没有」相反：那张是常驻增幅，这张是消耗品）；
+#   * 敌方侧不挂（`_damage_player` 的敌方分支没有减伤链，且这张卡只进玩家池）。
 const INSTINCT_ID:= 9176
-const INSTINCT_COUNT:= 3
-const INSTINCT_MAX_COST:= 1
+const INSTINCT_CAP:= 1        # 受击上限：>1 的伤害压到几点
+const INSTINCT_DRAW:= 2       # 挡下之后抽几张
 # ── R393：击杀成长（暗影刺客 / 森林精魄新卡）──
 # 猎杀 9205：3 费史诗技能 · 次元；基础伤害写在卡面 `value`（R427：22），每击杀 +4 本局永久。
 # 赏金猎人 9204 / 秃鹰 9206 的「每场首次击杀」数值走卡面字段
@@ -2077,6 +2090,10 @@ const DOOM_HERALD_ID:= 9232       # 厄运的使者：3 费稀有盟友 2/15/程
 const DOOM_HERALD_HEAL:= 3        # 攻击**被标记的**敌人 → 自己回复 3
 const SOUL_REAPER_ID:= 9233       # 灵魂收割者：8 费史诗盟友 6/20/程1/速1
 const SOUL_REAPER_DISCOUNT:= 1    # 每次打中被标记的敌人 → 此卡费用永久 -1
+# R845（用户口径）：击杀单位的效果从「这张卡回满生命」整条换成
+# 「**回复 2 点费用 + 抽 2 张牌**」—— 回满生命那条已删除，别再加回来。
+const SOUL_REAPER_ENERGY:= 2      # 击杀 → 回复几点费用
+const SOUL_REAPER_DRAW:= 2        # 击杀 → 抽几张牌（玩家侧收益，敌方 AI 只拿费用）
 
 # ---- R505（2026-11-06）恐惧收割 9234（暗影刺客 · 2 费稀有技能）----
 # 用户口径：「造成 15 点伤害。在一个回合内对被标记的目标造成 3 次伤害后（恐惧收割除外），
@@ -2217,27 +2234,28 @@ const REBIRTH_ID:= 9148
 const REBIRTH_TRAIT:= "新生"
 
 # ---- R103（2026-10-07）夜蚀 8062 ----
-# 夜蚀8062（2 费史诗盟友 2/8/程1/速1）：**自己回合结束时**，回复 X 点生命值，
+# 夜蚀8062（2 费史诗盟友 3/9/程1/速1）：**自己回合结束时**，对所有敌人造成 X 点伤害，
 #   X = **自己剩余费用**（state.energy_of(side)，即这张卡读的是「本回合没用完的钱」，
-#   与地狱猫 8019 / 鲜血堡垒 8020 / 活力转移 9110 / 暗影锁链 9112 同一口径）。
-# 与那几张的**关键区别**：那几张给的是**永久成长**（Placement.end_atk / 直接加 p.health，
-#   等于抬上限），夜蚀是**回复**（把已损失的血补回来，**上限仍是卡面 health**），
-#   所以走的是 _regen_tick 那一套「不满血才回、mini 夹上限」的口径。
-# 结算入口同样挂在 _end_turn_surplus()（费用清零之前），读同一个 left。
-# 满血时不结算也不刷飘字（与 _regen_tick / _charge_tick 一致，避免「回复 0」噪声）。
+#   与地狱猫 8019 / 鲜血堡垒 8020 / 活力转移 9110 / 暗影锁链 9112 / 黑暗扩散 9113 同一口径）。
+# R845（用户口径）：原来是「回复 X 点生命（不越上限）」，现在**整条换成群体伤害** ——
+#   回复那一套（满血静默跳过 / mini 夹上限）连同 `_night_erosion_heal` 一起删除，
+#   改走 `_night_erosion_strike`：与黑暗扩散 9113 同构（`_hit_unit` + `_destroy_dead`，
+#   后排被打穿按通用溢出规则漏到 HP；场上没有敌人 → 落空，不补直击）。
+# 结算入口仍挂在 _end_turn_surplus()（费用清零之前），读同一个 left。
 const NIGHT_EROSION_ID:= 8062
 const NIGHT_EROSION_TRAIT:= "夜蚀"
-const NIGHT_EROSION_PER_ENERGY:= 1    # 每 1 点剩余费用 → 回复 1 点生命
+const NIGHT_EROSION_PER_ENERGY:= 1    # 每 1 点剩余费用 → 对每个敌人造成 1 点伤害
 
 # ---- R104（2026-10-08）起手式 9119 ----
-# 起手式（9119 技能，暗影刺客·普通）：1 费；**对目标造成 4 点伤害，然后抽 1 张卡**。
-# 定位是「连刺 9087」的平行变体：同为 1 费 4 伤，连刺补的是「卡组随机 0 费技能卡入手」，
+# 起手式（9119 技能，暗影刺客·普通）：1 费；**对目标造成 OPENING_MOVE_DMG 点伤害，然后抽 1 张卡**。
+#   R845（用户口径）：4 → 5 伤（抽牌不变）。
+# 定位是「连刺 9087」的平行变体：同为 1 费单体伤害，连刺补的是「卡组随机 0 费技能卡入手」，
 # 起手式补的是**确定性的抽 1 张**（不挑费用、不依赖卡组里有没有 0 费技能）。
 # 伤害走 _spell_dmg()（吃荧光草 / 魔法塔 / 魔力核心 / 鸭之眼等既有加成，与连刺同口径）；
 # 抽牌走 _draw_many()（手牌满则停，与批量传输 8040 同口径）。
 # ⚠️ 抽牌是**玩家侧收益**，敌方 AI 用这张卡只结算伤害、不抽牌（与准备 9094 同口径）。
 const OPENING_MOVE_ID:= 9119
-const OPENING_MOVE_DMG:= 4       # 基础伤害
+const OPENING_MOVE_DMG:= 5       # 基础伤害（R845：4 → 5）
 const OPENING_MOVE_DRAW:= 1      # 结算后抽几张
 
 
@@ -2253,13 +2271,13 @@ const SHADOW_STRIKE_DMG:= 8         # 基础伤害
 const SHADOW_STRIKE_NEED:= 3        # 含本卡累计用满几张
 const SHADOW_STRIKE_REFUND:= 1      # 达标回费
 
-# 暗影步（9121 技能，暗影刺客·稀有）：2 费；先对目标造成 8 点伤害，
+# 暗影步（9121 技能，暗影刺客·稀有）：2 费；先对目标造成 SHADOW_STEP_DMG 点伤害（R845：8 → 13），
 #   再从**弃牌区任选一张**（任意 kind，不限盟友）返回手卡。
 # 取牌面板与复活术 9078 同构但用**独立变量**（shadow_step_pending / _remaining）——
 # 复活术的候选是「仅盟友」，口径不同，混用同一套变量会互相污染。
 # ⚠️ 取牌是**玩家侧收益**：敌方 AI 用这张卡只结算伤害、不取牌（与起手式 9119 同口径）。
 const SHADOW_STEP_ID:= 9121
-const SHADOW_STEP_DMG:= 8
+const SHADOW_STEP_DMG:= 13
 const SHADOW_STEP_NEED:= 1          # 要从弃牌区取回几张
 
 
@@ -2272,7 +2290,7 @@ const SHADOW_STEP_NEED:= 1          # 要从弃牌区取回几张
 # ⚠️ 敌方 AI 不使用这张卡（改牌组是玩家侧决策，AI 用了会污染玩家牌序；与预判 9097 同口径）。
 const FOCUS_ID:= 9122
 const FOCUS_NEED:= 2            # 要从抽牌库移除几张
-# 负重减轻（8066 技能，暗影刺客·史诗，R201）：0 费；从抽牌库里选 1 张卡，这张卡
+# 负重减轻（8066 技能，暗影刺客·**稀有**，R201；R845 从史诗下调）：0 费；从抽牌库里选 1 张卡，这张卡
 # **本次对战中消失**，并且**下个回合开始时多抽一张卡**。
 # 面板完全复用专注那套（focus_pending / focus_options / focus_pick / focus_cancel），
 # 区别只在：张数是 1、以及选完后给 state.self_next_draw 记 +1（见 focus_pick 末尾）。
@@ -9757,76 +9775,6 @@ func _use_spell_body(hand_index: int, target = null, free_cast := false) -> Stri
 	return detail
 
 
-func _instinct_panel_open() -> bool:
-	## 本能 9176（R332）：结算中间出现「等玩家选」的面板就得收手 ——
-	## 继续「随机打出」会把面板依赖的下标/候选弄失效（与 use_spell 开头那四个守卫同源，
-	## 这里把弃牌区/卡组/手牌/合并等其余 pending 也一并算上）。
-	return assemble_combo_pending or overhaul_pending or creation_pending or cannonize_pending or surprise_pending \
-		or paint_pending \
-		or focus_pending or wish_pending or shadow_step_pending or revive_pending \
-		or merge_pending or crow_pending or whale_pending or endless_pending \
-		or rebirth_pending or eliminate_pending or recruit_pending or regret_pending
-
-
-func _instinct_cast(side: String) -> String:
-	## 本能（9176，R332，暗影刺客 2 费稀有技能）：随机打出抽牌库中 3 张费用 ≤ 1 的技能卡。
-	## ⚠️ 这里用 `state.hand.append()` 而**不是** `_grant_to_hand()`：那张卡只是临时借道手牌
-	##    去走 `use_spell(hand_index)`（`_grant_to_hand` 在手牌满时会改投弃牌区，语义不对）。
-	## ⚠️ 候选池存的是 **CardData 引用**而不是下标：每打出一张，`state.deck` 就会变短，
-	##    先前记下的下标会整体错位。真正出牌前才用 `state.deck.find(card)` 取当前下标。
-	var names: Array[String] = []
-	var pool: Array[CardData] = []
-	for c: CardData in state.deck:
-		if c == null or not c.is_spell():
-			continue
-		if c.id == INSTINCT_ID or c.x_cost:
-			continue
-		if cost_of(c, side) > INSTINCT_MAX_COST:
-			continue
-		pool.append(c)
-	while names.size() < INSTINCT_COUNT and not pool.is_empty():
-		if _instinct_panel_open():
-			_log("本能：上一张卡留下了选牌面板，停止后续打出")
-			break
-		var k: int = rng.randi() % pool.size()
-		var card: CardData = pool[k]
-		pool.remove_at(k)
-		var pick: int = state.deck.find(card)
-		if pick < 0:
-			# 前一张打出的卡带抽牌效果，把这张抽走了 → 当没抽到。
-			continue
-		var tgt = null
-		if card.needs_target():
-			var cells := _autoplay_spell_targets(card)
-			if cells.is_empty():
-				_log("本能：%s 没有合法目标，跳过" % card.card_name)
-				continue
-			tgt = cells[rng.randi() % cells.size()]
-		state.deck.remove_at(pick)
-		state.hand.append(card)
-		var hi: int = state.hand.size() - 1
-		var plays_before: int = state.self_card_plays
-		use_spell(hi, tgt, true)
-		if state.self_card_plays > plays_before:
-			names.append(card.card_name)
-			continue
-		# 被打回（夜行上限 / 两段式技能 / 目标无效）→ 放回牌库**原位**，不占「3 张」配额。
-		var back: int = state.hand.find(card)
-		if back >= 0:
-			state.hand.remove_at(back)
-		state.deck.insert(mini(pick, state.deck.size()), card)
-		_log("本能：%s 打出被拒，放回牌库" % card.card_name)
-		if _play_cap_blocked() != "":
-			break
-	if names.is_empty():
-		_log("本能：抽牌库里没有费用 %d 或以下的技能卡" % INSTINCT_MAX_COST)
-		return "抽牌库里没有费用 %d 或以下的技能卡" % INSTINCT_MAX_COST
-	var det := "本能：随机打出 %s" % "、".join(names)
-	_log(det)
-	action.emit("instinct", {"cards": names})
-	return det
-
-
 func use_effect(hand_index: int) -> String:
 	## R810：同 `play_from_hand` —— 薄壳 + 缺陷时钟判定（效果卡同样计入张数）。
 	var out := _use_effect_body(hand_index)
@@ -10133,17 +10081,17 @@ const SPELL_BASE_DMG := {
 	9273: 3,     # 炮火就位（× X 次，全体）
 	9084: 14,    # 火墙术（每格；另有 7 点持续伤害）
 	9086: 2,     # 终结（2 + 本回合已用张数）
-	9087: 4,     # 连刺
-	9088: 3,     # 敲晕
-	9090: 5,     # 偷袭（目标满血 12）
+	9087: GOUGE_DMG,          # 连刺（R845：4 → 5）
+	9088: STUN_BLOW_DMG,      # 敲晕（R845：3 → 2）
+	9090: SNEAK_DMG,          # 偷袭（R845：5 → 4；目标满血 10）
 	9093: 4,     # 连环戏法（已用 4 张其他卡 → 10）
 	9095: 10,    # 怒涛
 	9096: 17,    # 回旋斩
 	9102: 2,     # 回响
 	9104: 6,     # 收尾（手牌仅剩它 → 22）
-	9119: 4,     # 起手式
+	9119: OPENING_MOVE_DMG,   # 起手式（R845：4 → 5）
 	9120: 8,     # 影袭
-	9121: 8,     # 暗影步
+	9121: SHADOW_STEP_DMG,    # 暗影步（R845：8 → 13）
 	9145: 9,     # 聚能炮击（8075 在场 → +7）
 	9156: 0,     # 蓄势（吃 card.value，卡面自己会写）
 	9160: 5,     # 弹跳飞刀（另有最多 2 个目标，5 → 4 → 3）
@@ -10510,32 +10458,41 @@ func _zone_has_id(side: String, id: int) -> bool:
 
 
 func _gale_tick(side: String, played: CardData) -> void:
-	## 疾风（9091 效果卡）：效果区有本卡时，该方每使用一张卡（不含本卡自己打出）
-	## → 随机对一个敌人造成 2 点伤害；没有敌方单位 → 直击对方 HP。
-	var gale_found := false
-	var gale_zone: Array[CardData] = state.effects if side == SIDE_SELF else state.enemy_effects
-	for gz_c: CardData in gale_zone:
-		if gz_c.id == GALE_ID and gz_c != played:
-			gale_found = true
-			break
-	if not gale_found:
+	## 疾风（9091 效果卡，R845 重做）：**同一个回合内每使用 GALE_NEED 张卡**
+	## → 对一个随机敌人造成 GALE_DMG 伤，并使其本回合力量 -GALE_DEBUFF。
+	##   * 「不可叠加」= 效果区**有没有**这张卡（`_zone_has_id`）：两张也只结算一次；
+	##   * 计数读出牌唯一收尾口累加的 `self_card_plays` / `opp_card_plays`（**含本卡**），
+	##     回合开始清零 —— 与终结 9086 / 回转 9089 同一个计数器；
+	##   * 没有敌方单位 → 直击对方 HP（这一档没有降力对象，只结算伤害）；
+	##   * 降力与敲晕 9088 同源（atk_debuff + debuff_stage=1，到它自己回合结束清除）。
+	if not _zone_has_id(side, GALE_ID):
+		return
+	var plays: int = state.self_card_plays if side == SIDE_SELF else state.opp_card_plays
+	if plays <= 0 or plays % GALE_NEED != 0:
 		return
 	var foe := SIDE_OPPONENT if side == SIDE_SELF else SIDE_SELF
 	var cells: Array[Vector2i] = []
 	for cell: Vector2i in state.board:
 		var q: Placement = state.unit_at(cell)
-		if q != null and q.owner == foe:
+		if q != null and q.owner == foe and q.health > 0:
 			cells.append(cell)
 	# R662（店长口径）：疾风是**效果卡**，不算技能伤害 → 不叠加快速符文的 +5%。
 	var amount := _spell_dmg(side, GALE_DMG, null, false)
 	if cells.is_empty():
 		_damage_player(foe, amount, "疾风")
-		_log("疾风：没有敌方单位 → 对方 HP -%d" % amount)
+		_log("疾风：本回合第 %d 张牌，场上没有敌方单位 → 对方 HP -%d" % [plays, amount])
 		return
 	var t: Vector2i = cells[rng.randi_range(0, cells.size() - 1)]
 	var q2: Placement = state.unit_at(t)
 	var dealt := _hit_unit(q2, amount, "疾风")
-	_log("疾风：每用一张牌 → %s -%d（剩余 %d）" % [q2.card.card_name, dealt, maxi(0, q2.health)])
+	var gale_s := "疾风：本回合第 %d 张牌 → %s -%d" % [plays, q2.card.card_name, dealt]
+	if q2.health > 0:
+		q2.atk_debuff += GALE_DEBUFF
+		q2.debuff_stage = 1
+		gale_s += "，力量 -%d" % GALE_DEBUFF
+		action.emit("gale_debuff", {"cell": t, "card": q2.card,
+				"amount": GALE_DEBUFF, "power": q2.effective_power()})
+	_log("%s（剩余 %d）" % [gale_s, maxi(0, q2.health)])
 	action.emit("gale", {"cell": t, "dmg": dealt, "name": q2.card.card_name})
 	if q2.health <= 0:
 		_destroy_dead()
@@ -12585,9 +12542,6 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 					fs_n += 1
 			_log("烈火之剑：%d 列各受到 %d 点伤害" % [fs_n, fs_dmg])
 			return "烈火之剑：%d 列各受到 %d 点伤害" % [fs_n, fs_dmg]
-		INSTINCT_ID:
-			# 本能（9176，R332）：随机打出抽牌库中 3 张费用 ≤1 的技能卡。
-			return _instinct_cast(side)
 		NIGHT_WALK_ID:
 			# 夜行（9155，R232）：本回合我方所有卡免费；本回合出牌上限 NIGHT_WALK_MAX 张（含本卡）。
 			state.turn_all_free = true
@@ -16692,6 +16646,33 @@ func _end_hp_once() -> void :
 	if _hp_once_depth == 0:
 		_hp_once_sides.clear()
 
+func _instinct_absorb(dmg: int) -> int:
+	## 本能 9176（R845 效果卡）：接下来一次**大于 INSTINCT_CAP** 的 HP 伤害压到 INSTINCT_CAP，
+	## 然后抽 INSTINCT_DRAW 张，并把这张卡从效果区摘掉（**一次性**）。
+	##   * 只挡「大于 CAP」：最终伤害 ≤ CAP 时原样返回、**不消耗**这张卡；
+	##   * 多张各挡一次（消耗品，允许叠加）；
+	##   * 摘掉的卡进弃牌区（不是「消失」）—— 它只是用完了。
+	if dmg <= INSTINCT_CAP:
+		return dmg
+	var idx := -1
+	for i in state.effects.size():
+		if state.effects[i].id == INSTINCT_ID:
+			idx = i
+			break
+	if idx < 0:
+		return dmg
+	var inst_card: CardData = state.effects[idx]
+	state.effects.remove_at(idx)
+	if not inst_card.is_ephemeral:
+		state.discard.append(inst_card)
+	var inst_drawn := _draw_many(INSTINCT_DRAW)
+	_log("本能：挡下一次 %d 点伤害 → 变为 %d，抽 %d 张（效果区还剩 %d 张本能）" % [
+			dmg, INSTINCT_CAP, inst_drawn,
+			state.effects.filter(func(c: CardData): return c.id == INSTINCT_ID).size()])
+	action.emit("instinct", {"blocked": dmg, "capped": INSTINCT_CAP, "draw": inst_drawn})
+	return INSTINCT_CAP
+
+
 func _damage_player(side: String, amount: int, source:= "") -> int:
 	## R123：多格窗口内，同一方 HP 只结算**一次**。
 	## R470（用户口径「只结算受到伤害最高的格子的伤害」）：旧写法是「先到先算」——
@@ -16728,6 +16709,8 @@ func _damage_player(side: String, amount: int, source:= "") -> int:
 			return state.hp_self
 
 		var dmg:= _hp_damage_taken(amount)
+		# R845 本能（9176）：接下来一次**大于 1** 的伤害变为 1，然后抽 2 张（一次性、可叠加）。
+		dmg = _instinct_absorb(dmg)
 		# 不锈钢盆（6041，R311）：**代替玩家承受等量伤害**，计数归零即失去道具。
 		# 位置在减伤**之后**：卡面写的是「等量」—— 等的是「本来会掉到你身上的血」，
 		# 放在减伤之前会替玩家白挡掉鸭嘴 / 效果牌减伤那一层，等于把减伤也吃了。
@@ -19419,19 +19402,28 @@ func _end_turn_surplus(side: String) -> void :
 		if _zone_has(zone, DARK_CHAIN_TRAIT):
 			_log("暗影锁链：剩余费用 0，不足 %d 点 → 本次不触发" % DARK_CHAIN_COST)
 		return
+	# 夜蚀 8062（R845）：先收集、循环外再结算 —— 群体伤害可能致死并改动 board，
+	# 不能在遍历 board 的过程中直接杀（与黑暗扩散 9113 同一条纪律）。
+	var night_erosion_units: Array[Placement] = []
 	for cell: Vector2i in state.board:
 		var p: Placement = state.unit_at(cell)
 		if p == null or p.owner != side:
 			continue
-		# 夜蚀8062（R103）：**回复**剩余费用那么多点生命 —— 与上面几张的「永久加血」不同，
-		# 这里只是把已损失的血补回来，上限仍读卡面 health（不满血才结算，满血跳过不刷噪声）。
+		# 夜蚀8062（R103 → R845）：**自己回合结束时**，对所有敌人造成 left 点伤害；
+		# 这里只登记，真正结算在循环外（见下方 `_night_erosion_strike`）。
 		if p.card.traits.has(NIGHT_EROSION_TRAIT):
-			_night_erosion_heal(p, left, side)
+			night_erosion_units.append(p)
 			continue
 		if p.card.traits.has(HELL_CAT_TRAIT):
 			_buff_by_surplus_energy(p, HELL_CAT_ATK, HELL_CAT_HP, "地狱猫", left)
 		elif p.card.traits.has(BLOOD_FORT_TRAIT):
 			_buff_by_surplus_energy(p, BLOOD_FORT_ATK, BLOOD_FORT_HP, "鲜血堡垒", left)
+
+	# 夜蚀：场上**每一张**各结算一次（单位各自生效，两站两只就炸两轮），共用同一个 left。
+	for ne_p: Placement in night_erosion_units:
+		if ne_p.health <= 0:
+			continue
+		_night_erosion_strike(ne_p, left, side)
 
 	# 活力转移：效果区里有就算（多张不叠加 —— 与自愈/ 魔力核心同一口径）。
 	if _zone_has(zone, VITALITY_TRAIT):
@@ -19505,33 +19497,63 @@ func _dark_spread_strike(side: String, left: int) -> void :
 	action.emit("dark_spread", {"dmg": dmg, "left": left, "hits": total, "side": side})
 
 
-func _night_erosion_heal(p: Placement, left: int, side: String,
+func _soul_harvest_gain(attacker: Placement, killed_name: String) -> void :
+	## 灵魂收割者 9233（R504 → R845）：**击杀单位时** → 回复 SOUL_REAPER_ENERGY 点费用
+	## + 抽 SOUL_REAPER_DRAW 张牌（R845 用户口径；原来那条「生命回满」**整条删除**）。
+	##   * 费用直接进本方池 —— 与活力转移 9110 / 契约签订者 8024 / 影袭 9120 回费同口径
+	##     （不污染 `*_energy_spent`，允许当回合超额）；
+	##   * 抽牌是**玩家侧收益** —— 敌方 AI 用这张卡只拿费用（与起手式 9119 同口径）；
+	##   * 触发点在 `_reap()` **之后**：死亡结算已经完成，不会插进伤害链中间。
+	if attacker.owner == SIDE_SELF:
+		state.energy += SOUL_REAPER_ENERGY
+	else:
+		state.opp_energy += SOUL_REAPER_ENERGY
+	var drawn := 0
+	if attacker.owner == SIDE_SELF:
+		drawn = _draw_many(SOUL_REAPER_DRAW)
+	_log("灵魂收割者：击杀 %s → 费用 +%d、抽 %d 张（当前费用 %d）" % [
+			killed_name, SOUL_REAPER_ENERGY, drawn, state.energy_of(attacker.owner)])
+	action.emit("soul_harvest", {"cell": _cell_of(attacker), "card": attacker.card,
+			"energy": SOUL_REAPER_ENERGY, "draw": drawn, "health": attacker.health})
+
+
+func _night_erosion_strike(p: Placement, left: int, side: String,
 		per: int = NIGHT_EROSION_PER_ENERGY) -> void :
-	## 夜蚀 8062（R103，2 费史诗盟友 2/8/程1/速1）：自己回合结束时，
-	## 回复 X = **剩余费用** 点生命值。
+	## 夜蚀 8062（R103 → R845，2 费史诗盟友 3/9/程1/速1）：自己回合结束时，
+	## 对**所有敌人**造成 X = **剩余费用** 点伤害。
 	##
-	## 口径与 _regen_tick / _charge_tick 严格一致：
-	##   * 剩余费用为 0 → 不结算（不刷「回复 0」的噪声日志）；
-	##   * **满血跳过** —— 回复不是成长，满血时不该有任何表现；
-	##   * 上限读 p.card.health（当前卡面上限，被改造过的上限更高 → 能回更多），
-	##     用 mini 夹住，绝不越界。
-	## 注意这里**不改 p.card.health 也不加 end_atk**：回复只动当前血量 p.health，
-	## 所以这张卡不会像地狱猫那样永久堆血上限。
+	## 口径与黑暗扩散 9113 同构：
+	##   * 走通用 `_hit_unit`（**不套** `_spell_dmg`：这是单位效果不是技能，不吃荧光草那类
+	##     技能加伤），致死统一交 `_destroy_dead()`；后排被打穿按通用溢出规则漏到玩家 HP；
+	##   * 收集完再结算（`_hit_unit` 可能致死并改动 board，不能在遍历里直接杀）；
+	##   * 场上没有敌人 → 落空，**不补直击**（与黑暗扩散一致，也避免「空场打脸」这种白拿）；
+	##   * 剩余费用 0 → 不结算（调用方已在 `left <= 0` 早退，这里再兜一次）。
 	if left <= 0:
-		_log("%s：剩余费用 0 → 本次不回复" % p.card.card_name)
+		_log("%s：剩余费用 0 → 本次不结算" % p.card.card_name)
 		return
-	if p.health >= p.card.health:
-		return     # 满血：静默跳过
-	var amount: int = mini(left * per,
-			p.card.health - p.health)
-	if amount <= 0:
+	var dmg: int = left * per
+	var foes: Array[Vector2i] = []
+	for cell: Vector2i in state.board:
+		var q: Placement = state.unit_at(cell)
+		if q != null and q.owner != side and q.health > 0:
+			foes.append(cell)
+	if foes.is_empty():
+		_log("%s：场上没有敌人 → 夜蚀落空（剩余费用 %d）" % [p.card.card_name, left])
 		return
-	p.health += amount
-	_log("%s：剩余费用 %d → 回复 %d 点生命（%d / %d）" % [
-			p.card.card_name, left, amount, p.health, p.card.health])
+	var total := 0
+	_begin_hp_once()
+	for cell: Vector2i in foes:
+		var q: Placement = state.unit_at(cell)
+		if q == null or q.health <= 0:
+			continue
+		_hit_unit(q, dmg, "夜蚀")
+		total += 1
+	_destroy_dead()
+	_end_hp_once()
+	_log("%s：剩余费用 %d → 对 %d 个敌人各造成 %d 点伤害"
+			% [p.card.card_name, left, total, dmg])
 	action.emit("night_erosion", {"cell": _cell_of(p), "card": p.card,
-			"amount": amount, "hp": p.health, "max_hp": p.card.health,
-			"left": left, "side": side})
+			"amount": dmg, "left": left, "hits": total, "side": side})
 
 
 func _endless_dark(side: String) -> void :
@@ -19937,13 +19959,11 @@ func attack(src: Vector2i, dst: Vector2i, side:= SIDE_SELF) -> void :
 	# 且「伤害不会溢出」。以前这里直接 `_destroy(dst)`，于是战场上一刀就没了、
 	# 溢出还照常漏到玩家 HP（城墙站我方 HP 行被打穿 = 当场消失 + 漏 9 点）。
 	if defender.health <= 0 and _reap(dst):
-		# R504 灵魂收割者（9233）：**击杀单位时回满生命**（不要求被击杀者带标记）。
+		# R504 → R845 灵魂收割者（9233）：击杀单位 → **回复 2 点费用 + 抽 2 张牌**
+		# （R845 用户口径；原来那条「生命回满」整条删除）。
+		# ⚠️ 抽牌是**玩家侧收益** —— 敌方 AI 用这张卡只拿费用（与起手式 9119 同口径）。
 		if attacker.card.id == SOUL_REAPER_ID:
-			attacker.health = attacker.card.health
-			_log("灵魂收割者：击杀 %s → 生命回满（%d）" % [
-				defender.card.card_name, attacker.health])
-			action.emit("soul_harvest", {"cell": src, "card": attacker.card,
-				"health": attacker.health})
+			_soul_harvest_gain(attacker, defender.card.card_name)
 		# R225：践踏 —— 先把溢出伤沿同列逐个击穿，打穿整列后剩下的才轮到 HP。
 		var pierced_name: String = defender.card.card_name
 		if overflow > 0 and trample:
@@ -21921,10 +21941,11 @@ func _assemble_apply_fx(p: Placement, cell: Vector2i, fx: Variant) -> void:
 			# R570：地狱猫 8019 / 鲜血堡垒 8020「剩余费用每有 1 点 → +A 力 +H 血」
 			# （共用 `_buff_by_surplus_energy`；组合没有 end_turn 那层上下文，自己读费用）。
 			_buff_by_surplus_energy(p, int(fx.get("atk", 0)), int(fx.get("hp", 0)), "组合")
-		"heal_per_energy":
-			# R570：夜蚀 8062「回复 X 点生命，X = 剩余费用」（共用 `_night_erosion_heal`）。
-			# ⚠️ 那个函数自带「满血静默跳过 / 不超过上限」，这里不要自己再写一遍 clamp。
-			_night_erosion_heal(p, state.energy_of(p.owner), p.owner, value)
+		"damage_per_energy":
+			# R845：夜蚀 8062 从「回血」改成「群体伤害」后，组合素材同步换成这一条 ——
+			# 「X = 剩余费用 → 对所有敌人造成 X 点伤害」（与母卡共用 `_night_erosion_strike`）。
+			_night_erosion_strike(p, state.energy_of(p.owner), p.owner,
+					int(fx.get("value", 1)))
 		"draw_random_skill":
 			# R570：赤狐 9034「从卡组随机抽一张技能牌，该卡本回合费用 -N」
 			# （共用 `_fetch_skill_card`，牌库当场少一张、减费只挂那一张）。

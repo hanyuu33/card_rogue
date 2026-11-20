@@ -19574,13 +19574,15 @@ func _init() -> void:
 
 	var r259_s := _new_engine([], 30, 30)
 
-	check(int(r259_s.spell_now(r259_sneak).get("dmg", -1)) == 5,
+	check(int(r259_s.spell_now(r259_sneak).get("dmg", -1)) == GameEngine.SNEAK_DMG,
 
-			"R442 偷袭：目标未定 → 预览 5 伤")
+			"R442 偷袭：目标未定 → 预览 %d 伤（R845：5 → 4）" % GameEngine.SNEAK_DMG)
 
-	check(str(r259_s.spell_now(r259_sneak).get("note", "")).contains("12"),
+	check(str(r259_s.spell_now(r259_sneak).get("note", "")).contains(
+				str(GameEngine.SNEAK_FULL_DMG)),
 
-			"R262 偷袭：小字里写明满血目标为 12 伤")
+			"R262 偷袭：小字里写明满血目标为 %d 伤（R845：12 → 10）"
+				% GameEngine.SNEAK_FULL_DMG)
 
 	var r259_meteor := _card(9083, "流星雨", "技能", 4, 0, 0, 0, 0)
 
@@ -19776,7 +19778,9 @@ func _init() -> void:
 
 	r45_gg.use_spell(r45_gg.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r45_gg_foe.health == 51, "连刺：对目标 4 伤（55 → %d）" % r45_gg_foe.health)
+	check(r45_gg_foe.health == 55 - GameEngine.GOUGE_DMG,
+			"连刺：对目标 %d 伤（R845：4 → 5；55 → %d）"
+			% [GameEngine.GOUGE_DMG, r45_gg_foe.health])
 
 	check(r45_gg.state.hand.size() == r45_gg_hand + 1
 
@@ -19798,13 +19802,13 @@ func _init() -> void:
 
 	r45_st.use_spell(0, Vector2i(2, 1))
 
-	check(r45_st_foe.health == 52 and r45_st_foe.debuff_stage == 1
+	check(r45_st_foe.health == 55 - GameEngine.STUN_BLOW_DMG and r45_st_foe.debuff_stage == 1
 
 			and r45_st_foe.effective_power() == 5,
 
-			"敲晕：3 伤 + 力量 -3（55 → %d，8 → %d）"
+			"敲晕：%d 伤 + 力量 -3（R845：3 → 2；55 → %d，8 → %d）"
 
-			% [r45_st_foe.health, r45_st_foe.effective_power()])
+			% [GameEngine.STUN_BLOW_DMG, r45_st_foe.health, r45_st_foe.effective_power()])
 
 
 
@@ -19908,46 +19912,58 @@ func _init() -> void:
 
 	r45_sn.use_spell(0, Vector2i(2, 1))
 
-	check(r45_sn_foe.health == 43, "偷袭：满血目标 12 伤（55 → %d）" % r45_sn_foe.health)
+	check(r45_sn_foe.health == 55 - GameEngine.SNEAK_FULL_DMG,
+			"偷袭：满血目标 %d 伤（R845：12 → 10；55 → %d）"
+			% [GameEngine.SNEAK_FULL_DMG, r45_sn_foe.health])
 
 	r45_sn.state.hand.append(repo.get_card(GameEngine.SNEAK_ID))
 
 	r45_sn.use_spell(0, Vector2i(2, 1))
 
-	check(r45_sn_foe.health == 38, "偷袭：非满血目标 5 伤（43 → %d）" % r45_sn_foe.health)
+	check(r45_sn_foe.health == 55 - GameEngine.SNEAK_FULL_DMG - GameEngine.SNEAK_DMG,
+			"偷袭：非满血目标 %d 伤（R845：5 → 4；%d → %d）"
+			% [GameEngine.SNEAK_DMG, 55 - GameEngine.SNEAK_FULL_DMG, r45_sn_foe.health])
 
 
 
-	# 疾风（9091 效果）：每使用一张卡 → 随机敌人 2 伤（自己打出时不触发）
+	# 疾风（9091 效果，R845 重做）：同一个回合内每使用 3 张卡 → 随机敌人 8 伤 + 力量 -1
+	var r845_ga := _new_engine([], 30, 30)
+	var r845_ga_foe := r845_ga.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r845_ga.state.effects.append(repo.get_card(GameEngine.GALE_ID))
+	r845_ga.state.energy = 10
+	r845_ga.state.self_card_plays = 2          # 本回合已经用了 2 张
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)
+	check(r845_ga_foe.health == 55 - GameEngine.GALE_DMG
+			and r845_ga_foe.effective_power() == 8 - GameEngine.GALE_DEBUFF,
+			"R845 疾风：本回合第 %d 张 → 随机敌人 %d 伤 + 力量 -%d（%d / 力量 %d）"
+			% [GameEngine.GALE_NEED, GameEngine.GALE_DMG, GameEngine.GALE_DEBUFF,
+			r845_ga_foe.health, r845_ga_foe.effective_power()])
+	var r845_ga_hp := r845_ga_foe.health
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)                # 第 4 张 → 不该触发
+	check(r845_ga_foe.health == r845_ga_hp,
+			"R845 疾风：没到第 %d 张不触发（仍 %d）" % [GameEngine.GALE_NEED * 2, r845_ga_foe.health])
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)                # 第 5 张 → 不触发
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)                # 第 6 张 → 再触发一次
+	check(r845_ga_foe.health == 55 - GameEngine.GALE_DMG * 2,
+			"R845 疾风：第 6 张再触发一次（55 → %d）" % r845_ga_foe.health)
 
-	var r45_ga := _new_engine([], 30, 30)
-
-	var r45_ga_e1 := r45_ga.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
-			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
-
-	var r45_ga_e2 := r45_ga.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
-			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
-
-	r45_ga.state.energy = 15
-
-	r45_ga.state.hand.append(repo.get_card(GameEngine.GALE_ID))
-
-	r45_ga.use_effect(0)
-
-	check(r45_ga_e1.health == 55 and r45_ga_e2.health == 55,
-
-			"疾风：自己打出时不触发（55/55）")
-
-	r45_ga.state.hand.append(repo.get_card(GameEngine.GOUGE_ID))
-
-	r45_ga.use_spell(0, Vector2i(2, 0))
-
-	check(r45_ga_e1.health + r45_ga_e2.health == 104,
-
-			"疾风：再打一张 → 随机敌人 -2（合计 %d）" % (r45_ga_e1.health + r45_ga_e2.health))
-
+	# 不可叠加：效果区两张疾风，第 3 张牌也只打一次
+	var r845_ga2 := _new_engine([], 30, 30)
+	var r845_ga2_foe := r845_ga2.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r845_ga2.state.effects.append(repo.get_card(GameEngine.GALE_ID))
+	r845_ga2.state.effects.append(repo.get_card(GameEngine.GALE_ID))
+	r845_ga2.state.energy = 10
+	r845_ga2.state.self_card_plays = 2
+	r845_ga2.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga2.use_spell(0, null)
+	check(r845_ga2_foe.health == 55 - GameEngine.GALE_DMG,
+			"R845 疾风：效果区两张也只结算一次（55 → %d）" % r845_ga2_foe.health)
 
 
 	# 潜伏 + 幽光（9092 / 9099 效果）：回合开始多抽（0 费再抽 1）+ 荧光草塞手
@@ -20385,7 +20401,10 @@ func _init() -> void:
 
 	r45_gg2.use_spell(0, Vector2i(2, 1))
 
-	check(r45_gg2_foe.health == 50, "荧光草：连刺 4+1=5 伤（55 → %d）" % r45_gg2_foe.health)
+	check(r45_gg2_foe.health == 55 - GameEngine.GOUGE_DMG - 1,
+
+			"荧光草：连刺 %d+1 伤（55 → %d）"
+				% [GameEngine.GOUGE_DMG, r45_gg2_foe.health])
 
 
 
@@ -20966,6 +20985,7 @@ func _init() -> void:
 
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
 
+	# R845：本能 9176 由技能改效果卡 → 技能 118 → 117，伤害判据不变。
 	# 判据唯一口 `CardData.is_damage_spell()`：103 张玩家技能卡里恰好 42 张能直接造成伤害（R721 击退新增条件伤害 +1）（R582 +2 技能 / +1 伤害判据；R580 +2 技能 / +1 伤害判据）
 
 	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R777 彩虹诗 9269 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
@@ -20992,7 +21012,7 @@ func _init() -> void:
 
 			r226_leak.append(r226_card.card_name)
 
-	check(r226_skills == 118 and r226_dmg == 48 and r226_leak.is_empty(),
+	check(r226_skills == 117 and r226_dmg == 48 and r226_leak.is_empty(),
 
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 
@@ -31464,7 +31484,7 @@ func _init() -> void:
 
 
 
-	# ---- ① 受伤 + 剩余费用 3 → 回 3 点血 ----
+	# ---- ① 剩余费用 3、场上两个敌人 → 各 -3 ----
 
 	var r103_e1 := _new_engine([], 40, 40, -1, false)
 
@@ -31474,97 +31494,124 @@ func _init() -> void:
 
 		CardData.from_dict(r103_repo.get_card(8062).to_dict()), Vector2i(4, 1),
 
-		GameEngine.SIDE_SELF)   # 夜蚀上场，8 血满
+		GameEngine.SIDE_SELF)   # 夜蚀上场
 
-	var r103_p: Placement = r103_e1.state.unit_at(Vector2i(4, 1))
+	var r103_f1 := r103_e1.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
 
-	r103_p.health = 5                 # 先打成 5 血（已损失 3）
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var r103_f2 := r103_e1.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+
+			Vector2i(2, 3), GameEngine.SIDE_OPPONENT)
 
 	r103_e1.state.energy = 3                   # 本回合剩 3 点没花
 
 	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 8,
+	check(r103_f1.health == 52 and r103_f2.health == 52,
 
-		"R103 夜蚀：剩余费用 3 → 5 血回满到 8（实际 %d）" % r103_p.health)
-
-
-
-	# ---- ② 回复量 = 剩余费用，且**不超过生命上限** ----
-
-	# 造一个「上限被抬高」的场景：卡面 8 血、当前 3 血、剩 7 点费用 → 只应回 5 点到 8。
-
-	r103_e1.state.energy = 7
-
-	r103_p.health = 3
-
-	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r103_p.health == 9,
-
-		"R103 夜蚀：剩余费用 7 但只能回 5（3→9 不越界，实际 %d）" % r103_p.health)
+		"R845 夜蚀：剩余 3 费 → **所有**敌人各 -3（%d / %d）" % [r103_f1.health, r103_f2.health])
 
 
 
-	# ---- ③ **回复不是成长**：卡面生命上限不该被这次结算抬高 ----
+	# ---- ② 不是技能伤害：荧光草在场也照样是 left 点 ----
 
-	var r103_card_max := r103_p.card.health
+	r103_e1.state.place(_card(8010, "荧光草", "盟友", 1, 0, 3, 0, 0),
 
-	r103_e1.state.energy = 5
+			Vector2i(4, 3), GameEngine.SIDE_SELF)
 
-	r103_p.health = 2
+	r103_e1.state.energy = 2
 
 	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 7 and r103_p.card.health == r103_card_max,
+	check(r103_f1.health == 50,
 
-		"R103 夜蚀：回复**不抬生命上限**（卡面仍 %d，当前 %d）"
-
-			% [r103_p.card.health, r103_p.health])
+		"R845 夜蚀：不吃荧光草那类技能加伤（52 - 2 = %d）" % r103_f1.health)
 
 
 
-	# ---- ④ 剩余费用 0 → 不回复（也不越界）----
-
-	r103_p.health = 6
+	# ---- ③ 剩余费用 0 → 不结算 ----
 
 	r103_e1.state.energy = 0
 
 	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 6,
+	check(r103_f1.health == 50,
 
-		"R103 夜蚀：剩余费用 0 → 不回复（仍 %d）" % r103_p.health)
-
-
-
-	# ---- ⑤ 满血时不结算（静默跳过，不产生「回复 0」噪声）----
-
-	r103_p.health = r103_p.card.health
-
-	r103_e1.state.energy = 4
-
-	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r103_p.health == r103_p.card.health,
-
-		"R103 夜蚀：满血时跳过（仍 %d/%d）" % [r103_p.health, r103_p.card.health])
+		"R845 夜蚀：剩余费用 0 → 不结算（仍 %d）" % r103_f1.health)
 
 
 
-	# ---- ⑥ 敌方回合结束**不该**给这张卡回血（口径是「自己回合结束」）----
+	# ---- ④ 致死走 _destroy_dead：3 血敌人被 3 伤打掉 → 场上消失 ----
 
-	r103_p.health = 4
+	var r103_e4 := _new_engine([], 40, 40, -1, false)
 
-	r103_e1.state.energy = 5          # 我方剩5（不结算）
+	r103_e4.start_game()
 
-	r103_e1.state.opp_energy = 5                # 敌方剩 5
+	r103_e4.state.place(CardData.from_dict(r103_repo.get_card(8062).to_dict()),
 
-	r103_e1._end_turn_surplus(GameEngine.SIDE_OPPONENT)
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 4,
+	# 用没有亡语的靶子（亡灵领主 1051 死亡会召唤骷髅，格子会被补兵「填回来」，测不出来）。
+	var r103_e4_foe := r103_e4.state.place(_card(8003, "树人", "盟友", 2, 3, 3, 1, 1),
 
-		"R103 夜蚀：敌方回合结束不触发（仍 %d）" % r103_p.health)
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	r103_e4.state.energy = 3
+
+	r103_e4._end_turn_surplus(GameEngine.SIDE_SELF)
+
+	check(r103_e4.state.unit_at(Vector2i(2, 1)) == null and r103_e4_foe.health <= 0,
+
+		"R845 夜蚀：致死单位被清场（格子已空）")
+
+
+
+	# ---- ⑤ 场上没有敌人 → 落空，不补直击 ----
+
+	var r103_e5 := _new_engine([], 40, 40, -1, false)
+
+	r103_e5.start_game()
+
+	r103_e5.state.place(CardData.from_dict(r103_repo.get_card(8062).to_dict()),
+
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+
+	r103_e5.state.energy = 4
+
+	var r103_e5_hp := r103_e5.state.hp_opponent
+
+	r103_e5._end_turn_surplus(GameEngine.SIDE_SELF)
+
+	check(r103_e5.state.hp_opponent == r103_e5_hp,
+
+		"R845 夜蚀：场上没有敌人 → 落空，不直击对方 HP（仍 %d）" % r103_e5.state.hp_opponent)
+
+
+
+	# ---- ⑥ 敌方回合结束不该替这张卡结算（口径是「自己回合结束」）----
+
+	var r103_e6 := _new_engine([], 40, 40, -1, false)
+
+	r103_e6.start_game()
+
+	r103_e6.state.place(CardData.from_dict(r103_repo.get_card(8062).to_dict()),
+
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+
+	var r103_e6_foe := r103_e6.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	r103_e6.state.energy = 5                   # 我方剩 5（这场不该结算）
+
+	r103_e6.state.opp_energy = 5
+
+	r103_e6._end_turn_surplus(GameEngine.SIDE_OPPONENT)
+
+	check(r103_e6_foe.health == 55,
+
+		"R845 夜蚀：敌方回合结束不触发（仍 %d）" % r103_e6_foe.health)
 
 
 
@@ -31630,9 +31677,10 @@ func _init() -> void:
 
 	r104_e1.use_spell(r104_e1.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r104_foe.health == 51,
+	check(r104_foe.health == 55 - GameEngine.OPENING_MOVE_DMG,
 
-		"R104 起手式：对目标 4 伤（55 → %d）" % r104_foe.health)
+		"R104 起手式：对目标 %d 伤（R845：4 → 5；55 → %d）"
+			% [GameEngine.OPENING_MOVE_DMG, r104_foe.health])
 
 	# 打出这张牌（-1）→ 抽 1 张（+1），净 +1
 
@@ -31672,9 +31720,10 @@ func _init() -> void:
 
 	r104_e2.use_spell(r104_e2.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r104_foe2.health == 50,
+	check(r104_foe2.health == 55 - GameEngine.OPENING_MOVE_DMG - 1,
 
-		"R104 起手式：荧光草加成下 4+1=5 伤（55 → %d）" % r104_foe2.health)
+		"R104 起手式：荧光草加成下 %d+1 伤（55 → %d）"
+			% [GameEngine.OPENING_MOVE_DMG, r104_foe2.health])
 
 
 
@@ -31702,9 +31751,10 @@ func _init() -> void:
 
 		Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r104_me.health == 0,
+	check(r104_me.health <= 0,
 
-		"R104 起手式：敌方 AI 用这张卡也造成 4 伤（4 血单位 → %d）" % r104_me.health)
+		"R104 起手式：敌方 AI 用这张卡也造成 %d 伤（4 血单位 → %d）"
+			% [GameEngine.OPENING_MOVE_DMG, r104_me.health])
 
 	check(r104_e3.state.opp_hand_count == r104_oph0 - 1,
 
@@ -31734,11 +31784,11 @@ func _init() -> void:
 
 	r104_e4.use_spell(r104_e4.state.hand.size() - 1, null)
 
-	check(r104_e4.state.hp_opponent == r104_foe_hp0 - 4,
+	check(r104_e4.state.hp_opponent == r104_foe_hp0 - GameEngine.OPENING_MOVE_DMG,
 
-		"R104 起手式：无目标时打对方玩家 4 点（%d → %d）"
+		"R104 起手式：无目标时打对方玩家 %d 点（%d → %d）"
 
-			% [r104_foe_hp0, r104_e4.state.hp_opponent])
+			% [GameEngine.OPENING_MOVE_DMG, r104_foe_hp0, r104_e4.state.hp_opponent])
 
 
 
@@ -31932,9 +31982,10 @@ func _init() -> void:
 
 	r108_e4.use_spell(r108_e4.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r108_foe4.health == 47,
+	check(r108_foe4.health == 55 - GameEngine.SHADOW_STEP_DMG,
 
-		"R108 暗影步：先结算 8 伤（55 → %d）" % r108_foe4.health)
+		"R108 暗影步：先结算 %d 伤（R845：8 → 13；55 → %d）"
+			% [GameEngine.SHADOW_STEP_DMG, r108_foe4.health])
 
 	check(r108_e4.shadow_step_pending,
 
@@ -31986,9 +32037,10 @@ func _init() -> void:
 
 	r108_e5.use_spell(r108_e5.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r108_foe5.health == 47,
+	check(r108_foe5.health == 55 - GameEngine.SHADOW_STEP_DMG,
 
-		"R108 暗影步：弃牌区为空也照样打出 8 伤（55 → %d）" % r108_foe5.health)
+		"R108 暗影步：弃牌区为空也照样打出 %d 伤（55 → %d）"
+			% [GameEngine.SHADOW_STEP_DMG, r108_foe5.health])
 
 	check(not r108_e5.shadow_step_pending,
 
@@ -32018,9 +32070,10 @@ func _init() -> void:
 
 		Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r108_me6.health == 0,
+	check(r108_me6.health <= 0,
 
-		"R108 暗影步：敌方 AI 用这张卡也造成 8 伤（8 血单位 → %d）" % r108_me6.health)
+		"R108 暗影步：敌方 AI 用这张卡也造成 %d 伤（8 血单位 → %d）"
+			% [GameEngine.SHADOW_STEP_DMG, r108_me6.health])
 
 	# ⚠️ 不能数弃牌区**总数**：树人被打死，它自己的卡会合法地进弃牌区，总数会 +1。
 
@@ -32442,17 +32495,17 @@ func _init() -> void:
 
 	check(r201_c != null and r201_c.kind == "技能" and r201_c.cost == 0
 
-			and r201_c.rarity == 2 and r201_c.card_class == "暗影刺客"
+			and r201_c.rarity == 1 and r201_c.card_class == "暗影刺客"
 
 			and r201_c.target_mode == "none" and not r201_c.needs_target(),
 
-		"R201 负重减轻 8066：0 费史诗技能，暗影刺客，无目标（实际 %s）"
+		"R201 负重减轻 8066：0 费稀有技能（R845 从史诗下调），暗影刺客，无目标（实际 %s）"
 
 			% (r201_c.card_name if r201_c != null else "null"))
 
 	check(r201_pool_ids.has(GameEngine.LIGHTEN_ID),
 
-		"R201：负重减轻 8066 进入奖励池（史诗 rarity=2）")
+		"R201：负重减轻 8066 进入奖励池（稀有 rarity=1，R845 从史诗下调）")
 
 
 
@@ -43263,11 +43316,13 @@ func _init() -> void:
 
 	check(r242_bs.spell_bonus_note(r242_sneak, r242_full).contains("满血")
 
-			and r242_bs.spell_bonus_note(r242_sneak, r242_full).contains("12"),
+			and r242_bs.spell_bonus_note(r242_sneak, r242_full).contains(
+				str(GameEngine.SNEAK_FULL_DMG)),
 
-			"R242 偷袭：目标满血 → 金色提示「满血：6 → 12」（%s）"
+			"R242 偷袭：目标满血 → 金色提示「满血：%d → %d」（%s）"
 
-			% r242_bs.spell_bonus_note(r242_sneak, r242_full))
+			% [GameEngine.SNEAK_DMG, GameEngine.SNEAK_FULL_DMG,
+			r242_bs.spell_bonus_note(r242_sneak, r242_full)])
 
 	r242_full.health = 19
 
@@ -52912,15 +52967,18 @@ func _init() -> void:
 	var r662_gt := r662_ge.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
 			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
 	r662_ge.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
-	r662_ge.state.self_card_plays = 10   # +50%
+	# R845：疾风改成「每 3 张牌触发一次」—— 先把计数设成 11，打出这张后正好 12（3 的倍数）。
+	r662_ge.state.self_card_plays = GameEngine.GALE_NEED * 4 - 1
 	r662_ge.state.energy = 15
 	r662_ge.state.hand.append(r662_repo.get_card(GameEngine.GALE_ID))
-	r662_ge.use_effect(0)
-	r662_ge._gale_tick(GameEngine.SIDE_SELF, null)
-	check(r662_gt.health == 55 - 2,
-			"R662 疾风：效果卡不吃 +50%%（应 -2，实际 -%d）" % (55 - r662_gt.health))
-	check(r662_ge._spell_dmg(GameEngine.SIDE_SELF, GameEngine.GALE_DMG, null, true) == 3,
-			"R662 对照：同一数值若按技能算会变成 3（证明开关真的在起作用）")
+	r662_ge.use_effect(0)   # 打出即走 `_note_card_played` → 疾风在同一次调用里结算
+	check(r662_gt.health == 55 - GameEngine.GALE_DMG,
+			"R662 疾风：效果卡不吃 +50%%（应 -%d，实际 -%d）"
+			% [GameEngine.GALE_DMG, 55 - r662_gt.health])
+	# 8 点的 50% 是 12 —— 若真按技能算，这里会变成 12。
+	var r662_boosted: int = int(round(GameEngine.GALE_DMG * 1.5))
+	check(r662_ge._spell_dmg(GameEngine.SIDE_SELF, GameEngine.GALE_DMG, null, true) == r662_boosted,
+			"R662 对照：同一数值若按技能算会变成 %d（证明开关真的在起作用）" % r662_boosted)
 
 	# ---- ④ 作用域兜底：脚本错误把 `_spell_scope_depth` 卡在 >0 时，回合开头必须归零 ----
 	var r662_le := _new_engine([], 20, 20)
@@ -54211,7 +54269,7 @@ func _init() -> void:
 
 
 
-	# ---- 身法：抽 5 张 + 本回合禁用盟友 / 工事 ----
+	# ---- 身法：抽 REFLEX_DRAW 张（R845：5 → 4）+ 本回合禁用盟友 / 工事 ----
 
 	var r317_rf_deck: Array[CardData] = []
 
@@ -54233,9 +54291,10 @@ func _init() -> void:
 
 	var r317_drawn := r317_rf.state.hand.size() - r317_hand0
 
-	check(r317_drawn == 5,
+	check(r317_drawn == GameEngine.REFLEX_DRAW,
 
-			"R317 身法：抽 5 张（手牌 +%d）" % r317_drawn)
+			"R317 身法：抽 %d 张（R845：5 → 4；手牌 +%d）"
+			% [GameEngine.REFLEX_DRAW, r317_drawn])
 
 	check(r317_rf._no_unit_play_this_turn,
 
@@ -54956,243 +55015,32 @@ func _init() -> void:
 
 	# ============================================================
 
-	# R332：暗影刺客稀有技能「本能」9176
-
-	# 2 费：随机打出抽牌库中 3 张费用 ≤1 的技能卡（免费打出、受既有守卫约束）
+	# R332 → R845：本能 9176 已从「随机打出 3 张 ≤1 费技能卡」改成
+	# 「2 费稀有效果卡：挡下一次 >1 伤害并抽 2 张」。
+	# 完整时序（只挡 >1 / 挡完离场进弃牌区 / 1 点不消耗 / 两张各挡一次）由 `_test_r845()` 守；
+	# 这里只留一条「别退回旧实现」的钉子。
 
 	# ============================================================
 
-	var r332_repo := CardRepo.load_json()
+	var r332_innate: CardData = CardRepo.load_json().get_card(9176)
 
-	var r332_innate: CardData = r332_repo.get_card(9176)
+	check(r332_innate != null and r332_innate.kind == "效果" and r332_innate.cost == 2
 
-	check(r332_innate != null and r332_innate.is_spell() and r332_innate.cost == 2
+			and r332_innate.rarity == 1 and r332_innate.card_class == "暗影刺客",
 
-			and r332_innate.rarity == 1 and r332_innate.card_class == "暗影刺客"
+			"R845 本能 9176：已改为 2 费暗影刺客稀有效果卡（实际 %s / %d 费 / 稀有度 %d）"
 
-			and r332_innate.traits.has("本能"),
+			% [r332_innate.kind if r332_innate != null else "null",
 
-			"R332 本能 9176：2 费暗影刺客稀有技能（%s / %d 费 / 稀有度 %d / trait %s）"
+			r332_innate.cost if r332_innate != null else -1,
 
-			% [r332_innate.card_class, r332_innate.cost, r332_innate.rarity,
+			r332_innate.rarity if r332_innate != null else -1])
 
-				str(r332_innate.traits)])
+	check_src(FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 
-	check(r332_innate.effect_text == "随机打出抽牌库中 3 张费用 1 或以下的技能卡。",
+			.find("func _instinct_cast") < 0,
 
-			"R332 本能文案（实际「%s」）" % r332_innate.effect_text)
-
-
-
-	# ---- ① 牌库空：照常付 2 费结算，一张也打不出 ----
-
-	var r332_e1 := _new_engine([], 30, 30, -1, false)
-
-	r332_e1.start_game(0)
-
-	r332_e1.state.deck.clear()
-
-	r332_e1.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e1.state.energy = 5
-
-	var r332_e1_d: int = r332_e1.state.discard.size()
-
-	r332_e1.use_spell(0, null)
-
-	check(r332_e1.state.energy == 3 and r332_e1.state.hand.is_empty()
-
-			and r332_e1.state.discard.size() == r332_e1_d + 1,
-
-			"R332 本能：牌库空 → 仍照常付 2 费、弃牌 +1（费用 %d / 弃牌 +%d）"
-
-			% [r332_e1.state.energy, r332_e1.state.discard.size() - r332_e1_d])
-
-
-
-	# ---- ② 牌库 3 张 ≤1 费技能 → 全部打出 ----
-
-	var r332_e2 := _new_engine([], 30, 30, -1, false)
-
-	r332_e2.start_game(0)
-
-	r332_e2.state.deck = [_card(9801, "本能甲", "技能", 1, 0, 0),
-
-			_card(9802, "本能乙", "技能", 1, 0, 0),
-
-			_card(9803, "本能丙", "技能", 0, 0, 0)]
-
-	r332_e2.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e2.state.energy = 10
-
-	var r332_plays0: int = r332_e2.state.self_card_plays
-
-	r332_e2.use_spell(0, null)
-
-	check(r332_e2.state.deck.is_empty()
-
-			and r332_e2.state.self_card_plays == r332_plays0 + 4,
-
-			"R332 本能：牌库 3 张 ≤1 费技能全部打出（牌库剩 %d / 本次共出 %d 张 = 本能 + 3）"
-
-			% [r332_e2.state.deck.size(), r332_e2.state.self_card_plays - r332_plays0])
-
-
-
-	# ---- ③ 牌库 5 张候选 → 只打 3 张 ----
-
-	var r332_e3 := _new_engine([], 30, 30, -1, false)
-
-	r332_e3.start_game(0)
-
-	r332_e3.state.deck = []
-
-	for i in 5:
-
-		r332_e3.state.deck.append(_card(9810 + i, "本能 %d" % i, "技能", 1, 0, 0))
-
-	r332_e3.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e3.state.energy = 10
-
-	var r332_p3: int = r332_e3.state.self_card_plays
-
-	r332_e3.use_spell(0, null)
-
-	check(r332_e3.state.deck.size() == 2
-
-			and r332_e3.state.self_card_plays == r332_p3 + 4,
-
-			"R332 本能：牌库 5 张候选 → 只打 3 张（牌库剩 %d / 本次共出 %d 张）"
-
-			% [r332_e3.state.deck.size(), r332_e3.state.self_card_plays - r332_p3])
-
-
-
-	# ---- ④ 2 费技能不进候选 ----
-
-	var r332_e4 := _new_engine([], 30, 30, -1, false)
-
-	r332_e4.start_game(0)
-
-	r332_e4.state.deck = [_card(9820, "二费技能", "技能", 2, 0, 0),
-
-			_card(9821, "一费技能", "技能", 1, 0, 0)]
-
-	r332_e4.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e4.state.energy = 10
-
-	r332_e4.use_spell(0, null)
-
-	check(r332_e4.state.deck.size() == 1 and r332_e4.state.deck[0].id == 9820,
-
-			"R332 本能：2 费技能不进候选（牌库剩 %d 张，留下的是 %d）"
-
-			% [r332_e4.state.deck.size(),
-
-				r332_e4.state.deck[0].id if r332_e4.state.deck.size() > 0 else -1])
-
-
-
-	# ---- ⑤ 两段式技能打不出 → 放回牌库原位、不占 3 张配额 ----
-
-	var r332_e5 := _new_engine([], 30, 30, -1, false)
-
-	r332_e5.start_game(0)
-
-	r332_e5.state.deck = [_card(9100, "潜入", "技能", 0, 0, 0),
-
-			_card(9830, "本能丁", "技能", 1, 0, 0),
-
-			_card(9831, "本能戊", "技能", 1, 0, 0),
-
-			_card(9832, "本能己", "技能", 1, 0, 0)]
-
-	r332_e5.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e5.state.energy = 10
-
-	var r332_p5: int = r332_e5.state.self_card_plays
-
-	r332_e5.use_spell(0, null)
-
-	check(r332_e5.state.deck.size() == 1 and r332_e5.state.deck[0].id == 9100
-
-			and r332_e5.state.self_card_plays == r332_p5 + 4,
-
-			"R332 本能：两段式技能（潜入 9100）打不出 → 放回牌库、不占配额（牌库剩 %d / 本次共出 %d 张）"
-
-			% [r332_e5.state.deck.size(), r332_e5.state.self_card_plays - r332_p5])
-
-
-
-	# ---- ⑥ X 费卡不进候选：免费回合里它的 cost_of 也是 0，只能靠 x_cost 排除 ----
-
-	var r332_e6 := _new_engine([], 30, 30, -1, false)
-
-	r332_e6.start_game(0)
-
-	r332_e6.state.turn_all_free = true
-
-	r332_e6.state.energy = 0
-
-	r332_e6.state.deck = [CardData.from_dict(r332_repo.get_card(9083).to_dict()),
-
-			_card(9850, "本能庚", "技能", 1, 0, 0)]
-
-	r332_e6.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e6.use_spell(0, null)
-
-	check(r332_e6.state.deck.size() == 1 and r332_e6.state.deck[0].id == 9083,
-
-			"R332 本能：X 费卡（流星雨 9083）不进候选（免费回合里残留 %d 张：%d）"
-
-			% [r332_e6.state.deck.size(),
-
-				r332_e6.state.deck[0].id if r332_e6.state.deck.size() > 0 else -1])
-
-
-
-	# ---- ⑦ 随机可复现：同一种子 → 同一组被抽出 ----
-
-	var r332_left: Array = []
-
-	for _t in 2:
-
-		var r332_e7 := _new_engine([], 30, 30, -1, false)
-
-		r332_e7.start_game(0)
-
-		r332_e7.rng.seed = 424242
-
-		r332_e7.state.deck = []
-
-		for i in 5:
-
-			r332_e7.state.deck.append(_card(9860 + i, "本能 %d" % i, "技能", 1, 0, 0))
-
-		r332_e7.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-		r332_e7.state.energy = 10
-
-		r332_e7.use_spell(0, null)
-
-		var left_ids: Array = []
-
-		for c: CardData in r332_e7.state.deck:
-
-			left_ids.append(c.id)
-
-		r332_left.append(str(left_ids))
-
-	check(r332_left[0] == r332_left[1],
-
-			"R332 本能：同一种子下随机结果可复现（两次剩余 %s / %s）"
-
-			% [r332_left[0], r332_left[1]])
+			"R845 本能源码锁：随机打出 3 张的旧实现已整条删除")
 
 
 
@@ -70286,19 +70134,34 @@ func _init() -> void:
 
 		"R504 灵魂收割者：再打一次 → 累到 -2（本局一直累加）")
 
+	# R845（用户口径）：击杀奖励从「生命回满」改成「回复 2 点费用 + 抽 2 张牌」。
 	r504_f_me.health = 5
 
 	r504_f_me.tapped = false
 
 	r504_f_foe.health = 1
 
+	r504_f.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+
+	r504_f.state.deck.append(_card(9096, "回旋斩", "技能", 0, 0, 0, 0, 0))
+
+	var r845_sh_e0 := r504_f.state.energy
+
+	var r845_sh_h0 := r504_f.state.hand.size()
+
 	r504_f.attack(Vector2i(4, 1), Vector2i(3, 1), GameEngine.SIDE_SELF)
 
-	check(r504_f_me.health == r504_reaper.health,
+	check(r504_f.state.energy == r845_sh_e0 + GameEngine.SOUL_REAPER_ENERGY
+			and r504_f.state.hand.size() == r845_sh_h0 + GameEngine.SOUL_REAPER_DRAW,
 
-		"R504 灵魂收割者：击杀单位 → 生命回满（5 → %d / 上限 %d）"
+		"R845 灵魂收割者：击杀 → 费用 +%d、抽 %d 张（费用 %d → %d，手牌 %d → %d）"
 
-			% [r504_f_me.health, r504_reaper.health])
+			% [GameEngine.SOUL_REAPER_ENERGY, GameEngine.SOUL_REAPER_DRAW,
+			r845_sh_e0, r504_f.state.energy, r845_sh_h0, r504_f.state.hand.size()])
+
+	check(r504_f_me.health == 5,
+
+		"R845 灵魂收割者：不再「生命回满」（仍 %d）" % r504_f_me.health)
 
 
 
@@ -74415,6 +74278,7 @@ func _init() -> void:
 	_test_r833()
 	_test_r842()
 	_test_r844()
+	_test_r845()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -76745,8 +76609,8 @@ func _test_r679() -> void:
 			"R679：中毒的掉血数字也换毒绿（`fx_hit` 原本一律写死 SIDE_FOE，"
 			+ "只改 `fi_col` 是改不到数字的）")
 	check_src(r679_bs.contains("\t\t\"soul_harvest\":")
-			and r679_bs.contains("↑ 回满 %d"),
-			"R679：灵魂收割者从「零臂」变成有演出（暗影图 + 回满飘字）")
+			and r679_bs.contains("+%d 费 抽%d"),
+			"R679/R845：灵魂收割者击杀有演出（暗影图 + 「+2 费 抽2」飘字）")
 	check_src(r679_bs.contains("_fx_push_cell(FxArt.BLAST, rs_cell, rs_at, BATTLE_FX_MS, 124.0)"),
 			"R679：折射炮流弹补了命中爆点")
 	check_src(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, hd_t, n, BATTLE_FX_MS, 132.0)"),
@@ -82168,3 +82032,143 @@ func _test_r844() -> void:
 	check_src(not src.contains("DUCK_ALARM_ENERGY") and not src.contains("DUCK_ALARM_DRAW")
 			and not src.contains("DUCK_ALARM_SPELL") and not src.contains("DUCK_ALARM_SPELL_FROM"),
 			"R844 源码锁：加费 / 抽牌 / 技能加伤的旧常量全部删除")
+
+func _test_r845() -> void:
+	## R845（店长口径）：暗影刺客 11 张卡的调整 —— 9 张改数值、2 张改结构
+	## （本能 技能 → 效果卡、夜蚀 回血 → 群体伤害）。数值本身由各卡既有的常量断言守，
+	## 这里守结构那两条 + 卡面数据 + 四语文案：
+	##   * 负重减轻降稀有、本能改效果卡、夜蚀的组合素材换类型；
+	##   * 本能：只挡 >1、挡完抽 2 并离场、1 点小伤不消耗、两张各挡一次；
+	##   * 中 / 英 / 日 / 西 四份卡面文本都写进了新数值（防止只改中文）。
+	var repo := CardRepo.load_json()
+
+	# ---- ① 卡面数据 ----
+
+	var lighten: CardData = repo.get_card(GameEngine.LIGHTEN_ID)
+	check(lighten.rarity == 1,
+			"R845 负重减轻 8066：rarity 2 → 1（稀有，实际 %d）" % lighten.rarity)
+
+	var instinct: CardData = repo.get_card(GameEngine.INSTINCT_ID)
+	check(instinct.kind == "效果" and instinct.cost == 2 and instinct.rarity == 1,
+			"R845 本能 9176：2 费稀有**效果卡**（实际 %s / %d 费 / rarity %d）"
+			% [instinct.kind, instinct.cost, instinct.rarity])
+
+	var night: CardData = repo.get_card(GameEngine.NIGHT_EROSION_ID)
+	var night_fx: Array = (night.lower_effect as Dictionary).get("effects", []) as Array
+	check(night.kind == "盟友" and night_fx.size() == 1
+			and str((night_fx[0] as Dictionary).get("type", "")) == "damage_per_energy",
+			"R845 夜蚀 8062：仍是盟友，组合素材从 heal_per_energy 换成 damage_per_energy")
+
+	var gale: CardData = repo.get_card(GameEngine.GALE_ID)
+	check(gale.kind == "效果" and gale.cost == 3
+			and gale.effect_text.contains("%d 点伤害" % GameEngine.GALE_DMG)
+			and gale.effect_text.contains("力量 -%d" % GameEngine.GALE_DEBUFF),
+			"R845 疾风 9091：文案写 %d 伤 + 力量 -%d"
+			% [GameEngine.GALE_DMG, GameEngine.GALE_DEBUFF])
+
+	var reaper: CardData = repo.get_card(GameEngine.SOUL_REAPER_ID)
+	check(reaper.effect_text.contains("回复 %d 点费用" % GameEngine.SOUL_REAPER_ENERGY)
+			and reaper.effect_text.contains("抽 %d 张牌" % GameEngine.SOUL_REAPER_DRAW)
+			and not reaper.effect_text.contains("回满生命"),
+			"R845 灵魂收割者 9233：击杀奖励改成 +%d 费 / 抽 %d 张，回满生命的旧文案已删"
+			% [GameEngine.SOUL_REAPER_ENERGY, GameEngine.SOUL_REAPER_DRAW])
+
+	# ---- ② 本能：挡下一次 >1 伤害 → 变 1、抽 2 张、效果离场 ----
+
+	var e1 := _new_engine([], 40, 40, -1, false)
+	e1.start_game()
+	e1.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	e1.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	e1.state.deck.append(_card(9096, "回旋斩", "技能", 0, 0, 0, 0, 0))
+	var e1_hp := e1.state.hp_self
+	var e1_hand := e1.state.hand.size()
+	e1._damage_player(GameEngine.SIDE_SELF, 12, "测试")
+	check(e1.state.hp_self == e1_hp - GameEngine.INSTINCT_CAP,
+			"R845 本能：12 点伤害 → 只掉 %d 点（%d → %d）"
+			% [GameEngine.INSTINCT_CAP, e1_hp, e1.state.hp_self])
+	check(e1.state.hand.size() == e1_hand + GameEngine.INSTINCT_DRAW,
+			"R845 本能：挡下之后抽 %d 张（手牌 %d → %d）"
+			% [GameEngine.INSTINCT_DRAW, e1_hand, e1.state.hand.size()])
+	check(not e1.state.effects.any(func(c2: CardData): return c2.id == GameEngine.INSTINCT_ID),
+			"R845 本能：一次性 —— 触发后离开效果区")
+	check(e1.state.discard.any(func(c3: CardData): return c3.id == GameEngine.INSTINCT_ID),
+			"R845 本能：用过的那张进弃牌区（不是「消失」）")
+
+	# ---- ③ 1 点小伤不消耗 ----
+
+	var e2 := _new_engine([], 40, 40, -1, false)
+	e2.start_game()
+	e2.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	var e2_hp := e2.state.hp_self
+	e2._damage_player(GameEngine.SIDE_SELF, 1, "测试")
+	check(e2.state.hp_self == e2_hp - 1
+			and e2.state.effects.any(func(c4: CardData): return c4.id == GameEngine.INSTINCT_ID),
+			"R845 本能：1 点伤害原样掉血、**不消耗**这张卡")
+
+	# ---- ④ 两张各挡一次 ----
+
+	var e3 := _new_engine([], 40, 40, -1, false)
+	e3.start_game()
+	e3.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	e3.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	var e3_hp := e3.state.hp_self
+	e3._damage_player(GameEngine.SIDE_SELF, 12, "测试")
+	e3._damage_player(GameEngine.SIDE_SELF, 12, "测试")
+	check(e3.state.hp_self == e3_hp - GameEngine.INSTINCT_CAP * 2
+			and not e3.state.effects.any(func(c5: CardData): return c5.id == GameEngine.INSTINCT_ID),
+			"R845 本能：两张各挡一次（%d → %d）" % [e3_hp, e3.state.hp_self])
+
+	# ---- ⑤ 四语文案：新数值必须真的写进译文，不许回落中文 ----
+
+	var want := {
+		"en": {"9087": "Deal %d damage" % GameEngine.GOUGE_DMG,
+				"9119": "Deal %d damage" % GameEngine.OPENING_MOVE_DMG,
+				"9121": "Deal %d damage" % GameEngine.SHADOW_STEP_DMG,
+				"9090": "Deal %d damage" % GameEngine.SNEAK_DMG,
+				"9173": "Draw %d cards" % GameEngine.REFLEX_DRAW,
+				"9091": "%d damage" % GameEngine.GALE_DMG,
+				"9233": "gain %d Cost" % GameEngine.SOUL_REAPER_ENERGY,
+				"8062": "deal X damage to all enemies"},
+		"ja": {"9087": "%dダメージ" % GameEngine.GOUGE_DMG,
+				"9119": "%dダメージ" % GameEngine.OPENING_MOVE_DMG,
+				"9121": "%dダメージ" % GameEngine.SHADOW_STEP_DMG,
+				"9090": "%dダメージ" % GameEngine.SNEAK_DMG,
+				"9173": "%d枚ドロー" % GameEngine.REFLEX_DRAW,
+				"9091": "%dダメージ" % GameEngine.GALE_DMG,
+				"9233": "コストを%d回復" % GameEngine.SOUL_REAPER_ENERGY,
+				"8062": "すべての敵にXダメージ"},
+		"es": {"9087": "%d de daño" % GameEngine.GOUGE_DMG,
+				"9119": "%d de daño" % GameEngine.OPENING_MOVE_DMG,
+				"9121": "%d de daño" % GameEngine.SHADOW_STEP_DMG,
+				"9090": "Inflige %d de daño" % GameEngine.SNEAK_DMG,
+				"9173": "Roba %d cartas" % GameEngine.REFLEX_DRAW,
+				"9091": "%d de daño" % GameEngine.GALE_DMG,
+				"9233": "gana %d de Coste" % GameEngine.SOUL_REAPER_ENERGY,
+				"8062": "inflige X de daño a todos los enemigos"},
+	}
+	for lang_key: Variant in want.keys():
+		var lang := str(lang_key)
+		var raw_txt: Variant = JSON.parse_string(
+				FileAccess.get_file_as_string("res://i18n/cards_%s.json" % lang))
+		var rows: Dictionary = {}
+		if raw_txt is Dictionary:
+			rows = (raw_txt as Dictionary).get("cards", {}) as Dictionary
+		var miss: Array[String] = []
+		for cid: String in (want[lang] as Dictionary).keys():
+			var row: Variant = rows.get(cid, {})
+			var txt := "" if not row is Dictionary else str((row as Dictionary).get("effect_text", ""))
+			if txt.find(str((want[lang] as Dictionary)[cid])) < 0:
+				miss.append(cid)
+		check(miss.is_empty(),
+				"R845 译文（%s）：%d 张卡的卡面写进新数值（缺 %s）"
+				% [lang, (want[lang] as Dictionary).size(), "、".join(miss)])
+
+	# ---- ⑥ 源码锁：旧实现不许留 ----
+
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(src.find("func _night_erosion_heal") < 0 and src.find("func _instinct_cast") < 0
+			and not src.contains("const INSTINCT_COUNT") and not src.contains("const INSTINCT_MAX_COST"),
+			"R845 源码锁：夜蚀回血 / 本能随机打出这两条旧实现已整条删除")
+	check_src(src.contains("\"damage_per_energy\":"),
+			"R845 源码锁：组合素材 `damage_per_energy` 有对应实现口")
+

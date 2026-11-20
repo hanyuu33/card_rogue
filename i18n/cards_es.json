@@ -267,7 +267,7 @@
   },
   "8062": {
    "name": "Eclipse Nocturno",
-   "effect_text": "Al final de tu turno, recupera X de Vida, donde X es el Coste restante (1 de Vida por cada 1 punto de Coste restante, sin superar la Vida máxima)."
+   "effect_text": "Al final de tu turno, inflige X de daño a todos los enemigos, donde X es tu Coste restante."
   },
   "8064": {
    "name": "Recuperación",
@@ -696,11 +696,11 @@
   },
   "9087": {
    "name": "Ráfaga de Estocadas",
-   "effect_text": "Inflige 4 de daño a un objetivo y añade una carta de Habilidad aleatoria de Coste 0 de la pila de robo a la mano."
+   "effect_text": "Inflige 5 de daño a un objetivo y añade una carta de Habilidad aleatoria de Coste 0 de la pila de robo a la mano."
   },
   "9088": {
    "name": "Aturdimiento",
-   "effect_text": "Inflige 3 de daño a un objetivo; ese objetivo pierde 3 de Poder este turno."
+   "effect_text": "Inflige 2 de daño a un objetivo; ese objetivo pierde 3 de Poder este turno."
   },
   "9089": {
    "name": "Revolución",
@@ -708,11 +708,11 @@
   },
   "9090": {
    "name": "Emboscada",
-   "effect_text": "Inflige 5 de daño; si el objetivo tiene toda su Vida, inflige 12 de daño en su lugar."
+   "effect_text": "Inflige 4 de daño; si el objetivo tiene toda su Vida, inflige 10 de daño en su lugar."
   },
   "9091": {
    "name": "Vendaval",
-   "effect_text": "Cada vez que uses una carta, inflige 2 de daño a un enemigo aleatorio. Varias copias de esta carta en la zona de Efectos no se acumulan."
+   "effect_text": "Cada 3 cartas que uses en el mismo turno, inflige 8 de daño a un enemigo aleatorio y reduce su Poder en 1. Varias copias de esta carta en la zona de Efectos no se acumulan."
   },
   "9092": {
    "name": "Acecho",
@@ -804,7 +804,7 @@
   },
   "9119": {
    "name": "Movimiento de Apertura",
-   "effect_text": "Inflige 4 de daño a un objetivo y luego roba 1 carta."
+   "effect_text": "Inflige 5 de daño a un objetivo y luego roba 1 carta."
   },
   "9120": {
    "name": "Golpe Sombrío",
@@ -812,7 +812,7 @@
   },
   "9121": {
    "name": "Paso de las Sombras",
-   "effect_text": "Inflige 8 de daño a un objetivo y luego devuelve **cualquier carta que elijas de la pila de descarte** a la mano."
+   "effect_text": "Inflige 13 de daño a un objetivo y luego devuelve **cualquier carta que elijas de la pila de descarte** a la mano."
   },
   "9122": {
    "name": "Concentración",
@@ -996,7 +996,7 @@
   },
   "9173": {
    "name": "Agilidad",
-   "effect_text": "Roba 5 cartas. Hasta el final de este turno, no puedes usar cartas de Aliado ni de Estructura."
+   "effect_text": "Roba 4 cartas. Hasta el final de este turno, no puedes usar cartas de Aliado ni de Estructura."
   },
   "9174": {
    "name": "Eliminación",
@@ -1008,7 +1008,7 @@
   },
   "9176": {
    "name": "Instinto",
-   "effect_text": "Juega 3 cartas de Habilidad aleatorias con Coste 1 o menos de la pila de robo."
+   "effect_text": "La próxima vez que recibas más de 1 de daño, se convierte en 1 y luego robas 2 cartas."
   },
   "9177": {
    "name": "Pato Mascota",
@@ -1208,7 +1208,7 @@
   },
   "9233": {
    "name": "Segador de Almas",
-   "effect_text": "Cada vez que infliges daño a un enemigo marcado, el Coste de esta carta se reduce permanentemente en 1. Cuando esta carta mata a una unidad, recupera toda su Vida."
+   "effect_text": "Cada vez que infliges daño a un enemigo marcado, el Coste de esta carta se reduce permanentemente en 1. Cuando esta carta mata a una unidad, gana 2 de Coste y roba 2 cartas."
   },
   "9234": {
    "name": "Cosecha de Terror",

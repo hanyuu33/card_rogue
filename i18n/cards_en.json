@@ -267,7 +267,7 @@
   },
   "8062": {
    "name": "Night Eclipse",
-   "effect_text": "At the end of your turn, restore X Health, where X is your remaining Cost (1 Health per point of remaining Cost, up to your maximum Health)."
+   "effect_text": "At the end of your turn, deal X damage to all enemies, where X is your remaining Cost."
   },
   "8064": {
    "name": "Salvage",
@@ -696,11 +696,11 @@
   },
   "9087": {
    "name": "Flurry",
-   "effect_text": "Deal 4 damage to a target, then add a random 0-cost Skill card from your Draw Pile to your Hand."
+   "effect_text": "Deal 5 damage to a target, then add a random 0-cost Skill card from your Draw Pile to your Hand."
   },
   "9088": {
    "name": "Daze",
-   "effect_text": "Deal 3 damage to a target; that target loses 3 Power this turn."
+   "effect_text": "Deal 2 damage to a target; that target loses 3 Power this turn."
   },
   "9089": {
    "name": "Revolution",
@@ -708,11 +708,11 @@
   },
   "9090": {
    "name": "Ambush",
-   "effect_text": "Deal 5 damage; if the target is at full Health, deal 12 damage instead."
+   "effect_text": "Deal 4 damage; if the target is at full Health, deal 10 damage instead."
   },
   "9091": {
    "name": "Gale",
-   "effect_text": "Whenever you use a card, deal 2 damage to a random enemy. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Every 3 cards you use in the same turn, deal 8 damage to a random enemy and reduce its Power by 1. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9092": {
    "name": "Lurk",
@@ -804,7 +804,7 @@
   },
   "9119": {
    "name": "Opening Move",
-   "effect_text": "Deal 4 damage to a target, then draw 1 card."
+   "effect_text": "Deal 5 damage to a target, then draw 1 card."
   },
   "9120": {
    "name": "Shadow Strike",
@@ -812,7 +812,7 @@
   },
   "9121": {
    "name": "Shadowstep",
-   "effect_text": "Deal 8 damage to a target, then return **any card of your choice from the Discard Pile** to your Hand."
+   "effect_text": "Deal 13 damage to a target, then return **any card of your choice from the Discard Pile** to your Hand."
   },
   "9122": {
    "name": "Focus",
@@ -996,7 +996,7 @@
   },
   "9173": {
    "name": "Agility",
-   "effect_text": "Draw 5 cards. Until the end of this turn, you cannot use Ally or Structure cards."
+   "effect_text": "Draw 4 cards. Until the end of this turn, you cannot use Ally or Structure cards."
   },
   "9174": {
    "name": "Eliminate",
@@ -1008,7 +1008,7 @@
   },
   "9176": {
    "name": "Instinct",
-   "effect_text": "Play 3 random Skill cards with Cost 1 or less from your Draw Pile."
+   "effect_text": "The next time you take more than 1 damage, it becomes 1, then draw 2 cards."
   },
   "9177": {
    "name": "Pet Duck",
@@ -1208,7 +1208,7 @@
   },
   "9233": {
    "name": "Soul Reaper",
-   "effect_text": "Each time you deal damage to a Marked enemy, this card's Cost is permanently reduced by 1. When this card kills a unit, its Health is fully restored."
+   "effect_text": "Each time you deal damage to a Marked enemy, this card's Cost is permanently reduced by 1. When this card kills a unit, gain 2 Cost and draw 2 cards."
   },
   "9234": {
    "name": "Dread Harvest",
