@@ -81616,6 +81616,38 @@ func _test_r835() -> void:
 			"R835 机制：3 页 → 全体敌人各 -3（%d→%d / %d→%d）"
 			% [r835_a0, r835_a.health, r835_b0, r835_b.health])
 
+	# ── ⑧ 换层：记页账本必须随层作废（节点 id 每层重号）──
+	# 实测口径（12 个种子各走满三层、真实地图）：不清的话 9 个种子少算 1~4 页，
+	# 且少算量正好等于「两层事件 id 的交集大小」——节点 id 是每层 0..34 重号的。
+	RunState.relics = [6089]
+	RunState.story_book_pages = 0
+	RunState.story_book_nodes = []
+	RunState.map_cells = [{"id": 0, "type": "event", "layer": 1}]
+	RunState.current_node_id = 0
+	RunState.complete_current()
+	check(RunState.story_book_pages == 1, "R835 换层：第一层事件 0 → 1 页")
+	RunState.story_book_new_layer()
+	check(RunState.story_book_nodes.is_empty() and RunState.story_book_pages == 1,
+			"R835 换层：清的是账本、页数不动（仍 1 页）")
+	RunState.map_cells = [{"id": 0, "type": "event", "layer": 2}]
+	RunState.current_node_id = 0
+	RunState.complete_current()
+	check(RunState.story_book_pages == 2,
+			"R835 换层：第二层同号事件 0 照样 +1 页（实际 %d 页）"
+			% RunState.story_book_pages)
+	check_src(r835_src.contains("story_book_new_layer()"),
+			"R835 接线：advance_layer 里调 story_book_new_layer（换层即清账本）")
+
+	# ── ⑨ 实战接线：开场道具必须排在「敌人上场之后」──
+	# 顺序反了的话 `_story_book_tick()` 遍历不到任何敌方单位 → 每场都 0 伤害，
+	# 而单测里敌人是手动先摆好的，看不出来（这就是单测与实战的差别）。
+	var r835_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r835_i_place := r835_bs.find("engine.state.place(card, e[6], GameEngine.SIDE_OPPONENT)")
+	var r835_i_hook := r835_bs.rfind("engine.apply_battle_start_relics(repo)")
+	check_src(r835_i_place > 0 and r835_i_hook > r835_i_place,
+			"R835 接线：battle_scene 先摆敌人（%d）再跑开场道具（%d）"
+			% [r835_i_place, r835_i_hook])
+
 	# ── 还原全局状态（后面的用例不该看到这本测试用的书）──
 	RunState.relics = r835_saved_relics
 	RunState.story_book_pages = r835_saved_pages

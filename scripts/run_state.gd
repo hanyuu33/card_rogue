@@ -576,6 +576,15 @@ static func story_book_add_page() -> bool:
 	return true
 
 
+static func story_book_new_layer() -> void:
+	## R835 空故事书：换层时清掉「已记过页的事件节点」。
+	## ⚠️ 每层的节点 id 都是 0..34 **重号**（地图是每层重新生成的），
+	## 上一层记过页的 id 留在这里，就会把新一层同号的事件当成「已经记过」直接吞掉。
+	## 实测（12 个种子各走满三层）：9 个种子少算 1~4 页，且少算量正好等于两层事件 id 的交集大小。
+	## 页数本身**不清** —— 那是跨层的累计伤害。
+	story_book_nodes.clear()
+
+
 static func _note_story_book_event(node_id: int) -> void:
 	## R835：事件房结算完成 → 记一页。判据只有「这一格的 type 是 event」一条 ——
 	## 宝箱 / 商店 / 休息 / 战斗都不算（卡面写的是「事件」）。
@@ -1648,6 +1657,7 @@ static func advance_layer(layer: int) -> int:
 	reset_shop_session()          # R390：换层 = 新地图 → 上一层的店全部作废
 	cleared_ids = []
 	seen_ids = []                 # R207：换层 = 新地图 → 上一层记得的格子全部作废
+	story_book_new_layer()        # R835：节点 id 每层重号 → 记页账本也要换层作废
 	# R460（用户口径「地图上如果绘制了标记，进入下一层应该全部清除」）：
 	# 标记是按**旧地图**的格位存的（笔画记屏幕坐标点、小旗记格 id），新一层格子全换过 ——
 	# 留着不只对不上位置，还会让人误以为「这格我已经查过了」。
