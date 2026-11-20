@@ -80694,8 +80694,8 @@ func _test_r817() -> void:
 	check(DemoScope.baseline_count("relics") == r817_relics.all_relics().size(),
 			"R817 基线：道具 = relics.json 全量 %d 件（试玩版一件不裁）"
 			% r817_relics.all_relics().size())
-	check(DemoScope.baseline_count("traps") == 18,
-			"R817 基线：工具 = 18 件（R841 锤子 7018 / 润滑油 7019 进试玩，实际 %d）" % DemoScope.baseline_count("traps"))
+	check(DemoScope.baseline_count("traps") == 19,
+			"R817 基线：工具 = 19 件（R841 锤子 7018 / 润滑油 7019、R841d 大蒜 7017 进试玩，实际 %d）" % DemoScope.baseline_count("traps"))
 	check(DemoScope.baseline_count("events") == 25,
 			"R817 基线：事件 = 25 种子类型（一层 13 + 二层 16，去重后 25，实际 %d）"
 			% DemoScope.baseline_count("events"))
