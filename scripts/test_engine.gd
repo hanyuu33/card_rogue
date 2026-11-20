@@ -48213,9 +48213,17 @@ func _init() -> void:
 			and UiTheme.CARD_COMPACT_NAME_BOTTOM < UiTheme.CARD_BODY_BOTTOM,
 			"R843c 下部黑底：三行顺序排列且属性栏完整留在卡框内")
 	for r843_kind in ["forest", "shadow", "mech", "bard", "common", "enemy"]:
-		check(UiAssets.art_rarity_frame(r843_kind, false) != null
-				and UiAssets.art_rarity_frame(r843_kind, true) != null,
-				"R843e 职业一体框：%s 详情 / 紧凑双比例素材齐全" % r843_kind)
+		for r843_compact in [false, true]:
+			var r843_tex := UiAssets.art_rarity_frame(r843_kind, r843_compact)
+			check(r843_tex != null,
+					"R843e 职业一体框：%s 详情 / 紧凑双比例素材齐全（compact=%s）"
+					% [r843_kind, r843_compact])
+			if r843_tex != null:
+				var r843_img := r843_tex.get_image()
+				var r843_used := r843_img.get_used_rect()
+				check(r843_used == Rect2i(Vector2i.ZERO, r843_img.get_size()),
+						"R843f 一体框：%s 实际外缘贴齐画布，详情不再被透明余量推偏（compact=%s）"
+						% [r843_kind, r843_compact])
 
 	check(CardFace.marquee_offset(50.0, 60.0, 1234) == 0.0,
 

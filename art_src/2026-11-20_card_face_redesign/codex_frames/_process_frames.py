@@ -57,9 +57,23 @@ def main():
         frame.alpha_composite(band, (0, height - band_h))
         # Lanczos 会在全透明窗口留下 alpha=1 的采样残迹；统一归零，避免导入后薄雾。
         frame.putalpha(frame.getchannel("A").point(lambda value: 0 if value < 6 else value))
+        # R843f：抠底原图的透明安全边并不一致。若不二次归一，详情大卡会把几像素的
+        # 顶部余量放大成「职业框没对齐」。以实际不透明外框为准重新贴齐同一画布；
+        # 不能只信 alpha_key 的 getbbox，因为微弱品红残迹也会把 bbox 往外撑。
+        solid = frame.getchannel("A").point(lambda value: 255 if value >= 24 else 0)
+        outer = solid.getbbox()
+        if outer is None:
+            raise RuntimeError("empty integrated frame")
+        frame = frame.crop(outer).resize((width, height), Image.Resampling.LANCZOS)
+        frame.putalpha(frame.getchannel("A").point(lambda value: 0 if value < 6 else value))
+        actual = frame.getchannel("A").point(lambda value: 255 if value >= 24 else 0).getbbox()
+        # 重采样后最外一圈可能只剩淡抗锯齿；源图 1px 在最大详情卡上也不足 0.3px。
+        if actual is None or actual[0] > 1 or actual[1] > 1 \
+                or actual[2] < width - 1 or actual[3] < height - 1:
+            raise RuntimeError("integrated frame bounds not normalized: %s" % (actual,))
         path = OUT / ("art_rarity_frame_" + kind + suffix + ".png")
         frame.save(path)
-        print("OK", path, frame.size, "band_y", band_y, flush=True)
+        print("OK", path, frame.size, "band_y", band_y, "outer", outer, flush=True)
 
 
 if __name__ == "__main__":
