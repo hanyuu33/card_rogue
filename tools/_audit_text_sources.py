@@ -98,48 +98,32 @@ def C():
 
 def D():
     log("=" * 70)
-    log("D  traps.json  vs  i18n/traps_zh_canonical.json")
+    log("D  traps.json  vs  i18n/traps_en|ja|es.json")
+    ## 工具没有 zh_canonical（中文就写在 traps.json 里），所以这组只核 id 覆盖与空值。
     t = load("traps.json")
     items = t["traps"] if isinstance(t, dict) and "traps" in t else t
     ids = {int(x["id"]): x for x in items}
-    z = load("i18n/traps_zh_canonical.json")
-    zz = z["traps"] if isinstance(z, dict) and "traps" in z else z
-    zids = set(int(k) for k in zz)
-    log("  traps=%d zh=%d 仅 traps=%s 仅 zh=%s" % (
-        len(ids), len(zids), sorted(set(ids) - zids)[:8], sorted(zids - set(ids))[:8]))
     n = 0
-    for i in sorted(set(ids) & zids):
-        zz_i = zz[str(i)]
-        for f in ("name", "desc"):
-            if ids[i].get(f) != zz_i.get(f):
-                n += 1
-                log("  [%s] %d\n       traps=%r\n       zh=%r" % (f, i, ids[i].get(f), zz_i.get(f)))
-    log("  合计不符 %d" % n)
+    for lang in ("en", "ja", "es"):
+        d = load("i18n/traps_%s.json" % lang)
+        dd = d["traps"] if isinstance(d, dict) and "traps" in d else d
+        dids = set(int(k) for k in dd)
+        if dids != set(ids):
+            n += 1
+            log("  [%s] 缺=%s 多=%s" % (lang, sorted(set(ids) - dids)[:8], sorted(dids - set(ids))[:8]))
+        empty = [k for k, v in dd.items() if not str(v.get("desc", "")).strip()]
+        if empty:
+            n += 1
+            log("  [%s] 空描述 %s" % (lang, empty[:6]))
+    log("  traps=%d 三语覆盖问题 %d" % (len(ids), n))
 
 
 def E():
     log("=" * 70)
-    log("E  stories.json  vs  i18n/narrative_zh_canonical.json")
-    s = load("stories.json")
-    z = load("i18n/narrative_zh_canonical.json")
-    def flat(o, p=""):
-        out = {}
-        if isinstance(o, dict):
-            for k, v in o.items():
-                out.update(flat(v, p + "/" + str(k)))
-        elif isinstance(o, list):
-            for i, v in enumerate(o):
-                out.update(flat(v, p + "/%d" % i))
-        else:
-            out[p] = o
-        return out
-    fs, fz = flat(s), flat(z)
-    common = set(fs) & set(fz)
-    diff = [k for k in sorted(common) if isinstance(fs[k], str) and fs[k] != fz[k]]
-    log("  stories 键=%d narrative 键=%d 交集=%d 文本不符=%d" % (
-        len(fs), len(fz), len(common), len(diff)))
-    for k in diff[:20]:
-        log("  [%s]\n      stories=%r\n      narrative=%r" % (k, fs[k][:80], fz[k][:80]))
+    log("E  剧情 / 事件文案")
+    ## 结构与 narrative_zh_canonical 不是一一对应（按事件 id 分组），逐字比对交给
+    ## `i18n/validate_narrative.py` 与 `i18n/validate_event_ui.py`，本脚本只做提醒。
+    log("  由 validate_narrative.py（30 事件 / 74 条）+ validate_event_ui.py（99 选项 / 74 结果）全量校验")
 
 
 def F():
@@ -187,18 +171,15 @@ def F():
 
 def G():
     log("=" * 70)
-    log("G  demo_scope.json  vs  仓库实际条数")
+    log("G  demo_scope.json 白名单规模（只报数，不判等）")
     sc = load("demo_scope.json")
     cards = load("cards.json")["cards"]
     relics = load("relics.json")["relics"]
     traps = load("traps.json")
     items = traps["traps"] if isinstance(traps, dict) and "traps" in traps else traps
-    st = load("stories.json")
     log("  demo_scope: %s" % {k: len(v) for k, v in sc.items() if isinstance(v, list)})
-    log("  仓库：cards=%d（图鉴可见 %d）/ relics=%d / traps=%d" % (
-        len(cards), len([c for c in cards if c.get("rarity", 0) <= 2 or c.get("obtainable")]),
-        len(relics), len(items)))
-    log("  仓库：events=%d 组" % len([k for k in st if isinstance(st[k], dict)]))
+    log("  仓库：cards=%d / relics=%d / traps=%d" % (len(cards), len(relics), len(items)))
+    log("  判据在 `_test_r817()`：道具档要求基线 == all_relics()，卡/工具按白名单裁")
 
 
 for fn in (A, B, C, D, E, F, G):
