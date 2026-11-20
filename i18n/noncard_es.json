@@ -209,7 +209,7 @@
     },
     "6054": {
       "name": "Impulso oscuro",
-      "desc": "Ya no puedes omitir las recompensas de cartas: debes tomar 1 carta de inmediato para cerrar la pantalla de recompensa y no puedes guardar las recompensas de cartas para más adelante. Tampoco puedes eliminar cartas de tu mazo en las tiendas. Al comienzo de cada turno, roba 1 carta adicional."
+      "desc": "Ya no puedes omitir las recompensas de cartas: debes tomar 1 carta en el acto para cerrar la pantalla de recompensa, y no puedes guardarla para más adelante. Tampoco puedes eliminar cartas de tu mazo en las tiendas. A cambio, robas 1 carta adicional al comienzo de cada turno."
     },
     "6055": {
       "name": "Pipa de fumar",
