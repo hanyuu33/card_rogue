@@ -427,6 +427,9 @@ R843 已把奖励三选一的 `_draw_layer_card()` 也收回这个唯一口；�
    `test_smoke._check_hand_fan` 锁住这些不变量。
 6. **视觉验收使用真实 `CardFace`。** `tools/_shot_r843_card_style.gd` 同图输出 99×119 手牌、
    77×92 小卡与 198×238 详情卡，并启用测试档案且 `record_seen=false`，不得污染玩家已见卡牌记录。
+7. **费用图标与战场 HUD 同源（R843b）。** `assets/ui/icon_cost.png` 直接提取自
+   `adventure_shared/battle_mana_meter.png` 顶部的青绿切面水晶，清除面板背景并保留透明安全边；
+   不再使用旧蓝色描金水晶。只换共享素材，费用几何、数字描边与动态减费重画接口保持不变。
 
 #### 战场卡面：**上场之后已无作用的字段不标**（R118）
 
