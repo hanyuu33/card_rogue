@@ -624,6 +624,9 @@ const DUCK_ALARM_SPELL:= 1
 #   它们**不是奖励卡牌**（R826 店长口径），唯一获得途径就是这件道具。
 const MUSIC_BOX_RELIC_ID:= 6086
 const MUSIC_BOX_DRAW:= 3
+# R835 空故事书（6089，第一层初始池）：战斗开始时对全体敌人造成 `RunState.story_book_pages`
+# 点伤害；页数由「经过的事件房 / 打赢的首领」累计（累计口在 RunState，引擎只读）。
+const STORY_BOOK_RELIC_ID:= 6089
 const NOTE_TRAIT:= "音符"
 # 音符卡的 id —— 只有「排除本张」这类场合要精确比对（re 9278 的「另一张」）。
 const NOTE_DO_ID:= 9277
@@ -4276,6 +4279,35 @@ func apply_battle_start_relics(repo: CardRepo) -> void :
 	# R826 音乐盒（6086）：放在记忆药水之后 —— 两者都动 state.deck，追加在末尾不干扰前面。
 	if self_relics.has(MUSIC_BOX_RELIC_ID):
 		_music_box_tick(repo)
+	# R835 空故事书（6089）：**排在最后** —— 它要把敌人打到掉血甚至死亡，
+	# 放在所有「改牌库 / 掷骰 / 发放单位」的开场效果之后，前面各件的随机数序列一字不动。
+	if self_relics.has(STORY_BOOK_RELIC_ID):
+		_story_book_tick()
+
+
+func _story_book_tick() -> void:
+	## R835 空故事书（6089，第一层初始池）：战斗开始时对**全体敌方单位**各造成
+	## `RunState.story_book_pages` 点伤害。页数在 RunState 累计（每经过一个事件房 /
+	## 打赢一个首领 +1），引擎这边只读，不自己记账。
+	## 0 页 → 什么都不做（卡面写的就是「造成 0 伤害」：这本书还没有故事）。
+	## 死亡收口走统一 `_destroy_dead()`（它末尾会 `_check_game_over()`）；开场就清场是
+	## 极端情况，`start_game()` 里的那次 `_check_game_over()` 会兜住，不会卡在活着的状态。
+	var dmg := int(RunState.story_book_pages)
+	if dmg <= 0:
+		_log("空故事书：本局还没有故事（0 点伤害）")
+		return
+	var hit := 0
+	for cell: Vector2i in state.board.keys():
+		var p: Placement = state.unit_at(cell)
+		if p == null or p.owner != SIDE_OPPONENT:
+			continue
+		_hit_unit(p, dmg, "空故事书")
+		hit += 1
+	if hit > 0:
+		_log("空故事书：开场对 %d 名敌人各造成 %d 点伤害" % [hit, dmg])
+		action.emit("relic", {"id": STORY_BOOK_RELIC_ID,
+				"text": "空故事书：全体敌人 -%d" % dmg})
+	_destroy_dead()
 
 
 func _music_box_tick(repo: CardRepo) -> void:
@@ -7644,8 +7676,9 @@ func defect_clock_left() -> int:
 	## R832：缺陷时钟（6084）**本场还要再打几张牌**才触发 —— 角标唯一的取数口。
 	## 计数 `_clock_plays` 只活在引擎里：每个新 GameEngine = 一场新战斗，天然复位，
 	## 所以读档续战之后角标与实际触发同源（RunState 不另存一份，免得两套账）。
-	## ⚠️ 触发之后 `_clock_plays` 还会继续涨（`_note_card_played` 只对 `==` 置待办）→
-	##    夹到 0：本场已经白赚过一回合，「0」＝本场没戏，下一场重新数。
+	## R832：`_clock_plays` 到 DEFECT_CLOCK_AT 就封顶（见 `_note_card_played`），
+	##    这里的 `mini` 只是防别的路径写脏 —— 双保险，不是主判据。
+	##    本场已经白赚过一回合，角标恒「0」＝本场用光了，下一场重新数。
 	return maxi(0, DEFECT_CLOCK_AT - mini(_clock_plays, DEFECT_CLOCK_AT))
 
 
@@ -9894,10 +9927,14 @@ func _note_card_played(side: String, played: CardData = null) -> void:
 	# 计数记在引擎上 → 每个新 GameEngine = 一场新战斗，自然复位；不跨战斗、不进存档。
 	# ⚠️ 这里只**置待办**，真正的换回合交给 `_clock_maybe_switch()`（理由见那里的说明）。
 	if side == SIDE_SELF and played != null and self_relics.has(DEFECT_CLOCK_ID):
-		_clock_plays += 1
-		if _clock_plays == DEFECT_CLOCK_AT:
-			_clock_pending = true
-			_log("缺陷时钟：本场已打出第 %d 张牌，本卡结算完后结束回合" % DEFECT_CLOCK_AT)
+		# R832：计数**到 DEFECT_CLOCK_AT 就停** —— 这一场已经白赚过一次，再数没有意义。
+		# ⚠️ 原先是无条件 `+= 1`、只靠 `== 12` 去重：谁把判据改成 `>=`（很自然的「更稳妥」
+		#    改法）就会变成**每打一张都换回合**，一场战斗里玩家能无限白赚。封顶后两种写法都安全。
+		if _clock_plays < DEFECT_CLOCK_AT:
+			_clock_plays += 1
+			if _clock_plays == DEFECT_CLOCK_AT:
+				_clock_pending = true
+				_log("缺陷时钟：本场已打出第 %d 张牌，本卡结算完后结束回合" % DEFECT_CLOCK_AT)
 
 func _raid_dmg(side: String) -> int:
 	## 突袭的伤害基数 = RAID_BASE_DMG + X（X = 本回合该方已使用的卡牌数）。

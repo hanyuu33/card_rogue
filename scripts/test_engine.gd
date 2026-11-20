@@ -81379,13 +81379,30 @@ func _test_r832() -> void:
 	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "0",
 			"R832 角标：触发后画「0」（本场用光）")
 
-	# ⑤ 再打几张也不会变负数（`_clock_plays` 会继续涨，取数口必须夹住）
+	# ⑤ 触发之后**计数就停住**（R832b，用户追问「是不是不再计数」）：
+	#    原先只是靠 `== 12` 去重，`_clock_plays` 会一路涨到 25 —— 谁把判据改成 `>=`
+	#    就会每张都换回合。现在封顶在 12，两种写法都安全。
 	r832_e.state.energy = 30
 	r832_e.state.hand.clear()
 	r832_e.state.hand.append(CardData.from_dict(r832_cards.get_card(8006).to_dict()))
 	r832_e.play_from_hand(0, Vector2i(4, 2))
+	check(r832_e._clock_plays == 12,
+			"R832 缺陷时钟：触发后计数封顶在 12，不再累加（实际 %d）" % r832_e._clock_plays)
 	check(r832_e.defect_clock_left() == 0,
 			"R832 缺陷时钟：第 13 张后仍为 0，不出负数（实际 %d）" % r832_e.defect_clock_left())
+	# ⑤b 再往唯一计数口直压 6 次（相当于本场第 14~19 张）：一步都不动、回合一次都不跳
+	var r832_t1: int = r832_e.turn_number
+	var r832_card := CardData.from_dict(r832_cards.get_card(8006).to_dict())
+	for i in 6:
+		r832_e._note_card_played(GameEngine.SIDE_SELF, r832_card)
+		r832_e._clock_maybe_switch()
+	check(r832_e._clock_plays == 12,
+			"R832 缺陷时钟：再打 6 张，计数仍是 12（实际 %d）" % r832_e._clock_plays)
+	check(r832_e.turn_number == r832_t1 and r832_e.opp_turns == 0,
+			"R832 缺陷时钟：再打 6 张一次都不换回合（turn %d / opp %d）"
+				% [r832_e.turn_number, r832_e.opp_turns])
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "0",
+			"R832 角标：再打 6 张仍画「0」")
 
 	# ⑥ 下一场（新引擎）→ 回到 12（每场复位是设计口径，不是漏清）
 	var r832_e2 := _new_engine([], 40, 40)
