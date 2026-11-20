@@ -97,6 +97,13 @@ var field_owner := {}
 ## _cards_save / 各类「场地数量」判据当成卡牌扫到；陷阱不是卡牌，独立一张表最干净。
 ## 与 field_effects 并列：同一格最多一个陷阱、且不与场地卡共存（见 trap_legal_cells）。
 var trap_fields := {}
+## R839 大蒜 7017：Vector2i -> 剩余的我方回合数（>0 = 这一格「不可使用」）。
+## 与 `trap_fields` 并列但**语义相反**：那张表是「踩上去触发」，这张是「根本踩不进去」。
+## 唯一写口 `seal_cell()`、唯一读口 `is_cell_sealed()`、唯一推进口 `tick_seals()` ——
+## 移动 BFS / 跳跃 / 召唤落点 / 陷阱与场地落点 / 界面高亮全都读同一个判据。
+## ⚠️ 刻意**不进 `trap_fields`**：混进去会被 `trap_legal_cells()` 当成一件已布置的陷阱，
+##    而 `_trigger_trap()` 又永远等不到人踩（封锁格本身就进不去）。
+var sealed_cells := {}
 # R503 标记（9224）：**同时只存在一个**；R562 起加伤**固定 +1，不再按回合成长**。
 # 存在性由 `mark_cell()` 扫 field_effects 判定（唯一权威），这里只存**数值**：
 # 存进卡面会污染卡库共享实例（set_field 复制的是 CardData，不是附加状态）。
@@ -389,6 +396,37 @@ func clear_field(cell: Vector2i) -> CardData:
 	return old
 
 
+func is_cell_sealed(cell: Vector2i) -> bool:
+	## R839：这一格现在「不可使用」吗（大蒜）。**唯一读口** ——
+	## 引擎的移动 / 跳跃 / 落点判据与界面高亮都读它，别各自再摸一次 `sealed_cells`。
+	return int(sealed_cells.get(cell, 0)) > 0
+
+
+func seal_cell(cell: Vector2i, turns: int) -> void:
+	## R839：把一格封住 `turns` 个我方回合（大蒜 block_turns = 3）。
+	## 同一格再封一次 → 取**较大**的剩余回合：既不叠成「六回合」，也不会被更短的一次
+	## 覆盖成 1 回合（玩家并没有做错什么，不该被后来的短封锁「冲掉」）。
+	if turns <= 0:
+		return
+	sealed_cells[cell] = maxi(int(sealed_cells.get(cell, 0)), turns)
+
+
+func tick_seals() -> Array[Vector2i]:
+	## R839：大蒜倒计时**唯一推进口** —— 引擎在每个我方回合开始时调一次。
+	## 返回这一跳后**到期解开**的格子（已排序，界面据此播「这格恢复可用」的提示；
+	## 排序是为了回放 / 同种子下事件顺序稳定）。
+	var expired: Array[Vector2i] = []
+	for cell: Vector2i in sealed_cells.keys():
+		var left := int(sealed_cells[cell]) - 1
+		if left <= 0:
+			sealed_cells.erase(cell)
+			expired.append(cell)
+		else:
+			sealed_cells[cell] = left
+	expired.sort()
+	return expired
+
+
 func haste_turn(side: String) -> bool:
 	## R479：哈气（9024）是不是**该方本回合**的触发回合（第 3 / 5 / 7 个回合）。
 	## 与旧口径的区别：效果卡不再整方生效，只在这三个回合各挑**一个**单位（见 `haste_pick`）。
@@ -568,6 +606,12 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	if cell.x == GameEngine.forbidden_row_for(owner):
 		push_error("FieldState.place 拒绝：%s 不能站在 %s（owner=%s 的 HP 行）" % [
 				card.card_name, cell, owner])
+		return null
+	# R839 大蒜：被封锁的格子「不可使用」—— 召唤 / 效果直达 / 任何落点都不许落在这儿。
+	# 关卡摆位不受影响（`sealed_cells` 是局内产生的，摆位那一刻还是空的）。
+	if is_cell_sealed(cell):
+		push_error("FieldState.place 拒绝：%s 不能落在 %s（该格被大蒜封着）" % [
+				card.card_name, cell])
 		return null
 	var p := Placement.new()
 	p.card = card
@@ -752,6 +796,7 @@ func save_dict() -> Dictionary:
 		"board": _board_save(),
 		"fields": _fields_save(),
 		"trap_fields": _trap_fields_save(),
+		"sealed_cells": _sealed_save(),
 		"air_raid_cells": _air_raid_save(),
 		"laser_aim_cols": Array(laser_aim_cols),
 		"air_raid_turns": air_raid_turns,
@@ -828,6 +873,12 @@ func apply_dict(d: Dictionary) -> void:
 		for tf: Variant in tfl:
 			if tf is Dictionary and (tf as Dictionary).has("id"):
 				trap_fields[Vector2i(int(tf["r"]), int(tf["c"]))] = int(tf["id"])
+	sealed_cells.clear()
+	var sfl: Variant = d.get("sealed_cells", [])
+	if sfl is Array:
+		for sf: Variant in sfl:
+			if sf is Dictionary and int(sf.get("turns", 0)) > 0:
+				sealed_cells[Vector2i(int(sf["r"]), int(sf["c"]))] = int(sf["turns"])
 	var fl: Variant = d.get("fields", [])
 	if fl is Array:
 		for item2: Variant in fl:
@@ -896,6 +947,14 @@ func _trap_fields_save() -> Array:
 	var out: Array = []
 	for cell: Vector2i in trap_fields:
 		out.append({"r": cell.x, "c": cell.y, "id": int(trap_fields[cell])})
+	return out
+
+
+func _sealed_save() -> Array:
+	## R839：封锁格的存档形态 —— 坐标 + 剩余回合（形制与 `_trap_fields_save` 同款）。
+	var out: Array = []
+	for cell: Vector2i in sealed_cells:
+		out.append({"r": cell.x, "c": cell.y, "turns": int(sealed_cells[cell])})
 	return out
 
 

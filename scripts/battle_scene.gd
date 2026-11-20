@@ -6083,6 +6083,8 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 			var c := Vector2i(x, y)
 			if not GameEngine.hand_place_allowed(c, GameEngine.SIDE_SELF):
 				continue
+			if engine.cell_sealed(c):
+				continue          # R839 大蒜：封锁格「不可使用」，别亮成绿格
 			if not engine.state.board.has(c):
 				out.append(c)
 			elif engine.fence_merge_target(c, card):
@@ -6106,7 +6108,9 @@ func _field_place_cells(card: CardData) -> Array[Vector2i]:
 	for x in FieldState.BOARD_ROWS:
 		for y in FieldState.BOARD_COLS:
 			var c := Vector2i(x, y)
-			if GameEngine.field_place_allowed(c, aim):
+			# R839 大蒜：`field_place_allowed()` 是 static（拿不到 state），
+			# 封锁格由引擎的 `cell_sealed()` 这一刀挡 —— 高亮与真实可放必须一致。
+			if GameEngine.field_place_allowed(c, aim) and not engine.cell_sealed(c):
 				out.append(c)
 	return out
 
@@ -10236,6 +10240,8 @@ func _draw_grid() -> void:
 	_draw_field_markers()
 	if not engine.state.trap_fields.is_empty():
 		_draw_trap_markers()      # R663：已布置的陷阱（非卡牌场地，独立一张表）
+	if not engine.state.sealed_cells.is_empty():
+		_draw_seal_markers()      # R839：大蒜封住的格子（不可使用）
 	# 火墙术（9084）：正在燃烧的横行（引擎是唯一数据源，施放方下次回合开始自动熄灭）
 	for fw_row in engine.fire_wall_rows():
 		var fw_rect := Rect2(GRID_X, GRID_Y + fw_row * CELL - _grid_scroll, GRID_W, CELL)
@@ -10258,6 +10264,8 @@ func _board_has_pulsing_field() -> bool:
 	## 只有一个清泉在场上时不需要逐帧重绘 —— 这是 `_process` 里的重绘判据。
 	if engine != null and not engine.state.trap_fields.is_empty():
 		return true   # R663：陷阱格带呼吸描边，得逐帧重绘
+	if engine != null and not engine.state.sealed_cells.is_empty():
+		return true   # R839：大蒜封锁格同样带呼吸描边
 	if engine == null or engine.state.field_effects.is_empty():
 		return false
 	for c: Vector2i in engine.state.field_effects:
@@ -10559,7 +10567,11 @@ func _finish_trap_drag(pos: Vector2) -> void:
 		return
 	RunState.consume_trap(slot)   # 放置那一刻才从栏位移除（R663 口径）
 	var nm := td.trap_name if td != null else "工具"
-	_say("已布置「%s」，敌人踩到就会触发" % nm)
+	# R839 大蒜：封锁型不是「等人踩」，提示语必须换口径（照抄会骗玩家「踩了会触发」）。
+	if td != null and td.block_turns > 0:
+		_say("已封住这一格：「%s」生效期间任何单位都无法进入或经过" % nm)
+	else:
+		_say("已布置「%s」，敌人踩到就会触发" % nm)
 	queue_redraw()
 
 
@@ -10651,6 +10663,42 @@ func _draw_trap_markers() -> void:
 		var s := 30.0
 		TrapArt.draw(self, Rect2(r.get_center() - Vector2(s * 0.5, s * 0.5), Vector2(s, s)),
 				id, false)
+
+
+func _draw_seal_markers() -> void:
+	## R839 大蒜 7017：被封住的格子 = **「这一格不可使用」**。
+	## 画法与场上另外三套标记刻意分开，别让玩家读混：
+	##   * 陷阱 = 小图标 + 呼吸方框（「埋着东西，踩了会炸」）；
+	##   * 场地 = 45° 斜纹 + 名字角标（「这格挂着效果」）；
+	##   * 空袭 = 红色准星（「这格被点名了」）；
+	##   * **封锁 = 满格暗底 + 两道对角封条 + 中央蒜图标 + 右上角剩余回合数**
+	##     （「这格被封死了，谁都别想用」）。
+	## 判据只读 `engine.state.sealed_cells`（引擎是唯一数据源）；回合数也直接读表 ——
+	## 界面**绝不**自己按「放下时记几」倒推，两套账必然分叉。
+	var t := float(_now()) / 1000.0
+	var pulse := 0.5 + 0.5 * sin(t * 2.4)
+	for cell: Vector2i in engine.state.sealed_cells:
+		var left := int(engine.state.sealed_cells[cell])
+		if left <= 0:
+			continue
+		var r := _cell_rect(cell)
+		draw_rect(r.grow(-3.0), Color(0.24, 0.22, 0.31, 0.56), true)
+		draw_rect(r.grow(-3.0), Color(0.78, 0.76, 0.88, 0.55 + 0.35 * pulse), false, 2.5)
+		# 两道对角封条（不是斜纹：斜纹是场地卡的语汇）
+		var pad := 9.0
+		var seal_col := Color(0.84, 0.82, 0.92, 0.50 + 0.20 * pulse)
+		draw_line(r.position + Vector2(pad, pad), r.end - Vector2(pad, pad), seal_col, 3.0)
+		draw_line(Vector2(r.end.x - pad, r.position.y + pad),
+				Vector2(r.position.x + pad, r.end.y - pad), seal_col, 3.0)
+		# 中央蒜图标：**只画图案、不画底框**（暗格上再叠一个深色方块就认不出是蒜了），
+		# 尺寸按格子走（0.5 格宽）—— 固定 34px 在 128px 的格子里太小。
+		var gs := CELL_W * 0.50
+		TrapArt.draw_glyph(self, Rect2(r.get_center() - Vector2(gs * 0.5, gs * 0.5),
+				Vector2(gs, gs)), 7017)
+		# 右上角剩余我方回合数（「3」= 还能封 3 个我方回合）。不带底条 ——
+		# 底条会压住格子右上边框，而这一格本身已经是深色底，白字 + 描边就够读。
+		_draw_string_center(_font_bold, UI_FS_CAPTION, str(left),
+				Vector2(r.end.x - 21.0, r.position.y + 23.0), Color("f4efff"))
 
 
 func _draw_field_markers() -> void:

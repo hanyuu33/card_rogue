@@ -2927,6 +2927,7 @@ func _begin_turn(side: String) -> void :
 		_endless_blessing()
 		_echo_tick(SIDE_SELF)            # 幽深回响 9002（R688）：效果区几张就打几下
 		_seed_tick(SIDE_SELF)            # 种子 9248（R689）：回合开始破坏几张种子、各换 1 费 / 1 张卡
+		_seal_tick()                     # R839 大蒜：封锁格倒计时（我方回合开始 -1）
 		_action_growth_tick(SIDE_SELF)   # R161：先推进成长计数，再刷新 acts_left
 		_haste_pick_tick(SIDE_SELF)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_SELF)
@@ -3217,7 +3218,8 @@ func _random_free_board_cell(side: String) -> Vector2i:
 			continue
 		for col in FieldState.BOARD_COLS:
 			var c:= Vector2i(r, col)
-			if not state.board.has(c):
+			# R839 大蒜：封锁格不是「空格」—— 召唤物落上去会被 `place` 拒绝，白丢一次。
+			if not state.board.has(c) and not state.is_cell_sealed(c):
 				free.append(c)
 	if free.is_empty():
 		return Vector2i(-1, -1)
@@ -3297,7 +3299,8 @@ func _random_free_half_cell(side: String) -> Vector2i:
 	for r: int in rows:
 		for col in FieldState.BOARD_COLS:
 			var c:= Vector2i(r, col)
-			if not state.board.has(c):
+			# R839 大蒜：封锁格不算空格（与 `_random_free_board_cell` 同一口径）。
+			if not state.board.has(c) and not state.is_cell_sealed(c):
 				free.append(c)
 	if free.is_empty():
 		return Vector2i(-1, -1)
@@ -3602,8 +3605,8 @@ func _revelator_free_cell() -> Vector2i:
 			if c.x < 0 or c.x >= FieldState.OPPONENT_ROWS \
 					or c.y < 0 or c.y >= FieldState.BOARD_COLS:
 				continue
-			if not state.board.has(c):
-				near.append(c)
+			if not state.board.has(c) and not state.is_cell_sealed(c):
+				near.append(c)      # R839 大蒜：封锁格不能当召唤落点
 	if not near.is_empty():
 		return near[rng.randi_range(0, near.size() - 1)]
 	return _random_free_half_cell(SIDE_OPPONENT)
@@ -6250,6 +6253,14 @@ func _play_from_hand_body(hand_index: int, cell: Vector2i) -> Placement:
 			_pay_refund(paid)
 			_log("场地放不了：%s 是「%s」生效，目标方永远进不去 %s"
 				% [card.card_name, f_aim, cell])
+			return null
+		# R839 大蒜：被封锁的格「不可使用」—— 场地也铺不上去。
+		# `field_place_allowed()` 是 static（界面高亮也读它，拿不到 state），
+		# 所以这一刀只补在引擎侧；界面高亮另外读 `engine.cell_sealed()` 过滤。
+		if state.is_cell_sealed(cell):
+			_pay_refund(paid)
+			_log("场地放不了：%s 被大蒜封着（剩 %d 个我方回合不可使用）"
+				% [card.card_name, int(state.sealed_cells.get(cell, 0))])
 			return null
 		state.hand.remove_at(hand_index)
 		if card.id == MARK_ID:
@@ -17379,6 +17390,10 @@ func _move_bfs(start: Vector2i, side: String, freed:= Vector2i(-1, -1),
 			if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS\
 			or nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
 				continue
+			# R839 大蒜：封锁格「不可使用」—— 不能停留、也**不能穿过**。
+			# 排在穿行分支之前：穿行只让「被占格」可路过，封锁格是硬墙。
+			if state.is_cell_sealed(nxt):
+				continue
 			if phasing == 1:
 				# 穿行：被占格可**路过**（照样记 dist/parent 让 BFS 继续），落点合法性另判
 				if dist.has(nxt):
@@ -17568,6 +17583,9 @@ func move(src: Vector2i, dst: Vector2i, side:= SIDE_SELF, blink:= false) -> void
 		if state.board.has(dst):
 			_log("闪现落点 %s 已有单位" % dst)
 			return
+		if state.is_cell_sealed(dst):
+			_log("闪现落点 %s 被大蒜封着（不可使用）" % dst)
+			return
 		if not unit_slot_allowed(dst, side):
 			_log("不能移动到对方后排")
 			return
@@ -17630,6 +17648,8 @@ func leap_cells(cell: Vector2i, side: String) -> Array[Vector2i]:
 				continue
 			if state.board.has(t):
 				continue
+			if state.is_cell_sealed(t):
+				continue      # R839 大蒜：跳跃也进不去封锁格
 			if not unit_slot_allowed(t, side):
 				continue
 			out.append(t)
@@ -18814,6 +18834,24 @@ func tool_pick_cancel() -> void:
 	_tool_pick_cards.clear()
 
 
+func cell_sealed(cell: Vector2i) -> bool:
+	## R839 大蒜：界面唯一的读取口（拖放高亮 / 手牌落点 / 地图提示都读它）——
+	## 别在界面里直接摸 `state.sealed_cells`，否则「引擎说封了、界面说没封」迟早出现。
+	return state != null and state.is_cell_sealed(cell)
+
+
+func _seal_tick() -> void:
+	## R839 大蒜 7017：**每个我方回合开始**推进封锁倒计时。
+	## 「3 个我方回合」= 3 个完整轮次（放下那回合的敌方行动 + 之后两轮），
+	## 与 `traps.json` 里 7017 的 desc 是同一句话 —— 改口径两处一起改。
+	## 到期解开的格子发纯视觉事件（界面据它提示），不影响任何判定。
+	var gone := state.tick_seals()
+	for cell: Vector2i in gone:
+		_log("大蒜：%s 的封锁到期，这一格恢复可用" % cell)
+	if not gone.is_empty():
+		action.emit("seal_expired", {"cells": gone})
+
+
 func place_trap(id: int, cell: Vector2i) -> bool:
 	## 放置唯一口（界面拖放调这里；**不走 play_from_hand** —— R484/485 那道闸门是给卡牌的）。
 	var t: TrapData = TrapRepo.load_json().get_trap(id)
@@ -18821,6 +18859,14 @@ func place_trap(id: int, cell: Vector2i) -> bool:
 		return false
 	if not trap_legal_cells().has(cell):
 		return false
+	# R839 大蒜 7017：**封锁型** —— 不写 `trap_fields`（那张表是「踩上去触发」，
+	# 而封锁格根本踩不进去），改把这一格封进 `sealed_cells`：任何单位进不来也过不去。
+	if t.block_turns > 0:
+		state.seal_cell(cell, t.block_turns)
+		_log("工具布置：「%s」封住 %s（%d 个我方回合不可使用）"
+				% [t.trap_name, cell, t.block_turns])
+		action.emit("seal_place", {"cell": cell, "id": id, "turns": t.block_turns})
+		return true
 	state.trap_fields[cell] = id
 	_log("陷阱布置：「%s」放在 %s" % [t.trap_name, cell])
 	return true
@@ -18843,7 +18889,9 @@ func trap_legal_cells() -> Array[Vector2i]:
 			continue
 		for y in FieldState.BOARD_COLS:
 			var c := Vector2i(x, y)
-			if state.board.has(c) or state.field_effects.has(c) or state.trap_fields.has(c):
+			# R839：被大蒜封着的格子不可使用 —— 陷阱 / 场地 / 工具都不许再往上堆。
+			if state.board.has(c) or state.field_effects.has(c) or state.trap_fields.has(c) \
+					or state.is_cell_sealed(c):
 				continue
 			out.append(c)
 	return out
@@ -19012,6 +19060,8 @@ func _bounce_cell_ok(dst: Vector2i, src: Vector2i, p: Placement) -> bool:
 		return false
 	if state == null or state.board.has(dst):
 		return false
+	if state.is_cell_sealed(dst):
+		return false      # R839 大蒜：别把人「弹进」封锁格
 	return unit_slot_allowed(dst, p.owner)
 
 
@@ -20308,6 +20358,10 @@ func _walk_search(cell: Vector2i, p: Placement, want_hp: bool,
 			if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS\
 			or nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
 				continue
+			# R839 大蒜：封锁格当墙 —— AI 的距离估算必须与真实走位同一口径，
+			# 否则它会算出「一步就到」然后卡在原地白掉一个行动。
+			if state.is_cell_sealed(nxt):
+				continue
 			if nxt.x == forbidden_row_for(SIDE_OPPONENT):
 				continue
 			if seen.has(nxt) or blocked.has(nxt):
@@ -20365,6 +20419,10 @@ func _wall_depth(cell: Vector2i, p: Placement, cleared: Array = []) -> int:
 			var nxt: Vector2i = cur + dir
 			if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS\
 			or nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
+				continue
+			# R839 大蒜：封锁格当墙 —— AI 的距离估算必须与真实走位同一口径，
+			# 否则它会算出「一步就到」然后卡在原地白掉一个行动。
+			if state.is_cell_sealed(nxt):
 				continue
 			if nxt.x == forbidden_row_for(SIDE_OPPONENT):
 				continue
@@ -20554,6 +20612,10 @@ func _engage_distance(cell: Vector2i, p: Placement) -> int:
 			if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS\
 			or nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
 				continue
+			# R839 大蒜：封锁格当墙 —— AI 的距离估算必须与真实走位同一口径，
+			# 否则它会算出「一步就到」然后卡在原地白掉一个行动。
+			if state.is_cell_sealed(nxt):
+				continue
 			if nxt.x == forbidden_row_for(SIDE_OPPONENT) or seen.has(nxt):
 				continue
 			if state.board.has(nxt):
@@ -20582,6 +20644,10 @@ func _hp_pos_distance(cell: Vector2i, p: Placement) -> int:
 			var nxt: Vector2i = cur + d
 			if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS\
 			or nxt.y < 0 or nxt.y >= FieldState.BOARD_COLS:
+				continue
+			# R839 大蒜：封锁格当墙 —— AI 的距离估算必须与真实走位同一口径，
+			# 否则它会算出「一步就到」然后卡在原地白掉一个行动。
+			if state.is_cell_sealed(nxt):
 				continue
 			if nxt.x == forbidden_row_for(SIDE_OPPONENT) or seen.has(nxt):
 				continue

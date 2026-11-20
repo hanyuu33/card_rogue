@@ -59,6 +59,13 @@ var draw_cards := 0
 ## 与放置型（`damage`，埋进空格等敌人踩）是两回事：`damage` 归陷阱触发用，
 ## 这个归「指着谁砸谁」，所以必须是独立字段，判据见 `GameEngine.trap_drop_cells()`。
 var direct_damage := 0
+## R839：大蒜 7017 —— 放置后该格 **连续 N 个我方回合不可使用**
+## （任何单位不能进入 / 经过，也不能往上放陷阱 / 场地 / 单位）。
+## >0 = **封锁型**：`place_trap()` 写进 `FieldState.sealed_cells`，**刻意不进 `trap_fields`** ——
+## 那张表的语义是「踩上去触发」，而封锁格根本踩不进去；混进去会让 `trap_legal_cells()`
+## 把它当成一件已布置的陷阱（同格不许再放），`_trigger_trap()` 又永远等不到人踩。
+## 与 `bounce` / `blast` / `fill_hand` 同一条思路：一个工具只说明自己「怎么生效」。
+var block_turns := 0
 ## R754：「不受随机获得影响」—— 石头只从事件「奇异雕像」的摧毁选项拿，
 ## 混进掉落 / 工具箱就会变成「打怪掉石头」，把事件的选择变成笑话。
 ## 只影响 `TrapRepo.random_traps()`；商店本来就不收没有售价的（见 `in_shop()`）。
@@ -106,5 +113,6 @@ static func from_dict(d: Dictionary) -> TrapData:
 	t.bounce = int(d.get("bounce", 0))
 	t.blast = int(d.get("blast", 0))
 	t.direct_damage = int(d.get("direct_damage", 0))
+	t.block_turns = int(d.get("block_turns", 0))
 	t.no_drop = bool(d.get("no_drop", false))
 	return t

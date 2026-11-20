@@ -28,6 +28,8 @@ static func color_of(id: int) -> Color:
 		7014: return Color(0.58, 0.72, 0.98)   # 智慧药剂 · 智慧蓝
 		7015: return Color(0.94, 0.62, 0.38)   # 河豚 · 河豚橙
 		7016: return Color(0.86, 0.32, 0.28)   # 爆炸蘑菇 · 蘑菇红
+		# R839 大蒜 7017 —— 蒜苗青（不用蒜白：蒜白在米色格底上几乎看不见）。
+		7017: return Color(0.76, 0.82, 0.52)
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -79,6 +81,24 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 	ci.draw_rect(rect, Color(0.07, 0.08, 0.11, 0.90), true)
 	ci.draw_rect(rect.grow(-maxf(2.0, rect.size.x * 0.045)), base, false,
 			maxf(2.0, rect.size.x * 0.045))
+	_glyph(ci, rect, id, ink)
+
+
+static func draw_glyph(ci: CanvasItem, rect: Rect2, id: int) -> void:
+	## R839：**只画图案、不画底框**的入口 —— 给「这一格已经有自己的底色」的场合用。
+	## 目前唯一用户是战场上的大蒜封锁格：那里底板已经是暗格 + 对角封条，
+	## 再叠一个 34px 的深色底框就成了三块黑压一起（实测截图里像块石头，认不出是蒜）。
+	## 颜色直接取 `color_of(id)`（亮色剪影）—— 深色底板上才看得见。
+	var tex: Texture2D = UiAssets.trap_icon(id)
+	if tex != null:
+		ci.draw_texture_rect(tex, rect, false, Color.WHITE)
+		return
+	_glyph(ci, rect, id, color_of(id))
+
+
+static func _glyph(ci: CanvasItem, rect: Rect2, id: int, ink: Color) -> void:
+	## 图案本体（不含底板 / 外框）—— `draw()` 与 `draw_glyph()` 共用同一份，
+	## 保证「工具栏里的样子」和「战场上的样子」永远是同一个形状。
 	var c := rect.get_center()
 	var s := minf(rect.size.x, rect.size.y)
 	match id:
@@ -98,6 +118,7 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7014: _wisdom(ci, c, s, ink)
 		7015: _puffer(ci, c, s, ink)
 		7016: _mushroom(ci, c, s, ink)
+		7017: _garlic(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
 
 
@@ -150,6 +171,41 @@ static func _mushroom(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 	ci.draw_circle(tip, s * 0.05, col)
 	ci.draw_line(tip, tip + Vector2(s * 0.10, -s * 0.05), col, w * 0.8, true)
 	ci.draw_line(tip, tip + Vector2(-s * 0.04, -s * 0.10), col, w * 0.8, true)
+
+static func _ellipse(ci: CanvasItem, c: Vector2, rx: float, ry: float, col: Color) -> void:
+	## 椭圆填充（CanvasItem 只有 draw_circle，缩不成椭圆）——
+	## 大蒜的三片瓣都靠它画，别为此引一张贴图。
+	var pts := PackedVector2Array()
+	var steps := 20
+	for k in steps:
+		var a := TAU * float(k) / float(steps)
+		pts.append(Vector2(c.x + cos(a) * rx, c.y + sin(a) * ry))
+	ci.draw_colored_polygon(pts, col)
+
+
+static func _garlic(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R839 大蒜 7017：**圆胖底 + 收肩 + 短茎尖 + 三道瓣纹**的蒜头剪影。
+	## 前两版（单椭圆 / 三瓣并排）在 60px 下都读成「水滴、叶子」——
+	## 认蒜头靠三件事：底部**胖**、肩部**收**、表面**有瓣纹**，且顶部是断口不是圆顶。
+	## 与 `_mushroom` / `_puffer` 同一路数：单色剪影，靠形状认东西（有 png 时整段不走）。
+	var w := maxf(1.3, s * 0.022)
+	var body := c + Vector2(0, s * 0.125)
+	var dark := Color(col.r * 0.38, col.g * 0.40, col.b * 0.32, col.a)
+	_ellipse(ci, body, s * 0.235, s * 0.200, col)                              # 圆胖底部
+	_ellipse(ci, body + Vector2(0, -s * 0.095), s * 0.150, s * 0.150, col)      # 收肩
+	# 顶端断口（蒜苗切口）：窄三角，别做成圆顶
+	ci.draw_colored_polygon(PackedVector2Array([
+			Vector2(c.x - s * 0.060, body.y - s * 0.195),
+			Vector2(c.x + s * 0.060, body.y - s * 0.195),
+			Vector2(c.x, body.y - s * 0.380)]), col)
+	# 三道瓣纹：中间一道、两侧各一道（落在分瓣的接缝上）
+	for sx: float in [-0.112, 0.0, 0.112]:
+		ci.draw_line(Vector2(c.x + sx * s, body.y - s * 0.130),
+				Vector2(c.x + sx * s, body.y + s * 0.172), dark, w, true)
+	# 底部一道浅横沟（蒜头坐在案板上的那条线）
+	ci.draw_line(Vector2(c.x - s * 0.150, body.y + s * 0.155),
+			Vector2(c.x + s * 0.150, body.y + s * 0.155), dark, w * 0.8, true)
+
 
 static func _bomb(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 	var w := maxf(1.5, s * 0.035)
