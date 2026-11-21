@@ -38,6 +38,20 @@ const HINT_FALLBACK_LINES := 8
 const HINT_BOTTOM_PAD := 14.0
 const HINT_LINE_H := 19.0            # 1280x720 窗口实测行距（像素）
 
+## R848：右栏正文的几何与排版口径（**自绘**，不再用 Label）——
+##   框从 150 一直给到卡面（445）上方 435：原来的 236×230 对译文根本不够，
+##   实测 en 最坏 425px、es 最坏 475px（16px 字号下），230 高必然裁。
+const BODY_X := 18.0
+const BODY_Y := 150.0
+const BODY_W := 236.0
+const BODY_H := 285.0
+const BODY_FS_MAX := 16
+const BODY_FS_MIN := 9
+## 行高按字号算死（1.5 倍）。**不许改回 `Font.get_height()`**：那个值随字号 / 平台
+## 跳变（实测 16→25、12→36、10→30、9→27），偏大时「以为画得下」的行数比实际少好几行，
+## 余下的被 Label 的 `clip_text` 直接削掉 —— 这就是「图鉴看不全」的根因。
+const BODY_LINE_SCALE := 1.5
+
 var repo: CardRepo
 var _all: Array[CardData] = []
 var _shown: Array[CardData] = []
@@ -59,6 +73,11 @@ var _shot_scroll := 0         # R325：出图前先滚到这个位置（`--scrol
 var _font: Font
 var _font_bold: Font
 
+## R848：右栏正文的排版结果（`_fit_body` 产、`_draw_body` 消费）。
+## 以前是往 `detail_text`（Label）里塞字，由引擎自己折行 + `clip_text` 硬裁。
+var _body_lines: Array[String] = []
+var _body_fs := BODY_FS_MAX
+
 @onready var title_label: Label = $TopBar/TitleLabel
 @onready var player_tab: Button = $TopBar/PlayerTab
 @onready var enemy_tab: Button = $TopBar/EnemyTab
@@ -75,7 +94,6 @@ var _font_bold: Font
 @onready var detail_kind: Label = $DetailPanel/KindLabel
 @onready var detail_stats: Label = $DetailPanel/StatsLabel
 @onready var detail_traits: Label = $DetailPanel/TraitsLabel
-@onready var detail_text: Label = $DetailPanel/TextLabel
 @onready var detail_badge: Label = $DetailPanel/TargetBadge
 
 
@@ -104,7 +122,6 @@ func _ready() -> void:
 	detail_kind.add_theme_color_override("font_color", UiTheme.INK_600)
 	detail_stats.add_theme_color_override("font_color", UiTheme.INK_800)
 	detail_traits.add_theme_color_override("font_color", UiTheme.INK_600)
-	detail_text.add_theme_color_override("font_color", UiTheme.INK_800)
 	repo = CardRepo.load_json()
 	_all = repo.all_cards()
 	_build_search_index()   # R631：搜索索引只在载入时建一次
@@ -360,7 +377,9 @@ func _visible(c: CardData) -> bool:
 	## 判据复用 `CardRepo.demo_allows()`，与奖励池同一个字段，不另开白名单。
 	if not CardRepo.demo_allows(c):
 		return false
-	return gallery_visible(c, GameBuild.is_release())
+	# R848：判据从 `is_release()` 换成 `is_published()` —— **试玩版的图鉴机制与发布版一致**
+	# （见过才收录、未解锁不给看），试玩玩家看到的行为就是正式版的行为。
+	return gallery_visible(c, GameBuild.is_published())
 
 
 static func gallery_locked(c: CardData, release_mode: bool) -> bool:
@@ -374,7 +393,8 @@ static func gallery_locked(c: CardData, release_mode: bool) -> bool:
 func _locked(c: CardData) -> bool:
 	## 这张卡要不要遮成通用未解锁图。发布版里未见的卡在 `_visible()` 就先被挡掉了，
 	## 所以正常路径走不到这一支 —— 留着是给「发布版哪天改成露空位」兜底。
-	return gallery_locked(c, GameBuild.is_release())
+	## R848：与 `_visible()` 同一个闸门（`is_published()`），试玩版一并锁。
+	return gallery_locked(c, GameBuild.is_published())
 
 
 func _has_active_filter() -> bool:
@@ -387,10 +407,15 @@ func _has_active_filter() -> bool:
 
 func _group_counts() -> Array[int]:
 	## [该分组总张数, 已见过张数] —— 顶栏「已收集 X / Y」用。
+	## R848：分母只算**这个版本发得出来**的卡。试玩版的图鉴只收切片内的 120 张，
+	## 分母若照旧把切片外的也数进去，玩家会永远收不满（"已收集 5 / 78" 却再也见不到新的）。
+	## 发布版 `demo_allows()` 恒 true，分母口径不变。
 	var total := 0
 	var seen := 0
 	for c in _all:
 		if c.group != _group:
+			continue
+		if not CardRepo.demo_allows(c):
 			continue
 		total += 1
 		if ProfileData.is_card_seen(c.id):
@@ -508,8 +533,8 @@ func _apply_filters() -> void:
 			_text_only_hits += 1
 		_shown.append(c)
 	var summary := ""
-	if GameBuild.is_release():
-		# 发布版：说「收集进度」而不是「卡池总量」—— 玩家看不到没见过的部分，
+	if GameBuild.is_published():
+		# 发布版 / 试玩版：说「收集进度」而不是「卡池总量」—— 玩家看不到没见过的部分，
 		# 报总数等于直接告诉他「还有多少张没解锁」，那是另一件事（全卡开才给）。
 		var gc := _group_counts()
 		summary = GameI18n.ui("map", "GALLERY_SUMMARY_RELEASE", "%s · 已收集 %d / %d") % [_group_title(), int(gc[1]), int(gc[0])]
@@ -607,16 +632,67 @@ func _on_grid_input(event: InputEvent) -> void:
 # ------------------------------------------------------------ 详情面板
 
 func _on_detail_draw() -> void:
-	## 详情面板底部的大卡面（放大 132x160，走共享 CardFace 绘制）
+	## 详情面板：上半右栏正文（自绘）+ 底部大卡面（放大 132x160，走共享 CardFace 绘制）
+	var panel: Panel = $DetailPanel
+	_draw_body(panel)
 	if _selected == null:
 		return
 	var r := Rect2(70, 445, 132, 160)
 	# R642：未解锁的详情也不给看卡面（卡图本身就是最大的剧透）。
 	if _locked(_selected):
-		CardFace.draw_locked($DetailPanel, r, _font_bold)
+		CardFace.draw_locked(panel, r, _font_bold)
 		return
-	CardFace.draw_no_record($DetailPanel, _selected, r,
+	CardFace.draw_no_record(panel, _selected, r,
 			_selected.health, false, _font, _font_bold)
+
+
+func _fit_body(text: String) -> Dictionary:
+	## R848：右栏正文排版 —— **折行走唯一口、行高自己算死**。
+	##
+	## 为什么不再用 `UiTheme.autoshrink_label()` + Label（R602~R771 的老实现）：
+	##   * Label 自己折行（`AUTOWRAP_WORD_SMART`），与卡面 / 选卡详情那套 `TextWrap`
+	##     的断行禁则、西文成词**不是同一套** → 同一句文案在两处折法不同；
+	##   * 行高由引擎按 `Font.get_height()` 决定，而这个值随字号 / 平台跳变
+	##     （实测 16→25、12→36、10→30、9→27），偏大时 230px 只画得下四五行，
+	##     余下被 `clip_text` 无声削掉 —— 用户报的「图鉴看不全」正是这个。
+	## 现在：字号 16 逐级降到 9，取第一个「折好之后整块放得进 BODY_H」的档；
+	## 一路到 9 仍放不下就如实返回 `fits = false`（由调用方换更短的文案，不悄悄丢字）。
+	## 返回 {"fs": int, "lines": Array[String], "fits": bool}。
+	var out: Array[String] = []
+	if text.strip_edges() == "" or _font == null:
+		return {"fs": BODY_FS_MAX, "lines": out, "fits": true}
+	# ⚠️ 循环严格递减（fs -= 1），绝不依赖「条件终将不成立」退出 —— 绘制期死循环就是整帧不返回。
+	var fs := BODY_FS_MAX
+	while fs > BODY_FS_MIN:
+		var lines := CardFace.wrap_text(_font, text, BODY_W, fs)
+		if float(lines.size()) * float(fs) * BODY_LINE_SCALE <= BODY_H + 0.5:
+			return {"fs": fs, "lines": lines, "fits": true}
+		fs -= 1
+	return {"fs": BODY_FS_MIN, "lines": CardFace.wrap_text(_font, text, BODY_W, BODY_FS_MIN), "fits": false}
+
+
+func _set_body(lines: Array, fs: int) -> void:
+	## 把排版结果交给绘制口。每次换卡都整份替换 —— 行数 / 字号绝不沿用上一张卡。
+	_body_lines.clear()
+	for ln in lines:
+		_body_lines.append(str(ln))
+	_body_fs = clampi(fs, BODY_FS_MIN, BODY_FS_MAX)
+	$DetailPanel.queue_redraw()
+
+
+func _draw_body(panel: Panel) -> void:
+	## R848：逐行画正文。`width` 一律传 **-1** —— 传宽度会让贴边那颗字被裁掉
+	## （R631 在选卡详情上踩过）。行宽已由 `CardFace.wrap_text` 保证 ≤ BODY_W。
+	if _body_lines.is_empty():
+		return
+	var lh := float(_body_fs) * BODY_LINE_SCALE
+	var y := BODY_Y + float(_body_fs) * 0.9   # 首行基线（与 CardDetailOverlay 同口径）
+	for i in _body_lines.size():
+		if float(i) * lh > BODY_H + 0.5:
+			break
+		panel.draw_string(_font, Vector2(BODY_X, y), _body_lines[i],
+				HORIZONTAL_ALIGNMENT_LEFT, -1, _body_fs, UiTheme.INK_800)
+		y += lh
 
 
 func _refresh_detail() -> void:
@@ -625,11 +701,12 @@ func _refresh_detail() -> void:
 		# 这时候必须说清楚「为什么空」，否则玩家会以为图鉴坏了。
 		# 文案压在 11 字以内（236px 宽、20 号字），超了会被 Label 撑出框线。
 		detail_name.text = GameI18n.ui("map", "GALLERY_EMPTY", "（无卡牌）")
-		if GameBuild.is_release():
+		if GameBuild.is_published():
 			detail_name.text = (GameI18n.ui("map", "GALLERY_EMPTY_UNSEEN", "还没见过任何卡牌") if ProfileData.seen_count() == 0
 					else GameI18n.ui("map", "GALLERY_EMPTY_FILTERED", "（没有符合条件的卡牌）"))
-		for l: Label in [detail_kind, detail_stats, detail_traits, detail_text]:
+		for l: Label in [detail_kind, detail_stats, detail_traits]:
 			l.text = ""
+		_set_body([], BODY_FS_MAX)
 		detail_badge.visible = false
 		return
 	var c: CardData = _selected
@@ -641,7 +718,7 @@ func _refresh_detail() -> void:
 	const BX := 236.0
 	const B_TITLE := Vector2(BX, 30.0)
 	const B_LINE := Vector2(BX, 24.0)
-	const B_BODY := Vector2(BX, 230.0)
+	# R848：正文框不再走 `autoshrink_label(B_BODY)` —— 改自绘，高 285（见 BODY_H）。
 	# R642：未解锁的卡只报「还没解锁」，卡名 / 种类 / 数值 / 正文一律不写 ——
 	# 图鉴的解锁乐趣全在「第一次见到它」那一刻，详情面板不能提前把答案给出来。
 	# 只留一句**怎么解锁**，否则玩家会以为这是 Bug。
@@ -650,8 +727,9 @@ func _refresh_detail() -> void:
 		UiTheme.autoshrink_label(detail_kind, GameI18n.ui("map", "GALLERY_LOCKED_KIND", "未解锁"), 14, 10, B_LINE)
 		UiTheme.autoshrink_label(detail_stats, "", 14, 10, B_LINE)
 		UiTheme.autoshrink_label(detail_traits, "", 14, 10, B_LINE)
-		UiTheme.autoshrink_label(detail_text,
-				GameI18n.ui("map", "GALLERY_LOCKED_DESCRIPTION", "在游戏里见过这张卡后，才会收录进图鉴。"), 16, 11, B_BODY)
+		var lock_fit := _fit_body(GameI18n.ui("map", "GALLERY_LOCKED_DESCRIPTION",
+				"在游戏里见过这张卡后，才会收录进图鉴。"))
+		_set_body(lock_fit["lines"], int(lock_fit["fs"]))
 		detail_badge.visible = false
 		$DetailPanel.queue_redraw()
 		return
@@ -679,19 +757,14 @@ func _refresh_detail() -> void:
 	# R717：长译文下限与 CardDetailOverlay / DeckViewer 统一为 9px。英文「毒沼」连同行距
 	# 在 11px 仍需 249px，旧下限会让末行压出框；短卡仍从 16px 起，只有确实放不下才降。
 	# R771：正文优先给**全文**（含括号补注）—— 图鉴同样是查规则的地方。
-	# 但右栏 236×230 是 `scenes/gallery.tscn` 写死的硬框，西 / 日译文加上补注之后
-	# **没有余量**（es 9235 土元素缩到 9px 仍需 237px，R717 的越界断言直接抓）。
-	# 所以先量再选：放得下用全文，放不下退回「隐藏补注」的老口径 ——
-	# 少一句补注总好过把字压出框（R631 的教训）。判据只在这一处，别在别处再抄一份。
+	# R848：框加高到 285 并改成自绘之后，全文基本都放得下（实测 es 最坏 475px@16 缩一档就进）；
+	# 极端长句仍放不下时才退回「隐藏补注」的老口径 —— 少一句补注总好过缩到看不清。
+	# 判据只在这一处，量尺就是 `_fit_body()`（与 `_draw_body()` 同一套行高）。
 	var eff_full := CardText.naturalize_detail_text(c.effect_text)
-	var body_txt := eff_full
-	# 与 R717 的越界断言**同一把尺子**（`text_need` 已把 Label 的 line_spacing 算进去）：
-	# 用 `get_multiline_string_size` 会少算行距，量出来不超、实际还是压框。
-	var need := UiTheme.text_need(UiTheme.font(), eff_full, B_BODY.x, 9, true,
-			float(detail_text.get_theme_constant("line_spacing")))
-	if need.y > B_BODY.y - 0.5:
-		body_txt = CardText.naturalize(c.effect_text)
-	UiTheme.autoshrink_label(detail_text, body_txt, 16, 9, B_BODY)
+	var body_fit := _fit_body(eff_full)
+	if not bool(body_fit["fits"]):
+		body_fit = _fit_body(CardText.naturalize(c.effect_text))
+	_set_body(body_fit["lines"], int(body_fit["fs"]))
 	# 编号附在名字后
 	# R632：玩家不需要看到卡牌编号（内部 id）—— 只写卡名。
 	UiTheme.autoshrink_label(detail_name, GameI18n.card_name(c.id, c.card_name), 20, 13, B_TITLE)

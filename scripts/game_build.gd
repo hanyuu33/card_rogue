@@ -40,6 +40,18 @@ static func is_demo() -> bool:
 	return "--demo" in OS.get_cmdline_user_args()
 
 
+static func is_published() -> bool:
+	## R848（店长口径）：「**面向玩家的成品包**」= 发布版 或 试玩版。
+	##
+	## 只在「这件事是不是玩家自己的档案 / 进度」时用它 —— 图鉴「见过才收录」、
+	## 收集进度分母这类口径，试玩版必须和发布版**同一套**（试玩玩家看到的图鉴行为
+	## 就是正式版的行为，不能因为是试玩就全解锁）。
+	##
+	## ⚠️ 别在别处直接写 `is_release() or is_demo()`：以后再加一档（展会包之类）
+	##    只有这一个口要改。要区分「具体是哪一档」仍用 `is_release()` / `is_demo()`。
+	return is_release() or is_demo()
+
+
 static func is_release() -> bool:
 	## ⚠️ 试玩版优先：demo 包不进入任何「正式版独有」的分支。
 	if is_demo():

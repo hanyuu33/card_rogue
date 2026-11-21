@@ -76020,8 +76020,20 @@ func _test_r592b() -> void:
 	# ② 源码锁：锁挂在版本闸门上；顶栏也不再报未解锁张数
 	var r753_gs_src := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
 	check_src(r753_gs_src.contains("static func gallery_locked(")
-			and r753_gs_src.contains("return gallery_locked(c, GameBuild.is_release())"),
-			"R753 源码锁：`_locked()` 走 `gallery_locked(c, GameBuild.is_release())`")
+			and r753_gs_src.contains("return gallery_locked(c, GameBuild.is_published())"),
+			"R753/R848 源码锁：`_locked()` 走 `gallery_locked(c, GameBuild.is_published())`（试玩版同口径）")
+
+	# ---- R848（店长口径「试玩版在图鉴机制上要和发布版一致」）----
+	# 判据：`is_published()` = 发布版 ∪ 试玩版；图鉴的收录 / 锁 / 收集分母都挂在它上面。
+	var r848_gs = preload("res://scripts/gallery_scene.gd")
+	GameBuild.set_test_demo(1)
+	check(GameBuild.is_published() and not GameBuild.is_release(),
+			"R848 判据：试玩版算「面向玩家的成品包」，且不冒充发布版")
+	check(not r848_gs.gallery_visible(r642_new_card, GameBuild.is_published()),
+			"R848 判据：试玩版图鉴同样「没见过就没有条目」（与发布版一致）")
+	GameBuild.set_test_demo(-1)
+	check(not GameBuild.is_published(),
+			"R848 复位：测试版不是成品包（图鉴全解锁）")
 	check_src(not r753_gs_src.contains("GALLERY_SUMMARY_LOCKED"),
 			"R753 源码锁：测试版顶栏不再报未解锁张数")
 
