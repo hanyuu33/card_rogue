@@ -82199,5 +82199,34 @@ func _test_r847() -> void:
 			continue
 		check(fimg.get_pixel(fimg.get_width() / 2, fimg.get_height() / 2).a == 0.0,
 				"R847 场地 %d 边框中心必须全透（否则糊住站上去的单位）" % fid)
+		# R847b（店长反馈「卡片超出了框」）：开口必须**装得下卡面**。
+		#   格子 110 高、场上单位卡 BOARD_CARD_H = 76 × 124/102 ≈ 92.4 高；
+		#   所以开口高度换算到格子尺度必须 ≥ 92.4px（宽度同理 ≥ 76.6px）。
+		#   第一版素材只做到 60%（66px）、第二版最薄的清泉 79%（87px）→ 卡上下直接顶出边框。
+		#   这条钉死它：素材不达标就重出，**不要在绘制侧放大去凑**（会把框推出格子压邻格）。
+		var fw: int = fimg.get_width()
+		var fh: int = fimg.get_height()
+		var open_h: int = 0
+		var open_w: int = 0
+		var run_h: int = 0
+		var run_w: int = 0
+		for fy in fh:
+			if fimg.get_pixel(fw / 2, fy).a <= 0.16:
+				run_h += 1
+				open_h = maxi(open_h, run_h)
+			else:
+				run_h = 0
+		for fx in fw:
+			if fimg.get_pixel(fx, fh / 2).a <= 0.16:
+				run_w += 1
+				open_w = maxi(open_w, run_w)
+			else:
+				run_w = 0
+		var open_h_px: float = float(open_h) * 110.0 / float(fh)
+		var open_w_px: float = float(open_w) * 124.0 / float(fw)
+		check(open_h_px >= 92.4,
+				"R847b 场地 %d 边框开口高 %.1fpx，装得下卡面 92.4px" % [fid, open_h_px])
+		check(open_w_px >= 76.6,
+				"R847b 场地 %d 边框开口宽 %.1fpx，装得下卡面 76.6px" % [fid, open_w_px])
 	check(not FieldArt.has_frame(999999),
 			"R847 未知 id 不该有边框素材（缺图要回退程序化画法，不能静默不画）")

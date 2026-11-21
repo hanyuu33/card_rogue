@@ -121,6 +121,18 @@ def cut_frame(src_path, bright=205, satmax=40):
     return out.resize((OUT_W, OUT_H), Image.LANCZOS)
 
 
+def _longest_clear(alphas, thr=40):
+    """中线上一段最长「透明区」（连续 alpha<=thr）的长度 —— 就是框的开口。"""
+    best = cur = 0
+    for a in alphas:
+        if a <= thr:
+            cur += 1
+            best = max(best, cur)
+        else:
+            cur = 0
+    return best
+
+
 def self_check(im, name):
     """四角 / 中心必须全透，四条边「向内扫一段」必须撞到边框。
 
@@ -145,6 +157,19 @@ def self_check(im, name):
     for label, pts in probes:
         if not any(px[x, y][3] >= 200 for x, y in pts):
             bad.append("%s：向内扫 %dpx 没撞到边框" % (label, span))
+
+    # ⚠️ 开口必须装得下卡面（R847b 店长反馈「卡片超出了框」）。
+    #    格子 110 高、场上单位卡 92.4 高 → 开口高度必须 ≥ 92.4/110 = 84%。
+    #    实测「正方形画布」出的边框开口只有 60%~82%，横画布（113:100）能到 91%。
+    #    这条是**硬闸门**：不达标就把该张的 prompt 改回去重出，不要靠绘制侧放大硬撑。
+    gw = _longest_clear([px[x, h // 2][3] for x in range(w)])
+    gh = _longest_clear([px[w // 2, y][3] for y in range(h)])
+    if gh < h * 0.84:
+        bad.append("开口高 %.1f%% < 84%%（缩到格子只有 %.1fpx，卡面要 92.4px）"
+                   % (100.0 * gh / h, gh * 110.0 / h))
+    if gw < w * 0.62:
+        bad.append("开口宽 %.1f%% < 62%%（卡面宽要 76.6px）" % (100.0 * gw / w))
+
     if bad:
         raise RuntimeError("%s 自检失败：%s" % (name, "; ".join(bad)))
 

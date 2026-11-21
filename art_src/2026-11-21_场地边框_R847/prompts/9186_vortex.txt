@@ -1,11 +1,11 @@
-A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on.
+A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on. The canvas is slightly WIDER than tall, about 113 to 100, NOT square — a wide landscape rectangle.
 
 The frame is a closed decorative ring of dark deep-teal sea stone, with softly rounded corners.
 A large swirling whirlpool spiral is carved into the ring itself: the spiral arms coil around all four edges and tighten into small vortices at the four corners.
 Pale foam-white streaks and thin curved water lines run along the spiral arms, and a faint cyan glow leaks from the inner lip of the frame.
 The frame is tinted dark teal, deep sea blue-green and foam white.
 The inside of the frame is completely EMPTY pure white, nothing at all drawn inside the ring.
-The border band is thick, about one eighth of the canvas width, so it stays clearly readable when shrunk.
+The border band is SLIM and even: the left and right bands are at most one twelfth of the canvas width, the top and bottom bands are at most one sixteenth of the canvas height. The empty window inside the ring is very large, at least 90% of the canvas height and at least 74% of the canvas width. Ornaments sit at the four corners and along the left and right edges; the top and bottom edges carry only a thin rail with a small corner flourish. It must still read clearly when shrunk to 124 by 110 pixels.
 
 Thick dark brown outline, flat cel shading with two or three tone steps,
 soft hand-drawn cartoon style, centered and symmetrical, whole frame inside the canvas with a small margin,
