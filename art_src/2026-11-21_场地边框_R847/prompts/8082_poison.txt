@@ -1,0 +1,16 @@
+A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on.
+
+The frame is a closed decorative ring of cracked mossy swamp stone, with irregular chipped corners.
+Clumps of dark green moss grow along the top and side edges, and thick toxic sludge drips down from the middle of the bottom edge in three hanging strands.
+Three round poison bubbles rise along the left and right edges, and two small bleached bone fragments are embedded in the stone.
+The frame is tinted sickly acid green, murky olive brown and slimy dark grey, with a faint toxic green glow in the cracks.
+The inside of the frame is completely EMPTY pure white, nothing at all drawn inside the ring.
+The border band is thick, about one eighth of the canvas width, so it stays clearly readable when shrunk.
+
+Thick dark brown outline, flat cel shading with two or three tone steps,
+soft hand-drawn cartoon style, centered and symmetrical, whole frame inside the canvas with a small margin,
+single object isolated on a plain pure white background,
+no text, no letters, no numbers, no symbols, no watermark, no drop shadow, no ground shadow.
+
+NOT a card, NOT a panel with a picture inside, NOT a swamp landscape, NOT a skull drawn in the empty middle,
+no frogs, no snakes, no mushrooms inside the frame, no lettering anywhere.

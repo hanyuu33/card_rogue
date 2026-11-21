@@ -1,0 +1,16 @@
+A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on.
+
+The frame is a closed decorative ring of dark deep-teal sea stone, with softly rounded corners.
+A large swirling whirlpool spiral is carved into the ring itself: the spiral arms coil around all four edges and tighten into small vortices at the four corners.
+Pale foam-white streaks and thin curved water lines run along the spiral arms, and a faint cyan glow leaks from the inner lip of the frame.
+The frame is tinted dark teal, deep sea blue-green and foam white.
+The inside of the frame is completely EMPTY pure white, nothing at all drawn inside the ring.
+The border band is thick, about one eighth of the canvas width, so it stays clearly readable when shrunk.
+
+Thick dark brown outline, flat cel shading with two or three tone steps,
+soft hand-drawn cartoon style, centered and symmetrical, whole frame inside the canvas with a small margin,
+single object isolated on a plain pure white background,
+no text, no letters, no numbers, no symbols, no watermark, no drop shadow, no ground shadow.
+
+NOT a card, NOT a panel with a picture inside, NOT a whole ocean scene, NOT a whirlpool drawn in the empty middle,
+no fish, no tentacles, no ships, no blue crystal, no lettering anywhere.

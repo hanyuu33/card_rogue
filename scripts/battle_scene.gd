@@ -10722,22 +10722,32 @@ func _draw_field_markers() -> void:
 		var persistent := GameEngine.is_persistent_field(card)
 		var col := (COL_FIELD_PERSIST if persistent
 				else (COL_FIELD_SELF if mine else COL_FIELD_FOE))
-		# 斜纹底（4 条45° 短线）
-		for k in 4:
-			var off := float(k) * CELL / 4.0
-			draw_line(rect.position + Vector2(off, 0),
-					rect.position + Vector2(0, off), Color(col.r, col.g, col.b, 0.30), 2.0)
-		draw_rect(rect, col, false, 2.0)
-		# 右下角小标签（场地名，缩到能塞进角里）
+		# R847：优先用**每张场地自己的边框素材**（`FieldArt`，文件名带 id）；
+		# 缺图才回落到「45° 斜纹 + 冷色描边」这套程序化画法。
+		# 两套**互斥不叠加**：斜纹是「这格挂着个效果」的兜底语汇，有了真边框之后再叠
+		# 一层斜纹只会把画面弄脏（而且斜纹只画左上三角，本来就没盖满格）。
+		# 店长口径（R847）：场地要有真边框素材，且「漩涡和清泉不该一样」→ 按 id 分图。
+		var framed := FieldArt.draw_frame(self, rect, card.id)
+		if not framed:
+			# 斜纹底（4 条45° 短线）
+			for k in 4:
+				var off := float(k) * CELL / 4.0
+				draw_line(rect.position + Vector2(off, 0),
+						rect.position + Vector2(0, off), Color(col.r, col.g, col.b, 0.30), 2.0)
+			draw_rect(rect, col, false, 2.0)
+		# 名字角标：**有边框素材时不画**（R847）。边框本身就是「这是哪张场地」的答案，
+		# 再叠一行字只会压在卡面数值行上（实机核验：标签有一半被卡框吃掉）。
+		# 缺素材（mod 去图 / 旧包没带图）时照旧写出来 —— 那种情况下文字是唯一辨识手段。
 		# R503/R562：标记角标直接写当前加伤数值 —— 现在固定 +1，但照旧读 `mark_bonus`
 		# （数值出口只有一个，将来若调档位/加变体，画法不用跟着改）。
-		var tag := card.card_name
-		if card.id == GameEngine.MARK_ID:
-			tag = "标记 +%d" % engine.state.mark_bonus
-		var px := 10
-		while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL_W - 10.0:
-			px -= 1
-		_draw_string_box_nw(_font_bold, px, tag, rect.position + Vector2(5, CELL - 6), col)
+		if not framed:
+			var tag := card.card_name
+			if card.id == GameEngine.MARK_ID:
+				tag = "标记 +%d" % engine.state.mark_bonus
+			var px := 10
+			while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL_W - 10.0:
+				px -= 1
+			_draw_string_box_nw(_font_bold, px, tag, rect.position + Vector2(5, CELL - 6), col)
 		# R84：触发类型角标（一次性场地）。「范围伤害」这类标签太长塞不进 6 字宽的角，
 		#   缩字号 + 靠左排；清泉是持续型、**没有** trigger，不画这个（别误导成「会被触发」）。
 		if not persistent and card.trigger != "":

@@ -1,0 +1,16 @@
+A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on.
+
+The frame is a closed decorative ring of carved pale sandstone with softly rounded corners.
+Water ripples are carved in low relief along all four inner edges, and three small round lotus-leaf medallions sit on the left, right and bottom edges.
+One single small water droplet hangs from the middle of the bottom edge.
+The frame is tinted pale aqua teal with light cyan glints, and a faint cold glow seeps from the inner lip of the frame.
+The inside of the frame is completely EMPTY pure white, nothing at all drawn inside the ring.
+The border band is thick, about one eighth of the canvas width, so it stays clearly readable when shrunk.
+
+Thick dark brown outline, flat cel shading with two or three tone steps,
+soft hand-drawn cartoon style, centered and symmetrical, whole frame inside the canvas with a small margin,
+single object isolated on a plain pure white background,
+no text, no letters, no numbers, no symbols, no watermark, no drop shadow, no ground shadow.
+
+NOT a card, NOT a panel with a picture inside, NOT fire, NOT lava, NOT ice, NOT snow, NOT blue crystal,
+no mountains, no trees, no characters, no creatures, no items inside the frame, no lettering anywhere.

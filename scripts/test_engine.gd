@@ -74145,6 +74145,7 @@ func _init() -> void:
 	_test_r844()
 	_test_r845()
 	_test_r846()
+	_test_r847()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -82162,3 +82163,29 @@ func _test_r846() -> void:
 			rogue += 1
 	check(repo.all_cards().size() == 344 and rogue == 67,
 			"R846：卡总数 344 / 暗影刺客 67 不变（只改数值与文案，没增删卡）")
+
+
+func _test_r847() -> void:
+	## R847：六张场地卡的**边框素材** —— 有图、尺寸对、而且**中间真的透**。
+	## 为什么要单测透明度：单位卡画在边框**下面**，中心若留着白底，站上去的单位会被
+	## 一块白膜糊住（抠图脚本 `art_src/2026-11-21_场地边框_R847/_cut_frames.py` 跑的是
+	## 「四边泛洪 + 中心泛洪」两道掩膜，这条断言就是那份自检的复制）。
+	## 顺带钉住「缺图必须回退」——`draw_frame()` 返回 false 调用方才去画斜纹，
+	## 若哪天有人改成「没图就什么都不画」，空格子会变成完全看不出挂着场地。
+	var fs_ids: Array[int] = [8028, 8036, 8037, 9186, 8082, 9224]
+	for fid: int in fs_ids:
+		var ftex := FieldArt.frame_of(fid)
+		check(ftex != null, "R847 场地 %d 应有边框素材 field_frame_%d.png" % [fid, fid])
+		if ftex == null:
+			continue
+		check(ftex.get_width() == 248 and ftex.get_height() == 220,
+				"R847 场地 %d 边框应 248×220（格子 124×110 的 2×），实际 %d×%d"
+				% [fid, ftex.get_width(), ftex.get_height()])
+		var fimg := ftex.get_image()
+		check(fimg != null, "R847 场地 %d 边框能取出 Image（核透明度用）" % fid)
+		if fimg == null:
+			continue
+		check(fimg.get_pixel(fimg.get_width() / 2, fimg.get_height() / 2).a == 0.0,
+				"R847 场地 %d 边框中心必须全透（否则糊住站上去的单位）" % fid)
+	check(not FieldArt.has_frame(999999),
+			"R847 未知 id 不该有边框素材（缺图要回退程序化画法，不能静默不画）")
