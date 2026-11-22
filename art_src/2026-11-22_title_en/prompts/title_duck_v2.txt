@@ -1,0 +1,17 @@
+Generate a FINISHED 1920x1080 English game title screen, closely reinterpret the attached Chinese reference image, and replace its Chinese title with custom illustrated English duck lettering. This is a complete title-screen image, NOT a blank background.
+
+Exact visible title: "QUACKILL". One word, eight uppercase letters in this exact order: Q-U-A-C-K-I-L-L. Render it only once. No subtitle, no extra text, no watermark, no logo variations.
+
+The title must be playful hand-sculpted duck calligraphy rather than a normal computer font. Use fat rounded irregular cream-and-honey letters, thick chocolate-brown contour, golden edge light, soft painted shadows, matching the volume and palette of the Chinese title in the reference.
+
+Mandatory integrated duck anatomy:
+1. The Q is a round white duck face in profile facing right, with a golden-orange bill and a clearly visible Q tail shaped like a little wing.
+2. The U has a subtle white duck-neck curve and tiny feather tuft, but remains a readable U.
+3. The K has one small cream wing-like upper arm.
+4. The last L ends in an orange three-toed webbed duck foot.
+5. A small happy white duck sits on the top of the final letters, waving, as in the Chinese reference.
+Keep every letter recognizable at thumbnail size. Duck features should grow out of the strokes, not float beside them. Do not use a regular bold sans-serif title.
+
+Composition and art style: warm whimsical hand-painted watercolor/gouache storybook, 16:9. Title huge across upper center (about 88 percent width), no cropping. Sunny pale-blue sky, soft clouds, ginkgo leaves upper left, thatched cottages left and right, distant duck-banner castle gate, central stone path, two cheerful chubby white ducklings at bottom left and right. Keep lower middle uncluttered for game menu buttons. Match the reference's cream yellow, pale green, soft blue, warm brown palette. No border, no vignette, no interface buttons.
+
+Priority order: correct QUACKILL spelling and readability; obvious duck anatomy inside the title letters; close resemblance to the Chinese reference's puffy dimensional title; clean menu space; background detail.

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-"""英文版主界面主视觉背景：委托 codex 出无字图，标题字后期用金渐变合成。
+"""英文版主界面主视觉：codex 出图与鸭子字形重委托。
 
-为什么不让 AI 画字：R604 的老结论——英文八个字母 AI 照样会拼错，
-所以背景只出「无字版」，QUACKILL 由 _compose_title_en.py 用 PIL 排。
+en：旧流程，无字背景 + _compose_title_en.py 的 PIL 字体标题。
+duck1 / duck2：完整主视觉，QUACKILL 直接由 codex 画成鸭子字形；
+必须逐张人工核对八字母拼写，不能只验画风。最终选用 duck2。
 
-参考图传现有中文版 title_art.png，保证同一个童话村庄世界、同一套色调与角色。
+参考图传中文版 title_art.png 与现有英文无字背景，保持同一童话村庄与构图。
 
 用法：
-    python _run_codex.py
+    python _run_codex.py duck1 duck2
 """
 import json
 import os
@@ -30,6 +31,10 @@ PROXY = os.environ.get("CODEX_PROXY", "http://127.0.0.1:7897")
 
 JOBS = [
     ("en", ("bg_title_en.txt", "bg_title_en.png", ["assets/ui/title_art.png"])),
+    ("duck1", ("title_duck_v1.txt", "title_duck_v1.png", [
+        "assets/ui/title_art.png", "art_src/2026-11-22_title_en/raw/bg_title_en.png"])),
+    ("duck2", ("title_duck_v2.txt", "title_duck_v2.png", [
+        "assets/ui/title_art.png", "art_src/2026-11-22_title_en/raw/bg_title_en.png"])),
 ]
 
 PAT = re.compile(r"[A-Za-z]:[\\/][^\"\r\n]*?generated_images[\\/][^\"\r\n]*?\.png")

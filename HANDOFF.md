@@ -2343,3 +2343,27 @@ manifest 的 9018 条目已更新 ref / prompt / note。
   修两条旧口径断言——`BATTLE_HEAL[0]` 0→3、R237/R853 那条原本漏设档位跑在 0 档、
   现补 `set_difficulty(12)`（旧代码全 0 时侥幸没红）。
 - **回归**：`_verify.py` 十套；engine 断点见当轮日志。用户数据备份 `/e/tmp/wt_r851b_userdata_bk`。
+
+## 2026-11-22 English duck lettering illustration
+- Goal: finished QUACKILL title illustration, duck anatomy integrated into Q/C/final L.
+- Scope: new art_src/2026-11-22_title_en/finished_quackill_duck_lettering_v1.png and matching prompt file; existing art and game scenes preserved.
+- Validation: inspected generated illustration for exact QUACKILL lettering and integrated duck features; System.Drawing checked final PNG at 1920x1080. Built-in imagegen used; final sized with bicubic resampling.
+- Known limitation: git status failed because git.exe execution was denied. Existing uncommitted changes could not be enumerated. No commit or push performed. No runtime integration or game-scene acceptance claimed.
+- Next: review asset in real title scene if integration is requested; commit this explicit asset/prompt file list and HANDOFF.md once Git execution is available.
+- Commit: unavailable (Git execution denied).
+
+## 2026-11-22 QUACKILL finished title illustration v2
+- Goal: complete English title screen with exact QUACKILL spelling and integrated Q/U/K/final-L duck anatomy.
+- Scope: added art_src/2026-11-22_title_en/finished_quackill_duck_lettering_v2.png and matching .prompt.txt. Existing images and scenes preserved.
+- Validation: visually inspected generated art for eight-letter spelling, duck features, unclipped title and clear lower menu area; System.Drawing verified final export at 1920x1080. Built-in image_gen used.
+- Known issues: git status failed with git.exe access denied; external uncommitted changes could not be identified. No commit or push performed. Asset-only delivery, no runtime scene integration or scene acceptance claimed.
+- Next: if integrating, inspect the actual title scene including narrow windows. Commit only the two v2 files plus this handoff entry when Git execution is available.
+- Corresponding commit: unavailable, Git execution denied.
+
+## 2026-11-22 R855 英文主视觉鸭子字形定稿
+- 店长反馈 R854 普通英文粗体没有参考中文版的鸭子字形；本轮选择 codex 候选 v2。
+- `QUACKILL` 八字母拼写与顺序已逐字验收；Q 鸭头、K 翅膀、末尾 L 鸭掌均直接参与字形。
+- 正式替换 `assets/ui/title_art_en.png`（1920×1080）；中文图、语言分支及 R607 无副标题规则不变。
+- 已重新导入并用 `tools/_shot_title_lang.gd --lang=en` 实机截图：标题无裁切、不遮六个菜单按钮。
+- 对照图：`art_src/2026-11-22_title_en/preview_ingame_zh_vs_en.png`；候选与旧版备份均保留在同目录。
+- 纯美术资产与生成工程变更，无玩法代码改动，未跑全量玩法回归。

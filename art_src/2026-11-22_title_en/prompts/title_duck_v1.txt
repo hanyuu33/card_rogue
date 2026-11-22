@@ -1,0 +1,18 @@
+Create a FINISHED 1920x1080 landscape English title-screen illustration for the cozy duck-themed card roguelike game. Use attached reference image 1 (the Chinese title screen) as the primary art-direction reference and attached reference image 2 (the current English screen) only as background/composition reference.
+
+THE MOST IMPORTANT TASK IS TO REDESIGN THE TITLE LETTERING ITSELF. The current English title is unacceptable because it is plain generic bold font with no duck anatomy. Do NOT repeat that. Do NOT deliver a textless background.
+
+Render the exact title "QUACKILL" once, as one continuous word, in uppercase: Q U A C K I L L. Spelling and letter order must be exact and instantly readable. No subtitle, no other words, no letters, no watermark, no signature, no UI.
+
+TITLE DESIGN — hand-drawn custom duck lettering, not a typeset font:
+- Huge rounded puffy storybook letterforms with organic hand-painted curves, slightly varied heights, similar visual weight and charm to the Chinese reference title.
+- Cream-white top highlights, warm buttery yellow and golden-orange lower shading, very thick dark chocolate-brown outer outline, thin warm-gold outer rim, soft dimensional shadow.
+- Make the Q unmistakably duck-themed: a cute white duck head looking right lives inside/merges into the Q bowl, with two small dark eyes and a bright orange duck bill protruding from the right side; preserve a clear Q tail so it still reads as Q.
+- Turn the C into a second subtle duck-head curve facing right, with a small orange bill at its open mouth, while keeping the C silhouette readable.
+- Give the final L a warm orange webbed duck foot integrated into its bottom stroke. Optionally add one tiny white wing feather flourish on the K, without harming legibility.
+- One tiny cheerful white duck may perch on the upper-right edge of the title and wave a wing, like the Chinese reference, but the letter-integrated duck features above are mandatory.
+- The title must dominate the upper center, approximately 88 percent of canvas width, with generous rounded outlines, and no letters cropped or separated.
+
+BACKGROUND: match reference image 1's warm hand-painted watercolor and soft gouache storybook village, sunny spring morning, pale blue sky, ginkgo tree at upper left, thatched cottages at both sides, distant pale stone gate with a duck banner, cobblestone path, and two cute chubby white ducklings at lower left and lower right looking upward. Keep the central lower area open and low contrast for menu buttons. Soft cream, spring green, sky blue and warm golden palette. No border or vignette.
+
+The result should immediately feel like the English sibling of the Chinese reference, with ducks BUILT INTO the word QUACKILL, not ducks merely standing next to ordinary text.
