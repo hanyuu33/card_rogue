@@ -19,9 +19,23 @@ static var _loaded := false
 static var _attempts: Dictionary = {}
 
 
+## R850：日界固定在北京时间午夜（UTC+8 00:00）—— 不是 UTC 午夜，也不是设备本地时区。
+## 原来直接取 UTC 日期，国内玩家要等到**早上 8 点**才换日：跨夜把前一天的局打完，
+## 页面上仍是昨天那张卡、还写着「今日已挑战」，看起来像「第二天不刷新」。
+## 而取设备本地时区更糟 —— 不同时区的玩家会拿到不同种子，Steam 榜按 DAILY_yyyyMMdd
+## 聚合，等于把两局成绩混进同一张榜。固定偏移两头都满足：全球同刻换日、同一天同一局。
+## 偏移只影响「哪一刻换日」，种子仍按日期字符串派生，所以 `RULES_VERSION` 不用升。
+const DAY_TZ_OFFSET_HOURS := 8
+
+
 static func today() -> String:
-	## UTC 日历日：全球同日同榜；不外连校时，回拨到已玩日期仍受原记录约束。
-	return Time.get_date_string_from_system(true)
+	## 全球同一刻换日、同一份种子；不外连校时，回拨到已玩日期仍受原记录约束。
+	return date_for_unix(int(Time.get_unix_time_from_system()))
+
+
+static func date_for_unix(unix: int) -> String:
+	## 先偏移再按 UTC 读日历日 = 东八区的本地日期，不依赖设备时区设置。
+	return Time.get_date_string_from_unix_time(unix + DAY_TZ_OFFSET_HOURS * 3600)
 
 
 static func set_test_mode() -> void:

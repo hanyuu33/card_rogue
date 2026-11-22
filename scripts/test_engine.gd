@@ -77758,6 +77758,13 @@ func _test_r762() -> void:
 	var d0 := "2026-11-16"
 	var d1 := "2027-02-28"
 	var c0 := DailyChallenge.config_for_date(d0)
+	# R850：日界固定 UTC+8 午夜 —— 国内玩家本地 0 点换日，全球仍是同一份种子。
+	# 1763740800 = 2025-11-21 16:00:00Z = 2025-11-22 00:00 (UTC+8)
+	check(DailyChallenge.date_for_unix(1763740799) == "2025-11-21"
+			and DailyChallenge.date_for_unix(1763740800) == "2025-11-22"
+			and DailyChallenge.today() == DailyChallenge.date_for_unix(
+					int(Time.get_unix_time_from_system())),
+			"R850 日界：UTC+8 午夜换日（今日 %s）" % DailyChallenge.today())
 	var c1 := DailyChallenge.config_for_date(d1)
 	check(DailyChallenge.valid_date(d0) and DailyChallenge.valid_date("2028-02-29")
 			and not DailyChallenge.valid_date("2027-02-29"),

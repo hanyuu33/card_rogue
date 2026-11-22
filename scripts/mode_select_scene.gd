@@ -25,6 +25,7 @@ func _ready() -> void:
 	_attempt = DailyChallenge.attempt_for(str(_cfg.get("date", "")))
 	_steam_status = _t("DAILY_STEAM_IDLE", "连接后读取今日前十")
 	_make_buttons()
+	_start_day_watch()
 	# R767：这一页停留时间短，按「马上就会用到」的顺序排队：
 	# 选人场景 → 默认选中职业的 CG（整屏背景，最贵的一张）→ 头像 → 地图。
 	# 队列前面几个基本能在玩家点按钮前读完，安卓上就不会在切场景时黑屏卡住。
@@ -97,6 +98,29 @@ func _sync_daily_button() -> void:
 			else _t("DAILY_START", "开始今日挑战"))
 
 
+func _start_day_watch() -> void:
+	## R850：这一页可能一直是同一份场景（挂着过夜、或者早上才回来接着看）。
+	## 日界一跳就整页重取，别让昨天的「今日已挑战」压着新的一天。
+	var t := Timer.new()
+	t.name = "DayWatch"
+	t.wait_time = 20.0
+	t.timeout.connect(_sync_day)
+	add_child(t)
+	t.start()
+
+
+func _sync_day() -> void:
+	var date := DailyChallenge.today()
+	if date == str(_cfg.get("date", "")):
+		return
+	_cfg = DailyChallenge.config_for_date(date)
+	_attempt = DailyChallenge.attempt_for(date)
+	_steam_entries = []
+	_steam_status = _t("DAILY_STEAM_IDLE", "连接后读取今日前十")
+	_sync_daily_button()
+	queue_redraw()
+
+
 func _start_daily() -> void:
 	# 先消耗今日次数，再建局；重进程序不能刷新。已有局由标题「继续游戏」恢复。
 	if not DailyChallenge.begin_attempt(_cfg):
@@ -123,12 +147,20 @@ func _request_steam_board() -> void:
 		_steam_btn.disabled = false
 		queue_redraw()
 		return
+	# R850：请求跨过日界就作废 —— 迟到的榜属于昨天那张卡，别糊到今天的页面上。
+	var req_date := str(_cfg.get("date", ""))
 	_board_request.board_ready.connect(func(entries: Array):
+		if req_date != str(_cfg.get("date", "")):
+			_board_request = null
+			return
 		_steam_entries = entries
 		_steam_status = ""
 		_steam_btn.disabled = false
 		queue_redraw())
 	_board_request.board_failed.connect(func(reason: String):
+		if req_date != str(_cfg.get("date", "")):
+			_board_request = null
+			return
 		_steam_status = _t("DAILY_STEAM_FAILED", "读取失败 · 不影响本地成绩") + " (" + reason + ")"
 		_steam_btn.disabled = false
 		queue_redraw())
