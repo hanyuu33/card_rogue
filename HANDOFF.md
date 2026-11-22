@@ -2369,3 +2369,6 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - 纯美术资产与生成工程变更，无玩法代码改动，未跑全量玩法回归。
 - R855b 增补：`release/store/quackill_title_en.png` 为商店宣传用标题横幅（1760×570）；
   由 `_crop_title_logo.py` 按 `(80,60,1840,630)` 从定稿裁出，保留天空背景，全部鸭子字形无裁断。
+- R855c 透明版：`release/store/quackill_title_en_alpha.png`（1685×467 RGBA，37.47% 全透明）。
+  生成脚本 `art_src/2026-11-22_title_en/_matte_title_logo.py`；三底验收图 `preview_title_alpha.png`。
+  不含天空、云、银杏、房屋；尾部小鸭与橙色鸭掌完整，外缘为深棕+暖金薄边。
