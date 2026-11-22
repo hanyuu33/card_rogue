@@ -2367,3 +2367,5 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - 已重新导入并用 `tools/_shot_title_lang.gd --lang=en` 实机截图：标题无裁切、不遮六个菜单按钮。
 - 对照图：`art_src/2026-11-22_title_en/preview_ingame_zh_vs_en.png`；候选与旧版备份均保留在同目录。
 - 纯美术资产与生成工程变更，无玩法代码改动，未跑全量玩法回归。
+- R855b 增补：`release/store/quackill_title_en.png` 为商店宣传用标题横幅（1760×570）；
+  由 `_crop_title_logo.py` 按 `(80,60,1840,630)` 从定稿裁出，保留天空背景，全部鸭子字形无裁断。
