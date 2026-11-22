@@ -533,7 +533,7 @@ func _initialize() -> void:
 				_reset()
 				RunState.start_run(_map(), GameLayers.LAYER_TWO)
 				RunState.pending_node = {"type": "battle"}
-				RunState.pending_level = GameLevels.builtin_levels()[13],
+				RunState.pending_level = GameLevels.level_by_key("hecaton"),
 			_check_r366_hecaton],
 		# R367（用户口径）：消耗型道具用尽后**灰在道具栏里**（不移出 —— 记录统计要看得出
 		#   这局用过它），但引擎侧不能再算持有。这里走真场景读道具栏与面板行。
@@ -6257,7 +6257,7 @@ func _check_r365_merchant(s: Node) -> void:
 			% [gold0, RunState.gold, n0, RunState.deck_ids.size()])
 
 func _check_r366_hecaton(s: Node) -> void:
-	## R366：百臂工场（builtin 下标 13）开局盘面 = 大哥 (0,1) + 两座塔 (2,0)/(2,2)，
+	## R366：百臂工场（`level_by_key("hecaton")`，R856 起不再写下标）开局盘面 = 大哥 (0,1) + 两座塔 (2,0)/(2,2)，
 	## 塔的实际程必须是 **2**（元组第 8 项 range_bonus 只在 load_level 里生效）。
 	## 顺带钉住「加成走副本」：卡库里的 9137 必须还是程 1。
 	var eng: Variant = s.get("engine")

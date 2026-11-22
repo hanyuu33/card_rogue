@@ -99,7 +99,7 @@ static func builtin_levels() -> Array:
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
-		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
+		_knight_charge(), _egg_pitcher(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 			_metrology_works(),
 			_laser_line(),
@@ -159,6 +159,18 @@ static func bg_key(level: Dictionary) -> String:
 	## 该关卡专属战斗背景的槽位名（`assets/ui/battle_bg_<key>.png` 里的那段 key）。
 	## 没标 key 的关卡返回空串 → 取图会直接退到「当层背景」。
 	return str(level.get("key", ""))
+
+
+static func level_by_key(key: String) -> Dictionary:
+	## 按**稳定标识**取内置关卡（R856）。
+	## 给「我明确知道要哪一关」的调用方用 —— 别写 `builtin_levels()[13]` 这种下标：
+	## R856 往第一层普通困难插了一关「鸭蛋投手」，百臂工场就从 13 漂到 14，
+	## 冒烟测试当场变红（读到的是太阳熔炉的编成）。
+	## 找不到返回空字典（调用方自己判 `is_empty()`）。
+	for lvl in builtin_levels():
+		if str(lvl.get("key", "")) == key:
+			return lvl
+	return {}
 
 
 static func all_keys() -> Array[String]:
@@ -797,6 +809,49 @@ static func _familiars() -> Dictionary:
 	}
 
 
+static func _egg_pitcher() -> Dictionary:
+	## 第一层·普通敌人-困难（R856 新增，补一层普难池 4 → 5）：
+	## 后排中央一只鸭蛋投手（9284，6 力 / 55 血 / 程 1 / 速 1），**开场持有金鸭蛋** ——
+	## 蛋（9285，0 力 / 3 血 / 程 0 / 速 0）就摆在它正前方一格，`egg_held = true`。
+	##
+	## ── 两条形态（判据只有一个：场上有没有「属于它、且还挂着的」金鸭蛋）──
+	##   ① **持蛋**：整个行动被「扔蛋」替换（`GameEngine._egg_pitcher_act`），不普攻不推进。
+	##      蛋沿同一列朝我方推：撞到第一个单位 → 停住并对其造成**投手当前力量**的伤害，
+	##      带践踏（溢出沿同列继续穿）；整列没有单位 → 直击我方 HP。
+	##   ② **无蛋**：移动速度变 **3**、每个自己回合开始力量 **+3**（无上限成长）。
+	##      这一形态才是压力来源 —— 它不再是后排炮台，而是一头冲脸的成长怪。
+	##
+	## ── 循环（蛋被打死时，见 `GameEngine._golden_egg_death`）──
+	##   蛋死 → ① 玩家手卡得一张**随机史诗卡**（补偿 / 诱惑）；
+	##          ② 投手**重新获得金鸭蛋**（新蛋生成在它正前方一格）；
+	##          ③ 投手**随机移动到后排的一列**（重新摆炮位）。
+	##   于是「打蛋」不是纯赚：你拿到史诗卡，但投手回到了后排、重新拿到弹药。
+	##   不打蛋则要一直面对速 3 / 力 +3 的冲锋形态 —— 这关的取舍就在这一下。
+	##
+	## ⚠️ 蛋血量**恒为 3**：难度 ≥3 的「敌人生命 +10%」对它不生效
+	##    （`RunState.scaled_enemy_card` 里有豁免，卡面也写了「任何难度恒定为 3」）。
+	## ⚠️ 蛋摆 row1 而不是 row2：row1 才是「投手正前方一格」= 持有的物理位置；
+	##    扔出去之后它才会飞到玩家面前，那时才是玩家能打到的位置。
+	return {
+		"name": "鸭蛋投手",
+		"key": "egg_pitcher",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_DEFAULT,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9284, "鸭蛋投手", 6, 55, 1, 1, Vector2i(0, 1)],
+			[9285, "金鸭蛋", 0, 3, 0, 0, Vector2i(1, 1)],
+		],
+		"tutorial": [],
+	}
+
+
 static func _knight_charge() -> Dictionary:
 	## 普通敌人-困难：中排三只鸭子骑士一字排开正面冲锋（3/30，速 2，击杀成长）。
 	return {
@@ -1214,20 +1269,28 @@ static func _duck_kiln() -> Dictionary:
 
 
 static func _sun_forge() -> Dictionary:
-	## 第二层·普通敌人-困难（R135）：后排中央一座太阳装置「赫利俄斯」
-	## （9130，**工事** 0 力 50 血 / 程 0 / 速 0 —— 不会打人也不会移动）。
-	## 它在场时，本方的「量产型俄倪厄」（9131，5/45 程1 速1）获得两条光环：
-	##   ① 一回合行动两次；② 每回合结束回复 2 点生命。
-	## ⚠️ 两条都**以「赫利俄斯还在场」为前提** —— 先拆掉太阳装置，两只俄倪厄
-	##    立刻回到「每回合 1 次行动、不回血」。这是这关的核心取舍：
-	##    打兵（45×2 血）还是拆塔（50 血，但它自己回不了血）。
+	## 第二层·精英敌人-简单（R135 建；R856 从「普通敌人-困难」上调）：
+	## 后排中央一座太阳装置「赫利俄斯」（9130，**工事** 0 力 **70** 血 / 程 0 / 速 0
+	## —— 不会打人也不会移动）。
+	## 它在场时，**场上所有「量产型」卡**获得两条光环：
+	##   ① 每回合可以行动两次；② 受到的**技能**伤害 -2（最少仍受 1 点）。
+	## ⚠️ 两条都**以「赫利俄斯还在场」为前提** —— 先拆掉太阳装置，场上的量产型立刻
+	##    回到「每回合 1 次行动、不减伤」。这是这关的核心取舍：
+	##    打兵（45×2 血）还是拆塔（**70** 血）。
+	## ⚠️ R856 用户口径：血量 50 → 70（拆塔不再白送 —— 原来是「先清兵后拆塔」的最优解，
+	##    现在两条路都要付代价），档位上调精英简单（敌方血条随之 60 → 80）。
+	## ⚠️ R856 同时**取消**了原来的「每回合结束回复 2 点生命」，换成本条技能减伤：
+	##    回血在双动压力下等于逼玩家先拆塔，减伤则让「先清小兵」也成了一条能走的路。
+	## ⚠️ 「量产型」判据走 `GameEngine.is_mass_produced()` 唯一口（trait + 名字前缀
+	##    双来源）—— 只判 trait 会漏掉 9131 / 9137 那 8 张（它们 trait 里没有「量产型」，
+	##    只有名字带前缀）；只判名字则会漏掉将来「挂了 trait 但名字不带前缀」的卡。
 	## ⚠️ 摆放顺序：赫利俄斯写**在数组最前**。`place()` 是算完 `acts_left` 才落子，
 	##    光环源先上场 → 后面两只俄倪厄上场时就吃到了双动；battle_scene 摆完还会
 	##    统一 `apply_extra_actions` 补一次，两条保险都留着（顺序反过来也不会漏）。
 	return {
 		"name": "太阳熔炉",
 		"key": "sun_forge",
-		"tier": TIER_NORMAL_HARD,
+		"tier": TIER_ELITE_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
 		"player_hp": 20,
@@ -1237,7 +1300,7 @@ static func _sun_forge() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9130, "赫利俄斯", 0, 50, 0, 0, Vector2i(0, 1)],
+			[9130, "赫利俄斯", 0, 70, 0, 0, Vector2i(0, 1)],
 			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 0)],
 			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 2)],
 		],

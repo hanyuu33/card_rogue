@@ -1260,6 +1260,12 @@ static func scaled_enemy_card(card: CardData) -> CardData:
 	## 与 `configure_growth`（atk_growth 独立叠加、与 card.power 解耦）顺序无关。
 	if card == null:
 		return null
+	# R856 金鸭蛋（9285）：卡面写明**任何难度血量恒定为 3** → 整卡原样放行，
+	# 连副本都不做（蛋只有血 3 这一个数值，加成就没有意义；攻击 +1 也轮不到 0 攻工事）。
+	# ⚠️ 判据只认 id：别改成 `card.traits.has("鸭蛋")` —— 生蛋鸭的鸭蛋 9022 也带那个 trait，
+	#    它是玩家侧单位、按普通规则走。
+	if card.id == GameEngine.GOLDEN_EGG_ID:
+		return card
 	var pct := enemy_hp_bonus_pct()
 	var add := enemy_power_bonus()
 	var skip_power: bool = card.is_fort() and card.power == 0

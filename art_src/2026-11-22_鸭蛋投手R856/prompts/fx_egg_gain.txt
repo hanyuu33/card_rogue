@@ -1,0 +1,15 @@
+A game visual effect sprite on a pure solid black background: a golden egg-summon flash.
+
+Design: a tall vertical oval of brilliant warm gold light shaped like an egg,
+a white-hot molten core in the center, three concentric oval shockwave rings
+expanding outward at slightly different sizes, thin straight light rays
+radiating up and down, small floating golden sparkles and short curved streaks
+scattered around the oval, plus a soft outer glow that fades to pure black.
+
+Rendering: additive-glow style, painted with smooth luminous gradients,
+no outline, no hard cut edges, high contrast against black,
+symmetrical centered composition, the whole effect fits inside the frame with margin.
+
+no text, no logo, no watermark, no frame, no border, no character, no duck,
+no egg shell, no landscape, no ground,
+the entire background must stay pure black so it can be used as an additive glow layer.

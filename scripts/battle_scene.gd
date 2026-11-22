@@ -14009,6 +14009,70 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("spell")
 				_say("收尾：这是你手卡里仅剩的一张 → %d 点伤害（平时只有 4 点）"
 						% int(data.get("dmg", 0)))
+		"egg_throw":
+			# R856 鸭蛋投手：蛋沿**同一列**飞出去。
+			# ⚠️ 没有单独画「抛物线」：`path` 是引擎给的真实落点序列，沿它逐格推一张
+			#    `egg_gain`、每格错开 70ms —— 时间差冒充飞行，不必再改 `_draw` 的绘制层。
+			#    最后在真正的落脚点补一张大的，玩家能看清「蛋停在哪里」。
+			var et_path: Array = data.get("path", [])
+			var et_to: Vector2i = data.get("to", Vector2i(-1, -1))
+			var et_hit: Vector2i = data.get("hit", Vector2i(-1, -1))
+			var et_spill := int(data.get("spilled", 0))
+			var et_pierced := str(data.get("pierced", ""))
+			for et_i in et_path.size():
+				var et_c: Vector2i = et_path[et_i]
+				_fx_push_cell(FxArt.EGG_GAIN, et_c, n + et_i * 70, 360, 96.0)
+			if et_to.x >= 0:
+				_fx_push_cell(FxArt.EGG_GAIN, et_to, n + et_path.size() * 70, 520, 140.0)
+			sfx.play("place")
+			_shake(2.0, 150)
+			var et_msg := "🥚 鸭蛋投手：扔出金鸭蛋"
+			if et_hit.x >= 0:
+				et_msg += "，撞上第一个单位"
+			if et_spill > 0:
+				et_msg += "，%d 点穿到 HP" % et_spill
+				if et_pierced != "":
+					et_msg += "（打穿的是 %s）" % et_pierced
+			_say(et_msg)
+			queue_redraw()
+		"egg_fury":
+			# R856 无蛋形态：每个自己回合开始力量 +3。飘字写在投手头顶，
+			# 让「它正在变强」这件事看得见 —— 否则玩家只会觉得莫名其妙越打越疼。
+			var ef_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var ef_amt := int(data.get("amount", 0))
+			if ef_cell.x >= 0:
+				_fx_push_cell(FxArt.EGG_GAIN, ef_cell, n, 600, 124.0)
+				_floaters.append({"pos": _cell_center(ef_cell) + Vector2(0, -34),
+					"sc": _grid_scroll, "text": "力量 +%d" % ef_amt,
+					"col": Color("ffcf4a"), "start": n, "dur": 1500})
+			_say("🥚 鸭蛋投手：没有蛋了 → 力量 +%d（现 %d）" % [ef_amt, int(data.get("power", 0))])
+			queue_redraw()
+		"egg_break":
+			# R856 金鸭蛋被打碎 —— 店长要的那个「重新获得金鸭蛋」特殊演出就在这里。
+			# ⚠️ 光爆落在**投手脚下**（`pitcher`），不是蛋碎的位置：玩家要看懂的是
+			#    「它又拿到蛋了、而且退回后排了」，而不是「一个蛋没了」。
+			var eb_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var eb_pit: Vector2i = data.get("pitcher", Vector2i(-1, -1))
+			var eb_egg: Vector2i = data.get("egg", Vector2i(-1, -1))
+			if eb_cell.x >= 0:
+				_fx_push_cell(FxArt.BLAST, eb_cell, n, 380, 118.0)
+			if eb_pit.x >= 0:
+				_fx_push_cell(FxArt.EGG_GAIN, eb_pit, n + 180, 900, 210.0)
+				_floaters.append({"pos": _cell_center(eb_pit) + Vector2(0, -44),
+					"sc": _grid_scroll, "text": "重新获得金鸭蛋",
+					"col": Color("ffd45e"), "outline": 6, "size": 19,
+					"start": n + 180, "dur": 1900})
+			sfx.play("spell")
+			var eb_msg := "🥚 金鸭蛋破碎"
+			if data.get("card") is CardData:
+				eb_msg += "：你获得一张随机史诗卡「%s」" % (data["card"] as CardData).card_name
+			if eb_pit.x >= 0:
+				eb_msg += "；鸭蛋投手重新获得金鸭蛋"
+				if eb_egg.x >= 0:
+					eb_msg += "并退回后排"
+			_say(eb_msg)
+			queue_redraw()
+
 		"egg_token":
 			sfx.play("place")
 			var eg_name := "?"

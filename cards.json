@@ -4403,7 +4403,7 @@
       "kind": "工事",
       "cost": 0,
       "power": 0,
-      "health": 50,
+      "health": 70,
       "attack_range": 0,
       "move_speed": 0,
       "rarity": 4,
@@ -4413,7 +4413,7 @@
         "工事",
         "机械"
       ],
-      "effect_text": "在场时，场上的「量产型俄倪厄」每回合可以行动两次，且每回合回复 2 点生命。",
+      "effect_text": "在场时，场上的「量产型」卡每回合可以行动两次，且受到技能伤害 -2（最少为 1）。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -7201,6 +7201,49 @@
       "effect_text": "对随机敌方单位造成 7 点伤害，重复 7 次。",
       "target_mode": "none",
       "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9284,
+      "name": "鸭蛋投手",
+      "kind": "盟友",
+      "cost": 6,
+      "power": 6,
+      "health": 55,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "鸭",
+        "投手"
+      ],
+      "effect_text": "若持有金鸭蛋：作为行动的代替，向正前方（同纵列方向）扔出一枚金鸭蛋。金鸭蛋在碰撞到第一个单位时会停止并对这个单位造成等同于自己力量的伤害，践踏（没有单位则直接对 HP 造成伤害）；若自己不持有金鸭蛋，移动速度变为 3，回合开始时力量 +3。",
+      "target_mode": "none",
+      "color": "物理",
+      "image": ""
+    },
+    {
+      "id": 9285,
+      "name": "金鸭蛋",
+      "kind": "工事",
+      "cost": 0,
+      "power": 0,
+      "health": 3,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "工事",
+        "鸭蛋",
+        "金鸭蛋"
+      ],
+      "effect_text": "受到非攻击伤害时，每次最多受到 1 点伤害。死亡：将一张随机史诗卡加入对手手卡，并使鸭子投手重新获得金鸭蛋。",
+      "target_mode": "none",
+      "color": "自然",
       "image": ""
     }
   ]

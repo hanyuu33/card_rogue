@@ -38,6 +38,22 @@ var guarding: bool = false    # 森林守护：我方 HP 受伤时由它代为�
 ## 单独一个字段而不是复用 AFFIX_DEATH —— 后者只是「它有个死亡效果」的通用标记，
 ## 具体内容各卡不同（生命循环 / 辅助刃 / 隐藏能源各认自己的 Placement 标记）。
 var guard_last_word: bool = false
+# ---- R856 鸭蛋投手 / 金鸭蛋（第一层普通困难「鸭蛋投手」）----
+## 仅金鸭蛋 9285：**是否还挂在投手手上**（true = 还没扔出去，躺在投手正前方一格）。
+## 扔蛋时置 false；蛋被破坏后由 `_golden_egg_death()` 在新蛋上重新置 true。
+## 「投手持不持蛋」一律由它推出来（`GameEngine._golden_egg_of`），不另设布尔。
+## ⚠️ **默认 true**：所有落地路径（关卡布阵 / 死亡重生 / 召唤）都走 `FieldState.place()`
+##    → `Placement.new()`，默认值就是「刚到手」的语义。R856 实机抓过：默认 false 时
+##    关卡一开局投手就进无蛋形态（速 3、每回合 +3 力），卡面那句「持有金鸭蛋」等于没写。
+var egg_held: bool = true
+## 仅鸭蛋投手 9284：**当前是不是无蛋形态**。引擎在蛋扔出 / 蛋死亡 / 自己回合开始
+## 三处刷新（判据同 `_golden_egg_of`）。effective_speed 读它 → 移动 / AI 队列自然吃到 3 速。
+var egg_less: bool = false
+## 仅鸭蛋投手 9284：无蛋形态累计的力量成长（每个自己回合开始 +3，无上限）。
+## 单开字段而不是复用 `end_atk` / `atk_growth`：那两个各有明确的回合钩子与卡面语义，
+## 混用会让「到底谁在加攻」在日志里查不出来。effective_power 里加这一项。
+var egg_fury: int = 0
+
 var last_hit_by: Vector2i = Vector2i(-1, -1)  # 击杀记功：最后一下是谁打的（鸭子骑士靠它 +2 攻击力）
 var atk_buff_turn: int = 0    # 本回合攻击力加成（撕咬 9042：回合结束时由 end_turn 清除）
 var ramp_atk: int = 0         # 潜影者 8009：每用一张牌 +1 的力量累计值（攻击或离场后清零）
@@ -286,7 +302,7 @@ func effective_power() -> int:
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
 			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk + sword_atk
-			+ totem_atk + poem_atk + master_sword_atk
+			+ totem_atk + poem_atk + master_sword_atk + egg_fury
 			- debuff - mnemo_down)
 	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
 	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）
@@ -317,6 +333,11 @@ func effective_speed() -> int:
 	# 原本 0 速（工事 / 不动单位）保持 0，不会反而被加成 1 速。
 	if speed_cap > 0:
 		sp = mini(sp, speed_cap)
+	# R856 鸭蛋投手（9284）：**无蛋形态「移动速度变为 3」** —— 直接赋值，不叠加卡面那 1 速。
+	# 走这个出口 = 移动路径 / AI 队列 / 界面绿格全部自动一致，不必在 `_move_bfs` 另开分支。
+	# 放在 speed_cap 之后：板甲那种「变为 1」的封顶仍该盖住它（上限优先）。
+	if egg_less and speed_cap <= 0:
+		sp = GameEngine.EGG_PITCHER_EGGLESS_SPEED
 	return maxi(0, sp)
 
 
@@ -570,6 +591,7 @@ const _SAVE_FIELDS: Array[String] = [
 	"dmg_reduce", "first_hit_shield", "armor", "regen", "upgrade_feed_turn",
 	"mass_mnemo_turn", "sleep_left", "stun_left", "harp_atk", "sword_atk", "poem_atk",
 	"master_sword_atk",
+	"egg_held", "egg_less", "egg_fury",
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",

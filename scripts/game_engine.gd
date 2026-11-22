@@ -318,15 +318,35 @@ const BLAZE_DUCK_DAMAGE:= 10
 const HEALER_TRAIT:= "治疗"
 const KILN_TRAIT:= "孵化"
 const KILN_CARD_ID:= 9025
-# ---- 「太阳熔炉」关卡（R135，第二层普通困难）----
+# ---- 「太阳熔炉」关卡（R135 建；R856 上调第二层·精英敌人-简单）----
 # 与「哈气」那种**效果卡**不同，这里的双动来源是**场上的工事单位**赫利俄斯：
-# 它在场 → 本方的量产型俄倪厄 ① 一回合行动两次 ② 每回合结束回 SUN_FORGE_REGEN 点。
+# 它在场 → **场上所有「量产型」卡** ① 一回合行动两次 ② 受到的技能伤害 -2（最少 1）。
 # 两条都以「赫利俄斯还在场」为前提：行动数在 FieldState.unit_actions 里实时判定，
-# 回血在 `_regen_tick` 里实时判定 —— 拆掉它两条立刻断，不需要任何收尾钩子。
-const SUN_FORGE_HELIOS_ID:= 9130   # 赫利俄斯（太阳装置，工事 0/50 程0 速0）
+# 减伤在 `_unit_damage_taken` 里实时判定 —— 拆掉它两条立刻断，不需要任何收尾钩子。
+# ⚠️ R856 起取消「每回合结束回复 2 点生命」（原 SUN_FORGE_REGEN 常量已删）——
+#    用户口径：回血在双动压力下等于逼玩家先拆塔，技能减伤才让「先清小兵」也能走。
+# ⚠️ R856 起受惠者从「量产型俄倪厄（9131）」扩到**整个量产型族** —— 判据是
+#    `is_mass_produced()` 唯一口，别在这里写 `id == 9131`。
+const SUN_FORGE_HELIOS_ID:= 9130   # 赫利俄斯（太阳装置，工事 0/70 程0 速0）
 const SUN_FORGE_FURY_ID:= 9131     # 量产型俄倪厄（盟友 5/45 程1 速1）
-const SUN_FORGE_REGEN:= 2          # 赫利俄斯在场时，每只俄倪厄每回合结束的回复量
-const SUN_FORGE_ACTIONS:= 2        # 赫利俄斯在场时，俄倪厄每回合的行动次数
+const SUN_FORGE_ACTIONS:= 2        # 赫利俄斯在场时，量产型每回合的行动次数
+const SUN_FORGE_SPELL_REDUCE:= 2   # 赫利俄斯在场时，量产型受到的技能伤害减免量
+const MASS_PRODUCED_TRAIT:= "量产型"  # 「量产型」族的 trait 写法（另一来源是名字前缀）
+
+# ---- 「鸭蛋投手」关卡（R856，第一层·普通敌人-困难）----
+# 一对卡：投手 9284 + 金鸭蛋 9285。三条状态全部由**蛋**这一侧记账：
+#   投手**持蛋**（场上有属于它、`egg_held` 仍为真的蛋）→ 整条行动换成「扔蛋」；
+#   投手**无蛋** → 移速 3、每个自己回合开始力量 +3（`_egg_pitcher_tick`）；
+#   蛋**被破坏** → 玩家随机史诗卡 + 投手重获蛋 + 投手随机回后排（`_golden_egg_death`）。
+# ⚠️ 「持没持蛋」**不挂在投手上**：多一个 `holds_egg` 布尔就会与蛋的实际状态各记一份，
+#    迟早对不上（扔出去了没清 / 蛋被别人挪走了没发现）。唯一判据 = `_golden_egg_of()`。
+# ⚠️ 蛋的血量**不吃难度加成**（卡面「任何难度血量恒定为 3」），豁免在
+#    `RunState.scaled_enemy_card()`；这里的三条常量都只是数值，别在别处再写一遍。
+const EGG_PITCHER_ID:= 9284           # 鸭蛋投手（盟友 6 力 / 55 血 / 程 1 / 速 1）
+const GOLDEN_EGG_ID:= 9285            # 金鸭蛋（工事 0 力 / 3 血 / 程 0 / 速 0）
+const EGG_PITCHER_EGGLESS_SPEED:= 3   # 无蛋形态的移动速度（卡面「移动速度变为 3」）
+const EGG_PITCHER_FURY:= 3            # 无蛋形态：每个自己回合开始力量 +3（无上限）
+const GOLDEN_EGG_HIT_CAP:= 1          # 蛋受到**非攻击**伤害时，单次最多受这么多
 const CERAMIC_CARD_ID:= 9026
 # R259：场上该方陶瓷鸭达到这个数（>=3）时，鸭子窑不再四邻各刷一只（鸭海滚雪球），
 # 改为相邻空格里随机挑一个只召唤 1 只，并给所有陶瓷鸭 +1 血量（见 _kiln_hatch）。
@@ -554,6 +574,23 @@ const TAUNT_TRAIT:= "嘲讽"
 ##    这四张的嘲讽**只在 affixes**里，而 `_taunt_targets` 只读 `card.traits` → 嘲讽一次没生效过（实测第 2 层 Boss）。
 ##    `AFFIX_TAUNT` 之前声明了但全局没人用 —— 就是这个漏子。
 ## ⚠️ 新增嘲讽卡 / 改嘲讽到底开判据时，只改这里；界面的检查也走它（`GameEngine.card_has_taunt`）。
+static func is_mass_produced(card: CardData) -> bool:
+	## 「量产型」族（R856）—— 太阳熔炉两条光环的**受惠者判据，唯一口**。
+	## 两处来源缺一不可：
+	##   * `traits` 里有「量产型」—— 目前只有 8074 量产型代达罗斯 这么挂；
+	##   * **名字**以「量产型」开头 —— 8075 / 9131 / 9133 / 9137 / 9138 / 9142 /
+	##     9207 / 9188 共 8 张只在名字上带前缀，trait 里并没有。
+	## 只判 trait 会漏 8 张（光环形同只保 8074）；只判名字则会漏掉将来「挂了
+	## trait 但名字不带前缀」的新卡。两条件取并集，才对得上玩家在卡面上看到的名字。
+	## ⚠️ `card_name` 是权威中文（`CardData.from_dict` 直接读 `name` 字段），
+	##    不受界面语言影响 —— 别换成 `GameI18n` 的显示名去判。
+	if card == null:
+		return false
+	if card.traits.has(MASS_PRODUCED_TRAIT):
+		return true
+	return card.card_name.begins_with(MASS_PRODUCED_TRAIT)
+
+
 static func card_has_taunt(card: CardData) -> bool:
 	if card == null:
 		return false
@@ -3036,6 +3073,7 @@ func _begin_turn(side: String) -> void :
 		# R663：毒瓶与毒沼统一中毒口径（_apply_poison / _poison_tick），
 		# 都在所属方回合结束结算；这里不再单开「敌人回合开始」通道。
 		_action_growth_tick(SIDE_OPPONENT)   # R161：先推进成长计数，再刷新 acts_left
+		_egg_pitcher_tick(SIDE_OPPONENT)   # R856 鸭蛋投手：无蛋形态每回合力量 +3
 		_haste_pick_tick(SIDE_OPPONENT)      # R479 哈气：第 3/5/7 回合挑一个单位永久双动（必须在 reset 之前）
 		state.reset_units(SIDE_OPPONENT)
 		_arm_debuffs(SIDE_OPPONENT)
@@ -8946,25 +8984,20 @@ func _regen_tick(side: String) -> void :
 	## 口径：只结算 `p.owner == side` 的单位（「自己回合结束」）；
 	## 满血 `continue`（不越界、不刷噪声）；回血上限读 `p.card.health`（当前卡面上限）。
 	##
-	## R135：多了第二个来源 ——「太阳熔炉」的赫利俄斯（9130）在场时，本方的量产型俄倪厄
-	## （9131）每回合额外回 `SUN_FORGE_REGEN` 点。两者**相加走同一次收尾**
-	## （满血跳过 / `mini` 夹上限），所以「自我修复 + 赫利俄斯」不会互相顶掉，也不会越界。
-	## ⚠️ 光环是**实时判定**的（每回合读一次场面），拆掉赫利俄斯下个回合就断 —— 不需要
-	## 在离场处回收，因此这条不会重蹈「把场上加成烤进 CardData」的覆辙。
+	## R233：卡面自带的「每回合结束回血」（犀牛 9016 = 2）与自我修复**相加走同一次收尾**
+	## （满血跳过 / `mini` 夹上限），两者互不顶掉、也不会越界。
+	## ⚠️ R856 用户口径：太阳熔炉那条「赫利俄斯在场 → 量产型每回合回 2 点」**已取消**，
+	##    换成「受到的技能伤害 -2」（见 `_unit_damage_taken` 的 ①c2 与
+	##    `preview_hit_damage` 的同位置镜像）。所以这里不再有第三个 `aura` 项 ——
+	##    原 `SUN_FORGE_REGEN` 常量一并删除，别把它当「还能配平数值」的旋钮留着。
 	for cell: Vector2i in state.board.keys():
 		var p: Placement = state.unit_at(cell)
 		if p == null or p.owner != side:
 			continue
-		var aura: int = 0
 		var origin := "自我修复"
-		if p.card.id == SUN_FORGE_FURY_ID and state.has_sun_forge(side):
-			aura = SUN_FORGE_REGEN
-			origin = "太阳熔炉"
-		# R233：卡面自带的「每回合结束回血」（犀牛 9016 = 2）—— 与自我修复 / 太阳熔炉
-		# 相加走同一次收尾（满血跳过 / mini 夹上限），三者互不顶掉、也不会越界。
-		if p.regen <= 0 and p.card.regen_per_turn > 0 and aura <= 0:
+		if p.regen <= 0 and p.card.regen_per_turn > 0:
 			origin = "自身"
-		var amount: int = p.regen + p.card.regen_per_turn + aura
+		var amount: int = p.regen + p.card.regen_per_turn
 		if amount <= 0:
 			continue
 		if p.health >= p.card.health:
@@ -14686,6 +14719,19 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 	if p != null and p.card != null and dmg > 0 and p.card.traits.has(MOTHERSHIP_TRAIT):
 		_log("%s：免疫所有伤害（挡下 %d 点）" % [p.card.card_name, dmg])
 		return 0
+	# ⓪b R856 金鸭蛋（9285）：**受到非攻击伤害时，每次最多受到 1 点**。
+	#     * 位置：「封顶」不是「减伤」—— 排在所有 flat 减伤之前，先封顶再走后续链条，
+	#       否则「10 伤 → 减 2 → 再减半 → 3」会绕过卡面的「每次最多 1 点」。
+	#     * 分流：`kind != "attack"`（其余一律算非攻击，与太阳熔炉 / 百臂工场同一条口径）。
+	#       普攻照常按真实伤害打 —— 蛋只有 3 血，普攻一刀就碎，这是它唯一的弱点。
+	#     * 判据只认 id：生蛋鸭的鸭蛋 9022 是玩家侧单位，不带这条上限。
+	if (p != null and p.card != null and p.card.id == GOLDEN_EGG_ID
+			and kind != "attack" and dmg > GOLDEN_EGG_HIT_CAP):
+		var egg_before: int = dmg
+		dmg = GOLDEN_EGG_HIT_CAP
+		_log("金鸭蛋：非攻击伤害 %d → %d（每次最多 %d）" % [
+			egg_before, dmg, GOLDEN_EGG_HIT_CAP])
+
 	if p != null and p.card != null and dmg > 0 and p.card.traits.has(RHINO_TRAIT):
 		var before:= dmg
 		dmg = maxi(1, dmg - RHINO_DAMAGE_REDUCE)
@@ -14720,6 +14766,22 @@ func _unit_damage_taken(p: Placement, amount: int, kind := "") -> int:
 		dmg = maxi(1, dmg - p.dmg_reduce)
 		if dmg != ab:
 			_log("%s：加厚装甲减伤 %d → 受到的伤害 %d → %d" % [p.card.card_name, p.dmg_reduce, ab, dmg])
+	# ①c2 R856 太阳熔炉（赫利俄斯 9130）：它在场时，场上所有「量产型」卡受到的
+	#     **技能**伤害 -SUN_FORGE_SPELL_REDUCE（最少仍受 1 点）。
+	#     * 位置：flat 减伤段（与犀牛 / 加厚装甲同一条「至少 1 点」下限），**排在各类
+	#       减半之前** —— 与「先加成、再减半」同口径：10 伤 → -2 = 8 → 减半 = 4。
+	#     * 分流：`kind != "attack"`（与 ③ 量产型赫利俄斯 / ③b 启示者同一条「非攻击
+	#       即技能」口径）—— 普攻不吃这 2 点，否则这关的「先清兵」就太软了。
+	#     * 两个判据都是唯一口：`GameEngine.is_mass_produced()`（trait + 名字前缀）
+	#       与 `state.has_sun_forge(p.owner)`（实时扫场面，光源一拆立刻失效）。
+	#     * 光源自己（9130 赫利俄斯）不是量产型，天然不在受惠名单 —— 它挨打照常。
+	if (p != null and p.card != null and dmg > 0 and kind != "attack"
+			and is_mass_produced(p.card) and state.has_sun_forge(p.owner)):
+		var sfb:= dmg
+		dmg = maxi(1, dmg - SUN_FORGE_SPELL_REDUCE)
+		if dmg != sfb:
+			_log("%s：技能伤害 %d → %d（太阳熔炉 -%d）" % [
+					p.card.card_name, sfb, dmg, SUN_FORGE_SPELL_REDUCE])
 	# ①g R797 龟壳（6078）：**上回合没有攻击过的己方单位**受到的伤害 -SHELL_REDUCE。
 	#    只认己方（`p.owner == SIDE_SELF`）—— 敌人挨打不减，否则等于给对面一件免费道具；
 	#    与上面几条同为 flat 减伤、同一条「至少仍受 1 点」下限。
@@ -14916,6 +14978,10 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 		dmg = maxi(1, dmg - p.upgrade_stacks * HEAVY_TANK_REDUCE_PER_STACK)
 	if dmg > 0 and p.dmg_reduce > 0:
 		dmg = maxi(1, dmg - p.dmg_reduce)
+	# R856 太阳熔炉：与 `_unit_damage_taken()` 的 ①c2 同判据、同位置
+	if (dmg > 0 and not is_attack and is_mass_produced(p.card)
+			and state.has_sun_forge(p.owner)):
+		dmg = maxi(1, dmg - SUN_FORGE_SPELL_REDUCE)
 	# R467 枭熊之怒（9212）：与 `_unit_damage_taken()` 的 ①d 同位置同理
 	if dmg > 0 and p.card.traits.has(OWLBEAR_TRAIT) and p.health * 2 > p.card.health \
 			and _zone_has(state.enemy_effects, OWLBEAR_INSTINCT_TRAIT):
@@ -15851,6 +15917,9 @@ func _deathrattle(cell: Vector2i, p: Placement) -> void :
 		PRESSURE_MINE_ID:
 			# 压感地雷（9219，R493）：负血死亡 → 把「低于 0 的那部分」炸向敌方全体
 			_pressure_mine_blast(cell, p)
+		GOLDEN_EGG_ID:
+			_golden_egg_death(cell, p)
+
 		WYVERN_ID:
 			_summon_token(WYVERN_TOKEN_ID, cell, p.owner, 1)
 		GHOUL_ID:
@@ -17412,7 +17481,10 @@ func _death_adds_cards(p: Placement) -> bool:
 	if p.guard_last_word:                 # R663 森林守护：死亡抽一张卡（会「加卡」）
 		return true
 	match p.card.id:
+		GOLDEN_EGG_ID:                       # R856：发史诗卡 + 补一枚新蛋 + 挪投手
+			return true
 		WYVERN_ID, LICH_ID, SKELETON_SUMMON_ID, GHOST_ID:
+
 			return true
 	# 母舰 9208：敌方友方被破坏 → 旁边补造一份复制（`_mothership_on_ally_death`）。
 	if p.owner == SIDE_OPPONENT and p.card.id != MOTHERSHIP_ID 			and _cell_of_unit(MOTHERSHIP_ID) != Vector2i(-1, -1):
@@ -20940,6 +21012,11 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 	# R758 常数测量员：力 0 / 程 1，通用流程只会「往前挪一步、然后空手横置」——
 	# 它的整个行动就是那一发分配。必须排在 `_ai_target_choice` **之前**：
 	# 它压根不该有普通攻击（卡面写的是「作为行动的代替」）。
+	# R856 鸭蛋投手：持蛋时整条行动换成「扔蛋」（不普攻、不推进）。
+	# 必须排在通用 `_ai_target_choice` 之前 —— 它压根不该有普通攻击（卡面「作为行动的代替」）。
+	if p.card.id == EGG_PITCHER_ID and _egg_pitcher_act(cell, p):
+		return
+
 	if p.card.traits.has(SURVEYOR_TRAIT):
 		_surveyor_act(cell, p)
 		return
@@ -21011,6 +21088,227 @@ func _ai_act(cell: Vector2i, p: Placement) -> void :
 
 		attack(dst, _ai_pick_card_target(atk_targets, moved), SIDE_OPPONENT)
 	return
+
+# ================= R856：鸭蛋投手专属 AI（「作为行动的代替」）=================
+
+func _golden_egg_of(p: Placement) -> Placement:
+	## 「投手此刻持不持蛋」的**唯一判据**：场上有没有「同一方、仍是金鸭蛋、且 `egg_held` 为真」的蛋。
+	## 返回 null = 无蛋形态（移速 3 / 每个自己回合力量 +3）。
+	## ⚠️ 蛋扔出去的那一刻 `egg_held` 就变 false —— 哪怕它只挪了两格、还躺在投手旁边，
+	##    也不算「持有」。所以判据绝不能写成「距离 1 内有蛋」。
+	## ⚠️ 不缓存：蛋可能被打碎 / 被效果挪走，缓存一份必然过期。
+	if p == null:
+		return null
+	for c: Vector2i in state.board:
+		var q: Placement = state.board[c]
+		if (q != null and q != p and q.owner == p.owner
+				and q.card != null and q.card.id == GOLDEN_EGG_ID and q.egg_held):
+			return q
+	return null
+
+
+func _egg_pitcher_of(side: String) -> Placement:
+	## 场上该方的鸭蛋投手（本关只有一只；多只时取先扫到的，迭代顺序稳定）。
+	## 蛋死亡时要靠它来「补一枚新蛋 + 挪回后排」—— 投手自己已经死了就返回 null。
+	for c: Vector2i in state.board:
+		var q: Placement = state.unit_at(c)
+		if q == null or q.owner != side or q.card == null or q.card.id != EGG_PITCHER_ID:
+			continue
+		return q
+	return null
+
+
+func _egg_pitcher_act(cell: Vector2i, p: Placement) -> bool:
+	## 投手持蛋 → 整个行动换成「扔蛋」（卡面「作为行动的代替」）。
+	## 返回 true = 这一轮行动已经用掉，调用方直接 return，不要再走通用 AI。
+	## 返回 false = 没有蛋 → 交回通用 AI（那一刻它已经是速 3 的冲锋形态）。
+	var egg: Placement = _golden_egg_of(p)
+	if egg == null:
+		p.egg_less = true
+		return false
+	_throw_golden_egg(cell, p, egg)
+	return true
+
+
+func _throw_golden_egg(pitcher_cell: Vector2i, p: Placement, egg: Placement) -> void:
+	## 扔蛋：蛋沿**同一列**朝对方半场逐格推进 —— 撞到第一个单位就停住并结算伤害；
+	## 整列没有单位（或只剩对方 HP 行）→ 直击对方 HP。三条口径别自己改：
+	##   * 伤害 = **投手当前力量**（`p.effective_power()`，含无蛋形态攒的成长），不是蛋的力量
+	##     —— 蛋本身 0 力，卡面那句「等同于自己力量」写的是**投手**的力量；
+	##   * 带践踏：击杀后的溢出沿同列继续穿（复用 `_trample_chain`，与普通攻击同口径）；
+	##   * 穿到整列尽头 → 剩下的直击 HP（走 `_damage_player` 唯一口，减伤 / 盆 / lucky7 照常）。
+	## 蛋**不会自己消失**：它停在撞到的位置、`egg_held = false`，玩家这时才打得到它。
+	## ⚠️ 蛋是真的换格子（`state.move_unit`），不是「飞过去再回来」—— 界面拿 `egg_throw`
+	##    事件的 path 演抛物线就行，数据侧不另存一份轨迹。
+	## ⚠️ 蛋是工事、`is_fort()` 为真 → 不要走 `move()`（那条会拦工事），直接 `move_unit`。
+	var egg_cell: Vector2i = _cell_of(egg)
+	if egg_cell == Vector2i(-1, -1):
+		return
+	egg.egg_held = false
+	p.egg_less = true          # 扔出去的这一刻就进入无蛋形态（移速 3 立刻生效）
+	var dir: int = 1 if p.owner == SIDE_OPPONENT else -1
+	var stop_row: int = forbidden_row_for(p.owner)   # 对方 HP 行：蛋不能落上去
+	var cur: Vector2i = egg_cell
+	var path: Array[Vector2i] = [cur]
+	var target: Placement = null
+	var target_cell := Vector2i(-1, -1)
+	while true:
+		var nxt := Vector2i(cur.x + dir, cur.y)
+		if nxt.x < 0 or nxt.x >= FieldState.BOARD_ROWS:
+			break
+		if nxt.x == stop_row:
+			break                  # 撞线：蛋停在最后一格，伤害走 HP
+		var q: Placement = state.unit_at(nxt)
+		if q != null:
+			target = q
+			target_cell = nxt
+			break
+		cur = nxt
+		path.append(cur)
+	if cur != egg_cell:
+		state.move_unit(egg_cell, cur)
+	var power: int = p.effective_power()
+	var dealt := 0
+	var pierced := ""
+	var spilled := 0
+	if target != null:
+		var hp_before: int = target.health
+		target.last_hit_by = pitcher_cell
+		dealt = _hit_unit(target, power, "战斗", true, true)
+		_log("%s：金鸭蛋撞上 %s，造成 %d 点伤害" % [
+				p.card.card_name, target.card.card_name, dealt])
+		action.emit("egg_hit", {"cell": target_cell, "amount": dealt,
+				"name": target.card.card_name, "side": target.owner,
+				"src": pitcher_cell, "atk_name": p.card.card_name, "from": cur})
+		# 践踏：只有真的打死目标才溢出（与普通攻击 `attack()` 同一条判据）
+		if target.health <= 0 and _reap(target_cell):
+			var overflow: int = dealt - maxi(hp_before, 0)
+			if overflow > 0:
+				var tr: Array = _trample_chain(p, target.owner, target_cell, overflow, pitcher_cell)
+				spilled = int(tr[0])
+				pierced = str(tr[1])
+	else:
+		spilled = power
+	# 溢出 / 整列无人 → 直击 HP
+	if spilled > 0:
+		var foe: String = SIDE_SELF if p.owner == SIDE_OPPONENT else SIDE_OPPONENT
+		_damage_player(foe, spilled, "%s 的金鸭蛋" % p.card.card_name)
+	action.emit("egg_throw", {"src": pitcher_cell, "from": egg_cell, "to": cur,
+			"path": path, "hit": target_cell, "dealt": dealt,
+			"spilled": spilled, "pierced": pierced, "side": p.owner, "card": p.card})
+	_log("%s：扔出金鸭蛋（%s → %s），命中 %s，溢出 %d" % [
+			p.card.card_name, str(egg_cell), str(cur),
+			("无" if target == null else target.card.card_name), spilled])
+	_tap(p, "%s：扔出金鸭蛋" % p.card.card_name)
+	_check_game_over()
+
+
+func _egg_pitcher_tick(side: String) -> void:
+	## 每个**自己的**回合开始：刷新投手形态，并给无蛋形态 +3 力量（卡面「回合开始时力量 +3」）。
+	## 开场那一回合它还持蛋 → 自动不成长，不需要「跳过第一回合」的特判。
+	## ⚠️ 成长**无上限**（卡面没写上限）—— 所以不能复用有封顶的 `atk_buff`。
+	for c: Vector2i in state.board:
+		var p: Placement = state.unit_at(c)
+		if p == null or p.owner != side or p.card == null or p.card.id != EGG_PITCHER_ID:
+			continue
+		var eggless: bool = _golden_egg_of(p) == null
+		p.egg_less = eggless
+		if not eggless:
+			continue
+		p.egg_fury += EGG_PITCHER_FURY
+		_log("%s：无蛋形态，力量 +%d（当前 %d）" % [
+			p.card.card_name, EGG_PITCHER_FURY, p.effective_power()])
+		action.emit("egg_fury", {"cell": c, "amount": EGG_PITCHER_FURY,
+			"power": p.effective_power(), "side": side})
+
+
+func _egg_front_spot(pit_cell: Vector2i, side: String) -> Vector2i:
+	## 投手「正前方一格」（朝对方半场）—— 新蛋就摆在那一格。被占 / 越界都返回 (-1,-1)。
+	var dir: int = 1 if side == SIDE_OPPONENT else -1
+	var c := Vector2i(pit_cell.x + dir, pit_cell.y)
+	if _can_hold(c, side):
+		return c
+	return Vector2i(-1, -1)
+
+
+func _egg_pitcher_back_spot(pitcher: Placement, cur: Vector2i) -> Vector2i:
+	## 「随机移动到一列**后排**」的落点：自己的后排那一行，随机挑一个空列（当前格也算候选）。
+	## 三列全占满 → 原地不动（返回 cur），不强行挤人。
+	var row: int = back_row(pitcher.owner)
+	var cols: Array[int] = []
+	for y in FieldState.BOARD_COLS:
+		var c := Vector2i(row, y)
+		if c == cur or _can_hold(c, pitcher.owner):
+			cols.append(y)
+	if cols.is_empty():
+		return cur
+	return Vector2i(row, cols[rng.randi_range(0, cols.size() - 1)])
+
+
+func _random_epic_card() -> CardData:
+	## 金鸭蛋的死亡补偿：**奖励池里的随机史诗**（rarity == 2）。
+	## 池子空（账号进度锁死 / 全被禁）→ 退回卡库全表里的史诗，保证「必有一张」。
+	## ⚠️ 走 `rng`（进存档的那个），不走全局 `randi()` —— 同种子回放要逐帧一致。
+	var pool: Array[CardData] = []
+	var repo: CardRepo = CardRepo.load_json()
+	for c: CardData in repo.reward_pool():
+		if c.rarity == 2:
+			pool.append(c)
+	if pool.is_empty():
+		for c2: CardData in repo.all_cards():
+			if c2.rarity == 2:
+				pool.append(c2)
+	if pool.is_empty():
+		return null
+	return pool[rng.randi_range(0, pool.size() - 1)]
+
+
+func _golden_egg_death(cell: Vector2i, egg: Placement) -> void:
+	## 金鸭蛋被破坏（卡面「死亡：将一张随机史诗卡加入对手手卡，使鸭子投手重新获得金鸭蛋」）。
+	## 三条按顺序来：
+	##   ① 对手（= 投手对面的那一方）手卡得一张**随机史诗卡**；
+	##   ② 投手**重获金鸭蛋**：新蛋摆在它正前方一格；
+	##   ③ 投手**随机移动到后排一列**。
+	## ⚠️ 顺序不能反：先摇走位再放蛋，蛋会落在旧位置。
+	## ⚠️ 投手已经不在场（被一起清场）→ 只发卡，不补蛋、不挪人。
+	## ⚠️ 蛋走 `_deathrattle` 这条死亡链，所以「补蛋」发生在击破演出之后（R360 同口径）。
+	var foe: String = SIDE_SELF if egg.owner == SIDE_OPPONENT else SIDE_OPPONENT
+	var pick: CardData = _random_epic_card()
+	if pick != null:
+		var copy: CardData = CardData.from_dict(pick.to_dict())
+		copy.upgrade_stacks = 0
+		_grant_to_hand(copy, "金鸭蛋破碎")
+		_log("金鸭蛋破碎：%s 获得随机史诗卡「%s」" % [
+			("你" if foe == SIDE_SELF else "敌方"), copy.card_name])
+	var pitcher: Placement = _egg_pitcher_of(egg.owner)
+	if pitcher == null:
+		action.emit("egg_break", {"cell": cell, "card": pick, "side": egg.owner,
+			"pitcher": Vector2i(-1, -1), "egg": Vector2i(-1, -1)})
+		return
+	var pit_cell: Vector2i = _cell_of(pitcher)
+	var spot: Vector2i = _egg_pitcher_back_spot(pitcher, pit_cell)
+	if spot != pit_cell:
+		state.move_unit(pit_cell, spot)
+		action.emit("move", {"src": pit_cell, "dst": spot, "card": pitcher.card,
+			"side": pitcher.owner, "path": [pit_cell, spot], "blink": true})
+		_log("金鸭蛋破碎：%s 随机移动到后排 %s" % [pitcher.card.card_name, str(spot)])
+	pit_cell = spot
+	pitcher.egg_less = false
+	var egg_spot: Vector2i = _egg_front_spot(pit_cell, pitcher.owner)
+	if egg_spot == Vector2i(-1, -1):
+		_log("金鸭蛋破碎：%s 正前方没有空位，蛋没有补上" % pitcher.card.card_name)
+	else:
+		var base: CardData = CardRepo.load_json().get_card(GOLDEN_EGG_ID)
+		if base != null:
+			var new_egg: CardData = CardData.from_dict(base.to_dict())
+			var placed: Placement = state.place(new_egg, egg_spot, pitcher.owner)
+			if placed != null:
+				placed.egg_held = true
+				action.emit("place", {"cell": egg_spot, "card": new_egg,
+					"side": pitcher.owner, "summon": true, "from": pit_cell})
+				_log("金鸭蛋破碎：%s 重新获得金鸭蛋（%s）" % [pitcher.card.card_name, str(egg_spot)])
+	action.emit("egg_break", {"cell": cell, "card": pick, "side": egg.owner,
+			"pitcher": pit_cell, "egg": egg_spot})
 
 # ================= R758：常数测量员专属 AI（「作为行动的代替」）=================
 
