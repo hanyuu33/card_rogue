@@ -792,7 +792,7 @@
   },
   "9116": {
    "name": "Demon Duck",
-   "effect_text": "Starts with Sleep 2: it does not act. Sleep decreases by 1 after each of its own turns, and by 1 each time it takes damage; it resumes acting as soon as Sleep reaches 0. While awake, it gains +1 Power each time it is hurt (permanent)."
+   "effect_text": "Starts with Sleep 2: it does not act, and while asleep its Armor is reset to 5 each turn. Sleep decreases by 1 after each of its own turns, and by 1 each time it takes damage; it resumes acting as soon as Sleep reaches 0, and its Armor disappears with it. While awake, it gains +1 Power each time it is hurt (permanent)."
   },
   "9117": {
    "name": "Demon Familiar",
@@ -1240,7 +1240,7 @@
   },
   "9241": {
    "name": "Laser Cannon",
-   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns. Each turn it picks two columns at random and telegraphs them; when it acts, deal damage equal to its Power to the first enemy unit in each of those two columns; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
+   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns, and while asleep its Armor is reset to 5 each turn. Each turn it picks two columns at random and telegraphs them; when it acts, deal damage equal to its Power to the first enemy unit in each of those two columns; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
   },
   "9242": {
    "name": "Shade of Pronoia",
