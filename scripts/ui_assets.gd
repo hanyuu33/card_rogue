@@ -442,6 +442,14 @@ static func title_art() -> Texture2D:
 	return get_tex("title_art")
 
 
+static func title_art_en() -> Texture2D:
+	## R854 英文版主界面主视觉：1920×1080，QUACKILL 已烘焙进图里。
+	## 背景由 codex 出无字图、标题由 PIL 奶油立体渲染合成
+	## （art_src/2026-11-22_title_en/_compose_title_en.py）——**不让 AI 画字母，八个字母它照样拼错**。
+	## 非中文界面统一用它；缺图返回 null → `title_scene` 回退 `title_bg` + 程序文字标题。
+	return get_tex("title_art_en")
+
+
 static func language_bg() -> Texture2D:
 	## R660 首次语言选择背景：1920×1080，codex 纯文生图（无文字）。
 	## 缺图返回 null → 选择页回退 `title_art` → `title_bg`，不会黑屏。

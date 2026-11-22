@@ -1,0 +1,21 @@
+Generate a 1920x1080 landscape title-screen background illustration for a cozy duck-themed card roguelike fantasy game.
+
+CRITICAL RULE: Absolutely NO text, NO letters, NO words, NO title, NO logo, NO watermark, NO signature, NO UI elements anywhere in the image. The upper-center sky area must stay completely clean and empty. This is a background plate; the title will be composited later.
+
+STYLE: warm hand-painted watercolor and soft gouache, children's storybook illustration, thick painterly brushwork, gentle and cheerful. Bright palette: cream yellow, pale spring green, soft sky blue, warm stone gray. Must match the attached reference image's world, palette and mood exactly.
+
+SCENE:
+- A peaceful storybook fantasy village on a sunny spring morning
+- Left and right edges: thatched-roof cottages with wooden fences and small hanging banners
+- A large leafy tree with ginkgo leaves in the upper left corner; a few golden leaves drifting in the air
+- Distant pale stone castle gate with a duck crest on its banner, soft atmospheric mist over the horizon
+- A cobblestone path running from the bottom center toward the distant gate
+- Two cute chubby white ducklings, one on the lower left and one on the lower right, both looking slightly upward with cheerful expressions
+- One small flying duck with tiny spread wings peeking in from the upper right area
+
+COMPOSITION:
+- Upper 45 percent of the frame: mostly open sky, light clouds and soft haze, deliberately empty and low-contrast so a title can sit on top
+- Lower middle area: open grassy ground and stone path, deliberately uncluttered so menu buttons can sit on top
+- Both ducklings fully visible, not cropped by the frame edge and not hidden behind anything
+
+Do not add any decorative frame, border or vignette. Fill the entire 16:9 canvas edge to edge.
