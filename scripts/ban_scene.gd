@@ -20,12 +20,21 @@ extends Control
 ## 列表口径 = `CardRepo.obtainable_cards()`（奖励池的**去禁卡版**）。
 ##
 ## 出图参数：`-- --screenshot`（可加 `--demo`：在测试档案里解锁几张卡，看满额度态）
+##
+## R851（安卓拖动）：列表原来只认 `MOUSE_BUTTON_WHEEL_*`，触屏没有滚轮 → 下半截永远看不到；
+##   而且点行在 `event.pressed` 就执行 → 手指一滑的**第一帧**就把卡给禁了。
+##   现在与故事页同一套：手势口 `UiDrag.scroll_delta`（鼠标拖 / 触屏拖同一手感）、
+##   细滚动条 + 上下双箭头（画与拖同源）、点击一律「按下记意图、抬起且没拖才执行」。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const ROW_H := 40.0
 const ROW_W := 980.0
 const LIST_Y := 196.0
+const UiDrag = preload("res://scripts/ui_drag.gd")
+const ScrollHint = preload("res://scripts/ui_scroll_hint.gd")
+const BAR_W := 8.0             ## 滚动条视觉宽
+const BAR_HIT_W := 20.0        ## 拖动命中区宽（只画不给命中 = 手指点不到）
 
 var _font: Font
 var _font_bold: Font
@@ -40,6 +49,14 @@ var _cls := ""
 var _toast := ""
 var _toast_t := 0.0
 var _last_mp := Vector2.INF
+## R851 拖动：正在拖哪条滚动条（"" / "list"）+ 按下点相对滑块顶的偏移。
+var _bar_drag := ""
+var _bar_grab_dy := 0.0
+## R851 按下位置（抬起才执行）：触屏第一下就是 pressed，按下即切禁会把滑动误判成点禁卡。
+var _press_pos := Vector2.INF
+## R851 拖动余量（像素）：按 ROW_H 折成整行，余量留到下一次（慢拖也不卡住）。
+var _drag_accum := 0.0
+var _breath_acc := 0.0
 
 
 func _ready() -> void:
@@ -136,6 +153,9 @@ func _refresh() -> void:
 			return a.rarity < b.rarity
 		return a.id < b.id)
 	_scroll = 0
+	_press_pos = Vector2.INF
+	_bar_drag = ""
+	_drag_accum = 0.0
 	queue_redraw()
 
 
@@ -164,6 +184,70 @@ func _max_rows() -> int:
 	return maxi(1, int((size.y - LIST_Y - 30.0) / ROW_H))
 
 
+func _max_scroll() -> int:
+	return maxi(0, _cards.size() - _max_rows())
+
+
+func _list_track() -> Rect2:
+	## 竖排在列表右沿外侧的空白带（1280 宽时右沿 1130，右侧还剩 150）。
+	## 窄屏放不下就贴回窗口右边缘 —— 别让滚动条跑到屏幕外。
+	var right := (size.x + ROW_W) * 0.5
+	var x := minf(right + 14.0, size.x - BAR_W - 10.0)
+	var top := LIST_Y
+	var bottom := LIST_Y + _max_rows() * ROW_H - 10.0
+	return Rect2(x, top, BAR_W, bottom - top)
+
+
+func _list_bar_hit() -> Rect2:
+	## 命中区比视觉条宽：8px 的条手指根本点不准。
+	var t := _list_track()
+	return Rect2(t.position.x - (BAR_HIT_W - BAR_W) * 0.5, t.position.y - 4.0,
+			BAR_HIT_W, t.size.y + 8.0)
+
+
+func _bar_thumb_rect(track: Rect2, ratio: float, t: float) -> Rect2:
+	## 滑块矩形 —— **绘制与拖动共用**，分开算一次就是「看得见摸不到」。
+	## 最小 22px：内容再长，滑块也不能细成一条线（手指点不到、眼睛看不见）。
+	var th := clampf(track.size.y * clampf(ratio, 0.04, 1.0), 22.0, track.size.y)
+	var y := track.position.y + (track.size.y - th) * clampf(t, 0.0, 1.0)
+	return Rect2(track.position.x, y, track.size.x, th)
+
+
+func _bar_grab_offset(track: Rect2, ratio: float, t: float, my: float) -> float:
+	## 按下点相对滑块顶的偏移；点在轨道空白处 = 抓滑块中心（滑块直接跟过去）。
+	var th := _bar_thumb_rect(track, ratio, t)
+	if my < th.position.y or my > th.end.y:
+		return th.size.y * 0.5
+	return my - th.position.y
+
+
+func _bar_scroll_at(track: Rect2, ratio: float, max_scroll: int, my: float) -> int:
+	## 指针 y → 滚动量（抓取式：滑块顶始终跟着手指，拖多久都不会越拖越偏）。
+	var th := _bar_thumb_rect(track, ratio, 0.0)
+	var travel := maxf(track.size.y - th.size.y, 1.0)
+	var t := clampf((my - _bar_grab_dy - track.position.y) / travel, 0.0, 1.0)
+	return int(round(t * float(max_scroll)))
+
+
+func _draw_bar(track: Rect2, ratio: float, t: float) -> void:
+	## 细滚动条（轨道 + 滑块），配色沿用 BRASS 系；滑块压暗一档才认得出是可拖的。
+	## ⚠️ 只在真的溢出时调用：装得下却挂根条 = 骗玩家「下面还有」。
+	var lit := track.grow(7.0).has_point(get_local_mouse_position())
+	draw_rect(track, Color(0.30, 0.26, 0.18, 0.22), true)
+	draw_rect(track, Color(UiTheme.ADVENTURE_BRASS, 0.70), false, 0.8)
+	var thumb := _bar_thumb_rect(track, ratio, t)
+	var fill := UiTheme.ADVENTURE_BRASS.darkened(0.16 if lit else 0.26)
+	draw_rect(thumb, fill, true)
+	draw_rect(thumb, Color(UiTheme.ADVENTURE_BRASS_LIT, 0.92), false, 0.8)
+
+
+func _set_scroll(v: int) -> void:
+	var nv := clampi(v, 0, _max_scroll())
+	if nv != _scroll:
+		_scroll = nv
+	queue_redraw()
+
+
 func _row_at(pos: Vector2) -> int:
 	for i in _max_rows():
 		var idx := _scroll + i
@@ -182,38 +266,86 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	# R851：滚轮 / 按住内容拖 / 拖滚动条三种翻法（触屏没有滚轮）。
+	# 点击一律「按下只记意图、抬起且没拖才执行」—— 触屏滑动的第一帧就是 pressed。
 	if event is InputEventMouseMotion:
-		_hover = _row_at(event.position)
+		var mm := event as InputEventMouseMotion
+		if _bar_drag == "list":
+			_set_scroll(_bar_scroll_at(_list_track(),
+					float(_max_rows()) / float(maxi(1, _cards.size())),
+					_max_scroll(), mm.position.y))
+			return
+		if _press_pos != Vector2.INF and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+			if _drag_rows(mm):
+				_hover = -1
+				return
+		_hover = _row_at(mm.position)
 		queue_redraw()
-	elif event is InputEventMouseButton and event.pressed \
-			and event.button_index == MOUSE_BUTTON_LEFT:
-		if _back_rect().has_point(event.position):
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP \
+				or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			if mb.pressed:
+				var step := 4 if mb.button_index == MOUSE_BUTTON_WHEEL_DOWN else -4
+				_set_scroll(_scroll + step)
+			return
+		if mb.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if mb.pressed:
+			_press_pos = mb.position
+			_drag_accum = 0.0
+			if _max_scroll() > 0 and _list_bar_hit().has_point(mb.position):
+				_bar_drag = "list"
+				_bar_grab_dy = _bar_grab_offset(_list_track(),
+						float(_max_rows()) / float(maxi(1, _cards.size())),
+						float(_scroll) / float(maxi(1, _max_scroll())), mb.position.y)
+				_press_pos = Vector2.INF
+			return
+		# —— 抬起：拖动收尾，或者真的是一次点击
+		var dragged := _bar_drag == "list"
+		_bar_drag = ""
+		var press := _press_pos
+		_press_pos = Vector2.INF
+		if dragged or press == Vector2.INF or UiDrag.drag_moved(press, mb.position):
+			queue_redraw()
+			return
+		if _back_rect().has_point(press):
 			sfx.play("click")
 			_back()
 			return
 		# R352：职业页签
 		for ti in PlayerClass.ids().size():
-			if _tab_rect(ti).has_point(event.position):
+			if _tab_rect(ti).has_point(press):
 				var ids := PlayerClass.ids()
 				if _cls != ids[ti]:
 					_cls = ids[ti]
 					sfx.play("click")
 					_refresh()
 				return
-		var hit := _row_at(event.position)
+		var hit := _row_at(press)
 		if hit >= 0:
 			_toggle(_cards[hit])
 			return
-	elif event is InputEventMouseButton and event.pressed \
-			and (event.button_index == MOUSE_BUTTON_WHEEL_DOWN
-			or event.button_index == MOUSE_BUTTON_WHEEL_UP):
-		var step := 4 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -4
-		var hi := maxi(0, _cards.size() - _max_rows())
-		_scroll = clampi(_scroll + step, 0, hi)
-		queue_redraw()
-	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		return
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if _menu != null:
 			_menu.toggle()
+
+
+func _drag_rows(mm: InputEventMouseMotion) -> bool:
+	## 按住内容拖：像素位移按 ROW_H 折成整行，余量留到下一次（不丢手感）。
+	## ⚠️ 单位必须是 ROW_H(40) 而不是正文行距 26，否则手指走 40px 被算成 1.5 行，
+	##    安卓上「一碰就飞」（故事页 R735 踩过同一个坑）。
+	var d := UiDrag.scroll_delta(mm, 0.0)
+	if d == 0.0:
+		return false
+	_drag_accum += d
+	var rows := int(_drag_accum / ROW_H)
+	if rows != 0:
+		_drag_accum -= float(rows) * ROW_H
+		_set_scroll(_scroll + rows)
+	return true
 
 
 func _toggle(c: CardData) -> void:
@@ -251,6 +383,12 @@ func _process(delta: float) -> void:
 	if mp != _last_mp:
 		_last_mp = mp
 		queue_redraw()
+	# R851：只有真的溢出才需要呼吸重绘（箭头/滑块提示）；20fps 足够。
+	if _max_scroll() > 0:
+		_breath_acc += delta
+		if _breath_acc >= 0.05:
+			_breath_acc = 0.0
+			queue_redraw()
 
 
 func _back() -> void:
@@ -309,6 +447,13 @@ func _draw() -> void:
 			break
 		_draw_row(idx, _cards[idx])
 	if _cards.size() > _max_rows():
+		# R851：右侧细滚动条 + 上下双箭头。先让玩家知道下面还有，才谈得上往下看。
+		var track := _list_track()
+		_draw_bar(track, float(_max_rows()) / float(_cards.size()),
+				float(_scroll) / float(maxi(1, _max_scroll())))
+		ScrollHint.draw(self, track.get_center().x, track.position.y - 4.0,
+				track.end.y + 4.0, _scroll > 0, _scroll < _max_scroll(),
+				ScrollHint.breath())
 		# R630：底注原来画在 size.y - 12，纸面九宫格内框只到 size.y - 16、边框还有 ~12 厚
 		# → 整行被框线横切（与故事页 / 记录页同款）。收到 -36，落在内框内侧。
 		# ⚠️ 这个数要和 story_scene.gd 的底注保持一致，改一处就要对齐另一处。
