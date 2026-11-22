@@ -115,7 +115,7 @@ g["difficulties"] = named([
 ])
 g["difficulty_notes"] = named([
     ("无", "None", "なし"),
-    ("篝火回复生命值降低", "Reduced Campfire Healing", "篝火のHP回復量が低下"),
+    ("工具掉落率下降", "Lower Tool Drop Rate", "ツールドロップ率の低下"),
     ("战斗胜利不再回复生命值", "No Healing after Battle Victories", "戦闘勝利時にHPを回復しない"),
     ("敌人更加顽强", "Enemies Are Tougher", "敵がさらに頑強になる"),
     ("稀有卡牌获取概率降低", "Lower Rare Card Chance", "レアカードの入手確率低下"),

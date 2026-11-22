@@ -20539,7 +20539,7 @@ func _init() -> void:
 
 	# ---- R223：难度档位 0~10（继承制：高难度继承低难度全部 debuff）----
 
-	# 0 = 金钱 150；1 = 休息回复降低（R224 起无数值效果，文本保留）；
+	# 0 = 金钱 150 / 工具掉落 33%（R853）；1 = 工具掉落降到 10%（R853，篝火数值不动）；
 
 	# 2 = 战斗胜利不回血（R224 起全档位同此，文本保留）；3 = 敌血 +10%；4 = 稀有率 ×0.5；
 
@@ -20548,17 +20548,20 @@ func _init() -> void:
 	# 10 = 精英出现增多（R380 / R852：明房 / 「?」房精英出现概率 ×1.3；R852 起「?」房照旧刷商店，
 	#      加权代价只从战斗 / 事件 / 宝箱扣，商店占比不变）。
 
-	# R224 全局规则「除到达新的一层外不能回复 HP」：战斗胜利回血 / 休息回血两表归零，
+	# R853（店长口径）：难度 2 只关「战斗胜利默认回血」这一条，其他途径正常；
 
-	# 下面难度 0/1/2 的回血断言全部改成「恒 0」。
+	# 「除到新层外不能回血」是苹果 6027 的代价，不是难度规则。
 
 	RunState.set_difficulty(0)
 
 	RunState.reset(50)
 
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 20,
+	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 20,
 
-			"难度 0：战斗胜利不回血（R224）/ 篝火回血 40%% = 20（R237 恢复）")
+			"R853 难度 0：战斗胜利默认回血 +3 / 篝火回血 40%% = 20")
+
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.33),
+			"R853 难度 0：工具掉落率 33%")
 
 	check(RunState.start_gold() == 150 and RunState.chocolate_per_layer() == RogueMap.MAX_STEPS
 
@@ -20582,19 +20585,25 @@ func _init() -> void:
 
 	RunState.take_damage(30)
 
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 13,
+	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 13,
 
-			"难度 1：战斗胜利不回血 / 篝火回血 25%% = 13（R237）")
+			"R853 难度 1：战斗胜利默认回血 +3 / 篝火回血 25%% = 13")
 
 	check(RunState.rest() == 13 and RunState.hp == 33,
 
 			"难度 1：篝火休息回复 13（30/50 → %d/50）" % RunState.hp)
 
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.10),
+			"R853 难度 1：工具掉落率降到 10%")
+
+	check(is_equal_approx(RunState.tool_drop_chance_at(12), 0.10),
+			"R853 难度 12：工具掉落率仍是 10%")
+
 	RunState.set_difficulty(2)
 
 	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() == 0.25,
 
-			"难度 2：战斗胜利不回血 / 篝火 25%%（R237）")
+			"R853 难度 2：战斗胜利默认回血已关 / 篝火 25%% 照常生效")
 
 	RunState.set_difficulty(3)
 
@@ -20701,17 +20710,21 @@ func _init() -> void:
 
 	check(RunState.difficulty == 0, "难度档位：负数被钳制到 0")
 
+	check(is_equal_approx(RunState.TOOL_DROP_CHANCE_EASY, 0.33)
+			and is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10),
+			"R853 工具掉落率常量：33% / 10%")
+
 	check(RunState.DIFFICULTY_COUNT == 13 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 13
 
 			and RunState.DIFFICULTY_REST_PCT.size() == 13
 
 			and RunState.DIFFICULTY_TEXTS.size() == 13
 
-			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 0 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
+			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 3 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
 
 			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
 
-			"难度档位：共 13 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
+			"R853 难度档位：13 档；战斗胜利默认回血 3(0/1档)·0(2+档) / 篝火 40%%(0档)·25%%(1档起）")
 
 	# ---- R795：难度显示「数字 + 名称」（结算副标题 / 对战记录）----
 	check(RunState.difficulty_label(0) == "0 轻松" and RunState.difficulty_label(12) == "12 昂贵"
@@ -20784,13 +20797,15 @@ func _init() -> void:
 
 	# ---- R224：全局 HP 规则 + 苹果 6027 + 牛奶 6028 + 附魔资格唯一口 ----
 
-	# ① 两条自动回血路径（战斗胜利 / 休息）归零 —— 函数层再钉一遍
+	# ① R853：难度 12 战斗胜利默认回血关掉，篝火照常 —— 函数层再钉一遍
+
+	RunState.set_difficulty(12)   # R853：这条断言RunState原漏设档位，实际跑在 0 档
 
 	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() > 0.0
 
 			and RunState.rest_heal_amount() > 0,
 
-			"R237：战斗胜利仍不回血（R224 保留）；篝火回血已恢复（rest_pct %.2f）"
+			"R237/R853：难度 12 战斗胜利不回血；篝火回血照常（rest_pct %.2f）"
 
 			% RunState.rest_pct())
 
@@ -20813,6 +20828,26 @@ func _init() -> void:
 			% [RunState.hp, RunState.max_hp])
 
 	check(RunState.has_relic(RunState.APPLE_RELIC_ID), "苹果：登记进道具栏")
+
+	# R853 苹果代价：持有期间锁全部战外回血，换层回满 / 拿取瞬间那口 20% 例外。
+	check(RunState.hp_recovery_locked(), "R853 苹果代价：持有即锁战外回血")
+	check(RunState.battle_win_heal() == 0, "R853 苹果代价：战斗胜利默认 +3 也被锁")
+	var r852_before_rest := RunState.hp
+	check(RunState.rest() == 0 and RunState.hp == r852_before_rest,
+			"R853 苹果代价：篝火回复被锁（HP 不动）")
+	check(RunState.heal(20) == 0 and RunState.hp == r852_before_rest,
+			"R853 苹果代价：通用 heal 口一律 0")
+	RunState.gain_max_hp(5)
+	check(RunState.max_hp == 62 and RunState.hp == r852_before_rest,
+			"R853 苹果代价：上限照涨、附带回血不给")
+	# 换层回满不走 heal()（源码守卫：advance_layer 里直接写 hp = max_hp）
+	var r852_state_src := FileAccess.get_file_as_string("res://scripts/run_state.gd").replace("\r\n", "\n")
+	check_src(r852_state_src.find("hp = max_hp                      # 二层起始：恢复所有生命") >= 0,
+			"R853 换层回满直接写 hp，不受苹果锁血影响")
+	# 清理：还原到本段开始的状态，别污染后面的断言
+	RunState.relics.erase(RunState.APPLE_RELIC_ID)
+	check(not RunState.hp_recovery_locked() and RunState.battle_win_heal() == 3,
+			"R853 苹果代价：移除后恢复（战斗胜利默认 +3）")
 
 	# ③ 牛奶：随机两种附魔落到「合规且未附魔」的卡上，卡组本身不动
 
@@ -78872,6 +78907,9 @@ func _test_r796() -> void:
 	check(RunState.rabbit_foot_gold() == 10, "R796 兔脚：持有 → 战后金币 +10")
 
 	# ⑤ 兔脚：工具掉率**加算** 10%（300 场对比，走派生流所以确定性）
+	# R853：钉在难度 1（10% → 20%）上，免得难度 0 的 33% 把基线挪走。
+	var r796_sv_diff := RunState.difficulty
+	RunState.set_difficulty(1)
 	RunState.relics = []
 	RunState.tool_drop_pledge = 0
 	RunState.tool_roll_seq = 0
@@ -78889,6 +78927,7 @@ func _test_r796() -> void:
 	check(r796_hits_rabbit > r796_hits_plain + 15,
 			"R796 兔脚：掉率加算 10%%（300 场 %d → %d 次掉落）"
 			% [r796_hits_plain, r796_hits_rabbit])
+	RunState.set_difficulty(r796_sv_diff)
 
 	# ⑥ 钻头：X ≥ 6 翻倍、X < 6 不动；没道具一律不翻
 	RunState.relics = [6077]

@@ -554,10 +554,28 @@ func _init() -> void:
 	# 概率 / 满栏 / 入队 / 领取 / 放弃 五件事都钉在这里；「哪一类战斗」由
 	# `battle_scene` 的调用点决定（它不收 node_type，所以普通、精英、Boss、事件遭遇战
 	# 走的是同一条路）。
-	check(is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10), "掉落概率常量就是 10%")
+	check(is_equal_approx(RunState.TOOL_DROP_CHANCE_EASY, 0.33)
+			and is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10),
+			"R853 概率常量：难度 0 = 33% / 1 档起 = 10%")
+	var r852_sv_diff := RunState.difficulty
+	RunState.set_difficulty(0)
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.33),
+			"R853 难度 0：工具掉落率 33%")
 	var saved_seed := RunState.run_seed
 	RunState.run_seed = 20261114
 	RunState.tool_roll_seq = 0
+	# R853 难度 0：二项分布 n=1000 p=0.33 的 ±3σ ≈ ±45 → 285~375。
+	var easy_hits := 0
+	for i in 1000:
+		RunState.traps = [-1, -1, -1]
+		if RunState.roll_battle_tool_drop() > 0:
+			easy_hits += 1
+	check(easy_hits >= 285 and easy_hits <= 375,
+			"R853 难度 0：1000 场掉率落在 285~375 次（实测 %d）" % easy_hits)
+	# R694（用户口径「任何战斗都有 10% 概率掉落工具」）：1 档起仍是 10%。
+	RunState.set_difficulty(1)
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.10),
+			"R853 难度 1：工具掉落率 10%")
 	# 1000 场：每场先清空栏位，只测「摇不摇得中」。二项分布 n=1000 p=0.1 的 ±3σ ≈ ±9.5，
 	# 所以放宽到 70~130 —— 掉率真漂成 5% 或 15% 一定被抓到，又不会因为个别取样变随机红。
 	var hits := 0
@@ -576,6 +594,7 @@ func _init() -> void:
 			full_hits += 1
 	check(full_hits >= 8 and full_hits <= 32,
 			"工具栏满（3/3）时照样按 10%% 掉（200 场实测 %d）" % full_hits)
+	RunState.set_difficulty(r852_sv_diff)
 	# 满栏掉出来的工具也能一路走到「领进来」：丢弃一个旧槽就行（数据层口）。
 	var full_id := 7004
 	RunState.traps = [7001, 7002, 7003]

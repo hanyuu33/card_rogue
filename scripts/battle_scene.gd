@@ -8725,6 +8725,9 @@ func _show_over(win: bool) -> void:
 		# 肉鸽 run 结算：写战斗记录（卡组内容 / 是否失败 / 最终血量）
 		if win:
 			RunState.hp = maxi(0, engine.state.hp_self)
+			# R853（店长口径）：战斗胜利默认回血 +3（0/1 档，2+ 档为 0），
+			# 走 run 层的 `heal()` —— 苹果 6027 持有期间自动锁住（换层回满例外）。
+			RunState.heal(RunState.battle_win_heal())
 			# 鸭梨（6019）：战斗内每次 HP 受伤累计的最大生命提升，写回 run（跨战斗保留）
 			RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
 			# R234 止血绷带（6029）：本场受伤合计 > 20 → 本层下次休息额外 +8（同层累计）。

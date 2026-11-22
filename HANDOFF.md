@@ -2314,3 +2314,32 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - **i18n**：`interface_*.json` 新增 `daily` 域 43 条（20 名称 + 20 效果 + 3 界面），四语齐。
 - **回归**：`_verify.py` 全绿；engine **6279✓ 0✗**（+27 条 `_test_r767`）。
 - 顺带：`_test_r762` 两条旧断言按新口径更新（卡组改随机构筑；榜名里的版本号写成表达式）。
+
+## 2026-11-22 R853 回血口径归位 + 难度 1 改工具掉率 + 苹果代价
+
+- **口径（店长）**：之前把「除到达新的一层外不能回复 HP」当成 R224 的全局难度规则，是记串了。
+  真相＝**苹果 6027 的代价**；难度 2 的「战斗胜利不再回复生命值」只关**战斗胜利默认回血**
+  那一条，其他途径（篝火 / 圣餐 / 道具 / 换层）照常。
+- **难度 1 文本**：`DIFFICULTY_TEXTS[1]` 由「篝火回复生命值降低」换成「工具掉落率下降」；
+  篝火数值表 `DIFFICULTY_REST_PCT` **一律不动**（0 档 0.40 / 1+ 档 0.25）。
+- **工具掉落率**：新增唯一口 `RunState.tool_drop_chance()` / `tool_drop_chance_at(d)`，
+  难度 0 = 33%（`TOOL_DROP_CHANCE_EASY`）、难度 1+ = 10%（`TOOL_DROP_CHANCE`）。
+  `roll_battle_tool_drop()` 读这里；兔脚 6076 仍加算 +10%（0 档 33→43%，1+ 档 10→20%）。
+  `test_traps` ⑥c 段显式钉难度 0（1000 场 285~375）与难度 1（70~130），末尾还原。
+- **战斗胜利默认回血**：`DIFFICULTY_BATTLE_HEAL` 由全 0 改成 `[3,3,0×11]`（0/1 档 +3）。
+  `battle_scene._show_over()` 胜利分支在写回 hp 后真正调用 `RunState.heal(battle_win_heal())`；
+  此前 `battle_win_heal()` 没有任何调用点，只有测试在读（空壳函数）。
+- **苹果代价（锁血）**：新增唯一口 `RunState.hp_recovery_locked()`＝`has_relic(6027)`。
+  `heal()` 开头挡（篝火 / 圣餐 / 止血绷带 / 三层起点补给 / 战斗胜利默认 +3 全覆盖）；
+  `gain_max_hp()` 与类固醇 6001 / 重鸭 6017 的直接写 hp 也挡——**上限照涨、附带回血不给**。
+  **三个例外**：① 换层回满（`advance_layer` 直接写 `hp = max_hp`）；
+  ② 拿苹果瞬间 +7 与 20% 两口直接写 hp（此时 `relics` 已 append、锁已生效，
+  不能再走 `gain_max_hp()`，否则 +7 那口被自己的锁吞掉）；③ 战斗内自愈 9065 / 黄桃罐头走
+  `engine.battle_end_heal()`，不受此锁影响。
+- **i18n**：`difficulty_notes` 换词条（保留 13 条）；`build_glossary.py` 源同步；
+  `validate_glossary` / `validate_spanish` / `_audit_text_sources` 三套全绿。
+  ⚠️ 校验器锚点 `## R224：全局规则` 必须留在 `DIFFICULTY_TEXTS` 之后——注释改名会断锚。
+- **测试**：新增苹果锁血 8 条断言（持有即锁 / 篝火 / heal / 上限 / 源码守卫 / 移除恢复）；
+  修两条旧口径断言——`BATTLE_HEAL[0]` 0→3、R237/R853 那条原本漏设档位跑在 0 档、
+  现补 `set_difficulty(12)`（旧代码全 0 时侥幸没红）。
+- **回归**：`_verify.py` 十套；engine 断点见当轮日志。用户数据备份 `/e/tmp/wt_r851b_userdata_bk`。

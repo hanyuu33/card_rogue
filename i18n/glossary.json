@@ -1243,9 +1243,9 @@
       "en": "None",
       "ja": "なし"
     },
-    "篝火回复生命值降低": {
-      "en": "Reduced Campfire Healing",
-      "ja": "篝火のHP回復量が低下"
+    "工具掉落率下降": {
+      "en": "Lower Tool Drop Rate",
+      "ja": "ツールドロップ率の低下"
     },
     "战斗胜利不再回复生命值": {
       "en": "No Healing after Battle Victories",

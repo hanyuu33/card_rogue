@@ -218,7 +218,8 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 # R224 起新增全局规则：**除到达新的一层外不能回复 HP**（用户口径）——
 # 战斗胜利回血、休息处篝火回血两类「自动回复」全部作废（两表归零，见下）。
 #   0 = 初始金钱 +50（R224 前还带战斗胜利回 3 血、休息 40%，现已归零）
-#   1 = 篝火（休息）回复量降低（R224：休息处不再回血 → 本条暂无数值效果，文本保留待换新 debuff）
+#   1 = 工具掉落率下降（R853：文本由「篝火回复生命值降低」换过来；篝火数值表不动，
+#       1 档起仍是 25% —— 用户口径「全部难度篝火不动」）
 #   2 = 战斗胜利不再回复生命值（R224：全档位战斗胜利均不回血，文本保留待换新 debuff）
 #   3 = 开场时敌人生命值 +10%（向上取整）
 #   4 = 稀有卡牌获取概率降低（稀有权重 ×0.5）
@@ -244,7 +245,7 @@ const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强",
 ## 的数值摘要承载（那里列的都是「实际生效」的数值）。
 const DIFFICULTY_TEXTS: Array[String] = [
 	"无",
-	"篝火回复生命值降低",
+	"工具掉落率下降",
 	"战斗胜利不再回复生命值",
 	"敌人更加顽强",
 	"稀有卡牌获取概率降低",
@@ -257,11 +258,12 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"第三层上锁，获取三个信物以解锁第三层",
 	"商店商品售价 +40%（信物除外）",
 ]
-## R224：全局规则「除到达新的一层外不能回复 HP」→ 战斗胜利回血全档位归零。
-## 表保留 12 长度（回归钉死口径；将来若再加「某档回血」类 debuff 改这张表即可）。
-const DIFFICULTY_BATTLE_HEAL: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
+## R224：全局规则（R853 重做）—— 战斗胜利**默认**回血只有 0/1 档 = 3，难度 2 起关掉；
+## 其他回血途径（篝火 / 圣餐 / 道具 / 换层）都不受难度 2 影响。
+## ⚠️ 苹果 6027 持有期间这一口也被锁（唯一口 `hp_recovery_locked()`）。
+const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
 ## R237：恢复篝火回血 —— 难度 0 = 40%，1 档起 = 25%（即原始设计；R224 曾按用户要求归零，现加回）。
-## ⚠️ 战斗胜利回血（DIFFICULTY_BATTLE_HEAL）**仍为 0**：用户只要求篝火能回血，不恢复被动自动回血。
+## ⚠️ 战斗胜利回血（DIFFICULTY_BATTLE_HEAL）0/1 档 = 3、2+ 档 = 0（R853）；苹果持有时全锁。
 const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
 		0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                             # 休息回复百分比
 
@@ -390,6 +392,8 @@ static var traps: Array[int] = [-1, -1, -1]   # -1 = 空槽；其余 = traps.jso
 ## R694（用户口径「任何战斗都有 10% 概率掉落工具」）：**任何**战斗胜利都摇一次这个概率。
 ## `tool_roll_seq` = 本局第几次战斗结算，只用来派生随机种子 —— 随存档一起走，
 ## 续档之后接着往下数，同一条种子不会被摇第二遍。
+## R853（用户口径）：难度 0 提到 33%，难度 1 起仍是 10% —— 唯一口 `tool_drop_chance()`。
+const TOOL_DROP_CHANCE_EASY := 0.33
 const TOOL_DROP_CHANCE := 0.10
 ## R796 兔脚（6076，一般档）：战斗胜利金币 +RABBIT_FOOT_GOLD、战斗掉落工具的概率
 ## **加算** RABBIT_FOOT_TOOL_DROP（用户口径「＋10%（加算）」→ 10% → 20%，不是 ×1.1）。
@@ -498,9 +502,9 @@ const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大�
 # R224 新道具：苹果（6027，奖励池）—— 获得时**立即 +7 最大生命，并回复 20% 最大生命值**。
 # R445（用户口径）：14 → 7；R756（店长口径）：「回复满」改成**回复 20% 最大生命值**——
 # 它不再是一条「免费满血」，而是一口实打实的补给。
-# 全局 HP 规则「除到达新的一层外不能回复 HP」下，它是主动道具口径的回血手段
-# （R743：烤肉已改成工具，剩下的主动回血手段是黄桃罐头 / 自愈这类道具与卡牌；
-#  被动自动回血已全部移除）。
+# R853（店长口径）：苹果的**代价**＝持有期间锁住全部「战外回血」（篝火 / 圣餐 /
+# 止血绷带 / 三层起点补给 / 道具附带回血 / 战斗胜利默认 +3），只有**到新的一层**
+# 回满例外；拿取瞬间这一口 20% 先到账，然后才上锁。战斗内自愈 / 黄桃罐头不锁。
 const APPLE_RELIC_ID := 6027
 const APPLE_MAX_HP := 7
 const APPLE_HEAL_PCT := 0.20   # R756：回复「最大生命」的 20%（原来是一次回满）
@@ -631,8 +635,19 @@ static func take_damage(amount: int) -> void:
 	hp = maxi(0, hp - amount)
 
 
+static func hp_recovery_locked() -> bool:
+	## R853（店长口径）：苹果 6027 的代价 —— 持有期间锁住全部**战外回血**。
+	## 唯一口：所有走 `heal()` 的途径 + 道具直接写 hp 的口都查这里。
+	## 例外：换层回满（`advance_layer` 直接写 hp）与拿苹果瞬间那口 20%
+	## （`gain_relic` 里直接写 hp，不走 `heal()`）都不受影响。
+	return has_relic(APPLE_RELIC_ID)
+
+
 static func heal(amount: int) -> int:
 	## 回复指定生命，上限为最大生命。返回实际回复量。
+	## R853：苹果代价锁血 —— 锁住时一律 0（换层回满直接写 hp，不经过这里）。
+	if hp_recovery_locked():
+		return 0
 	var gained: int = mini(max_hp - hp, maxi(0, amount))
 	hp += gained
 	return gained
@@ -643,6 +658,17 @@ static func heal(amount: int) -> int:
 static func _diff() -> int:
 	## 当前档位（越界兜底）。
 	return clampi(difficulty, 0, DIFFICULTY_COUNT - 1)
+
+
+static func tool_drop_chance_at(d: int) -> float:
+	## R853：指定档位的战斗工具掉落率；越界钳到合法区间。
+	return TOOL_DROP_CHANCE_EASY if clampi(d, 0, DIFFICULTY_COUNT - 1) == 0 else TOOL_DROP_CHANCE
+
+
+static func tool_drop_chance() -> float:
+	## R853（用户口径）：当前档战斗掉落工具的概率 —— 难度 0 = 33%，难度 1 起 = 10%。
+	## 唯一口：`roll_battle_tool_drop()` 读这里，别在别处写死 0.33 / 0.10。
+	return tool_drop_chance_at(_diff())
 
 
 static func set_difficulty(d: int) -> void:
@@ -679,7 +705,7 @@ static func difficulty_note() -> String:
 static func difficulty_summary() -> String:
 	## 当前档**实际生效的数值**一览（角色选择界面第二行）—— 免得只看到「虚弱」不晓得是 80%。
 	## 金钱 / 巧克力恒定显示；其余只在「已生效」时列出（低难度下保持一行）。
-	## R224：回血类 debuff 两表归零 → 不再列「篝火」；继承关系由这里的数值替文本说话。
+	## R853：回血类只列战斗胜利默认 +3（0/1 档）；篝火不受难度 2 影响。
 	var d := _diff()
 	var bits: Array[String] = ["初始金钱 %d" % start_gold(), "巧克力 %d" % chocolate_per_layer()]
 	if d >= 3:
@@ -708,8 +734,10 @@ static func shop_price_mul(is_key_relic := false) -> float:
 
 
 static func battle_win_heal() -> int:
-	## 战斗**胜利**后的自动回复量。R224 全局规则「除到达新的一层外不能回复 HP」
-	## → 所有档位均为 0（表留 11 长度供回归与将来调整）。
+	## 战斗胜利后的**默认**回血：0/1 档 = 3，难度 2 起 = 0（R853）。
+	## 苹果持有期间锁血 → 返回 0；战斗内自愈 / 黄桃罐头走 engine，不受此口影响。
+	if hp_recovery_locked():
+		return 0
 	return DIFFICULTY_BATTLE_HEAL[_diff()]
 
 
@@ -771,7 +799,7 @@ static func rest_to_battle() -> bool:
 
 static func rest_heal_amount() -> int:
 	## 休息事件的回复量 = 最大生命 × 本档位百分比（向上取整），再受上限封顶。
-	## R224：rest_pct 全 0 → 恒为 0（保留函数是为了「将来要把休息回血加回来」只有一个口）。
+	## R853：篝火回复照常；苹果 6027 持有期间由 `heal()` 统一锁住。
 	return ceili(max_hp * rest_pct())
 
 
@@ -1281,10 +1309,14 @@ static func sync_fatigue() -> void:
 static func gain_max_hp(amount: int) -> int:
 	## R181：商店「+5 最大生命（并回血）」—— 最大生命 +amount，当前生命同 +amount
 	## （即「上限提升的同时也补上这几点血」）。返回实际增加的最大生命。
+	## R853：苹果锁血时**上限照涨、附带回血不给**（换层回满才例外）。
 	if amount <= 0:
 		return 0
 	max_hp += amount
-	hp = mini(max_hp, hp + amount)
+	if not hp_recovery_locked():
+		hp = mini(max_hp, hp + amount)
+	else:
+		hp = mini(hp, max_hp)
 	return amount
 
 
@@ -1835,9 +1867,9 @@ static func roll_battle_tool_drop() -> int:
 	# R754 祭拜祝福（事件「奇异雕像」）：pledge > 0 时这一场**不看概率、必掉一件**，
 	# 然后 -1。⚠️ 必须在 `randf()` 之前分流：祝福不是「提高概率」而是「保证掉落」，
 	# 先摇一次概率再覆盖会让同一个种子在「祝福 / 不祝福」之间产生不同的随机流。
-	# R796 兔脚：概率**加算**（0.10 → 0.20）。放在 `randf()` 之前只算一个数，
+	# R796 兔脚：概率**加算**（难度 0：0.33 → 0.43；1 档起：0.10 → 0.20）。放在 `randf()` 之前只算一个数，
 	# 不改变随机流的消费次数 —— 拿没拿兔脚，同一个种子摇出的那一颗 randf() 是同一颗。
-	var drop_chance := TOOL_DROP_CHANCE
+	var drop_chance := tool_drop_chance()
 	if has_relic(RABBIT_FOOT_RELIC_ID):
 		drop_chance += RABBIT_FOOT_TOOL_DROP
 	if tool_drop_pledge > 0:
@@ -1968,7 +2000,10 @@ static func gain_relic(id: int) -> void:
 	match relic.id:
 		6001:   # 类固醇（R340：+6 → +10）：最大生命 +10（当前生命同 +10）
 			max_hp += 10
-			hp += 10
+			if not hp_recovery_locked():
+				hp = mini(max_hp, hp + 10)
+			else:
+				hp = mini(hp, max_hp)
 		6002:   # 源数之力（SOURCE_POWER_ID）：先失去 5 点最大生命，再进入卡组选择
 			lose_max_hp(SOURCE_POWER_HP_COST)
 			pending_relic = relic.id
@@ -1978,9 +2013,15 @@ static func gain_relic(id: int) -> void:
 			pending_relic = relic.id
 		6017:   # 重鸭（二层起始）：拾起时最大生命 +6（当前生命同 +6）
 			max_hp += 6
-			hp += 6
-		APPLE_RELIC_ID:   # 苹果（R224/244/445/756）：立即 +7 最大生命，并回复 20% 最大生命值
-			gain_max_hp(APPLE_MAX_HP)
+			if not hp_recovery_locked():
+				hp = mini(max_hp, hp + 6)
+			else:
+				hp = mini(hp, max_hp)
+		APPLE_RELIC_ID:   # 苹果（R224/244/445/756/852）：立即 +7 最大生命，并回复 20% 最大生命值
+			# R853：此刻 relics 已 append（代价已上锁），所以 +7 与 20% 两口
+			# 都直接写 hp 绕过 `heal()` / `gain_max_hp()`，拿取瞬间照常到账。
+			max_hp += APPLE_MAX_HP
+			hp = mini(max_hp, hp + APPLE_MAX_HP)
 			hp = mini(max_hp, hp + int(round(max_hp * APPLE_HEAL_PCT)))
 		PACK_RELIC_ID:   # 行囊（R244）：+100 金币 + 一张「木栅栏」进卡组
 			gold += PACK_GOLD
