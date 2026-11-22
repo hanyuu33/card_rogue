@@ -5,14 +5,14 @@
   卡图区 = 卡面高 × 0.540，素材 448×404 → 图区 448:291。
   战斗读 **0..291**、商店 / 图鉴读居中 **56..347**，交集只有 56..291。
 
-两种处理：
-  * 9284 鸭蛋投手 —— 与既有卡图同口径：按 448:404 比例**顶部优先**裁切再缩放。
-    鸭子太高（头 10% / 脚 92%），任何裁法都装不进 235 行的交集带，
-    所以按惯例「卡图显示上半身」（低头、举起的金蛋、前指的手都在带内）。
-  * 9285 金鸭蛋 —— 单物件：等比缩放后**正好填满交集带 56..291**（高 235、顶 56），
-    两个口径都完整、无裁切。实测：高 300 居中时战斗口径切掉蛋底 30 行、商店口径上下各切 5 行，
-    而交集带内可行上限是 h<=178（居中）——所以不能居中，必须顶到 56 行起算，
-    这样 h 可以做到 235（= 291-56），是全图最大的无裁切尺寸。
+所有卡图都是**满幅场景插画**（和 9022 鸭蛋 / 9179 惊奇盒子 同一画法），
+所以两张都走**顶部优先**裁切：按 448:404 比例取上部再缩放。
+
+⚠️ R856 走过一次弯路：9285 第一版被当成「白底商品图」出图（提示词里明写
+`plain pure white background`），再看「单物件居中」的裁法——两道一起把卡图
+做成了贴图。店长当场否掉：**金鸭蛋是刚被扔出去的，它不在巢里、也不在白底上。**
+那条「单物件填 56..291 交集带」的方案随之作废（它只对白底物件成立），
+函数 `cut_contain` / `cut_band_fill` 一并删掉，免得下次又被当惯例抄一遍。
   * fx_egg_gain —— 特效：黑底按亮度转 alpha（RGB 归一化到满亮，避免黑边；
     与既有 bx_* 一致：低 alpha 区 RGB 仍 130+），256×256 RGBA。
 """
@@ -47,38 +47,17 @@ def cut_top_fill(src, dst):
     return im2
 
 
-def cut_contain(src, dst, box_h):
-    """等比缩放整张内容到指定高度，居中放白底。"""
-    im = Image.open(src).convert("RGBA")
-    w, h = im.size
-    scale = box_h / float(h)
-    nw = int(round(w * scale))
-    im2 = im.resize((nw, box_h), Image.LANCZOS)
-    canvas = Image.new("RGB", (W, H), (255, 255, 255))
-    canvas.paste(im2, ((W - nw) // 2, (H - box_h) // 2), im2)
-    canvas.save(dst)
-    return canvas
+def cut_box(src, dst, box):
+    """按原始像素窗口裁（box = 左, 上, 右, 下），窗口须已接近 448:404。
 
-
-def cut_band_fill(src, dst, top, bottom, fill=0.92):
-    """等比缩放后填满 top..bottom 这条带（再留 fill 比例），带内居中放白底。
-
-    交集带 56..291 → 高 235。这是「两个口径都完整」能给出的最大尺寸：
-    居中方案（整张 404 上下留一样）上限只有 h<=178，因为 (404-h)/2 必须 >= 56。
-    fill=0.92 让蛋底离带边留 ~9 行，战斗口径下不贴边。
+    R856 9285：远景图 1536×1024 里蛋太小（只占画幅 23% 高，落地到 404 上只有 93 行，
+    战场格子会看不清），所以把镜头往蛋推近。窗口由「蛋心落在交集带 56..291 的中线
+    173 行」反推：y0 = 蛋心y - 173 × 窗高 / 404。实测蛋心 ≈ (777, 436)。
     """
-    im = Image.open(src).convert("RGBA")
-    w, h = im.size
-    band_h = bottom - top
-    box_h = int(round(band_h * fill))
-    scale = box_h / float(h)
-    nw = int(round(w * scale))
-    im2 = im.resize((nw, box_h), Image.LANCZOS)
-    y = top + (band_h - box_h) // 2
-    canvas = Image.new("RGB", (W, H), (255, 255, 255))
-    canvas.paste(im2, ((W - nw) // 2, y), im2)
-    canvas.save(dst)
-    return canvas
+    im = Image.open(src).convert("RGB").crop(box)
+    im2 = im.resize((W, H), Image.LANCZOS)
+    im2.save(dst)
+    return im2
 
 
 def cut_fx(src, dst, size=256):
@@ -122,22 +101,18 @@ def preview(im, dst, label):
 
 
 jobs = [
-    ("9284_鸭蛋投手.png", "9284.png", "top", None),
-    ("9285_金鸭蛋.png", "9285.png", "band", None),
+    ("9284_鸭蛋投手.png", "9284.png", None),
+    # 蛋心 (777, 436)，推近窗口 700×631 → 输出里蛋占 95..251 行（交集带 56..291 内）
+    ("9285_金鸭蛋_fly_wide.png", "9285.png", (427, 166, 1127, 797)),
 ]
 
-for raw_name, out_name, mode, box_h in jobs:
+for raw_name, out_name, box in jobs:
     src = os.path.join(RAW, raw_name)
     if not os.path.exists(src):
         print("SKIP %s（raw 不存在）" % raw_name)
         continue
     dst = os.path.join(OUT, out_name)
-    if mode == "top":
-        im = cut_top_fill(src, dst)
-    elif mode == "band":
-        im = cut_band_fill(src, dst, ART_SHOP[0], ART_TOP)
-    else:
-        im = cut_contain(src, dst, box_h)
+    im = cut_box(src, dst, box) if box else cut_top_fill(src, dst)
     print("OK %s -> cut/%s %s" % (raw_name, out_name, im.size))
     preview(im, os.path.join(PREV, out_name.replace(".png", "_compare.png")),
             "%s  |左 0..291 右 56..347" % out_name)
