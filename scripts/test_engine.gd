@@ -82601,6 +82601,26 @@ func _test_r856() -> void:
 	check(r856_e4._unit_damage_taken(r856_g4b, 10, "attack") == 10,
 			"R856 金鸭蛋：**普攻**照常吃满 10 点（3 血一刀碎 = 它唯一的弱点）")
 
+	# ── ⑤b 预览镜像：`preview_hit_damage()` 必须与真实扣血报同一个数 ──
+	# ⚠️ R856 初版漏了这条 —— 那个函数自己写着「改 `_unit_damage_taken()` 的减伤链，
+	#    必须同步改这里」，六条同类（母舰 / 太阳熔炉 / 枭熊 / 标记 / 执法者 / 护盾构装体）
+	#    都对了，只有蛋的封顶漏了 → 悬停显示 10、实打只掉 1。
+	var r856_pv_sp: Dictionary = r856_e4.preview_hit_damage(r856_g4b, 10, false)
+	check(int(r856_pv_sp["dmg"]) == GameEngine.GOLDEN_EGG_HIT_CAP,
+			"R856 预览镜像：技能 10 伤的预览值是 %d（期望 %d）"
+			% [int(r856_pv_sp["dmg"]), GameEngine.GOLDEN_EGG_HIT_CAP])
+	var r856_pv_atk: Dictionary = r856_e4.preview_hit_damage(r856_g4b, 10, true)
+	check(int(r856_pv_atk["dmg"]) == 10,
+			"R856 预览镜像：普攻 10 伤的预览值照常 10（实际 %d）"
+			% int(r856_pv_atk["dmg"]))
+	# 主断言：预览值必须**等于**真打一下扣的血（两边各自漂就抓得到）
+	var r856_pv7: int = int(r856_e4.preview_hit_damage(r856_g4b, 7, false)["dmg"])
+	var r856_hp_b4: int = r856_g4b.health
+	var r856_real7: int = r856_e4._hit_unit(r856_g4b, 7, "毒", false)
+	check(r856_pv7 == r856_real7 and r856_g4b.health == r856_hp_b4 - r856_pv7,
+			"R856 预览 == 实打：7 伤预览 %d、实扣 %d（血 %d → %d）" % [
+				r856_pv7, r856_real7, r856_hp_b4, r856_g4b.health])
+
 	# ── ⑥ 蛋死亡：玩家随机史诗卡 + 投手重获蛋并回后排 ──
 	var r856_e5 := _new_engine([], 30, 30)
 	var r856_p5 := r856_e5.state.place(CardData.from_dict(r856_pit.to_dict()),

@@ -14967,6 +14967,12 @@ func preview_hit_damage(p: Placement, amount: int, is_attack := false,
 	#     顺序也一致：都在减伤链之前）。
 	if p.card.traits.has(MOTHERSHIP_TRAIT):
 		return {"dmg": 0, "tag": "免疫所有伤害"}
+	# ⓪b R856 金鸭蛋（9285）：受到非攻击伤害时每次最多 1 点。
+	#     与 `_unit_damage_taken()` 的 ⓪b **同判据**（`kind != "attack"` ↔ `not is_attack`）、
+	#     **同位置**（母舰之后、所有 flat 减伤之前 —— 封顶不是减伤，先封顶再减）。
+	#     ⚠️ R856 初版漏了这条镜像：悬停 10 点技能显示 10、实打只掉 1。
+	if p.card.id == GOLDEN_EGG_ID and not is_attack and amount2 > GOLDEN_EGG_HIT_CAP:
+		amount2 = GOLDEN_EGG_HIT_CAP
 	if p.first_hit_shield:
 		return {"dmg": PREVIEW_NO_DMG, "tag": "免疫下一次伤害"}
 	if _shield_gen_for(p) != null:
