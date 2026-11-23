@@ -1,0 +1,74 @@
+[
+  {
+    "scene": "01_faltering_music",
+    "frame": 1,
+    "width": 832,
+    "height": 466
+  },
+  {
+    "scene": "01_faltering_music",
+    "frame": 2,
+    "width": 832,
+    "height": 466
+  },
+  {
+    "scene": "01_faltering_music",
+    "frame": 3,
+    "width": 832,
+    "height": 467
+  },
+  {
+    "scene": "01_faltering_music",
+    "frame": 4,
+    "width": 832,
+    "height": 467
+  },
+  {
+    "scene": "02_conversation",
+    "frame": 1,
+    "width": 832,
+    "height": 466
+  },
+  {
+    "scene": "02_conversation",
+    "frame": 2,
+    "width": 832,
+    "height": 466
+  },
+  {
+    "scene": "02_conversation",
+    "frame": 3,
+    "width": 832,
+    "height": 467
+  },
+  {
+    "scene": "02_conversation",
+    "frame": 4,
+    "width": 832,
+    "height": 467
+  },
+  {
+    "scene": "03_departure",
+    "frame": 1,
+    "width": 832,
+    "height": 466
+  },
+  {
+    "scene": "03_departure",
+    "frame": 2,
+    "width": 832,
+    "height": 466
+  },
+  {
+    "scene": "03_departure",
+    "frame": 3,
+    "width": 832,
+    "height": 467
+  },
+  {
+    "scene": "03_departure",
+    "frame": 4,
+    "width": 832,
+    "height": 467
+  }
+]
