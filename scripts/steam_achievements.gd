@@ -44,11 +44,12 @@ const INIT_NOT_INSTALLED := -2
 ## 达到该难度（含）的真通关算「高难度通关」。
 const HARD_DIFF := 5
 
-## 最高难度（R740 新增成就用）：RunState 的档位是 0~12 共 13 档（`DIFFICULTY_COUNT = 13`）。
-## 难度 11 起「第三层要凑齐三样信物才开门」（R543），难度 12 再叠「商店售价 +40%」（R794b），
+## 最高难度（R740 新增成就用）：RunState 的档位是 0~13 共 14 档（`DIFFICULTY_COUNT = 14`）。
+## R862 插档后：难度 11「初始卡削弱」、12「第三层要凑齐三样信物才开门」（R543）、
+## 13 再叠「商店售价 +40%」（R794b），
 ## 所以真正摸到顶是 12 档。
 ## ⚠️ 若以后再加档位，这里和 `DIFFICULTY_COUNT` 要一起改；test_engine 已钉住两者一致。
-const APEX_DIFF := 12
+const APEX_DIFF := 13
 
 ## 职业 → 通关成就 API 名。
 const CLEAR_API_BY_CLASS := {

@@ -551,7 +551,7 @@ func _diff_set_to(d: int) -> void:
 func _draw_difficulty_block(x: float, w: float) -> void:
 	## R545：从 _draw_panel 抽出的难度档位 + 当前档文本 + 确认钮（盲选面板与角色面板共用）。
 	## R650：数值摘要整行删除（店长口径），区块里只剩一句 debuff 人话。
-	# 难度档位（R223：左箭头 / 档位盒 / 右箭头，0~12 共 13 档，钳制不循环）
+	# 难度档位（R862：左箭头 / 档位盒 / 右箭头，0~13 共 14 档，钳制不循环）
 	draw_string(_font_bold, Vector2(x, _diff_row_rect().position.y - 13.0), GameI18n.ui("shell", "CLASS_PICK_DIFFICULTY", "难度档位"),
 			HORIZONTAL_ALIGNMENT_LEFT, w, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	var cap := _diff_cap()
@@ -570,8 +570,9 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 			arrow_on if d < cap else arrow_off)
 	var br := _diff_box_rect()
 	UiTheme.draw_info_card(self, br, true)
-	# R543：难度 ≥ 11（第三层上锁）→ 难度框描边变橙色（美术风格不变，只换描边色）。
-	var locked := d >= RunState.DIFF_LOCK_FROM
+	# R862（用户口径）：橙色从 **11 档（初始卡削弱）** 起 —— 以前这一圈橙色挂在
+	# 「第三层上锁」上（R543，那时上锁正好是 11 档）；插档后上锁挪到 12，橙色提前一档。
+	var locked := d >= RunState.DIFF_STARTER_WEAK_FROM
 	if locked:
 		var ob := StyleBoxFlat.new()
 		ob.bg_color = Color(1, 0.5, 0.1, 0.0)
@@ -581,7 +582,7 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 		draw_style_box(ob, br)
 	var number_box := Rect2(br.position + Vector2(4, 3), Vector2(42, br.size.y - 6))
 	if locked:
-		# R543：难度 ≥ 11 时数字框底整个换成橙色（原 `draw_action` 是森林绿底）。
+		# R862：难度 ≥ 11 时数字框底整个换成橙色（原 `draw_action` 是森林绿底）。
 		var nb := StyleBoxFlat.new()
 		nb.bg_color = Color("c96a14")
 		nb.border_color = Color("f0a336")

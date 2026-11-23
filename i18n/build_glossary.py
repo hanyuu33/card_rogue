@@ -110,7 +110,8 @@ g["difficulties"] = named([
     ("稀缺", "Scarcity", "欠乏"), ("疲惫", "Fatigue", "疲労"),
     ("凶暴", "Ferocious", "凶暴"), ("贫瘠", "Barren", "不毛"),
     ("匆忙", "Haste", "急ぎ"), ("虚弱", "Weakened", "虚弱"),
-    ("噩梦", "Nightmare", "悪夢"), ("上锁", "Locked", "施錠"),
+    ("噩梦", "Nightmare", "悪夢"), ("初始卡削弱", "Weakened Starter Cards", "初期カード弱体化"),
+    ("上锁", "Locked", "施錠"),
     ("昂贵", "Pricey", "高値"),
 ])
 g["difficulty_notes"] = named([
@@ -125,6 +126,9 @@ g["difficulty_notes"] = named([
     ("行动力降低", "Less Chocolate", "チョコレート減少"),
     ("虚弱", "Weakened", "虚弱"),
     ("精英出现增多", "More Elites", "エリートの出現増加"),
+    ("初始卡削弱：攻击伤害 4，木栅栏生命 6",
+     "Weakened starter cards: Strike deals 4 damage, Wooden Fence has 6 Health",
+     "初期カード弱体化：攻撃のダメージ4、木の柵のHP6"),
     ("第三层上锁，获取三个信物以解锁第三层",
      "Layer 3 Locked: collect three Key Relics to unlock it",
      "第3層が施錠：3つのキーレリックを集めると解除"),

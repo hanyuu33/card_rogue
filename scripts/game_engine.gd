@@ -1410,7 +1410,8 @@ const LOADER_ID := 9262
 const LOADER_TRAIT := "增量"
 const LOADER_NAME := "负载增量员"
 const LOADER_GIFT_ATTACK := 8002      # 「攻击」（1 费技能）
-const LOADER_GIFT_FENCE := 8001       # 「木栅栏」（2 费工事 0/6）
+const LOADER_GIFT_FENCE := 8001       # 「木栅栏」（2 费工事 0/8；R862 前是 0/6）
+const STARTER_ATTACK_ID := 8002       # 「攻击」（1 费技能；R862 起伤害随难度 5/4）
 
 # ── 角色：暗影刺客（2026-10-01）──
 # 终结（9086，角色专属初始卡，0 费技能）：对一个目标造成 RAID_BASE_DMG + X 点伤害，
@@ -10112,7 +10113,9 @@ func hand_bonus_text(card: CardData) -> String:
 #   ③ 表里只放**基础值**，加成一律现算 —— 别把「9 + 7 = 16」这种烘焙进来。
 #   ④ 本表是**只读数据**，不许在 `_spell_dmg()` 之外被谁改写。
 const SPELL_BASE_DMG := {
-	8002: 4,     # 攻击
+	# R862：攻击**原型值** = 5（初始卡在 0~10 档的真实数值）。难度 11 起卡组实例
+	# 被削到 4（`card_with_mod()`），取值一律走 `spell_base_of()`，别直接查这张表。
+	8002: 5,     # 攻击
 	9003: 17,    # 火焰箭
 	9004: 8,     # 击退（仅在因阻挡未走满 2 格时结算）
 	9006: 11,    # 闪电链（每个被连到的单位）
@@ -10208,6 +10211,23 @@ static func dmg_expr_text(base: int, dmg: int) -> String:
 	return "%d－%d" % [base, base - dmg]
 
 
+static func spell_base_of(card: CardData) -> int:
+	## R862：**卡面写着的那个伤害基数** —— 技能伤害取数的唯一口（预览 / 左栏 / 结算 / 献祭）。
+	## 与 `SPELL_BASE_DMG` 只差一类：**实例值卡**——
+	##   * 攻击 8002：难度 11 起 `value` 被削到 4（卡组副本），原型值仍是 5；
+	##   * 蓄势 9156 / 猎杀 9205：`value` 随本局成长变化，表里只有初始值。
+	## ⚠️ **不含任何加成**（附魔 / 魔法塔 / 荧光草 / 回合加成…）—— 那些由 `_spell_dmg()` 叠。
+	## ⚠️ 本函数**只读**。
+	if card == null:
+		return 0
+	if card.id == STARTER_ATTACK_ID or card.id == CHARGE_UP_ID or card.id == SLAY_ID:
+		if card.value > 0:
+			return card.value
+	if SPELL_BASE_DMG.has(card.id):
+		return maxi(0, int(SPELL_BASE_DMG[card.id]))
+	return 0
+
+
 static func spell_first_hit(card: CardData) -> int:
 	## R458（用户口径）：「**这张伤害技能卡的第一段伤害**」—— 契约核心的献祭数值唯一口。
 	## 为什么必须集中一口：
@@ -10226,9 +10246,7 @@ static func spell_first_hit(card: CardData) -> int:
 		return 0
 	if not SPELL_BASE_DMG.has(card.id):
 		return 0
-	if card.id == CHARGE_UP_ID or card.id == SLAY_ID:
-		return maxi(0, card.value)   # 实例值（卡面由 _charge_up_text / 成长写出）
-	return maxi(0, int(SPELL_BASE_DMG[card.id]))
+	return spell_base_of(card)
 
 
 func enter_damage_now(card: CardData) -> Dictionary:
@@ -10370,9 +10388,8 @@ func spell_now(card: CardData, side: String = SIDE_SELF) -> Dictionary:
 	# `_charge_up_text(card.value)` 同步写出）→ 单独取，不读表。
 	# R393：猎杀 9205 的伤害是**实例值**（本局永久成长会一直抬高 `card.value`），
 	# 与蓄势同理不能读表里的固定基数，否则左栏会一直报 25、越打越不准。
-	var base: int = int(SPELL_BASE_DMG[card.id])
-	if card.id == CHARGE_UP_ID or card.id == SLAY_ID:
-		base = card.value
+	# R862：基数一律走 `spell_base_of()`（攻击 8002 的实例值 / 蓄势 / 猎杀都在那里）。
+	var base: int = spell_base_of(card)
 	var fin: int = _spell_dmg(side, base, card)
 	if fin == base:
 		return {}
@@ -12632,7 +12649,9 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 				_spell_kill_damage_growth(card)
 			return hunt_out
 		8002:
-			return str(_op_deal_damage(side, _spell_dmg(side, 4, card), target))
+			# R862：基础伤害随难度（0~10 档 = 5，11 档起 = 4）—— 读卡实例 `value`，
+			# 由 `card_with_mod()` 烤进去；图鉴 / 非卡组来源的卡仍是原型 5。
+			return str(_op_deal_damage(side, _spell_dmg(side, spell_base_of(card), card), target))
 		LULLABY_ID:
 			# 摇篮曲（9182，R352，全职业公用 5 费史诗技能 · 次元）：
 			#   **所有单位**（不分敌我）1 回合不能行动。
@@ -15084,10 +15103,9 @@ func preview_spell_damage(card: CardData, dst: Vector2i, side:= SIDE_SELF) -> Di
 	var now:= spell_now(card, side)
 	if not now.is_empty():
 		base = int(now.get("dmg", 0))
-	elif card.id == CHARGE_UP_ID or card.id == SLAY_ID:   # R393：猎杀同蓄势，卡面值 = 实例 value
-		base = card.value       # 蓄势的「卡面值」是实例数据，不在表里
 	elif SPELL_BASE_DMG.has(card.id):
-		base = int(SPELL_BASE_DMG[card.id])
+		# R862：攻击 / 蓄势 / 猎杀的「卡面值」是**实例数据**，`spell_base_of()` 已按卡取值。
+		base = spell_base_of(card)
 	else:
 		return {"dmg": PREVIEW_NO_DMG, "tag": ""}
 	if base <= 0:

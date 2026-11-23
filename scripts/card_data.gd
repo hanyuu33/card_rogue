@@ -181,6 +181,12 @@ var effect_text: String = ""
 ## hand_any=选手牌里**任意一张**卡（R198「回收」8064 —— 目标被换成素体，种类不限）。
 var target_mode: String = "none"
 var value: int = 0
+## R862：卡面正文里**首个伤害数字**的显示替换（当前只有初始卡削弱用）。
+##   `{}` = 不替换；`{"from": 5, "to": 4}` = 正文里的 5 画成 4。
+## ⚠️ **只改显示**，绝不改 `effect_text`：i18n 译文按中文原串整句硬编码，
+##    改写原文会让非中文环境直接掉回中文（R702 踩过）。见 `CardText.parse_card()`。
+## ⚠️ 必须随 `to_dict()` 走：复制 / 离场还原 / 联机都会重建卡实例。
+var body_number_swap: Dictionary = {}
 ## 「一回合行动两次」的次数（1 = 普通）。**没有对应 trait**（R91 统一成字段「疾行」）。
 var actions: int = 1
 var rarity: int = 0             # 0普通 1稀有 2史诗 3初始 4怪物 5事件
@@ -414,6 +420,9 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.effect_text = str(d.get("effect_text", ""))
 	c.target_mode = str(d.get("target_mode", "none"))
 	c.value = int(d.get("value", 0))
+	# R862：正文数字替换（深拷贝 —— 别让副本与源卡共用同一个 Dictionary）。
+	var bn: Variant = d.get("body_number_swap", {})
+	c.body_number_swap = (bn as Dictionary).duplicate() if bn is Dictionary else {}
 	c.actions = maxi(1, int(d.get("actions", 1)))
 	c.rarity = clampi(int(d.get("rarity", 0)), 0, 6)
 	c.group = str(d.get("group", "player"))
@@ -593,6 +602,8 @@ func to_dict() -> Dictionary:
 		# R572：组合钩子同理（宝石兽 / 拼装工厂）。
 		"combo_trigger": combo_trigger,
 		"combo_scope": combo_scope,
+		# R862：卡面正文数字替换必须随复制 / 离场还原 / 联机通道走，漏了它削弱版又画回 5 伤。
+		"body_number_swap": body_number_swap.duplicate(),
 	}
 
 

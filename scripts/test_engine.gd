@@ -323,7 +323,7 @@ func _init() -> void:
 
 	check(fence.kind == "工事" and fence.cost == 2 and fence.power == 0
 
-			and fence.health == 6, "木栅栏：2 费 0 力 6 血工事")
+			and fence.health == 8, "木栅栏：2 费 0 力 8 血工事")
 
 	var shot := repo.get_card(8002)
 
@@ -9239,7 +9239,7 @@ func _init() -> void:
 
 	eng3.use_spell(shot2, null)
 
-	check(eng3.state.hp_opponent == hp0 - 4, "攻击无目标 → 敌方 HP -4")
+	check(eng3.state.hp_opponent == hp0 - 5, "攻击无目标 → 敌方 HP -5")
 
 
 
@@ -9752,9 +9752,9 @@ func _init() -> void:
 
 	var efarmer := eng_eye.state.unit_at(Vector2i(2, 1))
 
-	check(efarmer != null and efarmer.health == 2,
+	check(efarmer != null and efarmer.health == 1,
 
-			"鸭之眼：攻击 4+2=6（8 血农民剩 %d）" % (efarmer.health if efarmer != null else -1))
+			"鸭之眼：攻击 5+2=7（8 血农民剩 %d）" % (efarmer.health if efarmer != null else -1))
 
 	var s2 := _find(eng_eye.state.hand, 8002)
 
@@ -9762,15 +9762,15 @@ func _init() -> void:
 
 	eng_eye.use_spell(s2, null)
 
-	check(eng_eye.state.hp_opponent == hp_e0 - 6,
+	check(eng_eye.state.hp_opponent == hp_e0 - 7,
 
-			"鸭之眼：攻击无目标 → 敌方 HP -6（实际 %d）" % (hp_e0 - eng_eye.state.hp_opponent))
+			"鸭之眼：攻击无目标 → 敌方 HP -7（实际 %d）" % (hp_e0 - eng_eye.state.hp_opponent))
 
 	eng_eye.remote_spell(_card(8002, "攻击", "技能", 2, 0, 0), null)
 
-	check(eng_eye.state.hp_self == 16,
+	check(eng_eye.state.hp_self == 15,
 
-			"鸭之眼：敌方施法不受加成（我方 HP 20-4=16，实际 %d）" % eng_eye.state.hp_self)
+			"鸭之眼：敌方施法不受加成（我方 HP 20-5=15，实际 %d）" % eng_eye.state.hp_self)
 
 	# X 取的是 card.cost（原始费用），不是 cost_of()（临时减费不吃掉加成）
 
@@ -10397,9 +10397,9 @@ func _init() -> void:
 
 	eng_ws.use_spell(_find(eng_ws.state.hand, 8002), null)
 
-	check(eng_ws.state.hp_opponent == hp_b - 5,
+	check(eng_ws.state.hp_opponent == hp_b - 6,
 
-			"鸭之低语：技能伤害 +1（攻击 4+1=5 → 敌方 HP -5）")
+			"鸭之低语：技能伤害 +1（攻击 5+1=6 → 敌方 HP -6）")
 
 	# 回合结束 → 下一回合掷骰前，伤害加成清空
 
@@ -17584,17 +17584,17 @@ func _init() -> void:
 
 	var fp_res := fp_e.play_from_hand(0, Vector2i(4, 1))
 
-	check(fp_res == fp_pl and fp_pl.health == 12 and fp_pl.card.health == 12,
+	check(fp_res == fp_pl and fp_pl.health == 16 and fp_pl.card.health == 16,
 
-			"叠栅栏：6 + 6 → 同一格合成 12 血（不新建单位）")
+			"叠栅栏：8 + 8 → 同一格合成 16 血（不新建单位）")
 
 	check(fp_e.state.hand.is_empty() and fp_e.state.energy == 3,
 
 			"叠栅栏：手牌消耗 1 张、支付木栅栏的 2 费")
 
-	check(fp_lib.health == 6,
+	check(fp_lib.health == 8,
 
-			"叠栅栏：卡库里共享的木栅栏实例未被改（仍 6 血）")
+			"叠栅栏：卡库里共享的木栅栏实例未被改（仍 8 血）")
 
 
 
@@ -17618,9 +17618,9 @@ func _init() -> void:
 
 	fp_e2.play_from_hand(0, Vector2i(4, 2))
 
-	check(fp_pl2.health == 12 and fp_pl2.card.health == 12,
+	check(fp_pl2.health == 16 and fp_pl2.card.health == 16,
 
-			"叠栅栏：残血墙 3/6 再叠一张满血 6 → 回满 12/12（R811；旧口径是 9/12）")
+			"叠栅栏：残血墙 3/8 再叠一张满血 8 → 回满 16/16（R811；旧口径是 11/16）")
 
 
 
@@ -17642,11 +17642,11 @@ func _init() -> void:
 
 	fp_e3.play_from_hand(0, Vector2i(4, 0))
 
-	check(fp_pl3.health == 18 and fp_pl3.card.traits.has("铁栅栏") \
+	check(fp_pl3.health == 20 and fp_pl3.card.traits.has("铁栅栏") \
 
 			and fp_pl3.card.traits.has("栅栏"),
 
-			"叠栅栏：木栅栏叠到铁栅栏 → 18 血且保留「铁栅栏」特性")
+			"叠栅栏：木栅栏叠到铁栅栏 → 20 血且保留「铁栅栏」特性")
 
 	check(fp_e3.absorbs_for_hp(fp_pl3),
 
@@ -17706,17 +17706,17 @@ func _init() -> void:
 
 	fp_r.play_from_hand(0, Vector2i(4, 1))
 
-	check(fp_r_pl.card.health == 12 and fp_r_pl.fence_bonus_hp == 6,
+	check(fp_r_pl.card.health == 16 and fp_r_pl.fence_bonus_hp == 8,
 
-			"R67 叠栅栏：场上仍是 12 血，记 fence_bonus_hp=%d" % fp_r_pl.fence_bonus_hp)
+			"R67 叠栅栏：场上仍是 16 血，记 fence_bonus_hp=%d" % fp_r_pl.fence_bonus_hp)
 
 	fp_r._destroy(Vector2i(4, 1))
 
 	var fp_r_disc: CardData = fp_r.state.discard[fp_r.state.discard.size() - 1]
 
-	check(fp_r_disc != null and fp_r_disc.health == 6,
+	check(fp_r_disc != null and fp_r_disc.health == 8,
 
-			"R67 离场还原：进弃牌区的那张恢复原血 6（实际 %d）"
+			"R67 离场还原：进弃牌区的那张恢复原血 8（实际 %d）"
 
 			% (fp_r_disc.health if fp_r_disc != null else -1))
 
@@ -17730,19 +17730,19 @@ func _init() -> void:
 
 			GameEngine.SIDE_SELF)
 
-	check(fp_r_again.health == 6 and fp_r_again.card.health == 6
+	check(fp_r_again.health == 8 and fp_r_again.card.health == 8
 
 			and fp_r_again.fence_bonus_hp == 0,
 
-			"R67 还原后重新上场：6/6 血、bonus=0（实际 %d/%d，bonus %d）"
+			"R67 还原后重新上场：8/8 血、bonus=0（实际 %d/%d，bonus %d）"
 
 			% [fp_r_again.health, fp_r_again.card.health, fp_r_again.fence_bonus_hp])
 
 	# 卡库共享实例自始至终没被动过
 
-	check(fp_repo.get_card(8001).health == 6,
+	check(fp_repo.get_card(8001).health == 8,
 
-			"R67 离场还原：卡库里的木栅栏仍是 6 血")
+			"R67 离场还原：卡库里的木栅栏仍是 8 血")
 
 	# 没叠加过的普通栅栏离场 → 行为完全不变（零拷贝交出原卡）
 
@@ -17758,9 +17758,9 @@ func _init() -> void:
 
 	var fp_r2_disc: CardData = fp_r2.state.discard[fp_r2.state.discard.size() - 1]
 
-	check(fp_r2_disc != null and fp_r2_disc.health == 6 and fp_r2_pl.fence_bonus_hp == 0,
+	check(fp_r2_disc != null and fp_r2_disc.health == 8 and fp_r2_pl.fence_bonus_hp == 0,
 
-			"R67 未叠加的栅栏：离场后仍是 6 血（行为不变）")
+			"R67 未叠加的栅栏：离场后仍是 8 血（行为不变）")
 
 	# 连叠三张：bonus 累计 12，离场后从 18 还原回 6
 
@@ -17782,17 +17782,17 @@ func _init() -> void:
 
 		fp_r3.play_from_hand(0, Vector2i(4, 1))
 
-	check(fp_r3_pl.card.health == 18 and fp_r3_pl.fence_bonus_hp == 12,
+	check(fp_r3_pl.card.health == 24 and fp_r3_pl.fence_bonus_hp == 16,
 
-			"R67 连叠两次：18 血、bonus 累计 %d" % fp_r3_pl.fence_bonus_hp)
+			"R67 连叠两次：24 血、bonus 累计 %d" % fp_r3_pl.fence_bonus_hp)
 
 	fp_r3._destroy(Vector2i(4, 1))
 
 	var fp_r3_disc: CardData = fp_r3.state.discard[fp_r3.state.discard.size() - 1]
 
-	check(fp_r3_disc != null and fp_r3_disc.health == 6,
+	check(fp_r3_disc != null and fp_r3_disc.health == 8,
 
-			"R67 连叠两次后离场：18 → 还原成 6（实际 %d）"
+			"R67 连叠两次后离场：24 → 还原成 8（实际 %d）"
 
 			% (fp_r3_disc.health if fp_r3_disc != null else -1))
 
@@ -20663,34 +20663,96 @@ func _init() -> void:
 
 	RunState.set_difficulty(10)
 
-	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 13,
+	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 14,
 
-			"难度 10 = 噩梦；档位名共 13 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+			"难度 10 = 噩梦；档位名共 14 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+
+	# ---- R862：初始卡数值 —— 0~10 档 攻击 5 / 木栅栏 8；11 档起削到 4 / 6（图鉴恒基础值）----
+	check(RunState.starter_attack_dmg() == 5 and RunState.starter_fence_hp() == 8
+			and not RunState.starter_card_weak(),
+			"R862 难度 10：初始卡是上调后的 攻击 5 / 木栅栏 8")
+
+	var r862_repo := CardRepo.load_json()
+
+	# 这条只看「难度 10 的卡组实例」→ 显式摆一副最小卡组，别依赖此前测试留下的 deck_ids。
+	var r862_bak10 := RunState.deck_ids.duplicate()
+
+	RunState.deck_ids = [8001, 8002]
+
+	var r862_norm := RunState.build_deck(r862_repo)
+
+	var r862_n_attack: CardData = null
+
+	var r862_n_fence: CardData = null
+
+	for c: CardData in r862_norm:
+		if c.id == 8002 and r862_n_attack == null:
+			r862_n_attack = c
+		elif c.id == 8001 and r862_n_fence == null:
+			r862_n_fence = c
+
+	check(r862_n_attack != null and r862_n_attack.value == 5
+			and r862_n_fence != null and r862_n_fence.health == 8
+			and CardText.naturalize_card(r862_n_attack).contains("5 点伤害"),
+			"R862 难度 10 卡组实例：攻击 5 伤 / 木栅栏 8 血，卡面正文也是 5")
+
+	# 图鉴 / 卡库原型永远是上调后的基础值（削弱只发生在卡组实例上）
+	check(r862_repo.get_card(8002).value == 5 and r862_repo.get_card(8001).health == 8,
+			"R862 卡库原型：攻击 5 / 木栅栏 8（图鉴读这一份）")
+
+	RunState.deck_ids = r862_bak10
 
 	RunState.set_difficulty(11)
+
+	check(RunState.starter_card_weak() and RunState.starter_attack_dmg() == 4
+			and RunState.starter_fence_hp() == 6
+			and RunState.difficulty_name() == "初始卡削弱",
+			"R862 难度 11 = 初始卡削弱：攻击 4 / 木栅栏 6（%s）" % RunState.difficulty_note())
+
+	# 卡组实例层：难度 11 下 deck 里的木栅栏 / 攻击被改写，卡面正文数字同步（不改 effect_text）
+	var r862_bak_deck := RunState.deck_ids.duplicate()
+
+	RunState.deck_ids = [8001, 8002]
+
+	var r862_weak := RunState.build_deck(r862_repo)
+
+	check(r862_weak.size() == 2 and r862_weak[0].health == 6 and r862_weak[1].value == 4
+			and int(r862_weak[1].body_number_swap.get("to", 0)) == 4
+			and CardText.naturalize_card(r862_weak[1]).contains("4 点伤害")
+			and not CardText.naturalize_card(r862_weak[1]).contains("5 点伤害"),
+			"R862 难度 11 卡组实例：木栅栏 6 血 / 攻击 4 伤，卡面正文同步换 4（%s）"
+			% CardText.naturalize_card(r862_weak[1]))
+
+	RunState.deck_ids = r862_bak_deck
+
+	check(RunState.difficulty_name() == "初始卡削弱" and not RunState.third_layer_locked(),
+
+			"R862 难度 11 不再上锁（上锁已挪到 12 档，%s）" % RunState.difficulty_note())
+
+	RunState.set_difficulty(12)
 
 	check(RunState.difficulty_name() == "上锁" and RunState.third_layer_locked()
 			and RunState.difficulty_note().contains("获取三个信物以解锁第三层"),
 
-			"难度 11 = 上锁；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
+			"难度 12 = 上锁；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
 
 	# ---- R794b：难度 12「昂贵」—— 商店商品售价 +40%（信物除外）----
 	var r794_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 
-	check(RunState.DIFF_SHOP_PRICE_FROM == 12 and RunState.DIFF_SHOP_PRICE_MUL == 1.4,
-			"R794b 商店涨价的档位与倍率口径（12 档起 ×1.4）")
-
-	RunState.set_difficulty(11)
-
-	check(RunState.shop_price_mul() == 1.0 and RunState.shop_price_mul(true) == 1.0,
-			"R794b 难度 11 及以下商店不加价（信物一律不加）")
+	check(RunState.DIFF_SHOP_PRICE_FROM == 13 and RunState.DIFF_SHOP_PRICE_MUL == 1.4,
+			"R794b 商店涨价的档位与倍率口径（R862 插档后 13 档起 ×1.4）")
 
 	RunState.set_difficulty(12)
+
+	check(RunState.shop_price_mul() == 1.0 and RunState.shop_price_mul(true) == 1.0,
+			"R794b 难度 12 及以下商店不加价（信物一律不加）")
+
+	RunState.set_difficulty(13)
 
 	check(RunState.difficulty_name() == "昂贵" and RunState.shop_price_mul() == 1.4
 			and RunState.shop_price_mul(true) == 1.0
 			and RunState.difficulty_note().contains("40%"),
-			"R794b 难度 12 = 昂贵：非信物 ×1.4 / 信物 ×1.0（%s）" % RunState.difficulty_note())
+			"R794b 难度 13 = 昂贵：非信物 ×1.4 / 信物 ×1.0（%s）" % RunState.difficulty_note())
 
 	check(RunState.difficulty_summary().contains("商店 ×1.4"),
 			"R794b 数值摘要列出「商店 ×1.4」（%s）" % RunState.difficulty_summary())
@@ -20704,7 +20766,7 @@ func _init() -> void:
 
 	RunState.set_difficulty(99)
 
-	check(RunState.difficulty == 12, "难度档位：越界输入被钳制到 12")
+	check(RunState.difficulty == 13, "难度档位：越界输入被钳制到 13")
 
 	RunState.set_difficulty(-3)
 
@@ -20714,27 +20776,28 @@ func _init() -> void:
 			and is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10),
 			"R853 工具掉落率常量：33% / 10%")
 
-	check(RunState.DIFFICULTY_COUNT == 13 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 13
+	check(RunState.DIFFICULTY_COUNT == 14 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 14
 
-			and RunState.DIFFICULTY_REST_PCT.size() == 13
+			and RunState.DIFFICULTY_REST_PCT.size() == 14
 
-			and RunState.DIFFICULTY_TEXTS.size() == 13
+			and RunState.DIFFICULTY_TEXTS.size() == 14
 
 			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 3 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
 
 			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
 
-			"R853 难度档位：13 档；战斗胜利默认回血 3(0/1档)·0(2+档) / 篝火 40%%(0档)·25%%(1档起）")
+			"R853/R862 难度档位：14 档；战斗胜利默认回血 3(0/1档)·0(2+档) / 篝火 40%%(0档)·25%%(1档起）")
 
 	# ---- R795：难度显示「数字 + 名称」（结算副标题 / 对战记录）----
-	check(RunState.difficulty_label(0) == "0 轻松" and RunState.difficulty_label(12) == "12 昂贵"
-			and RunState.difficulty_name_at(11) == "上锁",
-			"R795 难度标签＝数字 + 名称（0 → %s / 12 → %s / 11 名 %s）" % [
-			RunState.difficulty_label(0), RunState.difficulty_label(12),
-			RunState.difficulty_name_at(11)])
+	check(RunState.difficulty_label(0) == "0 轻松" and RunState.difficulty_label(13) == "13 昂贵"
+			and RunState.difficulty_name_at(12) == "上锁"
+			and RunState.difficulty_name_at(11) == "初始卡削弱",
+			"R795/R862 难度标签＝数字 + 名称（0 → %s / 13 → %s / 12 名 %s / 11 名 %s）" % [
+			RunState.difficulty_label(0), RunState.difficulty_label(13),
+			RunState.difficulty_name_at(12), RunState.difficulty_name_at(11)])
 
 	# 旧版本记录文件兼容：档位只存了数字，名称现推；越界 / 负数一律钳住，不许越界取数组。
-	check(RunState.difficulty_label(99) == "12 昂贵" and RunState.difficulty_label(-5) == "0 轻松"
+	check(RunState.difficulty_label(99) == "13 昂贵" and RunState.difficulty_label(-5) == "0 轻松"
 			and RunState.difficulty_name_at(999) == "昂贵",
 			"R795 旧记录越界档位被钳制（99 → %s / -5 → %s）" % [
 			RunState.difficulty_label(99), RunState.difficulty_label(-5)])
@@ -20799,13 +20862,13 @@ func _init() -> void:
 
 	# ① R853：难度 12 战斗胜利默认回血关掉，篝火照常 —— 函数层再钉一遍
 
-	RunState.set_difficulty(12)   # R853：这条断言RunState原漏设档位，实际跑在 0 档
+	RunState.set_difficulty(13)   # R853：这条断言RunState原漏设档位，实际跑在 0 档；R862 插档后最高档 = 13
 
 	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() > 0.0
 
 			and RunState.rest_heal_amount() > 0,
 
-			"R237/R853：难度 12 战斗胜利不回血；篝火回血照常（rest_pct %.2f）"
+			"R237/R853：难度 13 战斗胜利不回血；篝火回血照常（rest_pct %.2f）"
 
 			% RunState.rest_pct())
 
@@ -25288,9 +25351,9 @@ func _init() -> void:
 
 	check(r82_attack.cost == 1 and r82_attack.target_mode == "unit"
 
-			and r82_attack.effect_text == "对一个目标造成 4 点伤害。",
+			and r82_attack.effect_text == "对一个目标造成 5 点伤害。",
 
-		"R82 攻击 8002：数值与效果文案未变（1 费 / 4 伤 / 选目标）—— 改名不影响规则")
+		"R82 攻击 8002：数值与效果文案未变（1 费 / 5 伤 / 选目标）—— 改名不影响规则")
 
 	var r82_atk_e := _new_engine(_single_deck(CardData.from_dict(r82_attack.to_dict())),
 
@@ -25298,9 +25361,9 @@ func _init() -> void:
 
 	r82_atk_e.start_game()
 
-	# 摆一个**血够厚**的敌人：判据用「血量变化 = 4」，不依赖它死不死
+	# 摆一个**血够厚**的敌人：判据用「血量变化 = 5」，不依赖它死不死
 
-	# （骷髅兵 2 血会被 4 伤打死，死了 unit_at 就返回 null，判据会失效）。
+	# （骷髅兵 2 血会被 5 伤打死，死了 unit_at 就返回 null，判据会失效）。
 
 	var r82_foe_card: CardData = _card(1053, "骷髅兵", "怪物", 3, 2, 1, 1, 1)
 
@@ -25314,9 +25377,9 @@ func _init() -> void:
 
 	r82_atk_e.use_spell(0, Vector2i(2, 1))
 
-	check(r82_target.health == 20 - 4,
+	check(r82_target.health == 20 - 5,
 
-		"R82 攻击 8002：改名前后伤害都是 4（20 → %d，引擎按 id 判定，不受改名影响）"
+		"R82 攻击 8002：改名前后伤害都是 5（20 → %d，引擎按 id 判定，不受改名影响）"
 
 			% r82_target.health)
 
@@ -26606,9 +26669,9 @@ func _init() -> void:
 
 	# ⚠️ **不能污染卡库**（build_deck 给的是卡库共享实例）
 
-	check(r86_repo.get_card(8003).health == 8 and r86_repo.get_card(8001).health == 6,
+	check(r86_repo.get_card(8003).health == 8 and r86_repo.get_card(8001).health == 8,
 
-		"R394 集体改造：**没有污染卡库**（树人仍 8 血 / 木栅栏仍 6 血，实际 %d / %d）"
+		"R394 集体改造：**没有污染卡库**（树人仍 8 血 / 木栅栏仍 8 血，实际 %d / %d）"
 
 			% [r86_repo.get_card(8003).health, r86_repo.get_card(8001).health])
 
@@ -28460,7 +28523,7 @@ func _init() -> void:
 
 	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8003).to_dict()))  # 树人 3费3/8
 
-	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8001).to_dict()))  # 木栅栏 2费0/6
+	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8001).to_dict()))  # 木栅栏 2费0/8
 
 	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8002).to_dict()))  # 攻击（技能，不改）
 
@@ -28480,7 +28543,7 @@ func _init() -> void:
 
 	check(r90_t2.power == 3 + GameEngine.BATCH_TRANSFER_ATK
 
-			and r90_f2.health == 6 + GameEngine.BATCH_TRANSFER_HP
+			and r90_f2.health == 8 + GameEngine.BATCH_TRANSFER_HP
 
 			and r90_f2.cost == 2 and r90_t2.cost == 3,
 
@@ -28518,7 +28581,7 @@ func _init() -> void:
 
 		% ("没抽到" if r90_bear == null else "抽到了"))
 
-	check(r90_repo.get_card(8003).power == 3 and r90_repo.get_card(8001).health == 6,
+	check(r90_repo.get_card(8003).power == 3 and r90_repo.get_card(8001).health == 8,
 
 		"R90 批量传输**没有污染卡库**（树人 3 攻 / 木栅栏 6 血不变）")
 
@@ -42083,13 +42146,13 @@ func _init() -> void:
 
 			"R223 难度 6：敌血 +10% 与敌攻 +1 同时生效 → 4/44")
 
-	var r223_fort0: CardData = CardData.from_dict(r223_repo.get_card(8001).to_dict())  # 木栅栏 0/6 工事
+	var r223_fort0: CardData = CardData.from_dict(r223_repo.get_card(8001).to_dict())  # 木栅栏 0/8 工事
 
 	var r223_fort_s: CardData = RunState.scaled_enemy_card(r223_fort0)
 
-	check(r223_fort_s.power == 0 and r223_fort_s.health == 7,
+	check(r223_fort_s.power == 0 and r223_fort_s.health == 9,
 
-			"R223 难度 6：原本 0 攻工事不吃攻击加成（0/6 → 0/7，只吃生命）")
+			"R223 难度 6：原本 0 攻工事不吃攻击加成（0/8 → 0/9，只吃生命）")
 
 	RunState.set_difficulty(0)
 
@@ -54076,9 +54139,9 @@ func _init() -> void:
 
 	r316_e.use_spell(r316_e.state.hand.size() - 1, Vector2i(0, 2))
 
-	check(r316_foe.health == r316_hp1 - 6,
+	check(r316_foe.health == r316_hp1 - 7,
 
-			"R316 极速：单目标技能卡也吃易伤（4 → 实际 -6，剩 %d/%d）"
+			"R316 极速：单目标技能卡也吃易伤（5 → 实际 -7，剩 %d/%d）"
 
 			% [r316_foe.health, r316_hp1])
 
@@ -72498,25 +72561,25 @@ func _init() -> void:
 
 			"R543 上锁：难度 10 不锁、恒可进第三层")
 
-	RunState.set_difficulty(11)
+	RunState.set_difficulty(12)
 
 	check(RunState.third_layer_locked() and RunState.can_enter_third_layer(),
 
-			"R543 上锁：难度 11 上锁、信物齐了才放行")
+			"R543/R862 上锁：难度 12 上锁、信物齐了才放行")
 
 	RunState.key_relics = []
 
 	check(not RunState.can_enter_third_layer(),
 
-			"R543 上锁：难度 11 无信物 → 不能进第三层")
+			"R543/R862 上锁：难度 12 无信物 → 不能进第三层")
 
-	# ③ 大宝箱二选一：难度 ≥ 11 且没种子 → relic_or_key 条目；两条领取路 + 放弃
+	# ③ 大宝箱二选一：难度 ≥ 上锁档且没种子 → relic_or_key 条目；两条领取路 + 放弃
 
 	RunState.key_relics = []
 
 	RunState.pending_rewards = []
 
-	RunState.set_difficulty(11)
+	RunState.set_difficulty(12)
 
 	var r543_bak_gold := RunState.gold
 
@@ -72532,7 +72595,7 @@ func _init() -> void:
 
 			and int(r543_last.get("relic_id", -1)) > 0,
 
-			"R543 大宝箱：难度 11 没种子 → 道具那格变成「道具/生命之种」二选一条目")
+			"R543/R862 大宝箱：难度 12 没种子 → 道具那格变成「道具/生命之种」二选一条目")
 
 	var r543_idx := RunState.pending_rewards.find(r543_last)
 
@@ -72986,9 +73049,9 @@ func _init() -> void:
 
 			"R577 高难度成就门槛 = 难度 5")
 
-	check(SteamAchievements.APEX_DIFF == 12,
+	check(SteamAchievements.APEX_DIFF == 13,
 
-			"R740 巅峰成就门槛 = 难度 12（0~12 共 13 档的最高档）")
+			"R740/R862 巅峰成就门槛 = 难度 13（0~13 共 14 档的最高档）")
 
 	check(SteamAchievements.APEX_DIFF == RunState.DIFFICULTY_COUNT - 1,
 
@@ -78863,17 +78926,17 @@ func _test_r792() -> void:
 
 	r792_brick.state.hand.clear()
 
-	r792_brick.state.hand.append(CardData.from_dict(r792_cards.get_card(8001).to_dict()))   # 木栅栏 2 费 6 血
+	r792_brick.state.hand.append(CardData.from_dict(r792_cards.get_card(8001).to_dict()))   # 木栅栏 2 费 8 血
 
 	var r792_w := r792_brick.play_from_hand(0, Vector2i(5, 1))
 
-	check(r792_w != null and r792_w.health == 10 and r792_w.card.health == 10 and r792_w.relic_bonus_hp == 4,
-			"R792 墙砖：木栅栏 6+4=10 生命（实得 %d）" % (r792_w.health if r792_w != null else -1))
+	check(r792_w != null and r792_w.health == 12 and r792_w.card.health == 12 and r792_w.relic_bonus_hp == 4,
+			"R792 墙砖：木栅栏 8+4=12 生命（实得 %d）" % (r792_w.health if r792_w != null else -1))
 
 	var r792_back := r792_brick._card_leaving_field(r792_w)
 
-	check(r792_back != null and r792_back.health == 6,
-			"R792 墙砖：离场还原成 6 血（实得 %d）" % (r792_back.health if r792_back != null else -1))
+	check(r792_back != null and r792_back.health == 8,
+			"R792 墙砖：离场还原成 8 血（实得 %d）" % (r792_back.health if r792_back != null else -1))
 
 	# ⑤ 源码守卫：「第一个盟友」两个额度各只发一次，重置点在 start_game
 	var r792_ge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
@@ -80474,10 +80537,10 @@ func _test_r811() -> void :
 		if k == "fence_merge":
 			r811_ev.append(int(d.get("gained", -1))))
 	r811_e1.play_from_hand(0, Vector2i(4, 1))
-	check(r811_p1.health == 12 and r811_p1.card.health == 12,
-			"R811 栅栏回满：2/6 的残墙叠一张木栅栏 → 12/12（旧行为只会到 8/12）")
-	check(r811_ev.size() == 1 and int(r811_ev[0]) == 10,
-			"R811 栅栏回满：飘字按「实际涨了多少」算（2 → 12 = +10），不是新栅栏的 6")
+	check(r811_p1.health == 16 and r811_p1.card.health == 16,
+			"R811 栅栏回满：2/8 的残墙叠一张木栅栏 → 16/16（旧行为只会到 10/16）")
+	check(r811_ev.size() == 1 and int(r811_ev[0]) == 14,
+			"R811 栅栏回满：飘字按「实际涨了多少」算（2 → 16 = +14），不是新栅栏的 8")
 
 	# ── ② 残墙 + 铁栅栏 → 上限 6+12=18 并回满（跨种类叠加同样回满）──
 	var r811_e2 := _new_engine([], 20, 20, -1, false)
@@ -80488,13 +80551,13 @@ func _test_r811() -> void :
 	r811_e2.state.hand = [CardData.from_dict(r811_repo.get_card(8001).to_dict())]
 	r811_e2.state.energy = 5
 	r811_e2.play_from_hand(0, Vector2i(3, 1))
-	check(r811_p2.health == 18 and r811_p2.card.health == 18,
-			"R811 栅栏回满：3/12 的铁栅栏叠一张木栅栏 → 18/18（上限 12+6 并回满）")
+	check(r811_p2.health == 20 and r811_p2.card.health == 20,
+			"R811 栅栏回满：3/12 的铁栅栏叠一张木栅栏 → 20/20（上限 12+8 并回满）")
 
 	# ── ③ 回满只动当前值：离场交出去的仍是原始卡 ──
 	var r811_out := r811_e1._card_leaving_field(r811_p1)
-	check(r811_out != null and r811_out.health == 6 and not r811_out.traits.has("铁栅栏"),
-			"R811 栅栏回满：上限仍由 fence_bonus_hp 还原（离场交回 6 血原卡、没偷来的特性）")
+	check(r811_out != null and r811_out.health == 8 and not r811_out.traits.has("铁栅栏"),
+			"R811 栅栏回满：上限仍由 fence_bonus_hp 还原（离场交回 8 血原卡、没偷来的特性）")
 	var r811_out2 := r811_e2._card_leaving_field(r811_p2)
 	var r811_tr2: Array = r811_out2.traits if r811_out2 != null else []
 	check(r811_out2 != null and r811_out2.health == 12 and r811_tr2.has("铁栅栏") and not r811_tr2.has("防御"),

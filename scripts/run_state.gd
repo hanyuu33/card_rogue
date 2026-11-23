@@ -212,7 +212,7 @@ static var revenge_pending := false
 const REVENGE_TRIGGER_CHANCE := 0.5         # 50%
 const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中的 boss 名必须是它
 
-# ---- 难度档位（R47 三档 → R223 重做成 0~10 共 11 档）----
+# ---- 难度档位（R47 三档 → R223 重做成 0~10 → R862 插入「初始卡削弱」→ 共 14 档）----
 # R223 起：角色选择界面用**左右箭头**调档（0~10），**高难度继承低难度全部 debuff**。
 # 用户口径逐档新增内容（数值口径见下方各 const 与取值函数）：
 # R224 起新增全局规则：**除到达新的一层外不能回复 HP**（用户口径）——
@@ -232,13 +232,17 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 #   10 = 精英出现增多（R380 / R852）：继承 0~9 全部 debuff，明房与「?」房两条途径的
 #        精英出现概率统一 ×1.3（约 +30%）。R852：「?」房**照旧刷商店**（原「10 档裁掉
 #        shop」已撤销），加权代价只从战斗 / 事件 / 宝箱里扣，商店占比与低难度一致。
-#   11 = 第三层上锁（R543）：要凑齐完美螺钉 / 生命之种 / 屠戮匕首三样信物才开门。
-#   12 = 昂贵（R794b）：商店商品售价 +40%，**信物除外**（信物 = 上面那三把钥匙）。
+#   11 = 初始卡削弱（R862，用户口径）：初始卡组里的木栅栏 / 攻击退回旧数值
+#        （木栅栏 6 血、攻击 4 伤）；0~10 档是上调后的 8 血 / 5 伤。
+#        数值唯一口 = `starter_fence_hp()` / `starter_attack_dmg()`；卡面正文数字由
+#        `card_with_mod()` 写进实例 `body_number_swap`，**不改 effect_text**（i18n 会掉)。
+#   12 = 第三层上锁（R543）：要凑齐完美螺钉 / 生命之种 / 屠戮匕首三样信物才开门。
+#   13 = 昂贵（R794b）：商店商品售价 +40%，**信物除外**（信物 = 上面那三把钥匙）。
 # 档位只在角色选择界面改，不属于 run 状态（end_run / start_run 都不动它）。
 static var difficulty: int = 0
-const DIFFICULTY_COUNT := 13
+const DIFFICULTY_COUNT := 14
 const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强", "稀缺",
-		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "上锁", "昂贵"]
+		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "初始卡削弱", "上锁", "昂贵"]
 ## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」；第 10 档无新增（空串）。
 ## R224：`difficulty_note()` 只返回**当前档**这一条（用户口径「难度文本没有必要写所有，
 ## 只需要写当前难度新增就行了」）—— 高档继承低档的全部 debuff 由 `difficulty_summary()`
@@ -255,17 +259,18 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"行动力降低",
 	"虚弱",
 	"精英出现增多",
+	"初始卡削弱：攻击伤害 4，木栅栏生命 6",
 	"第三层上锁，获取三个信物以解锁第三层",
 	"商店商品售价 +40%（信物除外）",
 ]
 ## R224：全局规则（R853 重做）—— 战斗胜利**默认**回血只有 0/1 档 = 3，难度 2 起关掉；
 ## 其他回血途径（篝火 / 圣餐 / 道具 / 换层）都不受难度 2 影响。
 ## ⚠️ 苹果 6027 持有期间这一口也被锁（唯一口 `hp_recovery_locked()`）。
-const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
+const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
 ## R237：恢复篝火回血 —— 难度 0 = 40%，1 档起 = 25%（即原始设计；R224 曾按用户要求归零，现加回）。
 ## ⚠️ 战斗胜利回血（DIFFICULTY_BATTLE_HEAL）0/1 档 = 3、2+ 档 = 0（R853）；苹果持有时全锁。
 const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
-		0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                             # 休息回复百分比
+		0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                      # 休息回复百分比
 
 ## 各 debuff 的数值口径（**唯一口** —— 界面 / 引擎 / 测试都读这里，别在各处写死数字）
 const DIFF_GOLD_LOW := 150         # 0~6 档初始金钱（原 100 + 难度 0 的 +50）
@@ -289,19 +294,33 @@ const DIFF_ELITE_MUL := 1.3        # 精英出现概率乘数（≈ +30%，扣�
 ## R778：强弱精英判据 —— 当前巧克力 <= 5 一定进强精英，否则一定进弱精英。
 ## 三层精英不参与（第三层固定抽第二层精英困难池，见 next_level）。
 const ELITE_STRONG_CHOCO_MAX := 5
-## R543（用户口径）：难度 11「上锁」—— 第三层需要凑齐三样信物才能进入。
-## ⚠️ 只有难度 ≥ 11 才需要信物；难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
-const DIFF_LOCK_FROM := 11         # 11 档起「第三层上锁」
+## R543（用户口径）：难度 12「上锁」—— 第三层需要凑齐三样信物才能进入。
+## ⚠️ 只有难度 ≥ 12 才需要信物；难度 ≤ 11 下第三层照常开放（用户明确「任何难度都开放第三层」）。
+## R862 插档前这一档是 11（「初始卡削弱」占了 11）。
+const DIFF_LOCK_FROM := 12         # 12 档起「第三层上锁」（R862 插档前是 11）
 ## 三样信物（解锁第三层所需的信物）：完美螺钉 / 生命之种 / 屠戮匕首。
 const SCREW_RELIC_ID := 6061       # 完美螺钉（第二层 Boss 掉落，替代一份普通卡牌奖励）
 const SEED_RELIC_ID := 6062        # 生命之种（大宝箱二选一）
 const DAGGER_RELIC_ID := 6063      # 屠戮匕首（商店第三排额外售卖）
 const KEY_RELIC_IDS: Array[int] = [SCREW_RELIC_ID, SEED_RELIC_ID, DAGGER_RELIC_ID]
-## R794b（用户口径）：难度 12「昂贵」—— 商店里卖的东西一律 +40%，**信物除外**。
+## R794b（用户口径）：难度 13「昂贵」—— 商店里卖的东西一律 +40%，**信物除外**。
+## R862 插档前这一档是 12。
 ## ⚠️ 唯一消费点 = `shop_scene._shelf_price()`：价签 / 悬停详情 / 扣款 / 遥测
 ##    四个口共用一个倍率，谁都不许自己乘 1.4。
 ##    信物目前只有第三行那条「屠戮匕首」—— 由调用方传 `key_relic = true` 跳过加价。
-const DIFF_SHOP_PRICE_FROM := 12   # 12 档起「商店涨价」
+const DIFF_SHOP_PRICE_FROM := 13   # 13 档起「商店涨价」（R862 插档前是 12）
+## R862（用户口径）：初始卡的**基础数值**（0~10 档）与**削弱后数值**（11 档起）。
+##   * 木栅栏 8001：8 血 → 6 血；攻击 8002：5 伤 → 4 伤；
+##   * 图鉴 / 卡库原型永远是基础值，削弱只发生在**卡组实例**上（`card_with_mod()`）；
+##   * 唯一口 = `starter_fence_hp()` / `starter_attack_dmg()`，别在别处写字面量。
+const STARTER_FENCE_HP := 8
+const STARTER_ATTACK_DMG := 5
+const STARTER_WEAK_FENCE_HP := 6
+const STARTER_WEAK_ATTACK_DMG := 4
+## 11 档起「初始卡削弱」，同时也是角色选择界面**橙色档位**的起点（用户口径）。
+const DIFF_STARTER_WEAK_FROM := 11
+const STARTER_FENCE_ID := 8001
+const STARTER_ATTACK_ID := 8002
 const DIFF_SHOP_PRICE_MUL := 1.4   # +40%
 ## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
 const FATIGUE_CARD_ID := 9149
@@ -660,6 +679,31 @@ static func _diff() -> int:
 	return clampi(difficulty, 0, DIFFICULTY_COUNT - 1)
 
 
+static func starter_card_weak() -> bool:
+	## R862：当前档位是否削弱**初始卡**（11 档起）。唯一判据。
+	return _diff() >= DIFF_STARTER_WEAK_FROM
+
+
+static func starter_fence_hp_at(d: int) -> int:
+	## 指定档位的木栅栏生命（图鉴 / 卡库原型不走这里，它们恒为零件的 `health`）。
+	return STARTER_WEAK_FENCE_HP if clampi(d, 0, DIFFICULTY_COUNT - 1) >= DIFF_STARTER_WEAK_FROM else STARTER_FENCE_HP
+
+
+static func starter_fence_hp() -> int:
+	## R862：初始卡「木栅栏」在当前档的生命值 —— 唯一口。
+	return starter_fence_hp_at(_diff())
+
+
+static func starter_attack_dmg_at(d: int) -> int:
+	## 指定档位的「攻击」伤害。
+	return STARTER_WEAK_ATTACK_DMG if clampi(d, 0, DIFFICULTY_COUNT - 1) >= DIFF_STARTER_WEAK_FROM else STARTER_ATTACK_DMG
+
+
+static func starter_attack_dmg() -> int:
+	## R862：初始卡「攻击」在当前档的伤害 —— 唯一口。
+	return starter_attack_dmg_at(_diff())
+
+
 static func tool_drop_chance_at(d: int) -> float:
 	## R853：指定档位的战斗工具掉落率；越界钳到合法区间。
 	return TOOL_DROP_CHANCE_EASY if clampi(d, 0, DIFFICULTY_COUNT - 1) == 0 else TOOL_DROP_CHANCE
@@ -672,7 +716,7 @@ static func tool_drop_chance() -> float:
 
 
 static func set_difficulty(d: int) -> void:
-	## 角色选择界面用左右箭头调档（0~10）。越界钳制、**不循环**。
+	## 角色选择界面用左右箭头调档（0~13）。越界钳制、**不循环**。
 	difficulty = clampi(d, 0, DIFFICULTY_COUNT - 1)
 
 
@@ -687,7 +731,7 @@ static func difficulty_name_at(d: int) -> String:
 
 static func difficulty_label(d: int = -1) -> String:
 	## R795：「数字 + 名称」（例 `12 昂贵`）—— 结算副标题 / 对战记录共用的**唯一口**。
-	## 数字就是角色选择界面档位框里的那个 0~12，名称紧跟其后，玩家不用再自己对照。
+	## 数字就是角色选择界面档位框里的那个 0~13，名称紧跟其后，玩家不用再自己对照。
 	## `d < 0` = 当前档；越界 / 缺失由 `clampi` 兜住 —— **兼容旧版本记录文件**就靠这一句：
 	## 老记录只存了档位数字（`difficulty`），名称一律现推，不落盘也不怕以后改名。
 	var i := _diff() if d < 0 else clampi(d, 0, DIFFICULTY_COUNT - 1)
@@ -720,13 +764,15 @@ static func difficulty_summary() -> String:
 		bits.append("精英 ×%.1f" % elite_weight_mul())
 	if d >= DIFF_SHOP_PRICE_FROM:
 		bits.append("商店 ×%.1f" % shop_price_mul())
+	if d >= DIFF_STARTER_WEAK_FROM:
+		bits.append("初始卡 攻%d/栅%d" % [starter_attack_dmg_at(d), starter_fence_hp_at(d)])
 	return " · ".join(bits)
 
 
 static func shop_price_mul(is_key_relic := false) -> float:
 	## R794b：商店成交价的难度倍率（**唯一判据**）。
 	## 信物（`KEY_RELIC_IDS`）恒不打折也不加价 → 跟「+40%」这条 debuff 无关；
-	## 其余商品在难度 ≥12 时 ×1.4，低难度恒 1.0。
+	## 其余商品在难度 ≥13 时 ×1.4，低难度恒 1.0。
 	## ⚠️ 别在 `shop_scene` 里另写一份 `if difficulty >= 12` —— 档位口径只许有这一处。
 	if is_key_relic:
 		return 1.0
@@ -1412,7 +1458,7 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# UI（class_pick_scene）里已经拦，这里是纵深防御：任何路径带着超限难度进来都会被压回。
 	# R762：每日挑战例外。固定配置对所有人相同，不能被各账号的解锁进度压成不同难度。
 	# R814：**试玩版也要钳**。试玩版 `is_release()` 恒 false，只判发布版的话，
-	# 一份来自完整版的档案（难度 12）能让试玩版直接 12 开局 —— 档位上限 1 就形同虚设。
+	# 一份来自完整版的档案（难度 13）能让试玩版直接 13 开局 —— 档位上限 1 就形同虚设。
 	if (GameBuild.is_release() or GameBuild.is_demo()) and daily_date == "":
 		difficulty = clampi(difficulty, 0, UnlockSystem.difficulty_cap(player_class))
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
@@ -2172,13 +2218,13 @@ static func has_all_keys() -> bool:
 
 
 static func third_layer_locked() -> bool:
-	## 第三层是否被「上锁」约束：难度 ≥ 11 时，需要凑齐三样信物才能进入。
+	## 第三层是否被「上锁」约束：难度 ≥ 12 时，需要凑齐三样信物才能进入。
 	## ⚠️ 难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
 	return _diff() >= DIFF_LOCK_FROM
 
 
 static func can_enter_third_layer() -> bool:
-	## 能否进入第三层：难度 < 11 恒可进；难度 ≥ 11 需要凑齐三样信物。
+	## 能否进入第三层：难度 < 12 恒可进；难度 ≥ 12 需要凑齐三样信物。
 	if not third_layer_locked():
 		return true
 	return has_all_keys()
@@ -3249,7 +3295,7 @@ static func grant_bigchest() -> Dictionary:
 	## 返回 {relic_id, gold, reward_idx}（relic_id = -1 表示奖励道具已全拿完）。
 	## R543（用户口径）：开启大宝箱时，若玩家**不持有生命之种**，则道具那格改成
 	## 「奖励道具 / 生命之种」二选一（新增的二选一领取方式）。
-	## ⚠️ 用户口径「所有信物改动只在难度 ≥ 11 生效」→ 低难度下仍走普通道具掉落。
+	## ⚠️ 用户口径「所有信物改动只在难度 ≥ 12 生效」→ 低难度下仍走普通道具掉落。
 	gain_gold(BIGCHEST_GOLD)
 	# R314：**大宝箱**的传奇概率翻倍（5% × 层数 → 10% × 层数），所以这里必须传 `true`。
 	var rid := roll_reward_relic(true)
@@ -4265,14 +4311,38 @@ static func card_with_mod(repo: CardRepo, index: int) -> CardData:
 		return null
 	var mod: Dictionary = _mod_at(index)
 	var growth := card_growth_of(deck_ids[index])
+	# R862：难度 ≥11 → 初始卡（木栅栏 / 攻击）退回旧数值。
+	# 判据只看 id + 当前档：卡片来源（初始 / 诅咒塞的 / 每日挑战）不区分 —— 这三张
+	# 本来就是 rarity=3 的初始卡，进不了奖励池，所以「卡组里的」就等于「玩家的基础卡」。
+	var weak := _starter_weak_applies(deck_ids[index])
 	# R393：没有附魔、但有本局永久成长时**也必须复制** —— 否则会把成长写进卡库共享实例。
-	if mod.is_empty() and growth.is_empty():
+	if mod.is_empty() and growth.is_empty() and not weak:
 		return c
 	var cc := CardData.from_dict(c.to_dict())   # 独立副本（affixes 等数组也独立）
 	if not mod.is_empty():
 		_apply_mod(cc, mod)
 	_apply_card_growth(cc, growth)
+	if weak:
+		_apply_starter_weak(cc)
 	return cc
+
+
+static func _starter_weak_applies(id: int) -> bool:
+	## R862：这张卡在当前档要不要按「初始卡削弱」处理（只认木栅栏 / 攻击两个 id）。
+	if id != STARTER_FENCE_ID and id != STARTER_ATTACK_ID:
+		return false
+	return starter_card_weak()
+
+
+static func _apply_starter_weak(cc: CardData) -> void:
+	## R862：把削弱后的数值烤进**副本**（调用方已复制，这里可以放心改）。
+	## ⚠️ 攻击**不改 `effect_text`**：i18n 译文按中文原串整句硬编码，改了原文就查不到译文
+	##    （R702 踩过）。卡面数字交给 `body_number_swap`，`CardText.parse_card()` 替换。
+	if cc.id == STARTER_FENCE_ID:
+		cc.health = STARTER_WEAK_FENCE_HP
+	elif cc.id == STARTER_ATTACK_ID:
+		cc.value = STARTER_WEAK_ATTACK_DMG
+		cc.body_number_swap = {"from": STARTER_ATTACK_DMG, "to": STARTER_WEAK_ATTACK_DMG}
 
 
 static func card_growth_of(card_id: int) -> Dictionary:

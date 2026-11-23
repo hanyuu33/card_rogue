@@ -270,7 +270,7 @@
       "kind": "工事",
       "cost": 2,
       "power": 0,
-      "health": 6,
+      "health": 8,
       "attack_range": 0,
       "move_speed": 0,
       "rarity": 3,
@@ -297,7 +297,8 @@
       "traits": [
         "攻击"
       ],
-      "effect_text": "对一个目标造成 4 点伤害。",
+      "effect_text": "对一个目标造成 5 点伤害。",
+      "value": 5,
       "target_mode": "unit",
       "color": "",
       "image": ""

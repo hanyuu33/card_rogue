@@ -179,6 +179,22 @@ static func ensure_loaded() -> void:
 			for cls: String in PlayerClass.ids():
 				banned_by_class[cls] = old_bans.duplicate()
 
+	# R862：难度表在 11 档插入了「初始卡削弱」→ 老档案的已解锁档位整体 +1
+	#（原 11 上锁 / 12 昂贵，现在分别是 12 / 13）。
+	# ⚠️ 必须放在 **ensure_loaded 的最后**：下面 `save()` 会按内存状态整份重写，
+	#    提前调用会把还没解析的禁卡表 / 教程标记冲成空。
+	# ⚠️ 必须**立刻落盘**：`diff_schema` 是写在 `save()` 里的，不写就会每次读档都 +1。
+	if int(d.get("diff_schema", 1)) < 2:
+		var shifted := false
+		for k2: Variant in class_diff.keys():
+			# 11 = RunState.DIFF_STARTER_WEAK_FROM（这里不引用 RunState，避免静态类循环依赖）
+			if int(class_diff[k2]) >= 11:
+				class_diff[k2] = int(class_diff[k2]) + 1
+				shifted = true
+		if shifted:
+			print("[ProfileData] R862 难度表插档：已解锁难度整体 +1")
+		save()
+
 
 static func save() -> bool:
 	ensure_loaded()
@@ -194,6 +210,7 @@ static func save() -> bool:
 		"class_diff": class_diff,               # R550
 		"banned_by_class": banned_by_class,
 		"tutorial_seen": tutorial_seen,         # R744
+		"diff_schema": 2,                       # R862：11 档插档迁移标记（<2 = 还没迁移）
 	}
 	var f := FileAccess.open(_path, FileAccess.WRITE)
 	if f == null:

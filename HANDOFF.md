@@ -2372,3 +2372,32 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 - R855c 透明版：`release/store/quackill_title_en_alpha.png`（1685×467 RGBA，37.47% 全透明）。
   生成脚本 `art_src/2026-11-22_title_en/_matte_title_logo.py`；三底验收图 `preview_title_alpha.png`。
   不含天空、云、银杏、房屋；尾部小鸭与橙色鸭掌完整，外缘为深棕+暖金薄边。
+
+## 2026-11-23 R862 难度插档（初始卡削弱）+ 初始卡数值上调
+
+- 店长口径：
+  * 低难度（0~10 档）攻击 8002 = **5 伤**、木栅栏 8001 = **8 血**，**图鉴也改**；
+  * 插入新档 **11「初始卡削弱」**：初始卡组里的攻击回到 4 伤、木栅栏回到 6 血；
+  * 原 11「第三层上锁」→ **12**，原 12「昂贵」→ **13**（总档位 13 → 14）；
+  * 角色选择界面**从 11 档起橙色**（原来橙色挂在「上锁」档上）。
+- 落地：
+  * `cards.json` 8001 `health` 6→8；8002 文案「造成 5 点伤害」并补 `value: 5`。
+  * `RunState`：`DIFFICULTY_COUNT` 14；NAMES / TEXTS 插入「初始卡削弱」；BATTLE_HEAL / REST_PCT 补第 14 项；
+    `DIFF_LOCK_FROM` 11→12、`DIFF_SHOP_PRICE_FROM` 12→13；新增 `DIFF_STARTER_WEAK_FROM = 11` 与
+    `STARTER_FENCE_HP / STARTER_ATTACK_DMG / STARTER_WEAK_*`；唯一口
+    `starter_card_weak()` / `starter_fence_hp(_at)` / `starter_attack_dmg(_at)`。
+  * **削弱落在卡组实例层**：`card_with_mod()` 对 8001 / 8002 复制后改 `health` / `value`，并写
+    `body_number_swap = {"from": 5, "to": 4}`；`CardText.parse_card()` 只换正文数字（`inline_amount`，不染红），
+    **绝不改 `effect_text`** —— i18n 译文按中文原串整句硬编码，改原文会掉回中文（R702 教训）。
+  * 引擎取数收口 `GameEngine.spell_base_of(card)`：攻击 / 蓄势 / 猎杀走实例 `value`，其余读 `SPELL_BASE_DMG`
+    （8002 原型值 4→5）；`_run_spell_effect_body` 的 8002 分支、`spell_now`、拖牌预览、`spell_first_hit` 全走它。
+  * `class_pick_scene._draw_difficulty_block()` 橙色判据由 `DIFF_LOCK_FROM` 换成 `DIFF_STARTER_WEAK_FROM`。
+  * `ProfileData`：新增 `diff_schema` 迁移（老档案已解锁难度 ≥ 11 一律 +1）。**必须放在 `ensure_loaded` 末尾
+    并立刻 `save()`**：提前调用会把还没解析的禁卡表冲成空，不落盘则每次读档都 +1。
+- 验证：十套全绿（engine **7327✓ / 0✗**、traps 250、smoke 77、trapinput 77、mod 37、reward 26、bgm 39、
+  content 15、assemble 0、mana PASS）；`validate_glossary`（difficulties / difficulty_notes 各 14）、
+  `validate_spanish` 24634 项、`_audit_text_sources` 0 问题。
+- 教训：
+  * 测试里 `RunState.deck_ids` 未必是初始卡组 → 断言「卡组实例」前必须**显式摆 deck**（本轮自己踩过一次）。
+  * 旧断言写死 8001 = 6 血 / 8002 = 4 伤的一共 **35 处**（叠栅栏 / R67 离场还原 / R792 墙砖 / R811 回满 /
+    鸭之眼 / 鸭之低语 / R316 易伤 / R223 敌血缩放 …），数值一上调必须同步，否则「功能对、断言红」。
