@@ -2558,3 +2558,9 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 - 用户授权后替换 assets/pics/8002_forest.png，保持 448×403，等比微裁无拉伸。
 - 验证：成品目视检查通过；Godot --headless --editor --import --quit 退出 0；职业卡图路由继续使用原路径。未进行游戏实景截图。
 - 外部 scripts/class_pick_scene.gd 和 art_src/2026-11-23_class_pick/ 未触碰；本轮本地提交未推送。
+
+## 2026-11-23 Boss 卡图应用
+- 用户授权将本轮生成图归档并应用。归档：art_src/2026-11-23_boss_card_refresh，包含七张原图与替换前素材。
+- 应用赫菲斯托斯 v2、启示者、舰炮、电磁屏障、紧急呼叫和三层背景；阶段 p2/p3 复用新版屏障/援军图，已有 pending 副本同步。
+- Godot 4.3 --headless --editor --import --quit 通过；map.tscn --layer 3 与 battle.tscn --level 40 截图目视通过，无 stderr，截图随归档保存。未改玩法代码，未跑全量玩法回归。
+- 外部 scripts/class_pick_scene.gd 与 art_src/2026-11-23_class_pick/ 保持不动。未推送；本阶段提交见 git log。
