@@ -2546,3 +2546,6 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 - 内置 image_gen 参考现役森林 CG 重绘攻击，v2 修正深黑外耳和尾巴；候选位于 art_src/2026-11-23_森林攻击重绘，未接入正式素材。
 - 已目视检查动作、颜色及近 448:403 构图；提示词见同目录 PROMPT.md。未运行游戏测试。
 - 外部 class_pick_scene.gd 与 R864/PROMPTS.md 改动未触碰；本阶段提交见 git log。
+
+## Steam 商店主视觉候选
+已确认 assets/ui/title_art_en.png 英文标题 QUACKILL 存在，结合四位现行角色 CG 以内置 image_gen 生成 art_src/2026-11-23_Steam主视觉/quackill_keyart_v1.png。已视觉检查标题拼写与角色。横向主题原画，尚未按 Steam 各上传槽位适配、未发布。鸭子弓手和赫菲新图尚未在目录发现，本版未使用。提示词同目录 PROMPT.txt；未推送。
