@@ -30,7 +30,7 @@ BAND_SRC = 48           # 镜像延伸带取源图顶部多少像素
 BAND_BLUR = 12.0
 
 PICKS = {
-    "forest": ("cg_forest_v3_1941.png", HEAD_ROOM),
+    "forest": ("cg_forest_v4_hands.png", HEAD_ROOM),
     "bard":   ("cg_bard_v2_1903.png",   HEAD_ROOM),
     "mech":   ("cg_mech_v2_1929.png",   HEAD_ROOM),
     "rogue":  ("cg_rogue_v2_1931.png",  HEAD_ROOM),
