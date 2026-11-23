@@ -1,0 +1,209 @@
+[
+ {
+  "file": "raw/cg/cg_forest_v1_1846.png",
+  "from": "exec-17d3b340-ee16-49e9-b8e6-b444653cf3d4.png",
+  "size": [
+   1672,
+   941
+  ],
+  "mtime": "2026-11-23 18:46"
+ },
+ {
+  "file": "raw/cg/cg_bard_v1_1848.png",
+  "from": "exec-0c1db209-5e0a-4492-b2a3-19d27a14c2e8.png",
+  "size": [
+   1672,
+   941
+  ],
+  "mtime": "2026-11-23 18:48"
+ },
+ {
+  "file": "raw/cg/cg_forest_v2_1902.png",
+  "from": "exec-5b4a797e-6cd4-4929-9956-f2f04fc26a59.png",
+  "size": [
+   1672,
+   941
+  ],
+  "mtime": "2026-11-23 19:02"
+ },
+ {
+  "file": "raw/cg/cg_bard_v2_1903.png",
+  "from": "exec-c694759d-7969-43c9-8bcd-fdf0328a23f0.png",
+  "size": [
+   1672,
+   941
+  ],
+  "mtime": "2026-11-23 19:03"
+ },
+ {
+  "file": "raw/cg/cg_mech_v2_1929.png",
+  "from": "exec-ddd57a48-a308-4830-acd3-35f1e3054b14.png",
+  "size": [
+   1672,
+   941
+  ],
+  "mtime": "2026-11-23 19:29"
+ },
+ {
+  "file": "raw/cg/cg_rogue_v2_1931.png",
+  "from": "exec-cade6d98-48ca-4580-b471-d822c6899792.png",
+  "size": [
+   1672,
+   941
+  ],
+  "mtime": "2026-11-23 19:31"
+ },
+ {
+  "file": "raw/cg/cg_forest_v3_1941.png",
+  "from": "exec-26e090e8-da74-4bb7-90e7-ef60f58506bc.png",
+  "size": [
+   1672,
+   941
+  ],
+  "mtime": "2026-11-23 19:41"
+ },
+ {
+  "file": "raw/art/art_cuckoo_1558.png",
+  "from": "exec-9667bb05-1ddf-40dc-9eed-047617cb01ac.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 15:58"
+ },
+ {
+  "file": "raw/art/art_recruit_1600.png",
+  "from": "exec-243000b8-2469-4cbc-81d9-27f60bde8c28.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:00"
+ },
+ {
+  "file": "raw/frame/frame_candidate_01_1618.png",
+  "from": "exec-1602b7aa-7731-47da-9215-5743823bbbbb.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:18"
+ },
+ {
+  "file": "raw/frame/frame_candidate_02_1619.png",
+  "from": "exec-542f0e62-da35-4bf8-a041-2f1757efec3a.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:19"
+ },
+ {
+  "file": "raw/frame/frame_candidate_03_1620.png",
+  "from": "exec-27fa97ba-7f47-445d-a2ad-b0f5b45dd4ee.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:20"
+ },
+ {
+  "file": "raw/frame/frame_candidate_04_1621.png",
+  "from": "exec-a9d3fd22-ff50-4762-ba13-420a6cdb56ec.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:21"
+ },
+ {
+  "file": "raw/frame/frame_candidate_05_1622.png",
+  "from": "exec-d890f8d0-27d2-4676-8ffe-1f116e70c3e0.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:22"
+ },
+ {
+  "file": "raw/frame/frame_candidate_06_1623.png",
+  "from": "exec-1abcf4ef-0852-4ecd-9aa9-60e0e2a32165.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:23"
+ },
+ {
+  "file": "raw/frame/frame_candidate_07_1630.png",
+  "from": "exec-eebfd34d-4d54-47ed-83c3-4f388d70f9e7.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 16:30"
+ },
+ {
+  "file": "raw/frame/frame_candidate_08_1818.png",
+  "from": "exec-856d08b2-42ab-46f1-a03b-ced537033335.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 18:18"
+ },
+ {
+  "file": "raw/frame/frame_candidate_09_1823.png",
+  "from": "exec-ab2ece7e-efe8-4f13-8014-4b057a2e7bb6.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 18:23"
+ },
+ {
+  "file": "raw/frame/frame_candidate_10_1824.png",
+  "from": "exec-6261789a-bdb3-4353-a094-555ab964c336.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 18:24"
+ },
+ {
+  "file": "raw/frame/frame_candidate_11_1825.png",
+  "from": "exec-27093901-f83e-4f57-a7a7-d6797102c574.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 18:25"
+ },
+ {
+  "file": "raw/frame/frame_candidate_12_1826.png",
+  "from": "exec-6b43d4c7-50cd-493b-8bc9-59b00d8f99a1.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 18:26"
+ },
+ {
+  "file": "raw/frame/frame_candidate_13_1827.png",
+  "from": "exec-8fc76d79-c1ad-4b7a-8556-4be3ad298799.png",
+  "size": [
+   1254,
+   1254
+  ],
+  "mtime": "2026-11-23 18:27"
+ },
+ {
+  "file": "raw/ui/ui_ribbon_initial_1630.png",
+  "from": "exec-4a145da1-329e-4d4f-9456-bbab7e75631f.png",
+  "size": [
+   2172,
+   724
+  ],
+  "mtime": "2026-11-23 16:30"
+ }
+]
