@@ -35207,6 +35207,40 @@ func _init() -> void:
 
 			"R135 光环只给俄倪厄：赫利俄斯自己仍 1 次行动（实际 %d）" % r135_h.acts_left)
 
+	# ①b R856：光环的受惠者是**整个量产型族**，上面那条只钉住 9131 ——
+
+	#     判据一旦退回 `id == SUN_FORGE_FURY_ID`，它仍然全绿（R856 的 bug 就是这么溜过去的）。
+
+	#     所以这里从**行为层**再钉两张：名字前缀来源（9138，trait 里没有「量产型」）
+
+	#     与 trait 来源（8074，名字带前缀同时挂 trait）。
+
+	var r135_mass_n: CardData = repo.get_card(9138)
+
+	var r135_mass_t: CardData = repo.get_card(8074)
+
+	check(r135_mass_n != null and r135_mass_t != null,
+
+			"R856 前置：9138 量产型赫菲斯托斯 / 8074 量产型代达罗斯都在卡库里")
+
+	var r135_mass_np := r135_e.state.place(CardData.from_dict(r135_mass_n.to_dict()),
+
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+
+	var r135_mass_tp := r135_e.state.place(CardData.from_dict(r135_mass_t.to_dict()),
+
+			Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+
+	r135_e.state.reset_units(GameEngine.SIDE_OPPONENT)
+
+	check(r135_mass_np.acts_left == GameEngine.SUN_FORGE_ACTIONS,
+
+			"R856 全族双动：名字前缀来源（9138）也吃光环（实际 %d）" % r135_mass_np.acts_left)
+
+	check(r135_mass_tp.acts_left == GameEngine.SUN_FORGE_ACTIONS,
+
+			"R856 全族双动：trait 来源（8074）也吃光环（实际 %d）" % r135_mass_tp.acts_left)
+
 
 
 	# ② 赫利俄斯离场 → 俄倪厄回到每回合 1 次（光环源不在就没有双动）
@@ -35248,6 +35282,19 @@ func _init() -> void:
 	check(r135_e2._unit_damage_taken(r135_f2, 2, "spell") == 1,
 			"R856 技能减伤下限 1 点：2 伤仍受 %d"
 			% r135_e2._unit_damage_taken(r135_f2, 2, "spell"))
+
+
+	# ③b 技能 -2 有**两个实现口**：`_unit_damage_taken()`（真结算）与
+	#     `preview_hit_damage()`（悬停预览伤害，返回 {dmg, tag}）。R815 的教训：
+	#     规则逻辑要查所有入口 —— 预览与实战不一致，玩家会照着错数字决策。
+	var r135_pv_spell := int(r135_e2.preview_hit_damage(r135_f2, 10, false)["dmg"])
+	var r135_pv_atk := int(r135_e2.preview_hit_damage(r135_f2, 10, true)["dmg"])
+	check(r135_pv_spell == 10 - GameEngine.SUN_FORGE_SPELL_REDUCE,
+			"R856 预览口同判据：技能预览也是 -%d（%d）"
+			% [GameEngine.SUN_FORGE_SPELL_REDUCE, r135_pv_spell])
+	check(r135_pv_atk == 10,
+			"R856 预览口同判据：普攻预览不吃减伤（%d）" % r135_pv_atk)
+
 	# ④ 两条光环都以「赫利俄斯还在场」为前提 → 拆塔立刻断
 	r135_e2.state.board.erase(Vector2i(0, 1))
 	check(r135_e2._unit_damage_taken(r135_f2, 10, "spell") == 10,

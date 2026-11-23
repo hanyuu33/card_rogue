@@ -1,0 +1,21 @@
+R861：修太阳熔炉双动 —— 判据从 id==9131 换成整个「量产型」族
+
+R856 把卡面（赫利俄斯 9130）改成「场上的『量产型』卡每回合可以行动两次」，
+game_engine 里「技能伤害 -2」也早走 `is_mass_produced()` 唯一口；但
+`FieldState.unit_actions()` ③ 仍写着 `p.card.id == SUN_FORGE_FURY_ID`
+→ 卡面说全族、实际只给俄倪厄 9131（9133 / 9137 / 9138 / 9142 等名字带前缀的
+卡在炉里都只动一次）。
+
+- `unit_actions()` ③ 改走 `GameEngine.is_mass_produced(p.card)`（trait ∪ 名字前缀），
+  与「技能 -2」的两个入口同判据；`has_sun_forge()` 注释同步（它只管光源在不在场）。
+- 测试补齐 5 条。原 R856 段只断言 9131 —— 判据退回旧写法时它照样全绿，bug 就是这么
+  溜过去的，所以这次从**行为层**和**第二个实现口**两头钉：
+  · ①b 双动行为层：9138（名字前缀来源）/ 8074（trait 来源）在炉里 acts_left 也是 2；
+  · ③b 预览口：`preview_hit_damage()` 技能 10→8、普攻 10（与 `_unit_damage_taken`
+    同判据，R815：规则逻辑要查所有入口）。
+- 反向验证：临时把 field_state.gd 换回 HEAD 版跑引擎 → 恰好红在新增的两条
+  （7316✓ / 2✗），换回修复版 7318✓ / 0✗ —— 这两条测试确实抓得住本次回归。
+
+验证：`_audit_text_sources` 未受影响；十套全绿
+（engine 7318✓ / smoke 77✓ / reward 26 / bgm 39 / traps 250 / trapinput 77 /
+content 15 / mod 37 / assemble 0 / mana PASS）；存档 md5 全等还原。

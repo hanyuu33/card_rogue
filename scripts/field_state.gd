@@ -516,8 +516,11 @@ func has_shield_construct(side: String) -> bool:
 
 func has_sun_forge(side: String) -> bool:
 	## 「太阳熔炉」的太阳装置（赫利俄斯 9130）是否在**该方场上**。
-	## 它是「量产型俄倪厄双动」与「俄倪厄每回合回血」两条光环的**唯一开关**，
+	## 它是「量产型双动」与「量产型受到的技能伤害 -2」两条光环的**唯一开关**，
 	## 所以两条都调这里判 —— 两处各写一遍扫描迟早会漏一处（改了一处忘另一处）。
+	## R856 用户口径：受惠者从「量产型俄倪厄 9131」扩到**整个量产型族**
+	## （判据 `GameEngine.is_mass_produced`），原来的「每回合回血」那条已取消。
+	## 本函数本身不用改 —— 它只管「光源在不在场」，谁受惠是调用方的事。
 	for p: Placement in board.values():
 		if p.owner == side and p.card.id == GameEngine.SUN_FORGE_HELIOS_ID:
 			return true
@@ -528,7 +531,7 @@ func unit_actions(p: Placement, side: String) -> int:
 	## 单位本回合的**行动轮数**（唯一口）。四个来源取最大：
 	##   ① 卡面自带 `actions`（疾行，如鸭子队长）；
 	##   ② 「哈气」9024 选中过它（`haste_double`）—— R479 起是**单点永久**，不再是整方光环；
-	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 量产型俄倪厄（9131）额外行动一次；
+	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 场上所有「量产型」卡额外行动一次（R856 起全族）；
 	##   ④ 行动力成长（R161 赫尔墨斯 9140）：每过 3 回合额外 +1 行动轮数。
 	## ⚠️ 所有写 `acts_left` 的地方（place / reset_units / apply_extra_actions）
 	##   都必须走这个口 —— 漏一处就会出现「上场那回合不动、下回合才双动」的错位。
@@ -540,7 +543,9 @@ func unit_actions(p: Placement, side: String) -> int:
 	# 「取最大」通道，于是 place / reset_units / apply_extra_actions 三处自动一致。
 	if p.boss_phase >= 2:
 		n = maxi(n, GameEngine.REVELATOR_ACTIONS)
-	if p.card.id == GameEngine.SUN_FORGE_FURY_ID and has_sun_forge(side):
+	# R856：判据从 `id == 9131` 换成「是量产型族」—— 9137 量产型赫利俄斯、
+	# 9138 量产型赫菲斯托斯这些在太阳熔炉里也会双动，别再只认俄倪厄。
+	if GameEngine.is_mass_produced(p.card) and has_sun_forge(side):
 		n = maxi(n, GameEngine.SUN_FORGE_ACTIONS)
 	# R792 兵（6071）：本场第一个盟友可以行动两次 —— 与上面几条同一条「取最大」通道，
 	# 于是 place / reset_units / apply_extra_actions 三处自动一致，不会出现
