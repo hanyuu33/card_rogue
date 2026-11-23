@@ -2552,3 +2552,9 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 
 ## 2026-11-23 本轮生成图归档与应用
 用户授权应用：俄倪厄现代战术服 v2 已复制至 assets/pics/9132.png，沿用现有资源导入配置；SHA256 与源图一致。旧游戏卡图归档为 art_src/2026-11-23_俄倪厄重设计/9132_before_apply.png，v1 保留为历史方案。Steam 主视觉及完整提示词已归档，未接入游戏。未改动并行 class_pick_scene.gd 和 class_pick 素材。未运行游戏，未推送。
+
+## 2026-11-23 生成图归档与森林攻击应用
+- 归档森林攻击 v1 弃稿、v2 定稿及旧正式图；归档刺客屋顶动画静态首帧，视频尚未生成。
+- 用户授权后替换 assets/pics/8002_forest.png，保持 448×403，等比微裁无拉伸。
+- 验证：成品目视检查通过；Godot --headless --editor --import --quit 退出 0；职业卡图路由继续使用原路径。未进行游戏实景截图。
+- 外部 scripts/class_pick_scene.gd 和 art_src/2026-11-23_class_pick/ 未触碰；本轮本地提交未推送。
