@@ -5851,6 +5851,9 @@ func _check_sleep_aura(scene: Variant) -> void:
 	# 这里是**受伤递减口**：`_hit_unit` → `_demon_duck_hurt`，挨够次数 sleep_left 归零。
 	# （R122 起**回合递减口** `_sleep_tick` 也回来了，两个口并存 —— 见本用例末尾。）
 	sp.sleep_left = 1
+	# R859：沉睡单位自带甲壳，甲没破时挨打**不算「挨打」**（不 -1）——
+	# 本用例只验证 wake 事件与挣脱环，先把甲清掉。甲壳本身在 engine 套 `_test_r857` 覆盖。
+	sp.armor = 0
 	var woke := [0]
 	eng.action.connect(func(what: String, _d: Variant) -> void:
 			if what == "wake":

@@ -678,6 +678,12 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
 		p.sleep_left = SLEEP_TURNS
+		# R859：沉睡单位**一上场就带甲壳**（GameEngine.SLEEP_ARMOR，目前 10 点），
+		# 且**不随回合重置**。放在 place 里 = 唯一初始化口，关卡摆位 / 召唤 / 手牌打出
+		# 三条路径一致；醒来时由 `_sleep_shed_armor()` 整个清掉。
+		# ⚠️ 甲还在时挨打不算「挨打」（`_demon_duck_hurt` 的 dealt 判据）——
+		#    这是「自动伤害道具打不醒沉睡单位」的实现方式，别只加甲不改判据。
+		p.armor = GameEngine.SLEEP_ARMOR
 	# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：带「铸造」trait 的单位一上场就挂表。
 	# 同样放在 place 里 = **唯一初始化口**（与沉睡 / 护盾同一套路）；回合数取引擎常量
 	# FUSE_TURNS，与卡面 effect_text 写的是同一句话 —— 改一处必须一起改。

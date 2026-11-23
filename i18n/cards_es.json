@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 344,
+ "count": 346,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -792,7 +792,7 @@
   },
   "9116": {
    "name": "Pato Demoníaco",
-   "effect_text": "Comienza con dormir 2: no actúa, y mientras duerme su Armadura se restablece a 5 cada turno. Dormir disminuye en 1 después de cada uno de sus turnos y en 1 cada vez que recibe daño; vuelve a actuar en cuanto dormir llega a cero, y su Armadura desaparece con él. Mientras esté despierto, obtiene +1 de Poder cada vez que recibe daño (permanente)."
+   "effect_text": "Comienza con dormir 2: no actúa, y empieza con 10 de Armadura (la Armadura nunca se restablece). Mientras la Armadura aguante, los golpes no reducen dormir. Dormir disminuye en 1 después de cada uno de sus turnos y en 1 cada vez que recibe daño una vez rota la Armadura; vuelve a actuar en cuanto dormir llega a cero, perdiendo toda la Armadura. Mientras esté despierto, obtiene +1 de Poder cada vez que recibe daño (permanente)."
   },
   "9117": {
    "name": "Familiar Demoníaco",
@@ -836,7 +836,7 @@
   },
   "9130": {
    "name": "Helios",
-   "effect_text": "Mientras esté en el campo, los «Onie de Producción en Serie» del campo pueden actuar dos veces por turno y recuperan 2 de Vida cada turno."
+   "effect_text": "Mientras esté en el campo, las cartas de «Producción en Serie» del campo pueden actuar dos veces por turno y reciben 2 menos de daño de habilidad (mínimo 1)."
   },
   "9131": {
    "name": "Onie de Producción en Serie",
@@ -1240,7 +1240,7 @@
   },
   "9241": {
    "name": "Cañón Láser",
-   "effect_text": "No puede realizar ataques normales. Duerme durante 2 turnos, y mientras duerme su Armadura se restablece a 5 cada turno. Cada turno elige dos columnas al azar y las anuncia; cuando actúa, inflige daño igual a su Poder a la primera unidad enemiga de cada una de esas dos columnas; si no hay ningún objetivo en esa columna, golpea directamente los HP del oponente. +1 de Poder cada turno."
+   "effect_text": "No puede realizar ataques normales. Duerme durante 2 turnos y empieza con 10 de Armadura (nunca se restablece; mientras la Armadura aguante, los golpes no reducen dormir). Cada turno elige dos columnas al azar y las anuncia; cuando actúa, inflige daño igual a su Poder a la primera unidad enemiga de cada una de esas dos columnas; si no hay ningún objetivo en esa columna, golpea directamente los HP del oponente. +1 de Poder cada turno."
   },
   "9242": {
    "name": "Sombra de Pronoia",
@@ -1377,6 +1377,14 @@
   "9283": {
    "name": "Si",
    "effect_text": "Inflige 7 de daño a una unidad enemiga aleatoria, repetido 7 veces."
+  },
+  "9284": {
+   "name": "Lanzador de Huevos de Pato",
+   "effect_text": "Mientras sostiene el Huevo de Pato Dorado: en lugar de actuar, lanza el Huevo de Pato Dorado hacia adelante (en su misma columna). El huevo se detiene en la primera unidad con la que choca y le inflige daño igual a su propio Poder, con Atropellar (si no hay ninguna unidad, golpea directamente los HP del oponente). Mientras no sostenga el Huevo de Pato Dorado, su Velocidad de Movimiento pasa a 3 y obtiene +3 de Poder al inicio de cada turno."
+  },
+  "9285": {
+   "name": "Huevo de Pato Dorado",
+   "effect_text": "Al recibir daño que no sea de ataque, recibe como máximo 1 de daño cada vez. Muerte: añade una carta Épica aleatoria a la mano del oponente y hace que el Lanzador de Huevos de Pato recupere el Huevo de Pato Dorado."
   },
   "9276": {
    "name": "Muñeca maldita",

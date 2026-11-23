@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 344,
+ "count": 346,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -792,7 +792,7 @@
   },
   "9116": {
    "name": "Demon Duck",
-   "effect_text": "Starts with Sleep 2: it does not act, and while asleep its Armor is reset to 5 each turn. Sleep decreases by 1 after each of its own turns, and by 1 each time it takes damage; it resumes acting as soon as Sleep reaches 0, and its Armor disappears with it. While awake, it gains +1 Power each time it is hurt (permanent)."
+   "effect_text": "Starts with Sleep 2: it does not act, and it starts with 10 Armor (the Armor is never reset). While the Armor holds, hits do not reduce Sleep. Sleep decreases by 1 after each of its own turns, and by 1 each time it takes damage once the Armor is broken; it resumes acting as soon as Sleep reaches 0, losing all Armor. While awake, it gains +1 Power each time it is hurt (permanent)."
   },
   "9117": {
    "name": "Demon Familiar",
@@ -836,7 +836,7 @@
   },
   "9130": {
    "name": "Helios",
-   "effect_text": "While on the field, \"Mass-Produced Onyae\" on the field may act twice per turn and restore 2 Health each turn."
+   "effect_text": "While on the field, \"Mass-Produced\" cards on the field may act twice per turn and take 2 less skill damage (minimum 1)."
   },
   "9131": {
    "name": "Mass-Produced Onyae",
@@ -1240,7 +1240,7 @@
   },
   "9241": {
    "name": "Laser Cannon",
-   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns, and while asleep its Armor is reset to 5 each turn. Each turn it picks two columns at random and telegraphs them; when it acts, deal damage equal to its Power to the first enemy unit in each of those two columns; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
+   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns and starts with 10 Armor (never reset; while the Armor holds, hits do not reduce Sleep). Each turn it picks two columns at random and telegraphs them; when it acts, deal damage equal to its Power to the first enemy unit in each of those two columns; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
   },
   "9242": {
    "name": "Shade of Pronoia",
@@ -1377,6 +1377,14 @@
   "9283": {
    "name": "Si",
    "effect_text": "Deal 7 damage to a random enemy unit, repeated 7 times."
+  },
+  "9284": {
+   "name": "Duck Egg Pitcher",
+   "effect_text": "While holding the Golden Duck Egg: instead of acting, throw the Golden Duck Egg straight ahead (along its column). The egg stops at the first unit it hits and deals damage equal to its own Power to that unit, with Trample (if there is no unit, hit the opponent's HP directly). While not holding the Golden Duck Egg, its Move Speed becomes 3 and it gains +3 Power at the start of each turn."
+  },
+  "9285": {
+   "name": "Golden Duck Egg",
+   "effect_text": "When taking non-attack damage, it takes at most 1 damage each time. Death: add a random Epic card to the opponent's Hand and let the Duck Egg Pitcher regain the Golden Duck Egg."
   },
   "9276": {
    "name": "Curse Doll",

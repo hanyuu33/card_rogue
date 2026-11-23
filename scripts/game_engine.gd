@@ -526,14 +526,15 @@ const ASCLEPIUS_TRAIT:= "护甲积攒"
 const ASCLEPIUS_ARMOR:= 20          # R506：16 → 20（同轮下调到第二层精英简单档）
 const ASCLEPIUS_GROWTH_ATK:= 1
 
-# ---- R857：沉睡「甲壳」 ----
-# 沉睡中的单位（`Placement.sleep_left > 0`；任何带「沉睡」trait 的卡：恶魔鸭 9116 /
-# 激光巨炮 9241 / 将来新增的睡着的单位）在**自己回合开始**把护甲重置为 SLEEP_ARMOR。
-# * 覆盖而非累加（`armor = SLEEP_ARMOR`）：卡面写的是「重置」，叠上去就变成滚雪球；
-# * 醒来那一刻甲壳碎裂 —— 只扣掉这 5 点，别处攒的护甲（赫卡同克瑞斯 +10 等）保留；
-# * 口径选「自己回合」而不是「每半回合」：后者玩家削完 5 点、敌方回合又被补满，
-#   等于每个玩家回合白打一刀，手感是「打不动」而不是「有层壳」。
-const SLEEP_ARMOR:= 5
+# ---- R859：沉睡「甲壳」----
+# 带「沉睡」trait 的单位**一上场**（关卡摆位 / 召唤 / 手牌打出，都走 FieldState.place）
+# 就带 SLEEP_ARMOR 点护甲，**不随回合重置**；醒来那一刻整个脱落（armor = 0）。
+# ⚠️ R857 曾是「每个自己回合开始重置 5 点」，R859 按店长口径改为一次性 10 点。
+# * 甲还在时挨打**不算「挨打」**（`_demon_duck_hurt` 的 `dealt` 判据）：开局的自动伤害
+#   道具只能磨甲、磨不醒它 —— 这正是这层甲存在的理由。副作用：普通攻击同样磨不醒，
+#   沉睡单位只能等自己的回合数走完（或甲被打穿之后）。
+# * 数值只放引擎这一处：卡面 / 测试 / 日志都读它。
+const SLEEP_ARMOR:= 10
 
 # ---- R451：第二层精英池「母舰空袭」（9207 / 9208 / 9209；R506 上调到精英困难）----
 # 三件新东西，各挂一个唯一口：
@@ -3000,7 +3001,6 @@ func _begin_turn(side: String) -> void :
 		_mage_growth(SIDE_SELF)
 		_familiar_growth(SIDE_SELF)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_SELF)
-		_sleep_armor_tick(SIDE_SELF)       # R857：沉睡甲壳重置（必须在其他加甲之前）
 		_asclepius_armor_tick(SIDE_SELF)   # R162：护甲积攒结算
 		_hecaton_armor_tick(SIDE_SELF)     # R778 量产型赫卡同克瑞斯 9133：给其他友军 +10 护甲
 		_mass_asclepius_tick(SIDE_SELF)   # R451 量产型阿斯克勒庇厄斯 9207：已有护甲则 +1 攻，再 +10 护甲
@@ -3093,7 +3093,6 @@ func _begin_turn(side: String) -> void :
 		_mage_growth(SIDE_OPPONENT)
 		_familiar_growth(SIDE_OPPONENT)   # 使魔之力 9115：回合开始使魔鸭子 +1
 		_apply_mech_growth(SIDE_OPPONENT)
-		_sleep_armor_tick(SIDE_OPPONENT)       # R857：沉睡甲壳重置（同我方，对称）
 		_asclepius_armor_tick(SIDE_OPPONENT)   # R162：护甲积攒结算
 		_hecaton_armor_tick(SIDE_OPPONENT)     # R778 9133 铸甲
 		_mass_asclepius_tick(SIDE_OPPONENT)   # R451 量产型阿斯克勒庇厄斯 9207
@@ -15251,7 +15250,7 @@ func _hit_unit(p: Placement, amount: int, source:= "效果", allow_redirect:= tr
 	# 恶魔鸭 9116（R63）：受击反应挂在这里 = 所有伤害路径（普通攻击 / 技能 / 效果）的唯一口。
 	# 死了就不再触发（沉睡了也没意义），所以只在活着的分支调。
 	if p.health > 0:
-		_demon_duck_hurt(p, _cell_of(p))
+		_demon_duck_hurt(p, _cell_of(p), dmg)
 		_enforcer_watch(p, _cell_of(p))   # R502 执法者：小弟挨打 → 本回合力量 +1
 	# R490：陨石术减费按**落地段数**记账 —— 这里**不分敌我**，自己的单位挨技能打也算一段。
 	if dmg > 0:
@@ -19353,31 +19352,17 @@ func _bounce_unit(p: Placement, prev_cell: Vector2i, t: TrapData) -> void :
 	_fire_wall_pass(b_path)
 
 
-func _sleep_armor_tick(side: String) -> void :
-	## 沉睡（R857）：**本方回合开始**，本方还在睡的单位把护甲重置为 SLEEP_ARMOR。
-	## 判据只看 `sleep_left > 0` —— 机制层不认 id，任何带「沉睡」trait 的单位都吃。
-	## 调用点：`_begin_turn` 两个分支的成长区开头（在 `_asclepius_armor_tick` 之前），
-	## 于是「先重置甲壳，其他加甲照常叠在上面」（沉睡的阿斯克勒庇厄斯 = 5 + 20）。
-	for cell: Vector2i in state.board:
-		var p: Placement = state.unit_at(cell)
-		if p == null or p.owner != side or p.sleep_left <= 0:
-			continue
-		var before: int = p.armor
-		p.armor = SLEEP_ARMOR
-		_log("沉睡甲壳：%s 的护甲重置为 %d（原 %d）" % [p.card.card_name, p.armor, before])
-		action.emit("armor_gain", {"cell": cell, "card": p.card, "side": side,
-				"armor": p.armor, "gained": p.armor - before})
-
-
+# R859：`_sleep_armor_tick`（每个自己回合重置 5 点）**已删除** —— 甲壳改成
+# 「一上场给一次、不重置」。给甲的口在 `FieldState.place()`（唯一初始化口），
+# 脱落的口就是下面的 `_sleep_shed_armor()`。
 func _sleep_shed_armor(p: Placement) -> void :
-	## 沉睡醒来的**唯一收尾口**：甲壳碎裂 —— 扣掉 SLEEP_ARMOR，别处攒的护甲留着。
-	## 两个醒来口（`_sleep_tick` 的回合口 / `_demon_duck_hurt` 的受伤口）都走这里，
-	## 所以不会出现「被打醒还顶着 5 点甲」或「两边各扣一次扣成负数」。
+	## 沉睡醒来的**唯一收尾口**：甲壳整个脱落 —— **失去所有护甲**（R859 店长口径），
+	## 不是扣一个定值。两个醒来口（`_sleep_tick` 的回合口 / `_demon_duck_hurt` 的受伤口）
+	## 都走这里，所以不会出现「被打醒还顶着甲」或「两边各清一次」。
 	if p.armor <= 0:
 		return
-	var lost: int = mini(p.armor, SLEEP_ARMOR)
-	p.armor -= lost
-	_log("%s 醒来：甲壳碎裂，失去 %d 点护甲（剩 %d）" % [p.card.card_name, lost, p.armor])
+	_log("%s 醒来：甲壳脱落，失去全部 %d 点护甲" % [p.card.card_name, p.armor])
+	p.armor = 0
 
 
 func _sleep_tick(side: String) -> void :
@@ -19403,7 +19388,7 @@ func _sleep_tick(side: String) -> void :
 					p.card.card_name, p.sleep_left])
 
 
-func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :
+func _demon_duck_hurt(p: Placement, cell: Vector2i, dealt:= 1) -> void :
 	## 恶魔鸭家族的受伤反应：**受击判定的唯一口**（挂在 _hit_unit 里，
 	## 所以普通攻击 / 技能 / 效果 / 直伤全都算，不只是普通攻击）。
 	## 按 trait 分派两种互斥的「挨打变强」：
@@ -19420,6 +19405,14 @@ func _demon_duck_hurt(p: Placement, cell: Vector2i) -> void :
 	if not p.card.traits.has(FieldState.SLEEP_TRAIT):
 		return
 	if p.sleep_left > 0:
+		# R859：甲壳还在、这一下**完全没打到肉**（`dealt == 0`）→ 不算「挨打」，
+		# 沉睡计数不变。开局的自动伤害道具因此打不醒它（只能磨甲）。
+		# 判据用「这次实际扣了多少血」而不是「当前 armor 是否 > 0」：
+		# 后者在「刚好把甲打穿的那一下」吸收后已经归零，会漏掉一次。
+		if dealt <= 0:
+			_log("%s 的沉睡甲壳挡住了这一下（沉睡计数不变，护甲 %d）" % [
+					p.card.card_name, p.armor])
+			return
 		p.sleep_left -= 1
 		# 受伤口：每次受伤 -1，减到 0 **立刻**恢复行动（R76 口径保留）。
 		# R122 补上「回合口」（_sleep_tick 也会 -1）—— 两个口并存，谁先减到 0 谁让它醒。

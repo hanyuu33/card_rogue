@@ -357,6 +357,7 @@ g["levels"] = named([
     ("巨炮防线", "Great Cannon Line", "巨砲防衛線"),
     ("钢铁要塞", "Steel Fortress", "鋼鉄の要塞"),
     ("鸭子队长登场", "Enter the Duck Captain", "アヒル隊長登場"),
+    ("鸭蛋投手", "Duck Egg Pitcher", "卵投げアヒル"),
 ])
 
 g["events"] = named([
