@@ -18931,11 +18931,25 @@ func _init() -> void:
 
 		r354_sizes += "第%d层=%dx%d " % [r354_l, r354_t.get_width(), r354_t.get_height()]
 
-		if r354_t.get_width() != 1280 or r354_t.get_height() != 720:
+		var r354_w := r354_t.get_width()
+
+		var r354_h := r354_t.get_height()
+
+		# R864 起第三层底图换成 1672×941 的高清版：不再是 1280×720，
+
+		# 但仍是 16:9（铺满时不拉伸），也不许比原图小（别把高清化白做了）。
+
+		if r354_l == 3:
+
+			if r354_w < 1280 or absf(float(r354_w) / float(r354_h) - 16.0 / 9.0) > 0.01:
+
+				r354_same = false
+
+		elif r354_w != 1280 or r354_h != 720:
 
 			r354_same = false
 
-	check(r354_same, "R354 背景尺寸：三层都是 1280×720（%s）" % r354_sizes)
+	check(r354_same, "R354 背景：一/二层 1280×720、第三层 ≥1280 宽且 16:9（%s）" % r354_sizes)
 
 	var r354_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
 
@@ -77334,10 +77348,12 @@ func _test_r761() -> void:
 			and r761_bs.contains("_ensure_pick_visible(\"recruit\")"),
 			"R761 接线：战斗场景认领 recruit（弹面板 / 建配置 / 结算 / 结束回合前拦一下）")
 	var r761_cps := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
+	# R864 选人界面重排：吟游诗人从「森林精魄正上方」改到「随机入口右侧同排」，
+	# 仍是 `_bard_rect()` 一个口同时供绘制与点击使用。
 	check_src(r761_cps.contains("func _bard_rect() -> Rect2:")
 			and r761_cps.contains("var r := _av_rect(0)")
-			and r761_cps.contains("return Rect2(r.position.x, r.position.y - AV - 56.0, AV, AV)"),
-			"R761 界面：吟游诗人槽位 = 森林精魄头像正上方（同 x、同尺寸）")
+			and r761_cps.contains("return Rect2(_rand_rect().end.x + AV_GAP, r.position.y, AV, AV)"),
+			"R761 界面：吟游诗人槽位 = 随机入口右侧同排（与头像同 y、同尺寸）")
 	check_src(r761_cps.contains("func _draw_bard_slot() -> void:")
 			and r761_cps.contains("if not PlayerClass.bard_enabled():"),
 			"R761 界面：槽位受开关控制（默认版本一个像素都不画）")
