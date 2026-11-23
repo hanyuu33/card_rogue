@@ -1,0 +1,3 @@
+The bespectacled mechanic sets a brass launcher on the wall. The forest spirit and duck remain behind cover. A single golden pulse hits the automaton shield. Sparks settle; the mechanic gestures for her companions to follow. Keep launcher grounded and preserve round glasses, low ponytail and ochre scarf.
+
+Use consecutive keyframes as start and end frames. Animate one action per clip, 2-4 seconds per transition. Preserve reference character designs, body scale and anatomy. Natural weight transfer, feet planted, coherent hands and props, subtle hair and cloth motion. Keep camera nearly locked, no cuts, no morphing, no additional characters, no text or watermark.

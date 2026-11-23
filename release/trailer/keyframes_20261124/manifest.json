@@ -1,0 +1,130 @@
+[
+  {
+    "scene": "01_duck_request",
+    "frame": 1,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "01_duck_request",
+    "frame": 2,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "01_duck_request",
+    "frame": 3,
+    "size": [
+      832,
+      467
+    ]
+  },
+  {
+    "scene": "01_duck_request",
+    "frame": 4,
+    "size": [
+      832,
+      467
+    ]
+  },
+  {
+    "scene": "02_forest_intervention",
+    "frame": 1,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "02_forest_intervention",
+    "frame": 2,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "02_forest_intervention",
+    "frame": 3,
+    "size": [
+      832,
+      467
+    ]
+  },
+  {
+    "scene": "02_forest_intervention",
+    "frame": 4,
+    "size": [
+      832,
+      467
+    ]
+  },
+  {
+    "scene": "03_mechanical_aid",
+    "frame": 1,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "03_mechanical_aid",
+    "frame": 2,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "03_mechanical_aid",
+    "frame": 3,
+    "size": [
+      832,
+      467
+    ]
+  },
+  {
+    "scene": "03_mechanical_aid",
+    "frame": 4,
+    "size": [
+      832,
+      467
+    ]
+  },
+  {
+    "scene": "04_factory_infiltration",
+    "frame": 1,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "04_factory_infiltration",
+    "frame": 2,
+    "size": [
+      832,
+      466
+    ]
+  },
+  {
+    "scene": "04_factory_infiltration",
+    "frame": 3,
+    "size": [
+      832,
+      467
+    ]
+  },
+  {
+    "scene": "04_factory_infiltration",
+    "frame": 4,
+    "size": [
+      832,
+      467
+    ]
+  }
+]

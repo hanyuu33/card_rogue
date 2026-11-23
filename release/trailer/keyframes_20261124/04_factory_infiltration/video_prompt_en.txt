@@ -1,0 +1,3 @@
+The two women crouch behind the wall as a searchlight sweeps the factory entrance. The rogue moves through shadow to the control box, works the lever and beckons the mechanic through. Keep short silver hair and purple cloak; preserve glasses and low ponytail. The patrol looks away, no combat.
+
+Use consecutive keyframes as start and end frames. Animate one action per clip, 2-4 seconds per transition. Preserve reference character designs, body scale and anatomy. Natural weight transfer, feet planted, coherent hands and props, subtle hair and cloth motion. Keep camera nearly locked, no cuts, no morphing, no additional characters, no text or watermark.
