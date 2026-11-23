@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 325,
+ "count": 346,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -10,7 +10,7 @@
   },
   "1013": {
    "name": "Ashen Dragon",
-   "effect_text": "At the start of the first turn after it enters the field: deal 4 damage to all enemy units."
+   "effect_text": ""
   },
   "1014": {
    "name": "Young Dragon",
@@ -54,7 +54,7 @@
   },
   "8002": {
    "name": "Strike",
-   "effect_text": "Deal 4 damage to a target."
+   "effect_text": "Deal 5 damage to a target."
   },
   "8003": {
    "name": "Treant",
@@ -70,7 +70,7 @@
   },
   "8006": {
    "name": "Shadow Cat",
-   "effect_text": "When played, if this is the 3rd card you have played this turn, add a random Skill card from your Draw Pile to your Hand."
+   "effect_text": "When played, if you have already used 3 other cards this turn, draw 2 cards."
   },
   "8007": {
    "name": "Shadow Fiend",
@@ -267,7 +267,7 @@
   },
   "8062": {
    "name": "Night Eclipse",
-   "effect_text": "At the end of your turn, restore X Health, where X is your remaining Cost (1 Health per point of remaining Cost, up to your maximum Health)."
+   "effect_text": "At the end of your turn, deal X damage to all enemies, where X is your remaining Cost."
   },
   "8064": {
    "name": "Salvage",
@@ -407,7 +407,7 @@
   },
   "9013": {
    "name": "Duck Power",
-   "effect_text": "At the start of each turn, all friendly units gain +1 Power (up to +4 per unit). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all friendly units gain +1 Power (up to +4 per unit)."
   },
   "9014": {
    "name": "Ancient Hollowbone Dragon",
@@ -415,7 +415,7 @@
   },
   "9015": {
    "name": "Duck Horn",
-   "effect_text": "Summon a Duck Knight every 3 turns. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Summon a Duck Knight every 3 turns."
   },
   "9016": {
    "name": "Rhino",
@@ -452,7 +452,7 @@
   },
   "9024": {
    "name": "Hiss",
-   "effect_text": "At the start of your 3rd, 5th and 7th turns, give a friendly unit with the highest current Health that does not already have Double Action the Double Action effect (permanent; units that could already act twice are not chosen). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of your 3rd, 5th and 7th turns, give a friendly unit with the highest current Health that does not already have Double Action the Double Action effect (permanent; units that could already act twice are not chosen)."
   },
   "9025": {
    "name": "Duck Kiln",
@@ -548,7 +548,7 @@
   },
   "9049": {
    "name": "Gear Ascension",
-   "effect_text": "At the start of each turn, all friendly units gain +2 Power (permanent). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all friendly units gain +2 Power (permanent)."
   },
   "9050": {
    "name": "Whale's Wrath",
@@ -684,7 +684,7 @@
   },
   "9084": {
    "name": "Wall of Fire",
-   "effect_text": "Deal 14 damage to all units in a horizontal row, friend and foe alike. Until the start of your next turn, units passing through that row take 7 damage; the same unit takes at most 14 damage."
+   "effect_text": "Deal 14 damage to all units in a horizontal row, friend and foe alike. Until the start of your next turn, units passing through or entering that row take 7 damage; the same unit takes at most 14 damage."
   },
   "9085": {
    "name": "Charge Up",
@@ -696,23 +696,23 @@
   },
   "9087": {
    "name": "Flurry",
-   "effect_text": "Deal 4 damage to a target, then add a random 0-cost Skill card from your Draw Pile to your Hand."
+   "effect_text": "Deal 5 damage to a target, then add a random 0-cost Skill card from your Draw Pile to your Hand."
   },
   "9088": {
    "name": "Daze",
-   "effect_text": "Deal 3 damage to a target; that target loses 3 Power this turn."
+   "effect_text": "Deal 2 damage to a target; that target loses 3 Power this turn."
   },
   "9089": {
    "name": "Revolution",
-   "effect_text": "Draw X cards, where X is the number of cards you have used this turn; those cards are not discarded at the end of this turn."
+   "effect_text": "Deal X damage to a target and draw X cards, where X is the number of other cards you have used this turn. Those cards are not discarded at the end of this turn."
   },
   "9090": {
    "name": "Ambush",
-   "effect_text": "Deal 5 damage; if the target is at full Health, deal 12 damage instead."
+   "effect_text": "Deal 4 damage; if the target is at full Health, deal 10 damage instead."
   },
   "9091": {
    "name": "Gale",
-   "effect_text": "Whenever you use a card, deal 2 damage to a random enemy. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Every 3 cards you use in the same turn, deal 8 damage to a random enemy and reduce its Power by 1. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9092": {
    "name": "Lurk",
@@ -760,7 +760,7 @@
   },
   "9103": {
    "name": "Dodge",
-   "effect_text": "This turn, all friendly units gain Taunt."
+   "effect_text": "Reduce an enemy unit's Power by X, where X is the number of cards you have played this turn."
   },
   "9104": {
    "name": "Coup de Grace",
@@ -772,7 +772,7 @@
   },
   "9111": {
    "name": "Shadow Blade",
-   "effect_text": "At the end of your turn, deal X damage to a random enemy, where X is the Cost you have spent this turn. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the end of your turn, deal X damage to a random enemy, where X is the number of cards you have used this turn. Multiple copies of this card in the Effect Zone do not stack."
   },
   "9112": {
    "name": "Shadow Chains",
@@ -788,15 +788,15 @@
   },
   "9115": {
    "name": "Familiar Power",
-   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent)."
   },
   "9116": {
    "name": "Demon Duck",
-   "effect_text": "Starts with Sleep 2: it does not act. Sleep decreases by 1 after each of its own turns, and by 1 each time it takes damage; it resumes acting as soon as Sleep reaches 0. While awake, it gains +1 Power each time it is hurt (permanent)."
+   "effect_text": "Starts with Sleep 2: it does not act, and it starts with 10 Armor (the Armor is never reset). While the Armor holds, taking damage does not reduce Sleep. Sleep decreases by 1 after each of its own turns, and by 1 each time it takes damage once the Armor is broken; it resumes acting as soon as Sleep reaches 0, losing all Armor. While awake, it gains +1 Power each time it is hurt (permanent)."
   },
   "9117": {
    "name": "Demon Familiar",
-   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent); every 2 turns, Summon a Familiar Duck on a random empty tile (except the player's back row). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each turn, all Familiar Ducks gain +1 Power (permanent); every 2 turns, Summon a Familiar Duck on a random empty tile (except the player's back row)."
   },
   "9118": {
    "name": "Demon Duck (Vengeance)",
@@ -804,7 +804,7 @@
   },
   "9119": {
    "name": "Opening Move",
-   "effect_text": "Deal 4 damage to a target, then draw 1 card."
+   "effect_text": "Deal 5 damage to a target, then draw 1 card."
   },
   "9120": {
    "name": "Shadow Strike",
@@ -812,7 +812,7 @@
   },
   "9121": {
    "name": "Shadowstep",
-   "effect_text": "Deal 8 damage to a target, then return **any card of your choice from the Discard Pile** to your Hand."
+   "effect_text": "Deal 13 damage to a target, then return **any card of your choice from the Discard Pile** to your Hand."
   },
   "9122": {
    "name": "Focus",
@@ -828,7 +828,7 @@
   },
   "9125": {
    "name": "Shadow Summoning",
-   "effect_text": "At the **start of battle** and **every 3 turns**, Summon a Duck Assassin. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the **start of battle** and **every 3 turns**, Summon a Duck Assassin."
   },
   "9127": {
    "name": "Rework",
@@ -836,7 +836,7 @@
   },
   "9130": {
    "name": "Helios",
-   "effect_text": "While on the field, \"Mass-Produced Onyae\" on the field may act twice per turn and restore 2 Health each turn."
+   "effect_text": "While on the field, \"Mass-Produced\" cards on the field may act twice per turn and take 2 less skill damage (minimum 1)."
   },
   "9131": {
    "name": "Mass-Produced Onyae",
@@ -848,7 +848,7 @@
   },
   "9133": {
    "name": "Mass-Produced Hecatoncheires",
-   "effect_text": "Casting: at the end of your turn, the countdown decreases by 1; when it reaches 0, Destroy this unit and raise a \"Steel Fortress\" where it stood."
+   "effect_text": "At the start of each turn, give a random other friendly unit 10 Armor."
   },
   "9134": {
    "name": "Steel Fortress",
@@ -872,11 +872,11 @@
   },
   "9139": {
    "name": "Charged Cannon",
-   "effect_text": "At the start of each of your turns, Destroy a random enemy unit. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of each of your turns, Destroy a random enemy unit."
   },
   "9140": {
    "name": "Hermes",
-   "effect_text": "May act twice per turn. Every 3 turns, its number of actions increases by 1."
+   "effect_text": "May act twice per turn. Every 3 turns, its number of actions increases by 1. Takes at most 20 damage each turn."
   },
   "9141": {
    "name": "Asclepius",
@@ -904,7 +904,7 @@
   },
   "9147": {
    "name": "Assembly Line",
-   "effect_text": "Every 3 turns, Summon either a Mass-Produced Onyae or a Mass-Produced Helios at random in your half of the field. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Every 3 turns, Summon either a Mass-Produced Onyae or a Mass-Produced Helios at random in your half of the field."
   },
   "9148": {
    "name": "Rebirth",
@@ -936,7 +936,7 @@
   },
   "9156": {
    "name": "Charge",
-   "effect_text": "Deal 0 damage. At the end of the turn, for each point of unspent Cost, this card in your Hand gains +3 damage; this bonus accumulates for the rest of this battle."
+   "effect_text": "Deal 0 damage. At the end of the turn, for each point of unspent Cost, this card in your Hand gains +3 damage for this battle."
   },
   "9157": {
    "name": "Jar",
@@ -996,7 +996,7 @@
   },
   "9173": {
    "name": "Agility",
-   "effect_text": "Draw 5 cards. Until the end of this turn, you cannot use Ally or Structure cards."
+   "effect_text": "Draw 4 cards. Until the end of this turn, you cannot use Ally or Structure cards."
   },
   "9174": {
    "name": "Eliminate",
@@ -1008,7 +1008,7 @@
   },
   "9176": {
    "name": "Instinct",
-   "effect_text": "Play 3 random Skill cards with Cost 1 or less from your Draw Pile."
+   "effect_text": "The next time you take more than 1 damage, it becomes 1, then draw 2 cards."
   },
   "9177": {
    "name": "Pet Duck",
@@ -1016,7 +1016,7 @@
   },
   "9178": {
    "name": "Eternal Night",
-   "effect_text": "Night Duck is no longer weakened: it is no longer affected by \"Light Phobia\" (its Attack Range, Move Speed and Power do not drop even on odd-numbered turns). Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "Night Duck is no longer weakened: it is no longer affected by \"Light Phobia\" (its Attack Range, Move Speed and Power do not drop even on odd-numbered turns)."
   },
   "9179": {
    "name": "Surprise Box",
@@ -1056,7 +1056,7 @@
   },
   "9188": {
    "name": "Mass-Produced Hermes",
-   "effect_text": ""
+   "effect_text": "Takes at most 20 damage each turn."
   },
   "9189": {
    "name": "Lone Wolf",
@@ -1116,11 +1116,11 @@
   },
   "9209": {
    "name": "Air Raid",
-   "effect_text": "At the start of the player's turn, mark 5 random tiles. Before the enemy acts, player units on the marked tiles take 5 damage; this damage increases by 1 each turn. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of the player's turn, mark 5 random tiles. Before the enemy acts, player units on the marked tiles take 5 damage; this damage increases by 1 each turn."
   },
   "9210": {
    "name": "Frost Barrier",
-   "effect_text": "At the start of every 2nd turn, all friendly units gain +1 Power, up to +4 per unit. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "At the start of every 2nd turn, all friendly units gain +1 Power, up to +4 per unit."
   },
   "9211": {
    "name": "Refraction Cannon",
@@ -1128,7 +1128,7 @@
   },
   "9212": {
    "name": "Owlbear's Wrath",
-   "effect_text": "While Owlbear's Health is above half, it takes -1 damage; when its Health drops to half or below, it gains \"Trample\" - when its damage kills a unit, the excess damage continues down the same column; it does not trigger if no unit was attacked. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "While Owlbear's Health is above half, it takes -1 damage; when its Health drops to half or below, it gains \"Trample\" - when its damage kills a unit, the excess damage continues down the same column; it does not trigger if no unit was attacked."
   },
   "9213": {
    "name": "Owlbear",
@@ -1200,7 +1200,7 @@
   },
   "9231": {
    "name": "Ill Omen",
-   "effect_text": "At the end of your turn, enemies on Marked tiles take 4X damage. X is the number of copies of this card in the Effect Zone."
+   "effect_text": "When used, if there is no Mark on the field, randomly Mark a tile. At the end of your turn, enemies on Marked tiles take 4X damage. X is the number of copies of this card in the Effect Zone."
   },
   "9232": {
    "name": "Herald of Doom",
@@ -1208,7 +1208,7 @@
   },
   "9233": {
    "name": "Soul Reaper",
-   "effect_text": "Each time you deal damage to a Marked enemy, this card's Cost is permanently reduced by 1. When this card kills a unit, its Health is fully restored."
+   "effect_text": "Each time you deal damage to a Marked enemy, this card's Cost is permanently reduced by 1. When this card kills a unit, gain 2 Cost and draw 2 cards."
   },
   "9234": {
    "name": "Dread Harvest",
@@ -1236,26 +1236,26 @@
   },
   "9240": {
    "name": "Wanted Notice",
-   "effect_text": "All units on the enemy's field gain \"Dimensional\". At the end of your 12th turn, Destroy all units on your own field. Multiple copies of this card in the Effect Zone do not stack."
+   "effect_text": "All units on the enemy's field gain \"Dimensional\". At the end of your 12th turn, Destroy all units on your own field."
   },
   "9241": {
    "name": "Laser Cannon",
-   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns. Each turn it picks two columns at random and telegraphs them; when it acts, deal damage equal to its Power to the first enemy unit in each of those two columns; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
+   "effect_text": "Cannot make normal attacks. Sleeps for 2 turns and starts with 10 Armor (never reset; while the Armor holds, taking damage does not reduce Sleep). Each turn it picks two columns at random and telegraphs them; when it acts, deal damage equal to its Power to the first enemy unit in each of those two columns; if there is no target in that column, hit the opponent's HP directly. +1 Power each turn."
   },
   "9242": {
    "name": "Shade of Pronoia",
-   "effect_text": "At the start of each turn, it changes form according to the card type the opponent has used most this turn: Ally or Structure -> Artillery Automaton; Skill or Field -> Shield Automaton; any other type -> Swift Automaton. If it is the only unit on the field, it loses 10 Health to Summon an Automaton; otherwise, the current Automaton transforms into the corresponding form."
+   "effect_text": "At the start of each turn, it changes form according to the card type the opponent has used most this turn: Ally or Structure -> Artillery Construct; Skill or Field -> Shield Construct; any other type -> Swift Construct. If it is the only unit on the field, it loses 10 Health to Summon a Construct; otherwise, the current Construct transforms into the corresponding form."
   },
   "9243": {
-   "name": "Artillery Automaton",
+   "name": "Artillery Construct",
    "effect_text": "At the start of each turn, give another friendly unit +1 Power."
   },
   "9244": {
-   "name": "Shield Automaton",
+   "name": "Shield Construct",
    "effect_text": "While this card is on the field, other friendly units take half damage."
   },
   "9245": {
-   "name": "Swift Automaton",
+   "name": "Swift Construct",
    "effect_text": "May act twice per turn."
   },
   "9246": {
@@ -1265,6 +1265,10 @@
   "9247": {
    "name": "Assembly Factory",
    "effect_text": "At the start of your turn, assemble a card."
+  },
+  "9271": {
+   "name": "Chocolate Factory",
+   "effect_text": "At the start of your turn, gain 1 Cost and draw a card."
   },
   "9248": {
    "name": "Seed",
@@ -1305,6 +1309,86 @@
   "9264": {
    "name": "Recruit",
    "effect_text": "Choose 1 of 3 Allies (one from each other class) and add it to your Hand."
+  },
+  "9265": {
+   "name": "Regret",
+   "effect_text": "Choose a card of another class in the discard pile. It is Banished."
+  },
+  "9266": {
+   "name": "Call",
+   "effect_text": "Gain +1 Energy for the rest of this battle. Add a random Ally of another class that costs 1 more than this card to your Hand; its cost becomes 0 for the rest of this battle."
+  },
+  "9267": {
+   "name": "Rousing Anthem",
+   "effect_text": "This turn, all Allies on the field gain +4 Power. Allies whose original class is not yours gain +6 instead."
+  },
+  "9268": {
+   "name": "Pipe Organ",
+   "effect_text": "When it attacks, add a random Skill card from your deck to your Hand; its cost is -1 this turn. While in play, whenever you use a Skill card, deal 3 damage to all enemies."
+  },
+  "9269": {
+   "name": "Rainbow Verse",
+   "effect_text": "Pick 3 different other classes at random. Add one random Ally or Skill card of each to your Hand; its cost is reduced by 1 for the rest of this battle."
+  },
+  "9270": {
+   "name": "Wind Song",
+   "effect_text": "All Allies gain +1 Move Speed. Allies of another class instead act twice each turn."
+  },
+  "9272": {
+   "name": "Chain Slash",
+   "effect_text": "Costs X; playing it consumes all of your Cost. Deal 7 damage to one target, repeated X times; if the target dies partway, the remaining strikes are lost. Can be used even with no Cost (X is 0 in that case)."
+  },
+  "9273": {
+   "name": "Artillery Ready",
+   "effect_text": "Costs X; playing it consumes all of your Cost. Add X copies of Charged Bombardment to your Draw Pile, and deal 3 damage to all enemies, repeated X times. Can be used even with no Cost (X is 0 in that case)."
+  },
+  "9274": {
+   "name": "Lingering Note",
+   "effect_text": "Costs X; playing it consumes all of your Cost. Add X copies of Note to your Draw Pile. Can be used even with no Cost (X is 0 in that case)."
+  },
+  "9275": {
+   "name": "Note",
+   "effect_text": "Gain 2 Cost and draw 2 cards."
+  },
+  "9277": {
+   "name": "Do",
+   "effect_text": "Draw 2 cards. At the start of your next turn, gain 1 Cost and draw 1 card."
+  },
+  "9278": {
+   "name": "Re",
+   "effect_text": "Deal 4 damage to all enemies. Add another random Note to your Draw Pile."
+  },
+  "9279": {
+   "name": "Mi",
+   "effect_text": "Two random enemies have -6 Power this turn. Draw 1 card."
+  },
+  "9280": {
+   "name": "Fa",
+   "effect_text": "Deal 18 damage to an enemy, and deal 5 damage to all other enemies."
+  },
+  "9281": {
+   "name": "Sol",
+   "effect_text": "Stun the target for 1 turn, and deal 6 damage to all enemies."
+  },
+  "9282": {
+   "name": "La",
+   "effect_text": "Draw 4 cards; those cards cost 1 less this battle. Allies and Structures drawn this way gain +2 Power."
+  },
+  "9283": {
+   "name": "Si",
+   "effect_text": "Deal 7 damage to a random enemy unit, repeated 7 times."
+  },
+  "9284": {
+   "name": "Duck Egg Pitcher",
+   "effect_text": "While holding the Golden Duck Egg: instead of acting, throw the Golden Duck Egg straight ahead (along its column). The egg stops at the first unit it hits and deals damage equal to its own Power to that unit, with Trample (if there is no unit, hit the opponent's HP directly). While not holding the Golden Duck Egg, its Move Speed becomes 3 and it gains +3 Power at the start of each turn."
+  },
+  "9285": {
+   "name": "Golden Duck Egg",
+   "effect_text": "When taking non-attack damage, it takes at most 1 damage each time. Death: add a random Epic card to the opponent's Hand and let the Duck Egg Pitcher regain the Golden Duck Egg."
+  },
+  "9276": {
+   "name": "Curse Doll",
+   "effect_text": "Cannot be played. At the end of the turn, you take 3 damage. At the start of your turn, if this card is in your Discard Pile, return it to your Hand."
   }
  }
 }

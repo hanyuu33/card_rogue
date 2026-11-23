@@ -36,8 +36,9 @@ def quoted(text):
 source_by_id = {str(r["id"]): r for r in SOURCE}
 expected_ids = set(source_by_id)
 instant_ids = {rid for rid, r in source_by_id.items() if r["kind"] == "即时"}
-check(len(SOURCE) == 63 and len(expected_ids) == 63, "真源为 63 件不重复道具")
-check(len(instant_ids) == 12, "kind=即时 共 12 件")
+check(len(SOURCE) >= 64 and len(SOURCE) == len(expected_ids),
+      "真源道具 ID 不重复（共 %d 件）" % len(SOURCE))
+check(len(instant_ids) == 14, "kind=即时 共 14 件（R842 +稀有价值 6090）")
 check(set(ZH["relics"]) == expected_ids, "canonical 道具 ID 完整覆盖")
 check(set(EN["relics"]) == expected_ids, "英文道具 ID 完整覆盖")
 check(set(JA["relics"]) == expected_ids, "日文道具 ID 完整覆盖")
@@ -136,7 +137,7 @@ check("15 or more" in EN["relics"]["6059"]["desc"] and "15以上" in JA["relics"
 check("Refit" in EN["classes"]["机械之心"]["subtitle"] and "改修" in JA["classes"]["机械之心"]["subtitle"], "8027 卡名与 Upgrade／改造机制不混用")
 
 for rid, row in ZH["relics"].items():
-    for old in ("手卡", "生命值", "血量", "攻击力", "抽牌库", "弃牌库", "弃牌堆"):
+    for old in ("手卡", "生命值", "血量", "攻击力", "抽牌堆", "弃牌库", "弃牌堆"):
         if old in row["desc"]:
             errors.append("%s canonical 残留未归一词 %s" % (rid, old))
 
@@ -149,4 +150,4 @@ if errors:
     for error in errors:
         print("  -", error)
     sys.exit(1)
-print("\nNONCARD I18N OK: 63 relics + 3 classes | 12 instant markers | numeric/term locks passed")
+print("\nNONCARD I18N OK: %d relics + 3 classes | 14 instant markers | numeric/term locks passed" % len(SOURCE))

@@ -323,7 +323,7 @@ func _init() -> void:
 
 	check(fence.kind == "工事" and fence.cost == 2 and fence.power == 0
 
-			and fence.health == 6, "木栅栏：2 费 0 力 6 血工事")
+			and fence.health == 8, "木栅栏：2 费 0 力 8 血工事")
 
 	var shot := repo.get_card(8002)
 
@@ -387,9 +387,9 @@ func _init() -> void:
 
 			"木栅栏×5 + 攻击×5 + 树人×2 + 熊×1（角色追加）")
 
-	check(repo.all_cards().size() == 325,
+	check(repo.all_cards().size() == 346,
 
-			"图鉴 = 325 张（R761 +2：杜鹃 9263 / 招募 9264（吟游诗人 · 隐藏职业的初始卡，rarity 3 不进随机池）；R758 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262（三个单位一套）；R756 +1：代偿 9252（契约核心的代价 · 2 费诅咒 · 次元 · 手卡里其余卡 +1 费）；R692 +2：鸭妈妈 9250 / 小鸭 9251；R689 +2：种子 9248 / 被眷顾者 9249；R632 −1：删工事罐子 9158；R582 +援护炮击 9192 / 技术结合 9193；R580 +猫鼠游戏 9190 / 黑暗嵌合 9191；R572 +宝石兽 9246 / 拼装工厂 9247（均稀有，进池）；R561 −3：删拼装主体 8083/8087/8088，拼装并入组合；R560 +传授 8085/8086；R559 +传授 8084；R556 +毒沼 8082；R541 +普罗诺亚之影 9242 / 炮击构状体 9243 / 护盾构状体 9244 / 迅捷构状体 9245；R539 +激光炮 9241；R536 删旧土元素 9218 −1；R525 +巴兰-α 9237 / 安西-β 9238 / 塔基尼-γ 9239 / 通缉令 9240（第二层 Boss「叛逃机械」）；R523 +土元素 9235 / 火元素 9236；R505 +恐惧收割；R504 +恐惧化身 / 噩兆 / 厄运的使者 / 灵魂收割者；R503 删 14 张陷阱系 + 加 6 张标记系；R502 +执法者 9223（第二层精英简单「执法者的审判」敌方单位）；R496 +忒修斯奇械 9222（机械之心 · 稀有盟友）；R494 +阵地保卫者 9220 / 结合者 9221；R493 +土元素 9218 / 压感地雷 9219；R473 +乱打 9215 / 飞踢 9216 / 冲拳 9217（武术大师事件专属，rarity 5 + traits「事件」不进随机池）；R467 +枭熊之怒 9212（洞穴关卡效果）+ 枭熊 9213（传说卡 · event_only，不进随机池）+ 枭熊 9214（洞穴敌方单位）；R465 +折射炮 9211（机械之心 · 3 费史诗效果卡）；R461 +寒霜结界 9210（寒冰防线敌方效果卡 · 冰封从冰冻术士的战吼搬过来）；R451 +量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209（第二层「母舰空袭」，R506 上调精英困难）；R446 +雪豹 8081（第一层事件「雪豹出现」选项 2）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄；漩涡 R757 起为普通池卡，鹅仍剧情锁）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
+			"图鉴 = 346 张（R856 敌人 +2：鸭蛋投手 9284 / 金鸭蛋 9285（第一层普通困难「鸭蛋投手」）；R826 玩家 +7：do/re/mi/fa/sol/la/si 9277~9283（吟游诗人 · 音符 · 次元 · rarity 5 不进随机池）；R807 玩家 +1：诅咒娃娃 9276（0 费诅咒 · 不可打出 · 「保存」· 事件「诡异洋房」的代价，rarity 6 不进随机池）；R800 玩家 +2：余音 9274（吟游诗人 · X 费稀有技能）/ 音符 9275（0 费技能 · 次元 · event_only 内部卡）；R799 玩家 +2：连斩 9272（暗影刺客 · X 费稀有技能）/ 炮火就位 9273（机械之心 · X 费史诗技能）；R794 +1：巧克力工厂 9271（事件卡 · 第二层事件「巧克力工厂」第 ④ 档产出 · 2 费工事 0/30 · 次元 · rarity 5 不进随机池）；R777b +1：疾风乐章 9270（吟游诗人 · 2 费史诗效果，职业隐藏 → 不进图鉴 / 随机池）；R777 +1：彩虹诗 9269（吟游诗人 · 2 费稀有技能，职业隐藏 → 不进图鉴 / 随机池）；R776 +2：激励乐章 9267 / 管风琴 9268（吟游诗人 · 1 费普通技能 / 4 费史诗工事）；R773 +1：呼唤 9266（吟游诗人 · 0 费普通技能 · rarity 0，但职业隐藏 → 默认不进图鉴 / 随机池）；R766 +1：懊悔 9265（猴爪的代价 · 1 费诅咒 · 次元 · 选弃牌区一张其他职业卡消失）；R761 +2：杜鹃 9263 / 招募 9264（吟游诗人 · 隐藏职业的初始卡，rarity 3 不进随机池）；R758 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262（三个单位一套）；R756 +1：代偿 9252（契约核心的代价 · 2 费诅咒 · 次元 · 手卡里其余卡 +1 费）；R692 +2：鸭妈妈 9250 / 小鸭 9251；R689 +2：种子 9248 / 被眷顾者 9249；R632 −1：删工事罐子 9158；R582 +援护炮击 9192 / 技术结合 9193；R580 +猫鼠游戏 9190 / 黑暗嵌合 9191；R572 +宝石兽 9246 / 拼装工厂 9247（均稀有，进池）；R561 −3：删拼装主体 8083/8087/8088，拼装并入组合；R560 +传授 8085/8086；R559 +传授 8084；R556 +毒沼 8082；R541 +普罗诺亚之影 9242 / 炮击构装体 9243 / 护盾构装体 9244 / 迅捷构装体 9245；R539 +激光炮 9241；R536 删旧土元素 9218 −1；R525 +巴兰-α 9237 / 安西-β 9238 / 塔基尼-γ 9239 / 通缉令 9240（第二层 Boss「叛逃机械」）；R523 +土元素 9235 / 火元素 9236；R505 +恐惧收割；R504 +恐惧化身 / 噩兆 / 厄运的使者 / 灵魂收割者；R503 删 14 张陷阱系 + 加 6 张标记系；R502 +执法者 9223（第二层精英简单「执法者的审判」敌方单位）；R496 +忒修斯奇械 9222（机械之心 · 稀有盟友）；R494 +阵地保卫者 9220 / 结合者 9221；R493 +土元素 9218 / 压感地雷 9219；R473 +乱打 9215 / 飞踢 9216 / 冲拳 9217（武术大师事件专属，rarity 5 + traits「事件」不进随机池）；R467 +枭熊之怒 9212（洞穴关卡效果）+ 枭熊 9213（传说卡 · event_only，不进随机池）+ 枭熊 9214（洞穴敌方单位）；R465 +折射炮 9211（机械之心 · 3 费史诗效果卡）；R461 +寒霜结界 9210（寒冰防线敌方效果卡 · 冰封从冰冻术士的战吼搬过来）；R451 +量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209（第二层「母舰空袭」，R506 上调精英困难）；R446 +雪豹 8081（第一层事件「雪豹出现」选项 2）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 9204 / 猎杀 9205 / 秃鹰 9206（本局永久击杀成长三卡）；R406 +独行 9189（暗影刺客 · 2 费普通技能）；R404 +涂装机器人 8080（机械之心 · 稀有盟友）；R397 +量产型赫尔墨斯 9188（敌方 · 装甲运输车）；R381 +漩涡 9186 / 鹅 9187（森林精魄；漩涡 R757 起为普通池卡，鹅仍剧情锁）；R373 +麻痹 9185（0 费诅咒 · 不能打出 · 回合结束仍在手牌即消失）；R370 +库存整理 9184（机械之心史诗技能）；R356 +启示者 9200 / 舰炮 9201 / 电磁屏障 9202 / 紧急呼叫 9203（第三层 Boss 关 = 1 单位 + 3 张阶段效果卡）；R352 +摇篮曲 9182 / 森林的朋友们 9183（剧情解锁的公用技能卡）；R351 +月亮 9180 / 硬币 9181（赏月事件产出的效果卡 · 不可从卡组删除）；R341 +惊奇盒子 9179（公用工事 · 道具产出）；R340 +宠物鸭 9177 / 永夜 9178；R332 +本能 9176（暗影刺客稀有·技能）；R331 +隐藏能源 8078 / 惊喜运单 8079（机械之心稀有·效果）＝ +2；R329 删除**紧急埋伏 9106**；R327 +送葬 9175（森林精魄稀有·效果）；R317 +身法 9173 / 淘汰 9174；R316 +极速 9171 / 激光扫射 9172；R315 +应急电源 9170；R306 +许愿 9168 / 烈火之剑 9169（占卜室产出）；R300 +激发 8077；R298 +集束炮台 9166 / 合体 9167；R291 +辅助刃 9164 / 复制术 9165；R290 +集中突破 9162 / 冲击炮 9163；R288 +失控要塞 9161；R271 +创意 8070 / 报废 8071 / 谟涅摩叙涅 8072 / 聚能机兵 8073 / 量产型代达罗斯 8074 / 量产型谟涅摩叙涅 8075；R269 +轻量化 8068 / 共享护盾 8069；R263 弹跳飞刀 9160；R245 +罐子 9157 / 工事罐子 9158；+ R150 赫菲斯托斯；+ R149 俄倪厄 / 量产型赫卡同克瑞斯 / 钢铁要塞；+ 幽影 8005 / 终结 9086 / 暗影刺客扩展 R45 / 回响·闪躲 R48 / 收尾 R49 / 爆炸陷阱 R50 / 冰霜·冻结·剧毒陷阱·陷阱精通 R51 / 紧急埋伏·陷阱工坊·暗影狩猎 R52 / 穿刺陷阱 R53 / 巨物捕获·活体栅栏·警觉 R54 / 地狱猫·鲜血堡垒·活力转移 R55 / 暗影之刃·黑暗领主·暗影锁链 R56 / 黑暗扩散·地狱咏唱者·黑暗祭坛·无尽黑暗 R57 / 使魔之力 9115 R60 / 契约签订者·恶魔鸭·恶魔使魔 R63 / **机械之心 素体·构装体·升级 R82** / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·嵌合暴君·生产订单** / **R97 拆解** / **R98 旧式机兵** / **R99 重组·城墙·超越极限** / **R100 重启·钢铁卫士** / **R101 救援构装体·榴弹击手·重甲战车·机器鸟·代达罗斯** / **R103 夜蚀 8062** / **R104 起手式 9119** / **R105 黑暗陷阱 8063** / **R111 鸭子暗杀者·鸭之暗面·暗影召唤** / **R116 捕兽大师 9126** / **赫卡同克瑞斯 9136·量产型赫利俄斯 9137 R152** / **量产型赫菲斯托斯 9138·充能巨炮 9139 R158** / **赫尔墨斯 9140 R161** / **阿斯克勒庇厄斯 9141 R162** / **量产型阿尔戈斯 9142 R174** / **返修 9127 R188** / **回收 8064 R198** / **货物 8065 R200** / **负重减轻 8066 R201** / **R202 发明专家·随心组装·聚能炮击·填充** / **R217 分裂之影 8067** / **R219 流水线装配 9147** / **R222 新生 9148** / **R223 疲惫 9149** / **R248 落石陷阱 9159**；R164 删除**双重场地 9108**；**R282 改装者 8076**；实际 %d）"
 
 			% repo.all_cards().size())
 
@@ -415,9 +415,9 @@ func _init() -> void:
 
 	var grp_enemy := repo.enemy_cards()
 
-	check(grp_player.size() == 247 and grp_enemy.size() == 78,
+	check(grp_player.size() == 266 and grp_enemy.size() == 80,
 
-			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 247 / 78（R761 玩家 +2：杜鹃 9263 / 招募 9264（吟游诗人）；R758 敌人 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262；R692 玩家 +2：鸭妈妈 9250 / 小鸭 9251；R689 玩家 +2；R632 玩家 −1：删工事罐子 9158；R582 玩家 +2；R580 玩家 +2；R572 玩家 +2：宝石兽 9246 / 拼装工厂 9247；R561 玩家 −3：删拼装主体 8083/8087/8088；R560 玩家 +2：传授 8085/8086；R559 玩家 +1：传授 8084；R556 玩家 +1：毒沼 8082；R541 敌人 +4：普罗诺亚之影 / 炮击构状体 / 护盾构状体 / 迅捷构状体；R536 玩家 −1 = 删旧土元素 9218；R525 敌人 +4：叛逃机械三只 + 通缉令；R523 玩家 +2：土元素 / 火元素；R505 玩家 +1；R504 玩家 +4；R503 玩家 -14 +6；（R502 敌人 +1：执法者 9223）；R496 玩家 +1：忒修斯奇械；R494 玩家 +2：阵地保卫者 / 结合者）；R493 玩家 +2：土元素 / 压感地雷；R473 玩家 +3（乱打 / 飞踢 / 冲拳）；R467 玩家 +1（枭熊 9213 · 传说卡）、敌人 +2（枭熊之怒 9212 · 枭熊 9214）；R465 玩家 +1（折射炮 9211）；R461 +1 张敌方关卡效果卡（寒霜结界 9210 · 寒冰防线）；R451 +3 张敌方卡（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R393 +3 张玩家卡；R406 +1 张玩家卡（独行 9189）；R404 +1 张玩家卡（涂装机器人 8080）；R397 +1 张敌方卡（量产型赫尔墨斯 9188）；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
+			"图鉴分组：玩家卡牌 %d 张 / 敌人 %d 张（期望 266 / 80（R856 敌人 +2：鸭蛋投手 / 金鸭蛋；R826 玩家 +7：音符 9277~9283；R807 玩家 +1：诅咒娃娃 9276；R800 玩家 +2：余音 9274 / 音符 9275；R794 玩家 +1：巧克力工厂 9271；R777b 玩家 +1：疾风乐章 9270；R777 玩家 +1：彩虹诗 9269；R776 玩家 +2：激励乐章 9267 / 管风琴 9268；R773 玩家 +1：呼唤 9266；R766 玩家 +1：懊悔 9265；R761 玩家 +2：杜鹃 9263 / 招募 9264（吟游诗人）；R758 敌人 +3：常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262；R692 玩家 +2：鸭妈妈 9250 / 小鸭 9251；R689 玩家 +2；R632 玩家 −1：删工事罐子 9158；R582 玩家 +2；R580 玩家 +2；R572 玩家 +2：宝石兽 9246 / 拼装工厂 9247；R561 玩家 −3：删拼装主体 8083/8087/8088；R560 玩家 +2：传授 8085/8086；R559 玩家 +1：传授 8084；R556 玩家 +1：毒沼 8082；R541 敌人 +4：普罗诺亚之影 / 炮击构装体 / 护盾构装体 / 迅捷构装体；R536 玩家 −1 = 删旧土元素 9218；R525 敌人 +4：叛逃机械三只 + 通缉令；R523 玩家 +2：土元素 / 火元素；R505 玩家 +1；R504 玩家 +4；R503 玩家 -14 +6；（R502 敌人 +1：执法者 9223）；R496 玩家 +1：忒修斯奇械；R494 玩家 +2：阵地保卫者 / 结合者）；R493 玩家 +2：土元素 / 压感地雷；R473 玩家 +3（乱打 / 飞踢 / 冲拳）；R467 玩家 +1（枭熊 9213 · 传说卡）、敌人 +2（枭熊之怒 9212 · 枭熊 9214）；R465 玩家 +1（折射炮 9211）；R461 +1 张敌方关卡效果卡（寒霜结界 9210 · 寒冰防线）；R451 +3 张敌方卡（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R393 +3 张玩家卡；R406 +1 张玩家卡（独行 9189）；R404 +1 张玩家卡（涂装机器人 8080）；R397 +1 张敌方卡（量产型赫尔墨斯 9188）；R381 +2 张玩家卡（漩涡 9186 / 鹅 9187）；R373 +1 张玩家卡（麻痹 9185 · 诅咒）；R370 +1 张玩家卡（库存整理 9184）；R356 +4 张敌方卡（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫）；R352 +2 张玩家技能卡（摇篮曲 / 森林的朋友们）；R351 +2 张玩家效果卡（月亮 / 硬币）；R341 +惊奇盒子 9179（玩家工事）；R340 +宠物鸭 9177（玩家挡伤 token）/ 永夜 9178（敌方关卡效果）；R332 +1（本能 9176）；R331 +2（隐藏能源 / 惊喜运单）；R329 删紧急埋伏 -1；R269 +2 张玩家卡（轻量化 / 共享护盾）；R263 弹跳飞刀 +1 张玩家卡；R245 +罐子 9157 / 工事罐子 9158；R188 / R198 / R200 / R201 各 +1；R202 +4 张玩家卡；R217 +1 张玩家卡；R222 +1 张玩家卡；R223 +1 张玩家卡（疲惫 9149）；R248 落石陷阱 +1 张玩家卡；R149 +3 / R150 +1 / R152 +2 / R161 +1 / R162 +1 / R174 +1 / R219 +1 张敌方卡；**R282 改装者 8076**；R164 玩家卡 -1 = 删除双重场地 9108）"
 
 			% [grp_player.size(), grp_enemy.size()])
 
@@ -481,9 +481,9 @@ func _init() -> void:
 
 	var pool := repo.reward_pool()
 
-	check(pool.size() == 202,
+	check(pool.size() == 204,
 
-			"奖励池 202 张（R757 +1：漩涡 9186 由剧情锁改为普通池卡；R692 +1：鸭妈妈 9250 稀有进池（小鸭 9251 是 token 不进池）；R689 +1：被眷顾者 9249 史诗进池（种子 9248 是 token 不进池）；R572 +2：宝石兽 9246 / 拼装工厂 9247（均稀有，进池）；R561 −3：删拼装主体 8083/8087/8088（均稀有，原进池）；R560 +传授 8085/8086（均稀有，进池）；R559 +传授 8084（稀有，进池）；R556 +毒沼 8082（普通，进池）；R536 −1 = 删旧土元素 9218；R523 +2：土元素（史诗）/ 火元素（稀有）；R505 +恐惧收割；R504 +4（恐惧化身 / 噩兆 / 厄运的使者 / 灵魂收割者）；R503 删 12 张进池卡 + 加 4 张进池卡；R496 +忒修斯奇械 9222（稀有）；R494 +阵地保卫者 9220（史诗）/ 结合者 9221（史诗）；R493 +土元素 9218（史诗）/ 压感地雷 9219（普通）；R465 +折射炮 9211（机械之心史诗效果卡，进池）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 / 猎杀 / 秃鹰 三张进池；R406 +独行 9189（普通）进池；R404 +涂装机器人 8080（稀有）进池；R370 +库存整理 9184（史诗）进池；R332 +本能 9176（稀有，进池）；R331 +隐藏能源 / 惊喜运单（均稀有）+2；R329：删**紧急埋伏 9106**（稀有）−1、**嵌合暴君 8047** 由初始升史诗 +1，仍 181；R327 +送葬 9175（稀有，进池）；R317 +身法 / 淘汰；R316 +极速 / 激光扫射；R315 +应急电源 9170 进池；R300 激发（史诗）进池；R298 集束炮台（普通）· 合体（史诗）均进池；R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 R329 起为史诗 → 进池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
+			"奖励池 204 张（R799 玩家 +2：连斩 9272（暗影刺客 · X 费稀有技能）/ 炮火就位 9273（机械之心 · X 费史诗技能）；R757 +1：漩涡 9186 由剧情锁改为普通池卡；R692 +1：鸭妈妈 9250 稀有进池（小鸭 9251 是 token 不进池）；R689 +1：被眷顾者 9249 史诗进池（种子 9248 是 token 不进池）；R572 +2：宝石兽 9246 / 拼装工厂 9247（均稀有，进池）；R561 −3：删拼装主体 8083/8087/8088（均稀有，原进池）；R560 +传授 8085/8086（均稀有，进池）；R559 +传授 8084（稀有，进池）；R556 +毒沼 8082（普通，进池）；R536 −1 = 删旧土元素 9218；R523 +2：土元素（史诗）/ 火元素（稀有）；R505 +恐惧收割；R504 +4（恐惧化身 / 噩兆 / 厄运的使者 / 灵魂收割者）；R503 删 12 张进池卡 + 加 4 张进池卡；R496 +忒修斯奇械 9222（稀有）；R494 +阵地保卫者 9220（史诗）/ 结合者 9221（史诗）；R493 +土元素 9218（史诗）/ 压感地雷 9219（普通）；R465 +折射炮 9211（机械之心史诗效果卡，进池）；R429 删魔法学徒 9081 −1；R393 +赏金猎人 / 猎杀 / 秃鹰 三张进池；R406 +独行 9189（普通）进池；R404 +涂装机器人 8080（稀有）进池；R370 +库存整理 9184（史诗）进池；R332 +本能 9176（稀有，进池）；R331 +隐藏能源 / 惊喜运单（均稀有）+2；R329：删**紧急埋伏 9106**（稀有）−1、**嵌合暴君 8047** 由初始升史诗 +1，仍 181；R327 +送葬 9175（稀有，进池）；R317 +身法 / 淘汰；R316 +极速 / 激光扫射；R315 +应急电源 9170 进池；R300 激发（史诗）进池；R298 集束炮台（普通）· 合体（史诗）均进池；R291 辅助刃 / 复制术进池；R290 集中突破 / 冲击炮进池；R275 重组降为普通后进池；R269 轻量化（普通）·共享护盾（稀有）均进池；R263 弹跳飞刀（普通，进池）；初始/怪物/事件卡不入池；R83 清泉 / R84 战斗骨骼 / R85 过载 / R86 批量改造·侦察塔 / R87 能量屏障·堡垒·自我修复 / R88 维修间 / R89 无限装甲 / R90 系统升级·批量传输 / R91 充电装置 / **R92 护盾生成器·模仿者** / **R95 加厚装甲·自主升级** / **R96 零件回收者·生产订单**（嵌合暴君 8047 R329 起为史诗 → 进池）/ **R97 拆解**（稀有）/ **R98 旧式机兵**（普通）/ **R100 重启（稀有）·钢铁卫士（稀有）**（均进池）/ **R101 救援构装体·榴弹击手（均普通）·重甲战车（稀有）·机器鸟（普通）均进池；代达罗斯（史诗）不进池** / **R116 捕兽大师 9126（史诗）进池** / **返修 9127（稀有）R188** / **回收 8064（史诗）R198** / **负重减轻 8066（史诗）R201** / **R202 发明专家（稀有）·随心组装（史诗）·聚能炮击（普通）·填充（普通）** / **R217 分裂之影（稀有，进池）** / **R222 新生（史诗，进池）** / **R248 落石陷阱（史诗，进池）**；R223 疲惫 9149（诅咒 rarity 6）不入池；**R282 改装者 8076（普通，进池）**；实际 %d）"
 
 			% pool.size())
 
@@ -944,6 +944,216 @@ func _init() -> void:
 			% [GameEngine.FIRE_WALL_DMG, fw3_res])
 
 
+
+	# ================= R840：火墙入场灼烧 + 技能抗性「最终不超过 3」 =================
+
+	# 店长口径 ①：「在火墙留下的火焰范围内入场的卡也需要受到伤害」——
+	# 判据挂在 `FieldState.place()` 的落位回调上（手牌打出 / 召唤 / 孵化 的唯一口）。
+
+	var r840_e := _new_engine([], 30, 30, -1, false)
+
+	r840_e.start_game(0)
+
+	r840_e.state.hand = [repo.get_card(9084)]
+
+	r840_e.state.energy = 5
+
+	r840_e.use_spell(0, Vector2i(1, 2))     # 第 1 行点起来（此刻是空行）
+
+	check(r840_e.fire_wall_rows().has(1),
+
+			"R840 火墙：第 1 行进入燃烧状态（%s）" % str(r840_e.fire_wall_rows()))
+
+	var r840_in := r840_e.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_SELF)
+
+	check(r840_in != null
+			and r840_in.health == r840_in.card.health - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：入场即灼烧 —— 召唤到燃烧横行的单位 -%d（%d→%d）" % [
+			GameEngine.FIRE_WALL_PASS_DMG, 30, r840_in.health])
+
+	var r840_out := r840_e.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+
+	check(r840_out != null and r840_out.health == 30,
+
+			"R840 火墙：不在燃烧横行的入场不受伤（%d）" % r840_out.health)
+
+	var r840_foe := r840_e.state.place(
+			CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	check(r840_foe != null
+			and r840_foe.health == r840_foe.card.health - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：不分敌我 —— 敌方单位入场同样 -%d（%d→%d）" % [
+			GameEngine.FIRE_WALL_PASS_DMG, r840_foe.card.health, r840_foe.health])
+
+	r840_e._clear_fire_walls(GameEngine.SIDE_SELF)
+
+	var r840_late := r840_e.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(1, 2), GameEngine.SIDE_SELF)
+
+	check(r840_late != null and r840_late.health == 30,
+
+			"R840 火墙：火焰熄灭后入场不受伤（%d）" % r840_late.health)
+
+	# 入场灼烧同样过减伤链：技能抗性的单位踏进火线 → 7 点被压到 3
+
+	var r840_e2 := _new_engine([], 30, 30, -1, false)
+
+	r840_e2.start_game(0)
+
+	r840_e2.state.hand = [repo.get_card(9084)]
+
+	r840_e2.state.energy = 5
+
+	r840_e2.use_spell(0, Vector2i(1, 0))
+
+	var r840_im := r840_e2.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+
+	check(r840_im != null and r840_im.health == 60 - GameEngine.SPELL_RESIST_CAP,
+
+			"R840 火墙：入场灼烧也吃技能抗性 → 7 压到 %d（%d）" % [
+			GameEngine.SPELL_RESIST_CAP, r840_im.health])
+
+	# 店长口径 ②：「限制 3 伤害应该是伤害最终不超过 3」——
+	# 封顶必须落在**最终落地值**（正义背刺 ×2 之后），不是减伤链的中间值。
+
+	var r840_cap := _new_engine([], 30, 200, -1, false)
+
+	r840_cap.start_game(0)
+
+	var r840_giant := r840_cap.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+
+	r840_cap.self_relics = [6064]     # 正义背刺：对满血敌人 ×2
+
+	var r840_g_hp := r840_giant.health
+
+	r840_cap._hit_unit(r840_giant, 20, "技能")
+
+	check(r840_giant.health == r840_g_hp - GameEngine.SPELL_RESIST_CAP,
+
+			"R840 技能抗性：20 点技能 × 正义背刺 → 最终仍只 -%d（%d→%d）" % [
+			GameEngine.SPELL_RESIST_CAP, r840_g_hp, r840_giant.health])
+
+	# 单目标技能那条扣血口（`_op_deal_damage`，不走 `_hit_unit`）同口径
+
+	var r840_cap2 := _new_engine([], 30, 200, -1, false)
+
+	r840_cap2.start_game(0)
+
+	var r840_giant2 := r840_cap2.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+
+	r840_cap2.self_relics = [6064]
+
+	r840_cap2.state.hand = [repo.get_card(9003)]     # 火焰箭：17 点单目标技能
+
+	r840_cap2.state.energy = 5
+
+	var r840_g2_hp := r840_giant2.health
+
+	r840_cap2.use_spell(0, Vector2i(0, 1))
+
+	check(r840_giant2.health == r840_g2_hp - GameEngine.SPELL_RESIST_CAP,
+
+			"R840 技能抗性：火焰箭 17 × 正义背刺 → 最终仍只 -%d（%d→%d）" % [
+			GameEngine.SPELL_RESIST_CAP, r840_g2_hp, r840_giant2.health])
+
+	# 反向守卫：技能抗性**不碰普通攻击**，新封顶不许误伤这一条
+
+	var r840_atk := _new_engine([], 30, 200, -1, false)
+
+	r840_atk.start_game(0)
+
+	var r840_g3 := r840_atk.state.place(
+			CardData.from_dict(repo.get_card(1071).to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+
+	var r840_g3_hp := r840_g3.health
+
+	r840_atk._hit_unit(r840_g3, 10, "战斗", true, true)
+
+	check(r840_g3.health == r840_g3_hp - 10,
+
+			"R840 技能抗性：普通攻击照旧全额 -10（%d→%d）" % [r840_g3_hp, r840_g3.health])
+
+	# ② 被推 / 被拉 / 被弹进火墙也要灼烧 —— 与入场共用 `dealt` 账本，同回合累计不超 cap
+
+	var r840_kb := _new_engine([], 30, 30, -1, false)
+
+	r840_kb.start_game(0)
+
+	r840_kb.state.hand = [repo.get_card(9084)]
+
+	r840_kb.state.energy = 5
+
+	r840_kb.use_spell(0, Vector2i(2, 0))     # 第 2 行烧起来
+
+	var r840_kb_u := r840_kb.state.place(
+			CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(3, 0), GameEngine.SIDE_OPPONENT)
+
+	check(r840_kb_u.health == 40,
+
+			"R840 火墙：击退前站在第 3 行（不在火线）不受影响（%d）" % r840_kb_u.health)
+
+	r840_kb._knockback(GameEngine.SIDE_OPPONENT, Vector2i(3, 0), 2, Vector2i(-1, 0))
+
+	check(r840_kb_u.health == 40 - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：被击退穿过火线 → -%d（40→%d）" % [
+			GameEngine.FIRE_WALL_PASS_DMG, r840_kb_u.health])
+
+	r840_kb._knockback(GameEngine.SIDE_OPPONENT, Vector2i(1, 0), 2, Vector2i(1, 0))
+
+	check(r840_kb_u.health == 40 - GameEngine.FIRE_WALL_CAP,
+
+			"R840 火墙：同一回合再被推回 → 只补到上限 %d（%d）" % [
+			GameEngine.FIRE_WALL_CAP, r840_kb_u.health])
+
+	r840_kb._knockback(GameEngine.SIDE_OPPONENT, Vector2i(3, 0), 2, Vector2i(-1, 0))
+
+	check(r840_kb_u.health == 40 - GameEngine.FIRE_WALL_CAP,
+
+			"R840 火墙：吃满上限后再被推过 → 不再掉血（%d）" % r840_kb_u.health)
+
+	# 入场 7 + 被推 7 = 同一面火墙累计 14（入场与位移共用 cap）
+
+	var r840_mix := _new_engine([], 30, 30, -1, false)
+
+	r840_mix.start_game(0)
+
+	r840_mix.state.hand = [repo.get_card(9084)]
+
+	r840_mix.state.energy = 5
+
+	r840_mix.use_spell(0, Vector2i(2, 0))
+
+	var r840_mix_u := r840_mix.state.place(
+			CardData.from_dict(repo.get_card(9021).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)     # 直接落进火线 → 入场灼烧 7
+
+	check(r840_mix_u.health == 30 - GameEngine.FIRE_WALL_PASS_DMG,
+
+			"R840 火墙：入场灼烧 7 点（30→%d）" % r840_mix_u.health)
+
+	r840_mix._knockback(GameEngine.SIDE_SELF, Vector2i(2, 1), 2, Vector2i(0, 1))
+
+	check(r840_mix_u.health == 30 - GameEngine.FIRE_WALL_CAP,
+
+			"R840 火墙：入场 + 被推共用上限 → 合计只到 %d（%d）" % [
+			GameEngine.FIRE_WALL_CAP, r840_mix_u.health])
 
 	# R247：不分敌我 —— 施放即烧到该行**所有单位**（含施放方自己人）
 
@@ -8203,11 +8413,11 @@ func _init() -> void:
 
 	check(nc_archer.card_name == "鸭子弓手" and nc_archer.power == 3
 
-			and nc_archer.health == 18 and nc_archer.attack_range == 2
+			and nc_archer.health == 15 and nc_archer.attack_range == 2
 
 			and nc_archer.move_speed == 1 and nc_archer.rarity == 4,
 
-			"鸭子弓手：怪物 3/18 程2 速1")
+			"鸭子弓手：怪物 3/15 程2 速1（R778 血 18→15）")
 
 	var nc_metal := repo.get_card(9018)
 
@@ -8307,13 +8517,13 @@ func _init() -> void:
 
 	check((lvl_ak.get("enemy_units", [])[0][2] as int) == 3
 
-			and (lvl_ak.get("enemy_units", [])[0][3] as int) == 18
+			and (lvl_ak.get("enemy_units", [])[0][3] as int) == 15
 
 			and (lvl_ak.get("enemy_units", [])[1][2] as int) == 3
 
 			and (lvl_ak.get("enemy_units", [])[1][3] as int) == 30,
 
-			"弓手与骑士：弓手 3/18、骑士 3/30")
+			"弓手与骑士：弓手 3/15、骑士 3/30（R778 弓手血 18→15）")
 
 
 
@@ -9029,7 +9239,7 @@ func _init() -> void:
 
 	eng3.use_spell(shot2, null)
 
-	check(eng3.state.hp_opponent == hp0 - 4, "攻击无目标 → 敌方 HP -4")
+	check(eng3.state.hp_opponent == hp0 - 5, "攻击无目标 → 敌方 HP -5")
 
 
 
@@ -9542,9 +9752,9 @@ func _init() -> void:
 
 	var efarmer := eng_eye.state.unit_at(Vector2i(2, 1))
 
-	check(efarmer != null and efarmer.health == 2,
+	check(efarmer != null and efarmer.health == 1,
 
-			"鸭之眼：攻击 4+2=6（8 血农民剩 %d）" % (efarmer.health if efarmer != null else -1))
+			"鸭之眼：攻击 5+2=7（8 血农民剩 %d）" % (efarmer.health if efarmer != null else -1))
 
 	var s2 := _find(eng_eye.state.hand, 8002)
 
@@ -9552,15 +9762,15 @@ func _init() -> void:
 
 	eng_eye.use_spell(s2, null)
 
-	check(eng_eye.state.hp_opponent == hp_e0 - 6,
+	check(eng_eye.state.hp_opponent == hp_e0 - 7,
 
-			"鸭之眼：攻击无目标 → 敌方 HP -6（实际 %d）" % (hp_e0 - eng_eye.state.hp_opponent))
+			"鸭之眼：攻击无目标 → 敌方 HP -7（实际 %d）" % (hp_e0 - eng_eye.state.hp_opponent))
 
 	eng_eye.remote_spell(_card(8002, "攻击", "技能", 2, 0, 0), null)
 
-	check(eng_eye.state.hp_self == 16,
+	check(eng_eye.state.hp_self == 15,
 
-			"鸭之眼：敌方施法不受加成（我方 HP 20-4=16，实际 %d）" % eng_eye.state.hp_self)
+			"鸭之眼：敌方施法不受加成（我方 HP 20-5=15，实际 %d）" % eng_eye.state.hp_self)
 
 	# X 取的是 card.cost（原始费用），不是 cost_of()（临时减费不吃掉加成）
 
@@ -9752,6 +9962,11 @@ func _init() -> void:
 
 	# R440 新增传奇「暗动力」6054 → 21 件 = 15 + 6。
 
+	# R792：+猴爪 6066（relics.json 写的 tier 是「稀有」，但 `RelicData.RELIC_TIERS`
+	# 只有「一般 / 传奇」两档，`normalize_tier()` 会把它归一成「一般」）+ 板甲 6070 /
+	# 兵 6071 / 墙砖 6072 三件一般 → **25 件 = 19 一般 + 6 传奇**。
+	# R806：+法术卷轴 6080（一般）→ **26 件 = 20 一般 + 6 传奇**（全池 32 件）。
+
 	var r289_repo := RelicRepo.load_json()
 
 	var r289_all := r289_repo.reward_ids()
@@ -9760,9 +9975,9 @@ func _init() -> void:
 
 	var r289_leg := r289_repo.legendary_reward_ids()
 
-	check(r289_all.size() == 21 and r289_nor.size() == 15 and r289_leg.size() == 6,
+	check(r289_all.size() == 36 and r289_nor.size() == 30 and r289_leg.size() == 6,
 
-			"奖励分档：奖励池 21 件 = 一般 15 + 传奇 6（实际 %d / %d / %d）"
+			"奖励分档：奖励池 36 件 = 一般 30 + 传奇 6（实际 %d / %d / %d）"
 
 			% [r289_all.size(), r289_nor.size(), r289_leg.size()])
 
@@ -10182,9 +10397,9 @@ func _init() -> void:
 
 	eng_ws.use_spell(_find(eng_ws.state.hand, 8002), null)
 
-	check(eng_ws.state.hp_opponent == hp_b - 5,
+	check(eng_ws.state.hp_opponent == hp_b - 6,
 
-			"鸭之低语：技能伤害 +1（攻击 4+1=5 → 敌方 HP -5）")
+			"鸭之低语：技能伤害 +1（攻击 5+1=6 → 敌方 HP -6）")
 
 	# 回合结束 → 下一回合掷骰前，伤害加成清空
 
@@ -12287,11 +12502,11 @@ func _init() -> void:
 
 	check(cap != null and cap.card_name == "鸭子队长" and cap.power == 6
 
-			and cap.health == 55 and cap.attack_range == 1 and cap.move_speed == 1
+			and cap.health == 50 and cap.attack_range == 1 and cap.move_speed == 1
 
 			and cap.actions == 2 and cap.rarity == 4,
 
-			"鸭子队长：怪物 6/55 程1 速1 行动2次（R449 攻 −1 / 血 +5）")
+			"鸭子队长：怪物 6/50 程1 速1 行动2次（R449 攻 −1 / 血 +5；R778 血 55→50）")
 
 	var lvl3: Dictionary = _level_named("鸭子队长登场")
 
@@ -12787,7 +13002,7 @@ func _init() -> void:
 
 	var lvls := GameLevels.builtin_levels()
 
-	check(lvls.size() == 40, "内置关卡共 40 关（8 普简 + 10 普难 + 8 精英简单 + 7 精英困难 + 7 Boss；R758 计量工坊进第二层普通困难；R541 普罗诺亚之影进第二层精英简单；R525 叛逃机械进第二层 Boss；R502 执法者的审判进第二层精英简单；R451 母舰空袭进第二层精英池、**R506 母舰空袭 ↔ 阿斯克勒庇厄斯的试炼互换档位**；R356 第三层启示者进 Boss；R340 永夜鸭群进第一层精英困难；"
+	check(lvls.size() == 41, "内置关卡共 41 关（R856 鸭蛋投手进一层普通困难 +1；8 普简 + 10 普难 + 7 精英简单 + 8 精英困难 + 7 Boss；R778 龙族巢穴→一层精英简单、阿斯克勒庇厄斯→普通困难、计量工坊→精英困难；R758 计量工坊进第二层普通困难；R541 普罗诺亚之影进第二层精英简单；R525 叛逃机械进第二层 Boss；R502 执法者的审判进第二层精英简单；R451 母舰空袭进第二层精英池、**R506 母舰空袭 ↔ 阿斯克勒庇厄斯的试炼互换档位**；R356 第三层启示者进 Boss；R340 永夜鸭群进第一层精英困难；"
 
 			+ "R135 太阳熔炉进第二层普通困难 / R149 钢铁要塞进第二层精英困难（R162 阿斯克勒庇厄斯 R506 下调精英简单） / R150 赫菲斯托斯工坊进第二层 Boss"
 
@@ -12823,13 +13038,13 @@ func _init() -> void:
 
 			"队长与巫师：精英困难（队长+巫师+使魔）")
 
-	check(GameLevels.normal_pool().size() == 8,
+	check(GameLevels.normal_pool().size() == 9,
 
-			"第一层普通池 8 关（普简×4 + 普难×4：R158 白魔法鸭护阵 / 夜鸭阵 上调进第一层普通困难）")
+			"第一层普通池 9 关（普简×4 + 普难×5：R856 鸭蛋投手；R158 白魔法鸭护阵 / 夜鸭阵 上调进第一层普通困难）")
 
-	check(GameLevels.elite_pool().size() == 6,
+	check(GameLevels.elite_pool().size() == 7,
 
-			"第一层精英池 6 关（精简×3 + 精难×3：R158 鸭子窑上调进第一层精英简单；R449 哈气骑士团下调到第一层；R340 永夜鸭群）")
+			"第一层精英池 7 关（精简×4 + 精难×3：R778 龙族巢穴从第二层整关移入精英简单；R158 鸭子窑上调进第一层精英简单；R449 哈气骑士团下调到第一层；R340 永夜鸭群）")
 
 	check(str(GameLevels.boss_level()["name"]) == "远古虚骨龙",
 
@@ -13571,9 +13786,9 @@ func _init() -> void:
 
 	check(kiln_c.effect_text.contains("少于3只时") and kiln_c.effect_text.contains("只召唤1只")
 
-			and kiln_c.effect_text.contains("所有陶瓷鸭+1血量"),
+			and kiln_c.effect_text.contains("所有陶瓷鸭+1生命"),
 
-			"R259：鸭子窑卡面写明 <3 只照旧、>=3 只只召唤 1 只且全体 +1 血量")
+			"R259：鸭子窑卡面写明 <3 只照旧、>=3 只只召唤 1 只且全体 +1 生命")
 
 	# ① 场上 0 只（<3）→ 原逻辑：相邻空格各刷 1 只
 
@@ -13885,9 +14100,9 @@ func _init() -> void:
 
 				GameLevels.levels_of_layer(GameLayers.LAYER_THREE).size()])
 
-	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 22,
+	check(GameLevels.levels_of_layer(GameLayers.LAYER_TWO).size() == 21,
 
-			"第二层自带 22 关（R758 计量工坊 +1；R541 普罗诺亚之影 +1；R539 巨炮防线 +1；R525 叛逃机械 +1；R502 执法者的审判 +1；R451 母舰空袭 +1；R228 废料场 +1；太阳熔炉 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层；R449 哈气骑士团下调到第一层）")
+			"第二层自带 21 关（R778 龙族巢穴移到第一层 −1）（R758 计量工坊 +1；R541 普罗诺亚之影 +1；R539 巨炮防线 +1；R525 叛逃机械 +1；R502 执法者的审判 +1；R451 母舰空袭 +1；R228 废料场 +1；太阳熔炉 / 寒冰防线 / 亡灵军团 / 龙族巢穴 / 机甲巨兵 / **钢铁要塞·阿斯克勒庇厄斯的试炼 R162** / **量产流水线·量产铁砧·双机炮阵 R158** / **赫尔墨斯的试炼 R161** / 机械巨鸭Boss / **赫菲斯托斯工坊Boss**；R158 白魔法鸭护阵·夜鸭阵·鸭子窑 与 鸭之暗面Boss 均下调到第一层；R449 哈气骑士团下调到第一层）")
 
 	# R356：第三层只有 1 关（启示者），且它就是这一层的专属 Boss
 
@@ -13913,13 +14128,13 @@ func _init() -> void:
 
 	check(GameLayers.content_layers(9).is_empty(), "未配置的层：内容池为空（拿不到任何内容）")
 
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 10,
+	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).size() == 9,
 
-			"第二层普通池 10 关（专属：普通简单 4 + 普通困难 6（R758 计量工坊）；R722 巨炮防线已上调精英困难；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员 / R228 废料场）")
+			"第二层普通池 9 关（专属：普通简单 4 + 普通困难 5（R758 计量工坊；R856 太阳熔炉上调精英简单 → −1）；R722 巨炮防线已上调精英困难；R135 太阳熔炉 / R158 量产流水线·量产铁砧·双机炮阵 / R174 百眼动员 / R228 废料场）")
 
 	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).size() == 9,
 
-			"第二层精英池 9 关（专属：精英简单 5 + 精英困难 4；R722 巨炮防线上调到精英困难；R541 普罗诺亚之影（精英简单）；**R506 母舰空袭（精英困难）↔ 阿斯克勒庇厄斯的试炼（精英简单）互换档位**；R502 执法者的审判（精英简单）；R149 钢铁要塞 / R161 赫尔墨斯的试炼；R449 哈气骑士团已下调到第一层）")
+			"第二层精英池 9 关（专属：精英简单 4 + 精英困难 5；R856 太阳熔炉从普通困难上调 +1；R778 龙族巢穴移到第一层 −1、阿斯克勒庇厄斯的试炼降为普通困难 −1、计量工坊升为精英困难 +1；R722 巨炮防线上调到精英困难；R541 普罗诺亚之影（精英简单）；R502 执法者的审判（精英简单）；R149 钢铁要塞 / R161 赫尔墨斯的试炼；R449 哈气骑士团已下调到第一层）")
 
 	var l2_battle_pool: Array[Dictionary] = []
 
@@ -14163,7 +14378,7 @@ func _init() -> void:
 
 
 
-	# ---- 战吼（所属阵营第一个回合开始时触发一次）----
+	# ---- R778：灰烬龙的战吼已整条删除（卡面清空 + trait 移除 + 引擎分支下线）----
 
 	var om_bc := _new_engine([], 20, 30, -1, false)
 
@@ -14177,15 +14392,11 @@ func _init() -> void:
 
 	var om_bc1 := om_bc.state.unit_at(Vector2i(3, 1))
 
-	check(om_bc1 != null and om_bc1.health == om_bc_hp - 4,
+	check(om_bc1 != null and om_bc1.health == om_bc_hp,
 
-			"灰烬龙战吼：对我方单位造成 4 点伤害")
+			"R778 灰烬龙战吼已删：敌方回合开始不再对全场造成 4 伤（%d → %d）"
 
-	om_bc._begin_turn(GameEngine.SIDE_OPPONENT)
-
-	var om_bc2 := om_bc.state.unit_at(Vector2i(3, 1))
-
-	check(om_bc2 == null or om_bc2.health == om_bc_hp - 4, "战吼只触发一次")
+			% [om_bc_hp, -1 if om_bc1 == null else om_bc1.health])
 
 	# R724（店长口径）：冰冻术士 1031 的战吼**已删除** —— 它的出场时机导致这个效果
 	# 根本触发不了（先入场的永远是玩家的单位，冰封「第一个入场」只会命中一个炮灰）。
@@ -14288,15 +14499,23 @@ func _init() -> void:
 
 
 
-	# ---- 4 个新关卡都属于第二层 ----
+	# ---- 新关卡都属于第二层（R778：龙族巢穴已整关移到第一层，单独断言）----
 
-	for om_nm in ["寒冰防线", "亡灵军团", "龙族巢穴", "机甲巨兵"]:
+	for om_nm in ["寒冰防线", "亡灵军团", "机甲巨兵"]:
 
 		var om_lv := _level_named(om_nm)
 
 		check(not om_lv.is_empty() and int(om_lv["layer"]) == GameLayers.LAYER_TWO,
 
 				"新关卡「%s」属于第二层" % om_nm)
+
+	var om_dn := _level_named("龙族巢穴")
+
+	check(not om_dn.is_empty() and int(om_dn["layer"]) == GameLayers.LAYER_DEFAULT
+
+			and int(om_dn["tier"]) == GameLevels.TIER_ELITE_EASY,
+
+			"R778 龙族巢穴：整关移到第一层·精英敌人-简单（原第二层）")
 
 
 
@@ -14468,7 +14687,7 @@ func _init() -> void:
 
 	var ev_kinds_layer := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
 
-	check(ev_kinds_layer.size() == 11 and not ev_kinds_layer.has("monster") \
+	check(ev_kinds_layer.size() == 13 and not ev_kinds_layer.has("monster") \
 
 			and ev_kinds_layer.has("adventurer") \
 
@@ -14480,17 +14699,17 @@ func _init() -> void:
 
 			and ev_kinds_layer.has("lake_lady") and ev_kinds_layer.has("divination") \
 
-			and ev_kinds_layer.has("snow_leopard") \
+			and ev_kinds_layer.has("snow_leopard") and ev_kinds_layer.has("sword") and ev_kinds_layer.has("dragon_slab") \
 
 			and not ev_kinds_layer.has("gaze") \
 
 			and not ev_kinds_layer.has("whisper"),
 
-			"第一层事件池：11 种子类型（挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师/R763d 奇异雕像；R512 移除卡牌宝箱；R514 移除鸭鸭低语→改二层起点三选一；无凝视、无怪物）")
+			"第一层事件池：13 种子类型（挣扎/奥秘之泉/遗忘之泉/鸭鸭工匠/运送委托/湖中仙女/占卜室/R446 雪豹出现/R447 冒险家的遗物/R473 武术大师/R763d 奇异雕像/R793 林中的剑/R842 龙石板；R512 移除卡牌宝箱；R514 移除鸭鸭低语→改二层起点三选一；无凝视、无怪物）")
 
 	var l2_ev_kinds := GameLayers.event_kinds(GameLayers.LAYER_TWO)
 
-	check(l2_ev_kinds.size() == 14 and l2_ev_kinds.has("smith") \
+	check(l2_ev_kinds.size() == 16 and l2_ev_kinds.has("smith") \
 
 			and l2_ev_kinds.has("martial") \
 
@@ -14500,9 +14719,10 @@ func _init() -> void:
 
 			and l2_ev_kinds.has("card_merchant") and l2_ev_kinds.has("divination")
 
-			and l2_ev_kinds.has("flyer") and not l2_ev_kinds.has("statue"),
+			and l2_ev_kinds.has("flyer") and l2_ev_kinds.has("haunted_house") \
+			and not l2_ev_kinds.has("statue"),
 
-			"第二层事件池：鸭梨山大 / 绝赞五换一 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 = 14 种子类型（R573 删除蓝色大肥鱼；R754 加奇异雕像；R763d 雕像挪去第一层）")
+			"第二层事件池：鸭梨山大 / 绝赞五换一 / 苹果与医生 + 凝视 + 遗忘之泉 + 鸭鸭工匠 + 卡片商人 + 占卜室 + R351 赏月 + R454 熔炉 + R458 契约的核心 + R467 洞穴 + R473 武术大师 + R555 飞行器 + R807 诡异洋房 = 16 种子类型（R573 删除蓝色大肥鱼；R754 加奇异雕像；R763d 雕像挪去第一层；R794 +巧克力工厂；R807 +诡异洋房）")
 
 	check(ev_kinds_layer.has("statue") and not l2_ev_kinds.has("statue"),
 
@@ -15354,6 +15574,65 @@ func _init() -> void:
 
 			"R192 第一层起点邻居：事件与一般战斗都确实会出现（未被写死成单一类型）")
 
+	# ---- R815：R192 的约束在**带骰子**时也得成立 ----
+	# R192 的老测试走 `RogueMap.generate(rng, LAYER)`（不带 dice_rng），只覆盖生成期；
+	# 而骰子的重摇是另一条路（`reroll_as_unknown` 把所有非固定格翻成 ?）。
+	# 实测（tools/_check_r813b_dice.gd，24 张）：修之前起点邻居 55/55 全显示成 ?。
+	var q_r814_bad_l1 := ""
+	var q_r814_bad_l2 := ""
+	for q_r814_i in 40:
+		var q_r814_rng := RandomNumberGenerator.new()
+		q_r814_rng.seed = 140000 + q_r814_i
+		var q_r814_dice := RandomNumberGenerator.new()
+		q_r814_dice.seed = 240000 + q_r814_i
+		var q_r814_m1: Array = RogueMap.generate(q_r814_rng, GameLayers.LAYER_DEFAULT,
+				q_r814_dice, {})
+		var q_r814_s1: Dictionary = RogueMap.start_cell(q_r814_m1)
+		for q_r814_nid: int in (q_r814_s1["doors"] as Array):
+			var q_r814_c: Dictionary = q_r814_m1[q_r814_nid]
+			var q_r814_t := str(q_r814_c.get("type", ""))
+			if q_r814_t != "event" and q_r814_t != "battle":
+				q_r814_bad_l1 = "层1#%d 类型=%s" % [q_r814_nid, q_r814_t]
+			if bool(q_r814_c.get("hidden", false)):
+				q_r814_bad_l1 = "层1#%d 被遮成?房" % q_r814_nid
+		var q_r814_dice2 := RandomNumberGenerator.new()
+		q_r814_dice2.seed = 340000 + q_r814_i
+		var q_r814_m2: Array = RogueMap.generate(q_r814_rng, GameLayers.LAYER_TWO,
+				q_r814_dice2, {})
+		var q_r814_s2: Dictionary = RogueMap.start_cell(q_r814_m2)
+		for q_r814_nid2: int in (q_r814_s2["doors"] as Array):
+			var q_r814_t2 := str(q_r814_m2[q_r814_nid2].get("type", ""))
+			if q_r814_t2 == "elite" or q_r814_t2 == "rest":
+				q_r814_bad_l2 = "层2#%d 类型=%s" % [q_r814_nid2, q_r814_t2]
+	check(q_r814_bad_l1 == "",
+			"R815 带骰子：第一层起点邻居仍是事件/一般战斗，**没被遮成 ? 房**（违例：%s）"
+			% ("无" if q_r814_bad_l1 == "" else q_r814_bad_l1))
+	check(q_r814_bad_l2 == "",
+			"R815 带骰子：第二层起点邻居仍不出精英/篝火（违例：%s）"
+			% ("无" if q_r814_bad_l2 == "" else q_r814_bad_l2))
+	# 反面对照：除起点邻居外的非固定格**必须**被遮成 ?（否则「只修了症状、骰子失效」）
+	var q_r814_other_q := 0
+	var q_r814_other_n := 0
+	var q_r814_rng3 := RandomNumberGenerator.new()
+	q_r814_rng3.seed = 140777
+	var q_r814_dice3 := RandomNumberGenerator.new()
+	q_r814_dice3.seed = 240777
+	var q_r814_m3: Array = RogueMap.generate(q_r814_rng3, GameLayers.LAYER_DEFAULT,
+			q_r814_dice3, {})
+	var q_r814_nb := {}
+	for q_r814_d: int in (RogueMap.start_cell(q_r814_m3)["doors"] as Array):
+		q_r814_nb[int(q_r814_d)] = true
+	for q_r814_c3: Dictionary in q_r814_m3:
+		var q_r814_i3 := int(q_r814_c3.get("id", -1))
+		if RogueMap.is_fixed_open(q_r814_c3) or q_r814_nb.has(q_r814_i3):
+			continue
+		q_r814_other_n += 1
+		if bool(q_r814_c3.get("hidden", false)):
+			q_r814_other_q += 1
+	check(q_r814_other_n > 0 and q_r814_other_q == q_r814_other_n,
+			"R815 带骰子：其余非固定格**全部**变成 ? 房（%d / %d）"
+			% [q_r814_other_q, q_r814_other_n])
+
 
 
 	# ---- R68：同一张地图上事件子类型不重复（全出过一遍后才允许重复）----
@@ -15894,11 +16173,11 @@ func _init() -> void:
 
 	var relic_repo := RelicRepo.load_json()
 
-	check(relic_repo.initial_ids().size() == 10 and relic_repo.get_relic(6001) != null
+	check(relic_repo.initial_ids().size() == 12 and relic_repo.get_relic(6001) != null
 
 			and relic_repo.get_relic(6004) != null and relic_repo.get_relic(6021) != null,
 
-			"道具库：10 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048 / R745 工具箱 6068）")
+			"道具库：12 个初始道具全部加载（+ 栅栏修复术 6021 / 行囊 6030 / 勇气徽章 6031 / 陶罐 6032 / R341 惊奇盒子 6047 · 洞窟绳 6048 / R745 工具箱 6068 / R830 首饰盒 6088 / R835 空故事书 6089）")
 
 	RunState.choose_start_relic(6001)
 
@@ -15932,23 +16211,51 @@ func _init() -> void:
 
 			== GameLevels.TIER_NORMAL_HARD, "第 3 场普通战斗：普通敌人-困难")
 
-	var ne1 := RunState.next_level({"type": "elite"})
+	# ---- R778：精英强弱按**当前巧克力**（<= 5 强精英 / > 5 弱精英）----
 
-	check(int(ne1["tier"]) == GameLevels.TIER_ELITE_EASY, "第 1 场精英：精英敌人-简单")
+	var r778_choco_backup: int = RunState.chocolate
 
-	RunState.on_battle_won("elite")
+	RunState.chocolate = 12
 
-	check(int(RunState.next_level({"type": "elite"})["tier"])
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_EASY,
+
+			"R778 巧克力 12：弱精英（精英敌人-简单）")
+
+	RunState.chocolate = 6
+
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_EASY,
+
+			"R778 巧克力 6（边界外）：仍为弱精英")
+
+	RunState.chocolate = 5
+
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_HARD,
+
+			"R778 巧克力 5（边界内）：强精英（精英敌人-困难）")
+
+	RunState.chocolate = 0
+
+	check(int(RunState.next_level({"type": "elite"})["tier"]) == GameLevels.TIER_ELITE_HARD,
+
+			"R778 巧克力 0：仍为强精英")
+
+	check(RunState.elite_tier_for_chocolate(5) == GameLevels.TIER_ELITE_HARD
+
+			and RunState.elite_tier_for_chocolate(6) == GameLevels.TIER_ELITE_EASY,
+
+			"R778 判据纯函数：<= 5 → 精英困难，> 5 → 精英简单")
+
+	RunState.chocolate = 12
+
+	check(int(RunState.next_level(
+
+			{"type": "elite", "layer": GameLayers.LAYER_THREE})["tier"])
 
 			== GameLevels.TIER_ELITE_HARD,
 
-			"第 2 场精英：精英敌人-困难（R506 起困难提早在第 2 场登场）")
+			"R778 第三层不变：巧克力 12 也仍走第二层精英困难池")
 
-	RunState.on_battle_won("elite")
-
-	check(int(RunState.next_level({"type": "elite"})["tier"])
-
-			== GameLevels.TIER_ELITE_HARD, "第 3 场精英：仍为精英敌人-困难")
+	RunState.chocolate = r778_choco_backup
 
 	check(int(RunState.next_level({"type": "boss"})["tier"]) == GameLevels.TIER_BOSS,
 
@@ -16878,15 +17185,15 @@ func _init() -> void:
 
 	var l2ids := l2repo.layer2_ids()
 
-	check(l2ids.size() == 9 and l2ids.has(6014) and l2ids.has(6015)
+	check(l2ids.size() == 12 and l2ids.has(6014) and l2ids.has(6015)
 
 			and l2ids.has(6016) and l2ids.has(6017) and l2ids.has(6018)
 
 			and l2ids.has(6033) and l2ids.has(6049) and l2ids.has(6010)
 
-			and l2ids.has(6067),
+			and l2ids.has(6067) and l2ids.has(6085) and l2ids.has(6086) and l2ids.has(6087),
 
-			"第二层起始道具池 9 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049 + R514 鸭之低语 6010 + R509 记忆药水 6067）")
+			"第二层起始道具池 12 件（黄桃罐头/鸭语耳环/冰淇淋与汽水/重鸭/生蛋鸭 + R246 兼修 6033 + R341 鹿首标本 6049 + R514 鸭之低语 6010 + R509 记忆药水 6067 + R824 鸭子闹钟 6085 + R826 音乐盒 6086 + R829 这是礼帽 6087）")
 
 	# R375（用户口径）：附魔大师 6034 移出二层起始池 —— 数据还在（旧存档 / 图鉴照样能读），
 
@@ -17145,7 +17452,7 @@ func _init() -> void:
 
 
 
-	# ---- 黄桃罐头（6014）：每次战斗结束回复 4 点生命 ----
+	# ---- 黄桃罐头（6014）：每次战斗结束回复 6 点生命，且最大生命 +1 ----
 
 	var eng_pc := _new_engine(wm_deck, 20, 20, -1, false)
 
@@ -17155,9 +17462,13 @@ func _init() -> void:
 
 	eng_pc.state.hp_self = 10
 
-	check(eng_pc.battle_end_heal() == 4 and eng_pc.state.hp_self == 14,
+	check(eng_pc.battle_end_heal() == 6 and eng_pc.state.hp_self == 16,
 
-			"黄桃罐头：战斗结束回复 4 点生命（10 → %d）" % eng_pc.state.hp_self)
+			"黄桃罐头：战斗结束回复 6 点生命（10 → %d）" % eng_pc.state.hp_self)
+
+	check(eng_pc.state.max_hp_self == 21,
+
+			"黄桃罐头：战斗结束最大生命 +1（20 → %d）" % eng_pc.state.max_hp_self)
 
 	var eng_pc2 := _new_engine(wm_deck, 20, 20, -1, false)
 
@@ -17169,7 +17480,9 @@ func _init() -> void:
 
 	eng_pc2.battle_end_heal()
 
-	check(eng_pc2.state.hp_self == 20, "黄桃罐头：回复不超过上限（18 + 4 → 20）")
+	check(eng_pc2.state.hp_self == 21 and eng_pc2.state.max_hp_self == 21,
+
+			"黄桃罐头：先抬上限再回复，满血也吃得进新上限（18 + 6 → 21，上限 20 → 21）")
 
 	var eng_pc3 := _new_engine(wm_deck, 20, 20, -1, false)
 
@@ -17271,21 +17584,21 @@ func _init() -> void:
 
 	var fp_res := fp_e.play_from_hand(0, Vector2i(4, 1))
 
-	check(fp_res == fp_pl and fp_pl.health == 12 and fp_pl.card.health == 12,
+	check(fp_res == fp_pl and fp_pl.health == 16 and fp_pl.card.health == 16,
 
-			"叠栅栏：6 + 6 → 同一格合成 12 血（不新建单位）")
+			"叠栅栏：8 + 8 → 同一格合成 16 血（不新建单位）")
 
 	check(fp_e.state.hand.is_empty() and fp_e.state.energy == 3,
 
 			"叠栅栏：手牌消耗 1 张、支付木栅栏的 2 费")
 
-	check(fp_lib.health == 6,
+	check(fp_lib.health == 8,
 
-			"叠栅栏：卡库里共享的木栅栏实例未被改（仍 6 血）")
+			"叠栅栏：卡库里共享的木栅栏实例未被改（仍 8 血）")
 
 
 
-	# 残血加固：当前生命 = 残血 + 新卡满血；上限同步相加
+	# 残血加固（R811 起**叠完回满**）：上限相加，当前生命直接填满 —— 不再是「残血 + 新卡满血」
 
 	var fp_e2 := _new_engine([], 20, 20, -1, false)
 
@@ -17305,9 +17618,9 @@ func _init() -> void:
 
 	fp_e2.play_from_hand(0, Vector2i(4, 2))
 
-	check(fp_pl2.health == 9 and fp_pl2.card.health == 12,
+	check(fp_pl2.health == 16 and fp_pl2.card.health == 16,
 
-			"叠栅栏：残血墙 3/6 再叠一张满血 6 → 当前 9、上限 12")
+			"叠栅栏：残血墙 3/8 再叠一张满血 8 → 回满 16/16（R811；旧口径是 11/16）")
 
 
 
@@ -17329,11 +17642,11 @@ func _init() -> void:
 
 	fp_e3.play_from_hand(0, Vector2i(4, 0))
 
-	check(fp_pl3.health == 18 and fp_pl3.card.traits.has("铁栅栏") \
+	check(fp_pl3.health == 20 and fp_pl3.card.traits.has("铁栅栏") \
 
 			and fp_pl3.card.traits.has("栅栏"),
 
-			"叠栅栏：木栅栏叠到铁栅栏 → 18 血且保留「铁栅栏」特性")
+			"叠栅栏：木栅栏叠到铁栅栏 → 20 血且保留「铁栅栏」特性")
 
 	check(fp_e3.absorbs_for_hp(fp_pl3),
 
@@ -17393,17 +17706,17 @@ func _init() -> void:
 
 	fp_r.play_from_hand(0, Vector2i(4, 1))
 
-	check(fp_r_pl.card.health == 12 and fp_r_pl.fence_bonus_hp == 6,
+	check(fp_r_pl.card.health == 16 and fp_r_pl.fence_bonus_hp == 8,
 
-			"R67 叠栅栏：场上仍是 12 血，记 fence_bonus_hp=%d" % fp_r_pl.fence_bonus_hp)
+			"R67 叠栅栏：场上仍是 16 血，记 fence_bonus_hp=%d" % fp_r_pl.fence_bonus_hp)
 
 	fp_r._destroy(Vector2i(4, 1))
 
 	var fp_r_disc: CardData = fp_r.state.discard[fp_r.state.discard.size() - 1]
 
-	check(fp_r_disc != null and fp_r_disc.health == 6,
+	check(fp_r_disc != null and fp_r_disc.health == 8,
 
-			"R67 离场还原：进弃牌区的那张恢复原血 6（实际 %d）"
+			"R67 离场还原：进弃牌区的那张恢复原血 8（实际 %d）"
 
 			% (fp_r_disc.health if fp_r_disc != null else -1))
 
@@ -17417,19 +17730,19 @@ func _init() -> void:
 
 			GameEngine.SIDE_SELF)
 
-	check(fp_r_again.health == 6 and fp_r_again.card.health == 6
+	check(fp_r_again.health == 8 and fp_r_again.card.health == 8
 
 			and fp_r_again.fence_bonus_hp == 0,
 
-			"R67 还原后重新上场：6/6 血、bonus=0（实际 %d/%d，bonus %d）"
+			"R67 还原后重新上场：8/8 血、bonus=0（实际 %d/%d，bonus %d）"
 
 			% [fp_r_again.health, fp_r_again.card.health, fp_r_again.fence_bonus_hp])
 
 	# 卡库共享实例自始至终没被动过
 
-	check(fp_repo.get_card(8001).health == 6,
+	check(fp_repo.get_card(8001).health == 8,
 
-			"R67 离场还原：卡库里的木栅栏仍是 6 血")
+			"R67 离场还原：卡库里的木栅栏仍是 8 血")
 
 	# 没叠加过的普通栅栏离场 → 行为完全不变（零拷贝交出原卡）
 
@@ -17445,9 +17758,9 @@ func _init() -> void:
 
 	var fp_r2_disc: CardData = fp_r2.state.discard[fp_r2.state.discard.size() - 1]
 
-	check(fp_r2_disc != null and fp_r2_disc.health == 6 and fp_r2_pl.fence_bonus_hp == 0,
+	check(fp_r2_disc != null and fp_r2_disc.health == 8 and fp_r2_pl.fence_bonus_hp == 0,
 
-			"R67 未叠加的栅栏：离场后仍是 6 血（行为不变）")
+			"R67 未叠加的栅栏：离场后仍是 8 血（行为不变）")
 
 	# 连叠三张：bonus 累计 12，离场后从 18 还原回 6
 
@@ -17469,17 +17782,17 @@ func _init() -> void:
 
 		fp_r3.play_from_hand(0, Vector2i(4, 1))
 
-	check(fp_r3_pl.card.health == 18 and fp_r3_pl.fence_bonus_hp == 12,
+	check(fp_r3_pl.card.health == 24 and fp_r3_pl.fence_bonus_hp == 16,
 
-			"R67 连叠两次：18 血、bonus 累计 %d" % fp_r3_pl.fence_bonus_hp)
+			"R67 连叠两次：24 血、bonus 累计 %d" % fp_r3_pl.fence_bonus_hp)
 
 	fp_r3._destroy(Vector2i(4, 1))
 
 	var fp_r3_disc: CardData = fp_r3.state.discard[fp_r3.state.discard.size() - 1]
 
-	check(fp_r3_disc != null and fp_r3_disc.health == 6,
+	check(fp_r3_disc != null and fp_r3_disc.health == 8,
 
-			"R67 连叠两次后离场：18 → 还原成 6（实际 %d）"
+			"R67 连叠两次后离场：24 → 还原成 8（实际 %d）"
 
 			% (fp_r3_disc.health if fp_r3_disc != null else -1))
 
@@ -18816,17 +19129,17 @@ func _init() -> void:
 
 	check(int(dr_cls_count.get(PlayerClass.DRUID, 0)) == 78
 
-			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 66
+			and int(dr_cls_count.get(PlayerClass.ROGUE, 0)) == 67
 
-		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 75
+		and int(dr_cls_count.get(PlayerClass.MECH, 0)) == 76
 
-			and int(dr_cls_count.get(PlayerClass.BARD, 0)) == 2
+			and int(dr_cls_count.get(PlayerClass.BARD, 0)) == 16
 
-			and int(dr_cls_count.get("敌人", 0)) == 78
+			and int(dr_cls_count.get("敌人", 0)) == 80
 
-			and int(dr_cls_count.get("", 0)) == 26,
+			and int(dr_cls_count.get("", 0)) == 29,
 
-		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 78 / 66 / 75 / 78 / 吟游诗人 2 / 公用 26（R761 吟游诗人 +2：杜鹃 9263 / 招募 9264）；R758 敌人 +3（常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262）；R756 公用 +1（代偿 9252）；R689 森林精魄 +2（种子 9248 / 被眷顾者 9249）；R582 机械之心 +2；R580 暗影刺客 +2（猫鼠游戏 9190 / 黑暗嵌合 9191）；R572 森林精魄 +1（宝石兽 9246）/ 机械之心 +1（拼装工厂 9247）；R561 森林精魄 −1（删树灵雏形 8087）/ 暗影刺客 −1（删影偶 8088）/ 机械之心 −1（删拼装原型 8083）；R560 暗影刺客 +1（影缚 8085）/ 机械之心 +1（重构 8086）；R559 森林精魄 +1（传授 8084）；R541 敌人 +4（普罗诺亚之影 / 三种构状体）；R539 +激光炮 9241；R536 森林精魄 −1（删旧土元素 9218）；R525 敌人 +4（叛逃机械三只 + 通缉令）；R523 森林精魄 +2；R505 暗影刺客 +1；R504 暗影刺客 +4；R503 暗影刺客 -8（删 14 增 6）；R502 敌人 +1（执法者 9223）；R496 机械之心 +1（忒修斯奇械 9222）；R494 机械之心 +2（阵地保卫者 / 结合者）；R493 森林精魄 +1（土元素）/ 机械之心 +1（压感地雷）；R467 敌人 +2（枭熊之怒 9212 · 枭熊 9214）、公用 +1（枭熊 9213 · class 留空）；R465 机械之心 +1（折射炮 9211）；R461 敌人 +1（寒霜结界 9210）；R451 敌人 +3（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R429 森林精魄 -1 = 删魔法学徒 9081；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 19（R446 +雪豹 8081）；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
+		"角色系统：森林精魄 %d 张 / 暗影刺客 %d 张 / 机械之心 %d 张 / 敌人 %d 张（期望 78 / 67 / 76 / 80 / 敌人 R856 +2 鸭蛋投手 / 金鸭蛋 / 吟游诗人 16（R826 +7：do/re/mi/fa/sol/la/si 音符卡；R800 +2：余音 / 音符） / 公用 29（R807 公用 +1：诅咒娃娃 9276；R794 +巧克力工厂 9271 class 留空；R777b 吟游诗人 +1：疾风乐章 9270；R777 吟游诗人 +1：彩虹诗 9269；R776 吟游诗人 +2：激励乐章 9267 / 管风琴 9268；R773 吟游诗人 +1：呼唤 9266；R766 公用 +1：懊悔 9265；R761 吟游诗人 +2：杜鹃 9263 / 招募 9264）；R758 敌人 +3（常数测量员 9260 / 精密计算者 9261 / 负载增量员 9262）；R756 公用 +1（代偿 9252）；R689 森林精魄 +2（种子 9248 / 被眷顾者 9249）；R582 机械之心 +2；R580 暗影刺客 +2（猫鼠游戏 9190 / 黑暗嵌合 9191）；R572 森林精魄 +1（宝石兽 9246）/ 机械之心 +1（拼装工厂 9247）；R561 森林精魄 −1（删树灵雏形 8087）/ 暗影刺客 −1（删影偶 8088）/ 机械之心 −1（删拼装原型 8083）；R560 暗影刺客 +1（影缚 8085）/ 机械之心 +1（重构 8086）；R559 森林精魄 +1（传授 8084）；R541 敌人 +4（普罗诺亚之影 / 三种构装体）；R539 +激光炮 9241；R536 森林精魄 −1（删旧土元素 9218）；R525 敌人 +4（叛逃机械三只 + 通缉令）；R523 森林精魄 +2；R505 暗影刺客 +1；R504 暗影刺客 +4；R503 暗影刺客 -8（删 14 增 6）；R502 敌人 +1（执法者 9223）；R496 机械之心 +1（忒修斯奇械 9222）；R494 机械之心 +2（阵地保卫者 / 结合者）；R493 森林精魄 +1（土元素）/ 机械之心 +1（压感地雷）；R467 敌人 +2（枭熊之怒 9212 · 枭熊 9214）、公用 +1（枭熊 9213 · class 留空）；R465 机械之心 +1（折射炮 9211）；R461 敌人 +1（寒霜结界 9210）；R451 敌人 +3（量产型阿斯克勒庇厄斯 9207 / 母舰 9208 / 空袭 9209）；R429 森林精魄 -1 = 删魔法学徒 9081；R393 森林精魄 +1（秃鹰）/ 暗影刺客 +2（赏金猎人 / 猎杀）；R406 暗影刺客 +1（独行 9189）；R404 机械之心 +1（涂装机器人 8080）；R397 敌人 +1（量产型赫尔墨斯 9188）；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R370 机械之心 +1（库存整理 9184）；R356 敌人 +4（启示者 / 舰炮 / 电磁屏障 / 紧急呼叫），公用 19（R446 +雪豹 8081）；R351 公用 +2（月亮 / 硬币，class 留空）；R332 暗影刺客 +1（本能 9176）；R331 机械之心 +2（隐藏能源 / 惊喜运单）；R329 暗影刺客 -1 = 删紧急埋伏 9106；R328 森林精魄 -2 = 木栅栏/攻击 8001/8002 改公用初始卡；R327 森林精魄 +1（送葬 9175）；R317 暗影刺客 +1 / 机械之心 +1；R316 暗影刺客 +1 / 机械之心 +1；R315 +1（应急电源）；R300 机械之心 +1（激发）；R298 机械之心 +2（集束炮台 / 合体）；R291 机械之心 +2（辅助刃 / 复制术）；R290 机械之心 +2（集中突破 / 冲击炮）；R277 六张公用卡（金属龙/鸭蛋/英雄/鲸鱼之怒/货物/铁栅栏）从森林精魄移出 → 68；R271 机械之心 +6；R269 机械之心 +2；R188 +1；R198 +1；R200 +1；R201 +1；R202 +4；R161 +1 / R162 +1 / R174 +1 / R219 +1；R164 暗影刺客 -1 = 删除双重场地 9108；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R282 改装者 8076 +1；R288 失控要塞 9161 +1）"
 
 			% [int(dr_cls_count.get(PlayerClass.DRUID, 0)),
 
@@ -18836,10 +19149,10 @@ func _init() -> void:
 
 				int(dr_cls_count.get("敌人", 0))])
 
-	# R632：删工事罐子 9158（class 留空）→ 公用 26 → 25；R756 代偿 9252 → 26。
-	check(int(dr_cls_count.get("", 0)) == 26,
+	# R632：删工事罐子 9158（class 留空）→ 公用 26 → 25；R756 代偿 9252 → 26；R766 懊悔 9265 → 27；R794 巧克力工厂 9271 → 28；R807 诅咒娃娃 9276 → 29。
+	check(int(dr_cls_count.get("", 0)) == 29,
 
-			"角色系统：class 留空（公用）= 公用初始卡 8001/8002 + 疲惫 9149 + 破绽 9154 + 罐子 9157 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑 + R351 月亮 9180 / 硬币 9181 + R352 摇篮曲 9182 / 森林的朋友们 9183 + R373 麻痹 9185 + R446 雪豹 8081 + R467 枭熊 9213 + R473 乱打 9215 / 飞踢 9216 / 冲拳 9217 + R756 代偿 9252（实际 %d）"
+			"角色系统：class 留空（公用）= 公用初始卡 8001/8002 + 疲惫 9149 + 破绽 9154 + 罐子 9157 + R277 六张事件 / 道具产出卡 + R306 许愿 / 烈火之剑 + R351 月亮 9180 / 硬币 9181 + R352 摇篮曲 9182 / 森林的朋友们 9183 + R373 麻痹 9185 + R446 雪豹 8081 + R467 枭熊 9213 + R473 乱打 9215 / 飞踢 9216 / 冲拳 9217 + R756 代偿 9252 + R766 懊悔 9265 + R807 诅咒娃娃 9276（实际 %d）"
 
 			% int(dr_cls_count.get("", 0)))
 
@@ -19215,11 +19528,11 @@ func _init() -> void:
 
 	var r259_ench := CardData.from_dict(rg_raid.to_dict())
 
-	r259_ench.power = 10   # 附魔「伤害 +10」烤进 power
+	r259_ench.power = 8    # 附魔「伤害 +8」烤进 power
 
-	check(int(r259.spell_now(r259_ench).get("dmg", -1)) == 15,
+	check(int(r259.spell_now(r259_ench).get("dmg", -1)) == 13,
 
-			"R262 终结：附魔 +10 也算进预览（5+10=15）")
+			"R262 终结：附魔 +8 也算进预览（5+8=13）")
 
 	r259.state.hand.clear()
 
@@ -19261,13 +19574,15 @@ func _init() -> void:
 
 	var r259_s := _new_engine([], 30, 30)
 
-	check(int(r259_s.spell_now(r259_sneak).get("dmg", -1)) == 5,
+	check(int(r259_s.spell_now(r259_sneak).get("dmg", -1)) == GameEngine.SNEAK_DMG,
 
-			"R442 偷袭：目标未定 → 预览 5 伤")
+			"R442 偷袭：目标未定 → 预览 %d 伤（R845：5 → 4）" % GameEngine.SNEAK_DMG)
 
-	check(str(r259_s.spell_now(r259_sneak).get("note", "")).contains("12"),
+	check(str(r259_s.spell_now(r259_sneak).get("note", "")).contains(
+				str(GameEngine.SNEAK_FULL_DMG)),
 
-			"R262 偷袭：小字里写明满血目标为 12 伤")
+			"R262 偷袭：小字里写明满血目标为 %d 伤（R845：12 → 10）"
+				% GameEngine.SNEAK_FULL_DMG)
 
 	var r259_meteor := _card(9083, "流星雨", "技能", 4, 0, 0, 0, 0)
 
@@ -19441,7 +19756,7 @@ func _init() -> void:
 
 	var r45_pool := repo.reward_pool()
 
-	check(int(r45_pool.size()) == 202, "R757 +1：漩涡 9186 剧情锁解除进池；R692 +1：鸭妈妈 9250（稀有进池；小鸭 9251 是 token 不进池）→ 201；R689 +1：被眷顾者 9249（史诗进池；种子 9248 是 token 不进池）→ 200；R572 +2：宝石兽 9246 / 拼装工厂 9247（均稀有，进池）→ 199；R561 −3（删拼装主体 8083/8087/8088）→ 197；R560 +传授 8085/8086（均稀有，进池）→ 200；R559 +传授 8084 → 196；R556 +毒沼 8082（普通，进池）→ 194；R536 删旧土元素 9218 → 193；R523 +2（土元素 / 火元素）；R503 删 14 张陷阱系 + 加 6 张标记系 → 187；R504 +4 → 191；R505 +1 → 192；R496 忒修斯奇械进池 = 195；R494 阵地保卫者 / 结合者进池 = 194；R493 土元素 / 压感地雷进池 = 192；R465 +折射炮 9211（史诗，进池）= 190；R429 删魔法学徒 9081 −1；R393 +赏金猎人 / 猎杀 / 秃鹰 = 190；R406 +独行 9189（普通，进池）= 187；R404 +涂装机器人 8080（稀有，进池）= 186；R370 +库存整理 9184（史诗，进池）= 185；R332 +本能 9176（稀有，进池）= 184；R331 +隐藏能源 / 惊喜运单（均稀有）+2 = 183；R329：删紧急埋伏 −1、嵌合暴君升史诗进池 +1；R327 送葬（稀有）进池 +1 = 181；R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
+	check(int(r45_pool.size()) == 204, "R757 +1：漩涡 9186 剧情锁解除进池；R692 +1：鸭妈妈 9250（稀有进池；小鸭 9251 是 token 不进池）→ 201；R689 +1：被眷顾者 9249（史诗进池；种子 9248 是 token 不进池）→ 200；R572 +2：宝石兽 9246 / 拼装工厂 9247（均稀有，进池）→ 199；R561 −3（删拼装主体 8083/8087/8088）→ 197；R560 +传授 8085/8086（均稀有，进池）→ 200；R559 +传授 8084 → 196；R556 +毒沼 8082（普通，进池）→ 194；R536 删旧土元素 9218 → 193；R523 +2（土元素 / 火元素）；R503 删 14 张陷阱系 + 加 6 张标记系 → 187；R504 +4 → 191；R505 +1 → 192；R496 忒修斯奇械进池 = 195；R494 阵地保卫者 / 结合者进池 = 194；R493 土元素 / 压感地雷进池 = 192；R465 +折射炮 9211（史诗，进池）= 190；R429 删魔法学徒 9081 −1；R393 +赏金猎人 / 猎杀 / 秃鹰 = 190；R406 +独行 9189（普通，进池）= 187；R404 +涂装机器人 8080（稀有，进池）= 186；R370 +库存整理 9184（史诗，进池）= 185；R332 +本能 9176（稀有，进池）= 184；R331 +隐藏能源 / 惊喜运单（均稀有）+2 = 183；R329：删紧急埋伏 −1、嵌合暴君升史诗进池 +1；R327 送葬（稀有）进池 +1 = 181；R45+R50~R57：扩展全部进奖励池（R164 删 9108 后 141 + R188 返修 + R198 回收 + R201 负重减轻 + R202 机械之心四卡 = 148，R217 分裂之影 +1 = 149，R222 新生 +1 = 150，R248 落石陷阱 +1 = 151，R263 弹跳飞刀 +1 = 152，R269 轻量化·共享护盾 +2 = 154，R275 重组（史诗→普通）+1 = 166，R282 改装者 8076（普通，进池）+1 = 167，实际 %d）" % r45_pool.size())
 
 
 
@@ -19463,7 +19778,9 @@ func _init() -> void:
 
 	r45_gg.use_spell(r45_gg.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r45_gg_foe.health == 51, "连刺：对目标 4 伤（55 → %d）" % r45_gg_foe.health)
+	check(r45_gg_foe.health == 55 - GameEngine.GOUGE_DMG,
+			"连刺：对目标 %d 伤（R845：4 → 5；55 → %d）"
+			% [GameEngine.GOUGE_DMG, r45_gg_foe.health])
 
 	check(r45_gg.state.hand.size() == r45_gg_hand + 1
 
@@ -19485,75 +19802,55 @@ func _init() -> void:
 
 	r45_st.use_spell(0, Vector2i(2, 1))
 
-	check(r45_st_foe.health == 52 and r45_st_foe.debuff_stage == 1
+	check(r45_st_foe.health == 55 - GameEngine.STUN_BLOW_DMG and r45_st_foe.debuff_stage == 1
 
 			and r45_st_foe.effective_power() == 5,
 
-			"敲晕：3 伤 + 力量 -3（55 → %d，8 → %d）"
+			"敲晕：%d 伤 + 力量 -3（R845：3 → 2；55 → %d，8 → %d）"
 
-			% [r45_st_foe.health, r45_st_foe.effective_power()])
+			% [GameEngine.STUN_BLOW_DMG, r45_st_foe.health, r45_st_foe.effective_power()])
 
 
 
-	# 回转（9089）：抽 X 张（X = 本回合已用数），本回合结束不弃
-
+	# 回转（9089，R846 用户口径）：对一个目标造成 X 伤 + 抽 X 张
+	# （X = 本回合**其他**卡张数），抽到的牌本回合结束不弃。
 	var r45_sp := _new_engine([], 30, 30)
-
+	var r45_sp_foe := r45_sp.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 	r45_sp.state.self_card_plays = 2
-
 	r45_sp.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
-
 	r45_sp.state.deck.append(_card(9097, "预判", "技能", 0, 0, 0, 0, 0))
-
 	r45_sp.state.hand.append(repo.get_card(GameEngine.SPIN_DRAW_ID))
-
-	r45_sp.use_spell(0, null)
-
+	r45_sp.use_spell(0, Vector2i(2, 1))
 	check(r45_sp.state.hand.size() == 2, "回转：X=2 → 抽 2 张（实际 %d）" % r45_sp.state.hand.size())
-
+	check(r45_sp_foe.health == 55 - 2,
+			"回转：X=2 → 对一个目标造成 2 伤（R846 新增伤害，55 → %d）" % r45_sp_foe.health)
 	var r45_sp_k1: CardData = r45_sp.state.hand[0]
-
 	var r45_sp_k2: CardData = r45_sp.state.hand[1]
-
 	r45_sp.end_turn()
-
 	check(r45_sp.state.hand.has(r45_sp_k1) and r45_sp.state.hand.has(r45_sp_k2),
-
 			"回转：回合结束抽到的 2 张仍留在手里（弃牌区只剩回转自己）")
 
 
 
-	# 影子猫（8006）：含此卡本回合第 3 张打出 → 卡组随机技能卡入手
-
+	# 影子猫（8006，R846 用户口径）：本回合已使用 3 张**其他**卡 → 抽 2 张
 	var r45_sc := _new_engine([], 30, 30)
-
-	r45_sc.state.self_card_plays = 2
-
+	r45_sc.state.self_card_plays = 3
 	r45_sc.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
-
+	r45_sc.state.deck.append(_card(9097, "预判", "技能", 0, 0, 0, 0, 0))
 	r45_sc.state.hand.append(repo.get_card(GameEngine.SHADOW_CAT_ID))
-
 	r45_sc.play_from_hand(0, Vector2i(4, 1))
-
-	check(r45_sc.state.hand.size() == 1
-
-			and r45_sc.state.hand[0].kind == "技能",
-
-			"影子猫：含此卡本回合第 3 张 → 卡组随机技能卡入手")
-
+	check(r45_sc.state.hand.size() == GameEngine.SHADOW_CAT_DRAW,
+			"影子猫：其他卡已满 %d 张 → 抽 %d 张（实际 %d）" % [
+					GameEngine.SHADOW_CAT_NEED, GameEngine.SHADOW_CAT_DRAW,
+					r45_sc.state.hand.size()])
 	var r45_sc2 := _new_engine([], 30, 30)
-
-	r45_sc2.state.self_card_plays = 1
-
+	r45_sc2.state.self_card_plays = 2
 	r45_sc2.state.deck.append(_card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0))
-
 	r45_sc2.state.hand.append(repo.get_card(GameEngine.SHADOW_CAT_ID))
-
 	r45_sc2.play_from_hand(0, Vector2i(4, 1))
-
 	check(r45_sc2.state.hand.is_empty() and r45_sc2.state.deck.size() == 1,
-
-			"影子猫：只有第 2 张 → 效果落空，卡组不动")
+			"影子猫：只有 2 张其他卡 → 效果落空，牌库不动")
 
 
 
@@ -19595,46 +19892,58 @@ func _init() -> void:
 
 	r45_sn.use_spell(0, Vector2i(2, 1))
 
-	check(r45_sn_foe.health == 43, "偷袭：满血目标 12 伤（55 → %d）" % r45_sn_foe.health)
+	check(r45_sn_foe.health == 55 - GameEngine.SNEAK_FULL_DMG,
+			"偷袭：满血目标 %d 伤（R845：12 → 10；55 → %d）"
+			% [GameEngine.SNEAK_FULL_DMG, r45_sn_foe.health])
 
 	r45_sn.state.hand.append(repo.get_card(GameEngine.SNEAK_ID))
 
 	r45_sn.use_spell(0, Vector2i(2, 1))
 
-	check(r45_sn_foe.health == 38, "偷袭：非满血目标 5 伤（43 → %d）" % r45_sn_foe.health)
+	check(r45_sn_foe.health == 55 - GameEngine.SNEAK_FULL_DMG - GameEngine.SNEAK_DMG,
+			"偷袭：非满血目标 %d 伤（R845：5 → 4；%d → %d）"
+			% [GameEngine.SNEAK_DMG, 55 - GameEngine.SNEAK_FULL_DMG, r45_sn_foe.health])
 
 
 
-	# 疾风（9091 效果）：每使用一张卡 → 随机敌人 2 伤（自己打出时不触发）
+	# 疾风（9091 效果，R845 重做）：同一个回合内每使用 3 张卡 → 随机敌人 8 伤 + 力量 -1
+	var r845_ga := _new_engine([], 30, 30)
+	var r845_ga_foe := r845_ga.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r845_ga.state.effects.append(repo.get_card(GameEngine.GALE_ID))
+	r845_ga.state.energy = 10
+	r845_ga.state.self_card_plays = 2          # 本回合已经用了 2 张
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)
+	check(r845_ga_foe.health == 55 - GameEngine.GALE_DMG
+			and r845_ga_foe.effective_power() == 8 - GameEngine.GALE_DEBUFF,
+			"R845 疾风：本回合第 %d 张 → 随机敌人 %d 伤 + 力量 -%d（%d / 力量 %d）"
+			% [GameEngine.GALE_NEED, GameEngine.GALE_DMG, GameEngine.GALE_DEBUFF,
+			r845_ga_foe.health, r845_ga_foe.effective_power()])
+	var r845_ga_hp := r845_ga_foe.health
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)                # 第 4 张 → 不该触发
+	check(r845_ga_foe.health == r845_ga_hp,
+			"R845 疾风：没到第 %d 张不触发（仍 %d）" % [GameEngine.GALE_NEED * 2, r845_ga_foe.health])
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)                # 第 5 张 → 不触发
+	r845_ga.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga.use_spell(0, null)                # 第 6 张 → 再触发一次
+	check(r845_ga_foe.health == 55 - GameEngine.GALE_DMG * 2,
+			"R845 疾风：第 6 张再触发一次（55 → %d）" % r845_ga_foe.health)
 
-	var r45_ga := _new_engine([], 30, 30)
-
-	var r45_ga_e1 := r45_ga.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
-			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
-
-	var r45_ga_e2 := r45_ga.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
-			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
-
-	r45_ga.state.energy = 15
-
-	r45_ga.state.hand.append(repo.get_card(GameEngine.GALE_ID))
-
-	r45_ga.use_effect(0)
-
-	check(r45_ga_e1.health == 55 and r45_ga_e2.health == 55,
-
-			"疾风：自己打出时不触发（55/55）")
-
-	r45_ga.state.hand.append(repo.get_card(GameEngine.GOUGE_ID))
-
-	r45_ga.use_spell(0, Vector2i(2, 0))
-
-	check(r45_ga_e1.health + r45_ga_e2.health == 104,
-
-			"疾风：再打一张 → 随机敌人 -2（合计 %d）" % (r45_ga_e1.health + r45_ga_e2.health))
-
+	# 不可叠加：效果区两张疾风，第 3 张牌也只打一次
+	var r845_ga2 := _new_engine([], 30, 30)
+	var r845_ga2_foe := r845_ga2.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r845_ga2.state.effects.append(repo.get_card(GameEngine.GALE_ID))
+	r845_ga2.state.effects.append(repo.get_card(GameEngine.GALE_ID))
+	r845_ga2.state.energy = 10
+	r845_ga2.state.self_card_plays = 2
+	r845_ga2.state.hand.append(repo.get_card(GameEngine.DODGE_ID))
+	r845_ga2.use_spell(0, null)
+	check(r845_ga2_foe.health == 55 - GameEngine.GALE_DMG,
+			"R845 疾风：效果区两张也只结算一次（55 → %d）" % r845_ga2_foe.health)
 
 
 	# 潜伏 + 幽光（9092 / 9099 效果）：回合开始多抽（0 费再抽 1）+ 荧光草塞手
@@ -19901,7 +20210,7 @@ func _init() -> void:
 
 
 
-	# 预判（9097）②：卡组随机非 0 费技能卡入手（本卡照常进弃牌区）
+	# 预判（9097）②：卡组随机非 0 费技能卡入手，本卡消失（R784 起 ② 也走「次元」）
 
 	var r45_fs := _new_engine([], 30, 30)
 
@@ -19917,9 +20226,9 @@ func _init() -> void:
 
 	check(r45_fs.state.hand.size() == 1 and r45_fs.state.hand[0].cost == 2
 
-			and r45_fs.state.discard.size() == 1,
+			and r45_fs.state.discard.is_empty() and r45_fs.state.void_count == 1,
 
-			"预判②：卡组非 0 费技能卡入手，本卡进弃牌区")
+			"预判②：卡组非 0 费技能卡入手，本卡消失（弃牌区不留）")
 
 
 
@@ -19946,6 +20255,15 @@ func _init() -> void:
 	check(r45_fs2.state.hand.size() == 1 and r45_fs2.state.discard.is_empty(),
 
 			"预判①：选回 0 费技能卡，本卡消失（弃牌区清空）")
+
+	# R784：① 无候选（效果落空）时本卡同样消失 —— 上一版会在弃牌区留一张 0 费次元卡
+	var r784_fs3 := _new_engine([], 30, 30)
+	r784_fs3.state.hand.append(repo.get_card(GameEngine.FORESIGHT_ID))
+	r784_fs3.use_spell(0, null)
+	r784_fs3.foresight_choose(1)
+	check(r784_fs3.state.discard.is_empty() and r784_fs3.state.void_count == 1,
+			"预判①落空：本卡同样消失（弃牌 %d / 消耗 %d）" % [
+				r784_fs3.state.discard.size(), r784_fs3.state.void_count])
 
 
 
@@ -20063,7 +20381,10 @@ func _init() -> void:
 
 	r45_gg2.use_spell(0, Vector2i(2, 1))
 
-	check(r45_gg2_foe.health == 50, "荧光草：连刺 4+1=5 伤（55 → %d）" % r45_gg2_foe.health)
+	check(r45_gg2_foe.health == 55 - GameEngine.GOUGE_DMG - 1,
+
+			"荧光草：连刺 %d+1 伤（55 → %d）"
+				% [GameEngine.GOUGE_DMG, r45_gg2_foe.health])
 
 
 
@@ -20115,18 +20436,18 @@ func _init() -> void:
 
 	check(int(r45_cls_count.get(PlayerClass.DRUID, 0)) == 78
 
-			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 66,
+			and int(r45_cls_count.get(PlayerClass.ROGUE, 0)) == 67,
 
-			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R689 森林精魄 +2（种子 9248 / 被眷顾者 9249）；R580 暗影刺客 +2（9190 / 9191）；R561 森林精魄 −1（删树灵雏形 8087）/ 暗影刺客 −1（删影偶 8088）；R560 暗影刺客 +1（影缚 8085）/ 机械之心 +1（重构 8086）；R559 森林精魄 +1（传授 8084）；R536 森林精魄 −1（删旧土元素 9218）；R523 森林精魄 +2（土元素 9235 / 火元素 9236）；R505 暗影刺客 +1；R504 暗影刺客 +4；R503 暗影刺客 -8 = 删 14 张陷阱系 + 加 6 张标记系；R429 森林精魄 -1 = 删魔法学徒 9081；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
+			"R45：全库角色归属（森林精魄 %d / 暗影刺客 %d；R799 玩家 +2：连斩 9272（暗影刺客 · X 费稀有技能）/ 炮火就位 9273（机械之心 · X 费史诗技能）；R689 森林精魄 +2（种子 9248 / 被眷顾者 9249）；R580 暗影刺客 +2（9190 / 9191）；R561 森林精魄 −1（删树灵雏形 8087）/ 暗影刺客 −1（删影偶 8088）；R560 暗影刺客 +1（影缚 8085）/ 机械之心 +1（重构 8086）；R559 森林精魄 +1（传授 8084）；R536 森林精魄 −1（删旧土元素 9218）；R523 森林精魄 +2（土元素 9235 / 火元素 9236）；R505 暗影刺客 +1；R504 暗影刺客 +4；R503 暗影刺客 -8 = 删 14 张陷阱系 + 加 6 张标记系；R429 森林精魄 -1 = 删魔法学徒 9081；R381 森林精魄 +2（漩涡 9186 / 鹅 9187）；R164 暗影刺客 -1 = 删 9108；R198 回收 +1；R200 货物 +1；R201 负重减轻 +1；R217 分裂之影 +1；R222 新生 +1；R227 生命循环 +1；R248 落石陷阱 +1；R263 弹跳飞刀 +1；R328 森林精魄 -2 = 木栅栏/攻击改公用；R329 暗影刺客 -1 = 删紧急埋伏 9106）"
 
 			% [int(r45_cls_count.get(PlayerClass.DRUID, 0)),
 
 				int(r45_cls_count.get(PlayerClass.ROGUE, 0))])
 
-	# R632：删工事罐子 9158（class 留空）→ 公用 26 → 25；R756 代偿 9252 → 26。
-	check(int(r45_cls_count.get("", 0)) == 26,
+	# R632：删工事罐子 9158（class 留空）→ 公用 26 → 25；R756 代偿 9252 → 26；R766 懊悔 9265 → 27；R794 巧克力工厂 9271 → 28；R807 诅咒娃娃 9276 → 29。
+	check(int(r45_cls_count.get("", 0)) == 29,
 
-			"R223/R231/R245/R277/R306/R328/R351：class 留空（公用）= 公用初始卡 8001/8002 + 诅咒 9149/9154/9157 + R340 宠物鸭 9177 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑 / R351 月亮 9180 + 硬币 9181 + R352 摇篮曲 9182 / 森林的朋友们 9183 + R373 麻痹 9185 + R446 雪豹 8081 + R467 枭熊 9213 + R473 乱打 9215 / 飞踢 9216 / 冲拳 9217（%d 张）"
+			"R223/R231/R245/R277/R306/R328/R351：class 留空（公用）= 公用初始卡 8001/8002 + 诅咒 9149/9154/9157 + R340 宠物鸭 9177 + 事件产出 9018 金属龙 / 9022 鸭蛋 / 9023 英雄 / 9050 鲸鱼之怒 / 8065 货物 / 9072 铁栅栏 / 9168 许愿 / 9169 烈火之剑 / R351 月亮 9180 + 硬币 9181 + R352 摇篮曲 9182 / 森林的朋友们 9183 + R373 麻痹 9185 + R446 雪豹 8081 + R467 枭熊 9213 + R473 乱打 9215 / 飞踢 9216 / 冲拳 9217 + R766 懊悔 9265 + R807 诅咒娃娃 9276（%d 张）"
 
 			% int(r45_cls_count.get("", 0)))
 
@@ -20218,25 +20539,29 @@ func _init() -> void:
 
 	# ---- R223：难度档位 0~10（继承制：高难度继承低难度全部 debuff）----
 
-	# 0 = 金钱 150；1 = 休息回复降低（R224 起无数值效果，文本保留）；
+	# 0 = 金钱 150 / 工具掉落 33%（R853）；1 = 工具掉落降到 10%（R853，篝火数值不动）；
 
 	# 2 = 战斗胜利不回血（R224 起全档位同此，文本保留）；3 = 敌血 +10%；4 = 稀有率 ×0.5；
 
 	# 5 = 疲惫诅咒；6 = 敌攻 +1；7 = 金钱 100；8 = 巧克力 11；9 = 最大生命 80%；
 
-	# 10 = 精英出现增多（R380：「?」房不再刷商店 + 明房 / 「?」房精英出现概率 ×1.3）。
+	# 10 = 精英出现增多（R380 / R852：明房 / 「?」房精英出现概率 ×1.3；R852 起「?」房照旧刷商店，
+	#      加权代价只从战斗 / 事件 / 宝箱扣，商店占比不变）。
 
-	# R224 全局规则「除到达新的一层外不能回复 HP」：战斗胜利回血 / 休息回血两表归零，
+	# R853（店长口径）：难度 2 只关「战斗胜利默认回血」这一条，其他途径正常；
 
-	# 下面难度 0/1/2 的回血断言全部改成「恒 0」。
+	# 「除到新层外不能回血」是苹果 6027 的代价，不是难度规则。
 
 	RunState.set_difficulty(0)
 
 	RunState.reset(50)
 
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 20,
+	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 20,
 
-			"难度 0：战斗胜利不回血（R224）/ 篝火回血 40%% = 20（R237 恢复）")
+			"R853 难度 0：战斗胜利默认回血 +3 / 篝火回血 40%% = 20")
+
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.33),
+			"R853 难度 0：工具掉落率 33%")
 
 	check(RunState.start_gold() == 150 and RunState.chocolate_per_layer() == RogueMap.MAX_STEPS
 
@@ -20260,19 +20585,25 @@ func _init() -> void:
 
 	RunState.take_damage(30)
 
-	check(RunState.battle_win_heal() == 0 and RunState.rest_heal_amount() == 13,
+	check(RunState.battle_win_heal() == 3 and RunState.rest_heal_amount() == 13,
 
-			"难度 1：战斗胜利不回血 / 篝火回血 25%% = 13（R237）")
+			"R853 难度 1：战斗胜利默认回血 +3 / 篝火回血 25%% = 13")
 
 	check(RunState.rest() == 13 and RunState.hp == 33,
 
 			"难度 1：篝火休息回复 13（30/50 → %d/50）" % RunState.hp)
 
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.10),
+			"R853 难度 1：工具掉落率降到 10%")
+
+	check(is_equal_approx(RunState.tool_drop_chance_at(12), 0.10),
+			"R853 难度 12：工具掉落率仍是 10%")
+
 	RunState.set_difficulty(2)
 
 	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() == 0.25,
 
-			"难度 2：战斗胜利不回血 / 篝火 25%%（R237）")
+			"R853 难度 2：战斗胜利默认回血已关 / 篝火 25%% 照常生效")
 
 	RunState.set_difficulty(3)
 
@@ -20332,50 +20663,212 @@ func _init() -> void:
 
 	RunState.set_difficulty(10)
 
-	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 12,
+	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 14,
 
-			"难度 10 = 噩梦；档位名共 12 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+			"难度 10 = 噩梦；档位名共 14 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+
+	# ---- R862：初始卡数值 —— 0~10 档 攻击 5 / 木栅栏 8；11 档起削到 4 / 6（图鉴恒基础值）----
+	check(RunState.starter_attack_dmg() == 5 and RunState.starter_fence_hp() == 8
+			and not RunState.starter_card_weak(),
+			"R862 难度 10：初始卡是上调后的 攻击 5 / 木栅栏 8")
+
+	var r862_repo := CardRepo.load_json()
+
+	# 这条只看「难度 10 的卡组实例」→ 显式摆一副最小卡组，别依赖此前测试留下的 deck_ids。
+	var r862_bak10 := RunState.deck_ids.duplicate()
+
+	RunState.deck_ids = [8001, 8002]
+
+	var r862_norm := RunState.build_deck(r862_repo)
+
+	var r862_n_attack: CardData = null
+
+	var r862_n_fence: CardData = null
+
+	for c: CardData in r862_norm:
+		if c.id == 8002 and r862_n_attack == null:
+			r862_n_attack = c
+		elif c.id == 8001 and r862_n_fence == null:
+			r862_n_fence = c
+
+	check(r862_n_attack != null and r862_n_attack.value == 5
+			and r862_n_fence != null and r862_n_fence.health == 8
+			and CardText.naturalize_card(r862_n_attack).contains("5 点伤害"),
+			"R862 难度 10 卡组实例：攻击 5 伤 / 木栅栏 8 血，卡面正文也是 5")
+
+	# 图鉴 / 卡库原型永远是上调后的基础值（削弱只发生在卡组实例上）
+	check(r862_repo.get_card(8002).value == 5 and r862_repo.get_card(8001).health == 8,
+			"R862 卡库原型：攻击 5 / 木栅栏 8（图鉴读这一份）")
+
+	RunState.deck_ids = r862_bak10
 
 	RunState.set_difficulty(11)
+
+	check(RunState.starter_card_weak() and RunState.starter_attack_dmg() == 4
+			and RunState.starter_fence_hp() == 6
+			and RunState.difficulty_name() == "初始卡削弱",
+			"R862 难度 11 = 初始卡削弱：攻击 4 / 木栅栏 6（%s）" % RunState.difficulty_note())
+
+	# 卡组实例层：难度 11 下 deck 里的木栅栏 / 攻击被改写，卡面正文数字同步（不改 effect_text）
+	var r862_bak_deck := RunState.deck_ids.duplicate()
+
+	RunState.deck_ids = [8001, 8002]
+
+	var r862_weak := RunState.build_deck(r862_repo)
+
+	check(r862_weak.size() == 2 and r862_weak[0].health == 6 and r862_weak[1].value == 4
+			and int(r862_weak[1].body_number_swap.get("to", 0)) == 4
+			and CardText.naturalize_card(r862_weak[1]).contains("4 点伤害")
+			and not CardText.naturalize_card(r862_weak[1]).contains("5 点伤害"),
+			"R862 难度 11 卡组实例：木栅栏 6 血 / 攻击 4 伤，卡面正文同步换 4（%s）"
+			% CardText.naturalize_card(r862_weak[1]))
+
+	RunState.deck_ids = r862_bak_deck
+
+	check(RunState.difficulty_name() == "初始卡削弱" and not RunState.third_layer_locked(),
+
+			"R862 难度 11 不再上锁（上锁已挪到 12 档，%s）" % RunState.difficulty_note())
+
+	RunState.set_difficulty(12)
 
 	check(RunState.difficulty_name() == "上锁" and RunState.third_layer_locked()
 			and RunState.difficulty_note().contains("获取三个信物以解锁第三层"),
 
-			"难度 11 = 上锁；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
+			"难度 12 = 上锁；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
+
+	# ---- R794b：难度 12「昂贵」—— 商店商品售价 +40%（信物除外）----
+	var r794_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
+
+	check(RunState.DIFF_SHOP_PRICE_FROM == 13 and RunState.DIFF_SHOP_PRICE_MUL == 1.4,
+			"R794b 商店涨价的档位与倍率口径（R862 插档后 13 档起 ×1.4）")
+
+	RunState.set_difficulty(12)
+
+	check(RunState.shop_price_mul() == 1.0 and RunState.shop_price_mul(true) == 1.0,
+			"R794b 难度 12 及以下商店不加价（信物一律不加）")
+
+	RunState.set_difficulty(13)
+
+	check(RunState.difficulty_name() == "昂贵" and RunState.shop_price_mul() == 1.4
+			and RunState.shop_price_mul(true) == 1.0
+			and RunState.difficulty_note().contains("40%"),
+			"R794b 难度 13 = 昂贵：非信物 ×1.4 / 信物 ×1.0（%s）" % RunState.difficulty_note())
+
+	check(RunState.difficulty_summary().contains("商店 ×1.4"),
+			"R794b 数值摘要列出「商店 ×1.4」（%s）" % RunState.difficulty_summary())
+
+	check_src(r794_shop.find("func _shelf_price(") >= 0
+			and r794_shop.find("_pay(int(t.price))") < 0
+			and r794_shop.find("var price: int = e[\"price\"]") < 0
+			and r794_shop.find("var price: int = ench[\"price\"]") < 0
+			and r794_shop.find("var del_price: int = _row3[0][\"price\"]") < 0,
+			"R794b 商店售价只走 _shelf_price()：陷阱 / 服务 / 附魔 / 删卡都不再直读原价")
 
 	RunState.set_difficulty(99)
 
-	check(RunState.difficulty == 11, "难度档位：越界输入被钳制到 11")
+	check(RunState.difficulty == 13, "难度档位：越界输入被钳制到 13")
 
 	RunState.set_difficulty(-3)
 
 	check(RunState.difficulty == 0, "难度档位：负数被钳制到 0")
 
-	check(RunState.DIFFICULTY_COUNT == 12 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 12
+	check(is_equal_approx(RunState.TOOL_DROP_CHANCE_EASY, 0.33)
+			and is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10),
+			"R853 工具掉落率常量：33% / 10%")
 
-			and RunState.DIFFICULTY_REST_PCT.size() == 12
+	check(RunState.DIFFICULTY_COUNT == 14 and RunState.DIFFICULTY_BATTLE_HEAL.size() == 14
 
-			and RunState.DIFFICULTY_TEXTS.size() == 12
+			and RunState.DIFFICULTY_REST_PCT.size() == 14
 
-			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 0 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
+			and RunState.DIFFICULTY_TEXTS.size() == 14
+
+			and RunState.DIFFICULTY_BATTLE_HEAL[0] == 3 and RunState.DIFFICULTY_BATTLE_HEAL[2] == 0
 
 			and RunState.DIFFICULTY_REST_PCT[0] == 0.40 and RunState.DIFFICULTY_REST_PCT[1] == 0.25,
 
-			"难度档位：共 12 档；战斗胜利回血恒 0 / 篝火 40%%(0档)·25%%(1档起)（R237 恢复）")
+			"R853/R862 难度档位：14 档；战斗胜利默认回血 3(0/1档)·0(2+档) / 篝火 40%%(0档)·25%%(1档起）")
 
+	# ---- R795：难度显示「数字 + 名称」（结算副标题 / 对战记录）----
+	check(RunState.difficulty_label(0) == "0 轻松" and RunState.difficulty_label(13) == "13 昂贵"
+			and RunState.difficulty_name_at(12) == "上锁"
+			and RunState.difficulty_name_at(11) == "初始卡削弱",
+			"R795/R862 难度标签＝数字 + 名称（0 → %s / 13 → %s / 12 名 %s / 11 名 %s）" % [
+			RunState.difficulty_label(0), RunState.difficulty_label(13),
+			RunState.difficulty_name_at(12), RunState.difficulty_name_at(11)])
+
+	# 旧版本记录文件兼容：档位只存了数字，名称现推；越界 / 负数一律钳住，不许越界取数组。
+	check(RunState.difficulty_label(99) == "13 昂贵" and RunState.difficulty_label(-5) == "0 轻松"
+			and RunState.difficulty_name_at(999) == "昂贵",
+			"R795 旧记录越界档位被钳制（99 → %s / -5 → %s）" % [
+			RunState.difficulty_label(99), RunState.difficulty_label(-5)])
+
+	RunState.set_difficulty(7)
+
+	check(RunState.difficulty_label() == "7 贫瘠" and RunState.difficulty_label(-1) == "7 贫瘠",
+			"R795 不带参数＝当前档（%s）" % RunState.difficulty_label())
+
+	var r795_sum := FileAccess.get_file_as_string("res://scripts/run_summary_scene.gd").replace("\r\n", "\n")
+	var r795_rec := FileAccess.get_file_as_string("res://scripts/record_list_scene.gd").replace("\r\n", "\n")
+	var r795_state := FileAccess.get_file_as_string("res://scripts/run_state.gd").replace("\r\n", "\n")
+
+	check_src(r795_sum.find("RunState.difficulty_label(diff)") >= 0
+			and r795_sum.find("RunState.DIFFICULTY_NAMES[diff]") < 0,
+			"R795 结算副标题带档位数字（不再只拼 DIFFICULTY_NAMES）")
+
+	check_src(r795_rec.find("RunState.difficulty_label(int(rec.get(\"difficulty\", 2)))") >= 0
+			and r795_rec.find("难度 %d") < 0,
+			"R795 记录行 / 详情都出「数字 + 名称」（不再只有 %d）")
+
+	check_src(r795_state.find("func difficulty_label(d: int = -1)") >= 0
+			and r795_state.find("DIFFICULTY_NAMES[clampi(d, 0, DIFFICULTY_COUNT - 1)]") >= 0,
+			"R795 难度标签唯一口在 RunState，越界由 clampi 兜住")
+
+	RunState.set_difficulty(0)
+
+
+	# ---- R795c：职业名显示 = 「旧名归一 + 按当前语言翻译」 ----
+	# 记录页原来只调 legacy_id()：中文 id 直接画到 en / ja / es 界面上；旧记录里的
+	# 「德鲁伊」又认不出译名。唯一口 = PlayerClass.display_name_of()。
+	check(PlayerClass.display_name_of(PlayerClass.DRUID) == "森林精魄"
+			and PlayerClass.display_name_of("德鲁伊") == "森林精魄"
+			and PlayerClass.display_name_of(PlayerClass.ROGUE) == "暗影刺客"
+			and PlayerClass.display_name_of("游荡者") == "暗影刺客",
+			"R795c 职业名：现行 id 与旧 id 都归一到「%s」" % PlayerClass.display_name_of("德鲁伊"))
+
+	var r795c_lang := GameSettings.language
+	GameSettings.set_language("en", true)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	check(PlayerClass.display_name_of(PlayerClass.DRUID) == "Forest Spirit"
+			and PlayerClass.display_name_of("德鲁伊") == "Forest Spirit",
+			"R795c 英文界面下职业名译出（%s）" % PlayerClass.display_name_of(PlayerClass.DRUID))
+	GameSettings.set_language(r795c_lang, true)
+	GameSettings._loaded = false
+	GameSettings.ensure_loaded()
+	check(PlayerClass.display_name_of(PlayerClass.DRUID) == "森林精魄",
+			"R795c 语言切回后职业名仍是中文（%s）" % PlayerClass.display_name_of(PlayerClass.DRUID))
+
+	var r795c_rec := FileAccess.get_file_as_string("res://scripts/record_list_scene.gd").replace("\r\n", "\n")
+	check_src(r795c_rec.find("PlayerClass.legacy_id(") < 0
+			and r795c_rec.count("PlayerClass.display_name_of(") == 2,
+			"R795c 记录页两处职业名都走 display_name_of()（不再裸 legacy_id）")
+	check_src(r795c_rec.count("RECORD_SEED") == 2,
+			"R795c 记录行 / 详情种子标签都走 RECORD_SEED（英文界面不再露中文）")
 	RunState.reset(50)
 
 
 
 	# ---- R224：全局 HP 规则 + 苹果 6027 + 牛奶 6028 + 附魔资格唯一口 ----
 
-	# ① 两条自动回血路径（战斗胜利 / 休息）归零 —— 函数层再钉一遍
+	# ① R853：难度 12 战斗胜利默认回血关掉，篝火照常 —— 函数层再钉一遍
+
+	RunState.set_difficulty(13)   # R853：这条断言RunState原漏设档位，实际跑在 0 档；R862 插档后最高档 = 13
 
 	check(RunState.battle_win_heal() == 0 and RunState.rest_pct() > 0.0
 
 			and RunState.rest_heal_amount() > 0,
 
-			"R237：战斗胜利仍不回血（R224 保留）；篝火回血已恢复（rest_pct %.2f）"
+			"R237/R853：难度 13 战斗胜利不回血；篝火回血照常（rest_pct %.2f）"
 
 			% RunState.rest_pct())
 
@@ -20398,6 +20891,26 @@ func _init() -> void:
 			% [RunState.hp, RunState.max_hp])
 
 	check(RunState.has_relic(RunState.APPLE_RELIC_ID), "苹果：登记进道具栏")
+
+	# R853 苹果代价：持有期间锁全部战外回血，换层回满 / 拿取瞬间那口 20% 例外。
+	check(RunState.hp_recovery_locked(), "R853 苹果代价：持有即锁战外回血")
+	check(RunState.battle_win_heal() == 0, "R853 苹果代价：战斗胜利默认 +3 也被锁")
+	var r852_before_rest := RunState.hp
+	check(RunState.rest() == 0 and RunState.hp == r852_before_rest,
+			"R853 苹果代价：篝火回复被锁（HP 不动）")
+	check(RunState.heal(20) == 0 and RunState.hp == r852_before_rest,
+			"R853 苹果代价：通用 heal 口一律 0")
+	RunState.gain_max_hp(5)
+	check(RunState.max_hp == 62 and RunState.hp == r852_before_rest,
+			"R853 苹果代价：上限照涨、附带回血不给")
+	# 换层回满不走 heal()（源码守卫：advance_layer 里直接写 hp = max_hp）
+	var r852_state_src := FileAccess.get_file_as_string("res://scripts/run_state.gd").replace("\r\n", "\n")
+	check_src(r852_state_src.find("hp = max_hp                      # 二层起始：恢复所有生命") >= 0,
+			"R853 换层回满直接写 hp，不受苹果锁血影响")
+	# 清理：还原到本段开始的状态，别污染后面的断言
+	RunState.relics.erase(RunState.APPLE_RELIC_ID)
+	check(not RunState.hp_recovery_locked() and RunState.battle_win_heal() == 3,
+			"R853 苹果代价：移除后恢复（战斗胜利默认 +3）")
 
 	# ③ 牛奶：随机两种附魔落到「合规且未附魔」的卡上，卡组本身不动
 
@@ -20519,7 +21032,7 @@ func _init() -> void:
 
 			and not RunState.enchant_ok("damage", r224_okrepo.get_card(8003), 9999),
 
-			"R224：enchant_ok —— 伤害 +10 只给技能卡（盟友被拒）")
+			"R224：enchant_ok —— 伤害 +8 只给技能卡（盟友被拒）")
 
 	# R226：再收紧 —— 只给**能直接造成伤害**的技能卡（治疗 / 抽牌 / 加 buff / 防御类被拒）
 
@@ -20547,13 +21060,16 @@ func _init() -> void:
 
 	check(r226_bad_ok,
 
-			"R226：伤害 +10 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
+			"R226：伤害 +8 拒绝「不能直接造成伤害」的技能卡（自然之力/智慧/重组/坚固围栏/闪躲/能量屏障）"
 
 			+ ("：全部被拒" if r226_bad_ok else "：被放行 " + ", ".join(r226_bad_names)))
 
+	# R845：本能 9176 由技能改效果卡 → 技能 118 → 117，伤害判据不变。
+	# R846：回转 9089 从「只抽牌」改成「对一个目标造成 X 伤 + 抽 X 张」→ 伤害判据 +1（48 → 49）；
+	#       闪躲 9103 从「全员嘲讽」改成「对敌方降力」，仍然不含「造成」二字 → 技能数不变。
 	# 判据唯一口 `CardData.is_damage_spell()`：103 张玩家技能卡里恰好 42 张能直接造成伤害（R721 击退新增条件伤害 +1）（R582 +2 技能 / +1 伤害判据；R580 +2 技能 / +1 伤害判据）
 
-	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
+	# （R528 传承记忆 9078 由技能改效果卡 → 技能 -1、伤害数不变）（R393 猎杀 9205 与 R406 独行 9189 都是技能且直接造成伤害 → 两者各 +2）（R352 摇篮曲 9182 / 森林的朋友们 9183 都不造伤害 → 技能 +2、伤害数不变）（R332 本能 9176 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R777 彩虹诗 9269 是技能但不直接造成伤害 → 技能 +1、伤害数不变）（R329 删紧急埋伏 9106 → 技能 -1）（R290 两张新卡文案含「造成…伤害」→ 自动入判据；R298 合体 9167 只改造不造成伤害 → 技能 +1、伤害数不变）
 
 	var r226_dmg := 0
 
@@ -20577,7 +21093,7 @@ func _init() -> void:
 
 			r226_leak.append(r226_card.card_name)
 
-	check(r226_skills == 104 and r226_dmg == 42 and r226_leak.is_empty(),
+	check(r226_skills == 117 and r226_dmg == 49 and r226_leak.is_empty(),
 
 			"R226：玩家技能卡 %d 张，能直接造成伤害 %d 张，判据漏判 %s"
 
@@ -20587,7 +21103,7 @@ func _init() -> void:
 
 			and RunState.enchant_ok("damage", r224_okrepo.get_card(8002), 9999),
 
-			"R226：伤害 +10 仍给流星雨（随机目标伤害）与「攻击」8002（基础攻击是技能卡）")
+			"R226：伤害 +8 仍给流星雨（随机目标伤害）与「攻击」8002（基础攻击是技能卡）")
 
 	check(not RunState.enchant_ok("costdown", r224_okrepo.get_card(8002), 9999)
 
@@ -20679,7 +21195,7 @@ func _init() -> void:
 
 			"奖励池过滤：暗影刺客摇不到森林精魄卡（风元素 / 蓄力 / 白魔法鸭）")
 
-	check(r47_dr.size() == 71 and r47_rg.size() == 61
+	check(r47_dr.size() == 71 and r47_rg.size() == 62
 
 			and r47_dr.size() + r47_rg.size() == repo.reward_pool().size()
 
@@ -20788,12 +21304,9 @@ func _init() -> void:
 			"回响 9102：1 费**稀有**暗影刺客技能（R329 由史诗降回稀有），不用选目标")
 
 	check(r48_dodge_c != null and r48_dodge_c.card_name == "闪躲" and r48_dodge_c.cost == 0
-
-			and r48_dodge_c.rarity == 0 and r48_dodge_c.card_class == PlayerClass.ROGUE
-
-			and r48_dodge_c.kind == "技能" and r48_dodge_c.target_mode == "none",
-
-			"闪躲 9103：0 费普通暗影刺客技能，不用选目标")
+			and r48_dodge_c.rarity == 1 and r48_dodge_c.card_class == PlayerClass.ROGUE
+			and r48_dodge_c.kind == "技能" and r48_dodge_c.target_mode == "unit",
+			"闪躲 9103：0 费**稀有**暗影刺客技能，要选一个敌方单位（R846：普通→稀有 + 改效果）")
 
 
 
@@ -20921,123 +21434,61 @@ func _init() -> void:
 
 
 
-	# 闪躲：本回合所有友方单位获得嘲讽（含后上场的单位，R542 改效果）
-
-	check(r48_dodge_c.effect_text.contains("所有友方单位获得嘲讽"),
-
-			"闪躲：卡面文案 = 本回合所有友方单位获得嘲讽（%s）" % r48_dodge_c.effect_text)
+	# 闪躲（9103，R846 用户口径）：使一个敌方单位力量 -X，X = 本回合打出的牌数
+	check(r48_dodge_c.effect_text.contains("力量 -X")
+			and r48_dodge_c.effect_text.contains("本回合打出的牌数"),
+			"闪躲：卡面文案 = 使一个敌方单位力量 -X（%s）" % r48_dodge_c.effect_text)
 
 	var r48_d := _new_engine([], 30, 30)
-
-	var r48_d_ally := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
-			Vector2i(4, 1), GameEngine.SIDE_SELF)
-
-	var r48_d_fort := r48_d.state.place(_card(8001, "木栅栏", "工事", 2, 0, 6, 0, 0),
-
-			Vector2i(4, 2), GameEngine.SIDE_SELF)
-
-	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
-
-	r48_d.use_spell(0, null)
-
-	check(r48_d.taunt_all_active(GameEngine.SIDE_SELF) and r48_d.state.energy == 5,
-
-			"闪躲：0 费；打出后「全员嘲讽」窗口开启（费用仍是 %d）" % r48_d.state.energy)
-
-	check(r48_d.unit_has_taunt(r48_d_ally) and r48_d.unit_has_taunt(r48_d_fort),
-
-			"闪躲：盟友与工事都获得嘲讽（unit_has_taunt 判据）")
-
-	# 后上场的单位也实时获得（不是一次性快照）
-
-	var r48_d_late := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
-			Vector2i(4, 0), GameEngine.SIDE_SELF)
-
-	check(r48_d.unit_has_taunt(r48_d_late),
-
-			"闪躲：窗口内后上场的单位也获得嘲讽")
-
-	# 敌方单位不受影响（只保我方单位）
-
 	var r48_d_foe := r48_d.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r48_d.state.self_card_plays = 3
+	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	r48_d.use_spell(0, Vector2i(2, 1))
+	check(r48_d_foe.effective_power() == 5 and r48_d_foe.debuff_stage == 1,
+			"闪躲：本回合已打 3 张 → 敌方力量 8 → %d（debuff_stage 1，它回合结束清）"
+			% r48_d_foe.effective_power())
+	check(r48_d.state.energy == 5, "闪躲：0 费（费用 5 → %d）" % r48_d.state.energy)
 
-	check(not r48_d.unit_has_taunt(r48_d_foe),
+	# 第二张继续叠：本回合第 4 张 → 再 -4
+	r48_d.state.self_card_plays = 4
+	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	r48_d.use_spell(0, Vector2i(2, 1))
+	check(r48_d_foe.effective_power() == 1,
+			"闪躲：第二张再 -4 → 力量 %d（降力可叠加，与敲晕 / 威慑同源）"
+			% r48_d_foe.effective_power())
 
-			"闪躲：敌方单位不获得嘲讽（只保我方）")
-
-	# 敌人射程内全是嘲讽单位 → 不能直击 HP（taunt_in_range 判据）
-
-	var r48_d3 := _new_engine([], 30, 30)
-
-	var r48_d3_ally := r48_d3.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
-			Vector2i(3, 1), GameEngine.SIDE_SELF)
-
-	var r48_d3_foe := r48_d3.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
-
-			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
-	r48_d3.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
-
-	r48_d3.use_spell(0, null)
-
-	check(r48_d3.taunt_in_range(Vector2i(2, 1), GameEngine.SIDE_OPPONENT, r48_d3_foe.card),
-
-			"闪躲：敌人射程内全是嘲讽 → 只能打单位，不能直击 HP")
-
-
-
-	# 闪躲：窗口在自己下个回合开始到期（含中间的敌方回合）
-
-	var r48_d2 := _new_engine([], 30, 30)
-
-	var r48_d2_ally := r48_d2.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
-
+	# 指到自己的单位 → 落空（不白降）
+	var r48_d_own := r48_d.state.place(_card(8005, "幽影", "盟友", 3, 3, 8, 1, 1),
 			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r48_d.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	var r48_d_msg := str(r48_d.use_spell(r48_d.state.hand.size() - 1, Vector2i(4, 1)))
+	check(r48_d_own.effective_power() == 3 and r48_d_msg.contains("敌方单位"),
+			"闪躲：指到己方单位 → 落空（己方力量仍是 %d，返回「%s」）"
+			% [r48_d_own.effective_power(), r48_d_msg])
 
-	r48_d2.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	# 本回合第一张就打它 → X=0，力量不变
+	var r48_d0 := _new_engine([], 30, 30)
+	var r48_d0_foe := r48_d0.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r48_d0.state.hand.append(CardData.from_dict(r48_dodge_c.to_dict()))
+	r48_d0.use_spell(0, Vector2i(2, 1))
+	check(r48_d0_foe.effective_power() == 8,
+			"闪躲：本回合还没打出别的卡 → X=0，力量不变（%d）"
+			% r48_d0_foe.effective_power())
 
-	r48_d2.use_spell(0, null)
-
-	r48_d2._begin_turn(GameEngine.SIDE_SELF)      # 下个回合开始 → 到期
-
-	check(not r48_d2.taunt_all_active(GameEngine.SIDE_SELF)
-
-			and not r48_d2.unit_has_taunt(r48_d2_ally),
-
-			"闪躲：自己下个回合开始时窗口到期，嘲讽随之消失")
-
-
-
-	# 闪躲：敌方 AI 打出无效
-
+	# 敌方 AI 打出无效
 	var r48_d5 := _new_engine([], 30, 30)
+	var r48_d5_msg := str(r48_d5._run_spell_effect(r48_dodge_c, null, GameEngine.SIDE_OPPONENT))
+	check(r48_d5_msg.contains("敌方 AI"),
+			"闪躲：敌方 AI 打出无效（%s）" % r48_d5_msg)
 
-	r48_d5._run_spell_effect(r48_dodge_c, null, GameEngine.SIDE_OPPONENT)
-
-	check(not r48_d5.taunt_all_active(GameEngine.SIDE_OPPONENT)
-
-			and not r48_d5.taunt_all_active(GameEngine.SIDE_SELF),
-
-			"闪躲：敌方 AI 打出无效（只保我方窗口）")
-
-
-
-	# R542 源码锁：嘲讽判定统一走 unit_has_taunt，闪躲窗口用 _taunt_all_active
-
-	var r542_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
-
-	check_src(r542_src.find("func unit_has_taunt(p: Placement) -> bool:") >= 0
-
-			and r542_src.find("unit_has_taunt(q)") >= 0
-
-			and r542_src.find("var _taunt_all_active:= false") >= 0,
-
-			"R542 源码：闪躲全员嘲讽走 unit_has_taunt() 唯一判据（_taunt_targets 也读它）")
+	# R846 源码锁：全员嘲讽那条机制整条删除，嘲讽只剩「卡面自带」一个来源
+	var r846_dodge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r846_dodge_src.find("func _dodge_spell(side: String, card: CardData, target)") >= 0
+			and r846_dodge_src.find("var _taunt_all_active") < 0
+			and r846_dodge_src.find("func taunt_all_active") < 0,
+			"R846 源码：闪躲只做敌方降力，全员嘲讽窗口（_taunt_all_active）已删除")
 
 
 
@@ -21403,7 +21854,7 @@ func _init() -> void:
 
 						% str(lv.get("name", "?")))
 
-	check(r60_lv == 2, "R60 使魔之力 9115 挂在 2 个巫师关卡（实际 %d）" % r60_lv)
+	check(r60_lv == 1, "R60 使魔之力 9115 挂在 1 个巫师关卡（R778 队长与巫师改用鸭子之力；实际 %d）" % r60_lv)
 
 
 
@@ -21424,14 +21875,10 @@ func _init() -> void:
 	var r55_vit := repo.get_card(9110)
 
 	check(r55_cat != null and r55_cat.card_name == "地狱猫" and r55_cat.kind == "盟友"
-
-			and r55_cat.cost == 0 and r55_cat.power == 1 and r55_cat.health == 1
-
+			and r55_cat.cost == 0 and r55_cat.power == 0 and r55_cat.health == 1
 			and r55_cat.attack_range == 1 and r55_cat.move_speed == 1
-
 			and r55_cat.rarity == 1 and r55_cat.card_class == PlayerClass.ROGUE,
-
-			"R243 地狱猫 8019：0 费**稀有**暗影刺客盟友 1/1 程1 速1")
+			"R243 地狱猫 8019：0 费**稀有**暗影刺客盟友 0/1 程1 速1（R846 初始力量 1 → 0）")
 
 	check(r55_fort != null and r55_fort.card_name == "鲜血堡垒" and r55_fort.kind == "工事"
 
@@ -21472,41 +21919,23 @@ func _init() -> void:
 	r55_a._end_turn_surplus(GameEngine.SIDE_SELF)
 
 	check(r55_cat_p.end_atk == 3 and r55_cat_p.health == 1 + 3 * 2
-
-			and r55_cat_p.effective_power() == 4,
-
-			"地狱猫：剩余 3 点 → 力量 1→4、生命 1→7（实际 力%d 生%d）"
-
+			and r55_cat_p.effective_power() == 3,
+			"地狱猫：剩余 3 点 → 力量 0→3、生命 1→7（实际 力%d 生%d）"
 			% [r55_cat_p.effective_power(), r55_cat_p.health])
-
 	check(r55_fort_p.end_atk == 3 and r55_fort_p.health == 1 + 3 * 3
-
 			and r55_fort_p.effective_power() == 3,
-
 			"鲜血堡垒：剩余 3 点 → 力量 0→3、生命 1→10（实际 力%d 生%d）"
-
 			% [r55_fort_p.effective_power(), r55_fort_p.health])
 
-
-
 	# 成长是**永久**的：第二次结算继续累加，回合结束不清零
-
 	r55_a.state.energy = 2
-
 	r55_a._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 6
-
+	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 5
 			and r55_cat_p.health == 1 + 5 * 2,
-
-			"地狱猫：成长累加不清零（再 +2 → 力量 6、生命 11）")
-
+			"地狱猫：成长累加不清零（再 +2 → 力量 5、生命 11）")
 	r55_a.state.energy = 0
-
 	r55_a.state.reset_units(GameEngine.SIDE_SELF)
-
-	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 6,
-
+	check(r55_cat_p.end_atk == 5 and r55_cat_p.effective_power() == 5,
 			"地狱猫：reset_units 不会清掉回合结束成长（仍为 5）")
 
 
@@ -21783,10 +22212,8 @@ func _init() -> void:
 
 	r56_a._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r56_cat_p.end_atk == 6 and r56_cat_p.effective_power() == 7,
-
-			"黑暗领主优先结算：地狱猫读到 1+5=6 点（力量 1 → %d）"
-
+	check(r56_cat_p.end_atk == 6 and r56_cat_p.effective_power() == 6,
+			"黑暗领主优先结算：地狱猫读到 1+5=6 点（力量 0 → %d）"
 			% r56_cat_p.effective_power())
 
 
@@ -21831,65 +22258,37 @@ func _init() -> void:
 
 
 
-	# 暗影之刃：X = 本回合**已花掉**的费用（不是剩余费用）
-
+	# 暗影之刃（R846）：X = 本回合**已使用的卡牌张数**（不再看花了多少费用）
 	var r56_d := _new_engine([], 30, 30)
-
 	r56_d.state.effects.append(CardData.from_dict(r56_blade.to_dict()))
-
 	var r56_foe := r56_d.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 30, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
 	r56_d.state.energy = 5
-
-	r56_d.state.pay_energy(4, GameEngine.SIDE_SELF)   # 花掉 4，剩 1
-
+	r56_d.state.self_card_plays = 4
 	r56_d._end_turn_surplus(GameEngine.SIDE_SELF)
-
 	check(r56_foe.health == 30 - 4,
+			"暗影之刃：本回合已用 4 张卡 → 随机敌人受 4 伤（30 → %d）" % r56_foe.health)
 
-			"暗影之刃：已花 4 费 → 随机敌人受 4 伤（30 → %d）" % r56_foe.health)
-
-
-
-	# 钱刚好花光（剩余 0）时暗影之刃**仍然结算** —— 这是它最常见的触发场景
-
+	# 一点费用都没花（剩 5）也照样按张数结算 —— 与「已花费用」口径彻底脱钩
 	var r56_e := _new_engine([], 30, 30)
-
 	r56_e.state.effects.append(CardData.from_dict(r56_blade.to_dict()))
-
 	var r56_foe2 := r56_e.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 30, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
 	r56_e.state.energy = 5
-
-	r56_e.state.pay_energy(5, GameEngine.SIDE_SELF)   # 全部花光
-
+	r56_e.state.self_card_plays = 2
 	r56_e._end_turn_surplus(GameEngine.SIDE_SELF)
+	check(r56_foe2.health == 28 and r56_e.state.energy == 5,
+			"暗影之刃：费用一分没花（剩 %d）也按 2 张卡结算（30 → %d）" % [
+					r56_e.state.energy, r56_foe2.health])
 
-	check(r56_foe2.health == 25,
-
-			"暗影之刃：剩余费用 0 也不被跳过（已花 5 → 30 → %d）" % r56_foe2.health)
-
-
-
-	# 没花过费用 → 效果落空，不造成伤害
-
+	# 本回合一张卡都没用过 → 落空
 	var r56_f := _new_engine([], 30, 30)
-
 	r56_f.state.effects.append(CardData.from_dict(r56_blade.to_dict()))
-
 	var r56_foe3 := r56_f.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 30, 1, 1),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
 	r56_f.state.energy = 5
-
 	r56_f._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r56_foe3.health == 30, "暗影之刃：本回合没花钱 → 落空（敌人 30 血不变）")
+	check(r56_foe3.health == 30, "暗影之刃：本回合没用过卡 → 落空（敌人 30 血不变）")
 
 
 
@@ -22723,6 +23122,9 @@ func _init() -> void:
 
 			Vector2i(1, 1), GameEngine.SIDE_SELF)
 
+	# R859：沉睡单位上场自带甲壳，甲没破就不算「挨打」——本段只测受伤递减口，
+	# 先把甲清掉（甲壳本身在 `_test_r857()` 里单独覆盖）。
+	r63_dd_p.armor = 0
 	r63_e.attack(Vector2i(1, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
 
 	check(r63_dd_p.sleep_left == FieldState.SLEEP_TURNS - 1,
@@ -22755,6 +23157,7 @@ func _init() -> void:
 
 			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
 
+	r63_f_p.armor = 0   # R859：同上，先破甲再测「受伤 -1」
 	r63_f._hit_unit(r63_f_p, 10, "测试")
 
 	check(r63_f_p.sleep_left == FieldState.SLEEP_TURNS - 1
@@ -22935,6 +23338,9 @@ func _init() -> void:
 
 			"R76-A 恶魔鸭：初始沉睡 2（sleep_left=%d）" % r76_sp.sleep_left)
 
+	# R859：先破甲 —— 甲还在时挨打不算「挨打」（甲壳见 `_test_r857()`）。
+	r76_sp.armor = 0
+
 	# 挨第1 下：沉睡 2 → 1，还不能动
 
 	r76_sleep.attack(Vector2i(1, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
@@ -22979,6 +23385,7 @@ func _init() -> void:
 
 			Vector2i(1, 1), GameEngine.SIDE_SELF)
 
+	r122_sp.armor = 0   # R859：先破甲，只测受伤口与回合口的配合
 	r122_sleep.attack(Vector2i(1, 1), Vector2i(0, 1), GameEngine.SIDE_SELF)
 
 	check(r122_sp.sleep_left == 1,
@@ -23263,8 +23670,10 @@ func _init() -> void:
 		var r643_rp := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
 		check(r643_rp.find("_layer_image(\"14\"") < 0,
 				"R643 奖励页不许按稀有度手挑缎带（款式只能由 UiAssets.rarity_ribbon 决定）")
-		check(r643_rp.find("CardFace._draw_rarity_ribbon(") >= 0,
-				"R643 奖励页的缎带必须走 CardFace 的唯一口")
+		check(r643_rp.find("CardFace.draw(") >= 0,
+				"R843 奖励页主卡面必须走 CardFace 唯一口（费用 / 稀有度 / 四属性不再另画）")
+		check(r643_rp.find("_layer_badge(") < 0,
+				"R843 奖励页不再维护旧圆形数值徽章")
 		var r643_missing := ""
 		for r643_i in 6:
 			if UiAssets.rarity_ribbon(r643_i) == null:
@@ -24942,9 +25351,9 @@ func _init() -> void:
 
 	check(r82_attack.cost == 1 and r82_attack.target_mode == "unit"
 
-			and r82_attack.effect_text == "对一个目标造成 4 点伤害。",
+			and r82_attack.effect_text == "对一个目标造成 5 点伤害。",
 
-		"R82 攻击 8002：数值与效果文案未变（1 费 / 4 伤 / 选目标）—— 改名不影响规则")
+		"R82 攻击 8002：数值与效果文案未变（1 费 / 5 伤 / 选目标）—— 改名不影响规则")
 
 	var r82_atk_e := _new_engine(_single_deck(CardData.from_dict(r82_attack.to_dict())),
 
@@ -24952,9 +25361,9 @@ func _init() -> void:
 
 	r82_atk_e.start_game()
 
-	# 摆一个**血够厚**的敌人：判据用「血量变化 = 4」，不依赖它死不死
+	# 摆一个**血够厚**的敌人：判据用「血量变化 = 5」，不依赖它死不死
 
-	# （骷髅兵 2 血会被 4 伤打死，死了 unit_at 就返回 null，判据会失效）。
+	# （骷髅兵 2 血会被 5 伤打死，死了 unit_at 就返回 null，判据会失效）。
 
 	var r82_foe_card: CardData = _card(1053, "骷髅兵", "怪物", 3, 2, 1, 1, 1)
 
@@ -24968,9 +25377,9 @@ func _init() -> void:
 
 	r82_atk_e.use_spell(0, Vector2i(2, 1))
 
-	check(r82_target.health == 20 - 4,
+	check(r82_target.health == 20 - 5,
 
-		"R82 攻击 8002：改名前后伤害都是 4（20 → %d，引擎按 id 判定，不受改名影响）"
+		"R82 攻击 8002：改名前后伤害都是 5（20 → %d，引擎按 id 判定，不受改名影响）"
 
 			% r82_target.health)
 
@@ -26260,9 +26669,9 @@ func _init() -> void:
 
 	# ⚠️ **不能污染卡库**（build_deck 给的是卡库共享实例）
 
-	check(r86_repo.get_card(8003).health == 8 and r86_repo.get_card(8001).health == 6,
+	check(r86_repo.get_card(8003).health == 8 and r86_repo.get_card(8001).health == 8,
 
-		"R394 集体改造：**没有污染卡库**（树人仍 8 血 / 木栅栏仍 6 血，实际 %d / %d）"
+		"R394 集体改造：**没有污染卡库**（树人仍 8 血 / 木栅栏仍 8 血，实际 %d / %d）"
 
 			% [r86_repo.get_card(8003).health, r86_repo.get_card(8001).health])
 
@@ -28114,7 +28523,7 @@ func _init() -> void:
 
 	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8003).to_dict()))  # 树人 3费3/8
 
-	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8001).to_dict()))  # 木栅栏 2费0/6
+	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8001).to_dict()))  # 木栅栏 2费0/8
 
 	r90_e5.state.hand.append(CardData.from_dict(r90_repo.get_card(8002).to_dict()))  # 攻击（技能，不改）
 
@@ -28134,7 +28543,7 @@ func _init() -> void:
 
 	check(r90_t2.power == 3 + GameEngine.BATCH_TRANSFER_ATK
 
-			and r90_f2.health == 6 + GameEngine.BATCH_TRANSFER_HP
+			and r90_f2.health == 8 + GameEngine.BATCH_TRANSFER_HP
 
 			and r90_f2.cost == 2 and r90_t2.cost == 3,
 
@@ -28172,7 +28581,7 @@ func _init() -> void:
 
 		% ("没抽到" if r90_bear == null else "抽到了"))
 
-	check(r90_repo.get_card(8003).power == 3 and r90_repo.get_card(8001).health == 6,
+	check(r90_repo.get_card(8003).power == 3 and r90_repo.get_card(8001).health == 8,
 
 		"R90 批量传输**没有污染卡库**（树人 3 攻 / 木栅栏 6 血不变）")
 
@@ -31047,7 +31456,7 @@ func _init() -> void:
 
 
 
-	# ---- ① 受伤 + 剩余费用 3 → 回 3 点血 ----
+	# ---- ① 剩余费用 3、场上两个敌人 → 各 -3 ----
 
 	var r103_e1 := _new_engine([], 40, 40, -1, false)
 
@@ -31057,97 +31466,124 @@ func _init() -> void:
 
 		CardData.from_dict(r103_repo.get_card(8062).to_dict()), Vector2i(4, 1),
 
-		GameEngine.SIDE_SELF)   # 夜蚀上场，8 血满
+		GameEngine.SIDE_SELF)   # 夜蚀上场
 
-	var r103_p: Placement = r103_e1.state.unit_at(Vector2i(4, 1))
+	var r103_f1 := r103_e1.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
 
-	r103_p.health = 5                 # 先打成 5 血（已损失 3）
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var r103_f2 := r103_e1.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+
+			Vector2i(2, 3), GameEngine.SIDE_OPPONENT)
 
 	r103_e1.state.energy = 3                   # 本回合剩 3 点没花
 
 	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 8,
+	check(r103_f1.health == 52 and r103_f2.health == 52,
 
-		"R103 夜蚀：剩余费用 3 → 5 血回满到 8（实际 %d）" % r103_p.health)
-
-
-
-	# ---- ② 回复量 = 剩余费用，且**不超过生命上限** ----
-
-	# 造一个「上限被抬高」的场景：卡面 8 血、当前 3 血、剩 7 点费用 → 只应回 5 点到 8。
-
-	r103_e1.state.energy = 7
-
-	r103_p.health = 3
-
-	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r103_p.health == 9,
-
-		"R103 夜蚀：剩余费用 7 但只能回 5（3→9 不越界，实际 %d）" % r103_p.health)
+		"R845 夜蚀：剩余 3 费 → **所有**敌人各 -3（%d / %d）" % [r103_f1.health, r103_f2.health])
 
 
 
-	# ---- ③ **回复不是成长**：卡面生命上限不该被这次结算抬高 ----
+	# ---- ② 不是技能伤害：荧光草在场也照样是 left 点 ----
 
-	var r103_card_max := r103_p.card.health
+	r103_e1.state.place(_card(8010, "荧光草", "盟友", 1, 0, 3, 0, 0),
 
-	r103_e1.state.energy = 5
+			Vector2i(4, 3), GameEngine.SIDE_SELF)
 
-	r103_p.health = 2
+	r103_e1.state.energy = 2
 
 	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 7 and r103_p.card.health == r103_card_max,
+	check(r103_f1.health == 50,
 
-		"R103 夜蚀：回复**不抬生命上限**（卡面仍 %d，当前 %d）"
-
-			% [r103_p.card.health, r103_p.health])
+		"R845 夜蚀：不吃荧光草那类技能加伤（52 - 2 = %d）" % r103_f1.health)
 
 
 
-	# ---- ④ 剩余费用 0 → 不回复（也不越界）----
-
-	r103_p.health = 6
+	# ---- ③ 剩余费用 0 → 不结算 ----
 
 	r103_e1.state.energy = 0
 
 	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 6,
+	check(r103_f1.health == 50,
 
-		"R103 夜蚀：剩余费用 0 → 不回复（仍 %d）" % r103_p.health)
-
-
-
-	# ---- ⑤ 满血时不结算（静默跳过，不产生「回复 0」噪声）----
-
-	r103_p.health = r103_p.card.health
-
-	r103_e1.state.energy = 4
-
-	r103_e1._end_turn_surplus(GameEngine.SIDE_SELF)
-
-	check(r103_p.health == r103_p.card.health,
-
-		"R103 夜蚀：满血时跳过（仍 %d/%d）" % [r103_p.health, r103_p.card.health])
+		"R845 夜蚀：剩余费用 0 → 不结算（仍 %d）" % r103_f1.health)
 
 
 
-	# ---- ⑥ 敌方回合结束**不该**给这张卡回血（口径是「自己回合结束」）----
+	# ---- ④ 致死走 _destroy_dead：3 血敌人被 3 伤打掉 → 场上消失 ----
 
-	r103_p.health = 4
+	var r103_e4 := _new_engine([], 40, 40, -1, false)
 
-	r103_e1.state.energy = 5          # 我方剩5（不结算）
+	r103_e4.start_game()
 
-	r103_e1.state.opp_energy = 5                # 敌方剩 5
+	r103_e4.state.place(CardData.from_dict(r103_repo.get_card(8062).to_dict()),
 
-	r103_e1._end_turn_surplus(GameEngine.SIDE_OPPONENT)
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
 
-	check(r103_p.health == 4,
+	# 用没有亡语的靶子（亡灵领主 1051 死亡会召唤骷髅，格子会被补兵「填回来」，测不出来）。
+	var r103_e4_foe := r103_e4.state.place(_card(8003, "树人", "盟友", 2, 3, 3, 1, 1),
 
-		"R103 夜蚀：敌方回合结束不触发（仍 %d）" % r103_p.health)
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	r103_e4.state.energy = 3
+
+	r103_e4._end_turn_surplus(GameEngine.SIDE_SELF)
+
+	check(r103_e4.state.unit_at(Vector2i(2, 1)) == null and r103_e4_foe.health <= 0,
+
+		"R845 夜蚀：致死单位被清场（格子已空）")
+
+
+
+	# ---- ⑤ 场上没有敌人 → 落空，不补直击 ----
+
+	var r103_e5 := _new_engine([], 40, 40, -1, false)
+
+	r103_e5.start_game()
+
+	r103_e5.state.place(CardData.from_dict(r103_repo.get_card(8062).to_dict()),
+
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+
+	r103_e5.state.energy = 4
+
+	var r103_e5_hp := r103_e5.state.hp_opponent
+
+	r103_e5._end_turn_surplus(GameEngine.SIDE_SELF)
+
+	check(r103_e5.state.hp_opponent == r103_e5_hp,
+
+		"R845 夜蚀：场上没有敌人 → 落空，不直击对方 HP（仍 %d）" % r103_e5.state.hp_opponent)
+
+
+
+	# ---- ⑥ 敌方回合结束不该替这张卡结算（口径是「自己回合结束」）----
+
+	var r103_e6 := _new_engine([], 40, 40, -1, false)
+
+	r103_e6.start_game()
+
+	r103_e6.state.place(CardData.from_dict(r103_repo.get_card(8062).to_dict()),
+
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+
+	var r103_e6_foe := r103_e6.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
+
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	r103_e6.state.energy = 5                   # 我方剩 5（这场不该结算）
+
+	r103_e6.state.opp_energy = 5
+
+	r103_e6._end_turn_surplus(GameEngine.SIDE_OPPONENT)
+
+	check(r103_e6_foe.health == 55,
+
+		"R845 夜蚀：敌方回合结束不触发（仍 %d）" % r103_e6_foe.health)
 
 
 
@@ -31213,9 +31649,10 @@ func _init() -> void:
 
 	r104_e1.use_spell(r104_e1.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r104_foe.health == 51,
+	check(r104_foe.health == 55 - GameEngine.OPENING_MOVE_DMG,
 
-		"R104 起手式：对目标 4 伤（55 → %d）" % r104_foe.health)
+		"R104 起手式：对目标 %d 伤（R845：4 → 5；55 → %d）"
+			% [GameEngine.OPENING_MOVE_DMG, r104_foe.health])
 
 	# 打出这张牌（-1）→ 抽 1 张（+1），净 +1
 
@@ -31255,9 +31692,10 @@ func _init() -> void:
 
 	r104_e2.use_spell(r104_e2.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r104_foe2.health == 50,
+	check(r104_foe2.health == 55 - GameEngine.OPENING_MOVE_DMG - 1,
 
-		"R104 起手式：荧光草加成下 4+1=5 伤（55 → %d）" % r104_foe2.health)
+		"R104 起手式：荧光草加成下 %d+1 伤（55 → %d）"
+			% [GameEngine.OPENING_MOVE_DMG, r104_foe2.health])
 
 
 
@@ -31285,9 +31723,10 @@ func _init() -> void:
 
 		Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r104_me.health == 0,
+	check(r104_me.health <= 0,
 
-		"R104 起手式：敌方 AI 用这张卡也造成 4 伤（4 血单位 → %d）" % r104_me.health)
+		"R104 起手式：敌方 AI 用这张卡也造成 %d 伤（4 血单位 → %d）"
+			% [GameEngine.OPENING_MOVE_DMG, r104_me.health])
 
 	check(r104_e3.state.opp_hand_count == r104_oph0 - 1,
 
@@ -31317,11 +31756,11 @@ func _init() -> void:
 
 	r104_e4.use_spell(r104_e4.state.hand.size() - 1, null)
 
-	check(r104_e4.state.hp_opponent == r104_foe_hp0 - 4,
+	check(r104_e4.state.hp_opponent == r104_foe_hp0 - GameEngine.OPENING_MOVE_DMG,
 
-		"R104 起手式：无目标时打对方玩家 4 点（%d → %d）"
+		"R104 起手式：无目标时打对方玩家 %d 点（%d → %d）"
 
-			% [r104_foe_hp0, r104_e4.state.hp_opponent])
+			% [GameEngine.OPENING_MOVE_DMG, r104_foe_hp0, r104_e4.state.hp_opponent])
 
 
 
@@ -31515,9 +31954,10 @@ func _init() -> void:
 
 	r108_e4.use_spell(r108_e4.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r108_foe4.health == 47,
+	check(r108_foe4.health == 55 - GameEngine.SHADOW_STEP_DMG,
 
-		"R108 暗影步：先结算 8 伤（55 → %d）" % r108_foe4.health)
+		"R108 暗影步：先结算 %d 伤（R845：8 → 13；55 → %d）"
+			% [GameEngine.SHADOW_STEP_DMG, r108_foe4.health])
 
 	check(r108_e4.shadow_step_pending,
 
@@ -31569,9 +32009,10 @@ func _init() -> void:
 
 	r108_e5.use_spell(r108_e5.state.hand.size() - 1, Vector2i(2, 1))
 
-	check(r108_foe5.health == 47,
+	check(r108_foe5.health == 55 - GameEngine.SHADOW_STEP_DMG,
 
-		"R108 暗影步：弃牌区为空也照样打出 8 伤（55 → %d）" % r108_foe5.health)
+		"R108 暗影步：弃牌区为空也照样打出 %d 伤（55 → %d）"
+			% [GameEngine.SHADOW_STEP_DMG, r108_foe5.health])
 
 	check(not r108_e5.shadow_step_pending,
 
@@ -31601,9 +32042,10 @@ func _init() -> void:
 
 		Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r108_me6.health == 0,
+	check(r108_me6.health <= 0,
 
-		"R108 暗影步：敌方 AI 用这张卡也造成 8 伤（8 血单位 → %d）" % r108_me6.health)
+		"R108 暗影步：敌方 AI 用这张卡也造成 %d 伤（8 血单位 → %d）"
+			% [GameEngine.SHADOW_STEP_DMG, r108_me6.health])
 
 	# ⚠️ 不能数弃牌区**总数**：树人被打死，它自己的卡会合法地进弃牌区，总数会 +1。
 
@@ -32025,17 +32467,17 @@ func _init() -> void:
 
 	check(r201_c != null and r201_c.kind == "技能" and r201_c.cost == 0
 
-			and r201_c.rarity == 2 and r201_c.card_class == "暗影刺客"
+			and r201_c.rarity == 1 and r201_c.card_class == "暗影刺客"
 
 			and r201_c.target_mode == "none" and not r201_c.needs_target(),
 
-		"R201 负重减轻 8066：0 费史诗技能，暗影刺客，无目标（实际 %s）"
+		"R201 负重减轻 8066：0 费稀有技能（R845 从史诗下调），暗影刺客，无目标（实际 %s）"
 
 			% (r201_c.card_name if r201_c != null else "null"))
 
 	check(r201_pool_ids.has(GameEngine.LIGHTEN_ID),
 
-		"R201：负重减轻 8066 进入奖励池（史诗 rarity=2）")
+		"R201：负重减轻 8066 进入奖励池（稀有 rarity=1，R845 从史诗下调）")
 
 
 
@@ -34695,15 +35137,16 @@ func _init() -> void:
 
 
 
-	# ================= R135：太阳熔炉（第二层 · 普通困难）=================
+	# ============ R135：太阳熔炉（R856 起：第二层 · **精英敌人-简单**）============
 
-	# 新增两张敌方单位：赫利俄斯（9130 工事 0/50 程0 速0） /
+	# 两张敌方单位：赫利俄斯（9130 工事 0/**70** 程0 速0，R856 生命 50→70） /
 
 	# 量产型俄倪厄（9131 盟友 **5/45** 程1 速1，R219 生命 30→45）。
 
-	# 赫利俄斯是**场上的光环源**（不是效果卡）：它在场时，本方的俄倪厄
+	# 赫利俄斯是**场上的光环源**（不是效果卡）：它在场时，场上**所有「量产型」卡**
 
-	# ① 一回合行动两次 ② 每回合结束回复 2 点生命；拆掉它两条立刻断。
+	# ① 一回合行动两次 ② 受到的**技能**伤害 -2（最少 1）；拆掉它两条立刻断。
+	# ⚠️ R856（店长口径）：受惠者从「量产型俄倪厄 9131」扩到整个量产型族；
 
 	var r135_helios := repo.get_card(GameEngine.SUN_FORGE_HELIOS_ID)
 
@@ -34711,11 +35154,11 @@ func _init() -> void:
 
 	check(r135_helios != null and r135_helios.kind == "工事"
 
-			and r135_helios.power == 0 and r135_helios.health == 50
+			and r135_helios.power == 0 and r135_helios.health == 70
 
 			and r135_helios.attack_range == 0 and r135_helios.move_speed == 0,
 
-			"R135 赫利俄斯：工事 0/50 程0 速0（实际 %s %d/%d 程%d 速%d）"
+			"R135/R856 赫利俄斯：工事 0/70 程0 速0（实际 %s %d/%d 程%d 速%d）"
 
 			% [r135_helios.kind, r135_helios.power, r135_helios.health,
 
@@ -34755,17 +35198,17 @@ func _init() -> void:
 
 	check(not r135_lv.is_empty()
 
-			and int(r135_lv["tier"]) == GameLevels.TIER_NORMAL_HARD
+			and int(r135_lv["tier"]) == GameLevels.TIER_ELITE_EASY
 
 			and GameLevels.layer_of(r135_lv) == GameLayers.LAYER_TWO
 
 			and GameLevels.bg_key(r135_lv) == "sun_forge",
 
-			"R135 太阳熔炉：第二层·普通敌人-困难，key=sun_forge")
+			"R856 太阳熔炉：第二层·精英敌人-简单（R856 上调），key=sun_forge")
 
-	check(GameLevels.normal_pool(GameLayers.LAYER_TWO).has(r135_lv),
+	check(GameLevels.elite_pool(GameLayers.LAYER_TWO).has(r135_lv),
 
-			"R135 太阳熔炉进第二层普通战斗池（地图会抽到）")
+			"R856 太阳熔炉进第二层**精英**战斗池（普通池已不再是它的家）")
 
 	var r135_units: Array = r135_lv["enemy_units"]
 
@@ -34827,6 +35270,40 @@ func _init() -> void:
 
 			"R135 光环只给俄倪厄：赫利俄斯自己仍 1 次行动（实际 %d）" % r135_h.acts_left)
 
+	# ①b R856：光环的受惠者是**整个量产型族**，上面那条只钉住 9131 ——
+
+	#     判据一旦退回 `id == SUN_FORGE_FURY_ID`，它仍然全绿（R856 的 bug 就是这么溜过去的）。
+
+	#     所以这里从**行为层**再钉两张：名字前缀来源（9138，trait 里没有「量产型」）
+
+	#     与 trait 来源（8074，名字带前缀同时挂 trait）。
+
+	var r135_mass_n: CardData = repo.get_card(9138)
+
+	var r135_mass_t: CardData = repo.get_card(8074)
+
+	check(r135_mass_n != null and r135_mass_t != null,
+
+			"R856 前置：9138 量产型赫菲斯托斯 / 8074 量产型代达罗斯都在卡库里")
+
+	var r135_mass_np := r135_e.state.place(CardData.from_dict(r135_mass_n.to_dict()),
+
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+
+	var r135_mass_tp := r135_e.state.place(CardData.from_dict(r135_mass_t.to_dict()),
+
+			Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+
+	r135_e.state.reset_units(GameEngine.SIDE_OPPONENT)
+
+	check(r135_mass_np.acts_left == GameEngine.SUN_FORGE_ACTIONS,
+
+			"R856 全族双动：名字前缀来源（9138）也吃光环（实际 %d）" % r135_mass_np.acts_left)
+
+	check(r135_mass_tp.acts_left == GameEngine.SUN_FORGE_ACTIONS,
+
+			"R856 全族双动：trait 来源（8074）也吃光环（实际 %d）" % r135_mass_tp.acts_left)
+
 
 
 	# ② 赫利俄斯离场 → 俄倪厄回到每回合 1 次（光环源不在就没有双动）
@@ -34841,59 +35318,66 @@ func _init() -> void:
 
 
 
-	# ③ 回血：赫利俄斯在场时**敌方回合结束**回 2；我方回合结束不回（「自己回合」口径）
-
+	# ③ R856 口径：**取消「每回合回 2 点生命」**，换成「受到的技能伤害 -2（最少 1）」。
+	#    ⚠️ 连「不回血」本身也要断言 —— 改口径时最容易漏的就是旧行为悄悄还在。
+	#    ⚠️ 减伤方向：只减**技能**（`kind != "attack"`），普攻照常吃满 —— 否则这关的
+	#       「先清小兵」就太软了（两只能动的 45 血单位 + 打不动的塔）。
 	var r135_e2 := _new_engine([], 30, 30)
-
-	r135_e2.state.place(CardData.from_dict(r135_helios.to_dict()),
-
+	var r135_h2 := r135_e2.state.place(CardData.from_dict(r135_helios.to_dict()),
 			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
-
 	var r135_f2 := r135_e2.state.place(CardData.from_dict(r135_fury.to_dict()),
-
 			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
 	r135_f2.health = 20
-
 	r135_e2.start_game()
-
-	r135_e2.end_turn()      # 我方回合结束 → 敌方单位不该回血
-
+	r135_e2.end_turn()      # 我方回合结束
+	r135_e2.end_turn()      # 敌方回合结束（旧口径下这里会 +2）
 	check(r135_f2.health == 20,
-
-			"R135 太阳熔炉：**我方**回合结束敌方俄倪厄不回血（仍 %d）" % r135_f2.health)
-
-	r135_e2.end_turn()      # 敌方回合结束 → 俄倪厄 +2
-
-	check(r135_f2.health == 22,
-
-			"R135 太阳熔炉：敌方回合结束俄倪厄回复 %d 点（20 → %d）"
-
-			% [GameEngine.SUN_FORGE_REGEN, r135_f2.health])
-
-
-
-	# ④ 回血以「赫利俄斯还在场」为前提：场上没有它，敌方回合结束也不回
-
-	var r135_e3 := _new_engine([], 30, 30)
-
-	var r135_f3 := r135_e3.state.place(CardData.from_dict(r135_fury.to_dict()),
-
-			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-
-	r135_f3.health = 20
-
-	r135_e3.start_game()
-
-	r135_e3.end_turn()
-
-	r135_e3.end_turn()
-
-	check(r135_f3.health == 20,
-
-			"R135 场上没有赫利俄斯：俄倪厄不回血（仍 %d）" % r135_f3.health)
+			"R856 太阳熔炉：**不再回血**（两个回合后仍 %d 点，旧口径会到 22）"
+			% r135_f2.health)
+	check(r135_e2._unit_damage_taken(r135_f2, 10, "spell")
+			== 10 - GameEngine.SUN_FORGE_SPELL_REDUCE,
+			"R856 赫利俄斯在场：量产型吃到的技能伤害 -%d（10 → %d）"
+			% [GameEngine.SUN_FORGE_SPELL_REDUCE,
+				r135_e2._unit_damage_taken(r135_f2, 10, "spell")])
+	check(r135_e2._unit_damage_taken(r135_f2, 10, "attack") == 10,
+			"R856 技能减伤**只管技能**：普攻照常吃满（%d）"
+			% r135_e2._unit_damage_taken(r135_f2, 10, "attack"))
+	check(r135_e2._unit_damage_taken(r135_f2, 2, "spell") == 1,
+			"R856 技能减伤下限 1 点：2 伤仍受 %d"
+			% r135_e2._unit_damage_taken(r135_f2, 2, "spell"))
 
 
+	# ③b 技能 -2 有**两个实现口**：`_unit_damage_taken()`（真结算）与
+	#     `preview_hit_damage()`（悬停预览伤害，返回 {dmg, tag}）。R815 的教训：
+	#     规则逻辑要查所有入口 —— 预览与实战不一致，玩家会照着错数字决策。
+	var r135_pv_spell := int(r135_e2.preview_hit_damage(r135_f2, 10, false)["dmg"])
+	var r135_pv_atk := int(r135_e2.preview_hit_damage(r135_f2, 10, true)["dmg"])
+	check(r135_pv_spell == 10 - GameEngine.SUN_FORGE_SPELL_REDUCE,
+			"R856 预览口同判据：技能预览也是 -%d（%d）"
+			% [GameEngine.SUN_FORGE_SPELL_REDUCE, r135_pv_spell])
+	check(r135_pv_atk == 10,
+			"R856 预览口同判据：普攻预览不吃减伤（%d）" % r135_pv_atk)
+
+	# ④ 两条光环都以「赫利俄斯还在场」为前提 → 拆塔立刻断
+	r135_e2.state.board.erase(Vector2i(0, 1))
+	check(r135_e2._unit_damage_taken(r135_f2, 10, "spell") == 10,
+			"R856 拆掉赫利俄斯：技能伤害不再减（%d）"
+			% r135_e2._unit_damage_taken(r135_f2, 10, "spell"))
+	# ④b 受惠者是**整个量产型族**：trait（8074）与名字前缀（9131 / 9137）两条来源都要认
+	var r135_mass_a: CardData = repo.get_card(8074)
+	var r135_mass_b: CardData = repo.get_card(9137)
+	var r135_mass_c: CardData = repo.get_card(9131)
+	check(r135_mass_a != null and r135_mass_a.traits.has("量产型")
+			and GameEngine.is_mass_produced(r135_mass_a),
+			"R856 「量产型」族：trait 来源（8074 量产型代达罗斯）认得出")
+	check(r135_mass_b != null and not r135_mass_b.traits.has("量产型")
+			and r135_mass_b.card_name.begins_with("量产型")
+			and GameEngine.is_mass_produced(r135_mass_b),
+			"R856 「量产型」族：名字前缀来源（9137 量产型赫利俄斯，trait 里没有）认得出")
+	check(r135_mass_c != null and GameEngine.is_mass_produced(r135_mass_c),
+			"R856 「量产型」族：9131 量产型俄倪厄在族内")
+	check(not GameEngine.is_mass_produced(repo.get_card(9001)),
+			"R856 「量产型」族：普通鸭子骑士不在族内（判据没有放宽成「所有敌方卡」）")
 
 	# ⑤ 徽标：俄倪厄卡面**没有**「疾行」字段（双动来自场上光环），但战场上必须照样标出来 ——
 
@@ -34941,21 +35425,23 @@ func _init() -> void:
 
 			"R424 量产型赫利俄斯 9137 在卡库里（工事 6/30，减伤光环源）")
 
-	check(r149_oni.kind == "盟友" and r149_oni.power == 10 and r149_oni.health == 80
+	check(r149_oni.kind == "盟友" and r149_oni.power == 10 and r149_oni.health == 100
 
-			and r149_oni.attack_range == 1 and r149_oni.move_speed == 1
+			and r149_oni.attack_range == 1 and r149_oni.move_speed == 3
 
 			and r149_oni.actions == 2 and r149_oni.has_affix(GameEngine.AFFIX_SWIFT),
 
-			"R149 俄倪厄：盟友 10/80 程1 速1（R424 血 50→80），自带双动（actions=2 +「疾行」字段）")
+			"R149 俄倪厄：盟友 10/100 程1 速3（R424 血 50→80；R778 血 80→100、速 1→3），自带双动（actions=2 +「疾行」字段）")
 
-	check(r149_hecate.kind == "盟友" and r149_hecate.power == 3 and r149_hecate.health == 35
+	check(r149_hecate.kind == "盟友" and r149_hecate.power == 3 and r149_hecate.health == 60
 
 			and r149_hecate.attack_range == 1 and r149_hecate.move_speed == 1
 
-			and r149_hecate.traits.has(GameEngine.FUSE_TRAIT),
+			and r149_hecate.traits.has("铸甲")
 
-			"R149 量产型赫卡同克瑞斯：盟友 3/35 程1 速1，带「铸造」trait")
+			and not r149_hecate.traits.has(GameEngine.FUSE_TRAIT),
+
+			"R778 量产型赫卡同克瑞斯：盟友 3/60 程1 速1，带「铸甲」trait（不再铸造）")
 
 	check(r149_steel.kind == "工事" and r149_steel.power == 5 and r149_steel.health == 100
 
@@ -35035,133 +35521,67 @@ func _init() -> void:
 
 
 
-	# ① 上场挂表（`place()` 是唯一初始化口）
+	# ① R778：铸甲 —— `side` 这一方回合开始时，每只 9133 给随机一个**其他**友方单位 +10 护甲
 
-	var r149_e := _new_engine([], 30, 30)
+	var r778_e := _new_engine([], 30, 30)
 
-	var r149_h := r149_e.state.place(CardData.from_dict(r149_hecate.to_dict()),
-
-			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
-
-	r149_e.start_game()
-
-	check(r149_h.fuse_left == GameEngine.FUSE_TURNS,
-
-			"R149 上场挂表：铸造倒计时 = %d（实际 %d）"
-
-			% [GameEngine.FUSE_TURNS, r149_h.fuse_left])
-
-	# ② 递减口径：**我方回合结束** -1；敌方回合结束不动（用户口径）
-
-	r149_e.end_turn()      # 我方回合结束 → -1
-
-	var r149_a1 := r149_h.fuse_left
-
-	r149_e.end_turn()      # 敌方回合结束 → 不动
-
-	check(r149_a1 == GameEngine.FUSE_TURNS - 1 and r149_h.fuse_left == r149_a1,
-
-			"R149 递减：我方回合结束 -1（%d → %d），敌方回合结束不动（仍 %d）"
-
-			% [GameEngine.FUSE_TURNS, r149_a1, r149_h.fuse_left])
-
-	# ③ 走完 5 个我方回合 → 破坏自身 + 原地立起钢铁要塞
-
-	for r149_i in 7:
-
-		r149_e.end_turn()
-
-	var r149_built := r149_e.state.unit_at(Vector2i(0, 0))
-
-	check(r149_built != null and r149_built.card.id == GameEngine.STEEL_FORTRESS_ID,
-
-			"R149 铸造完成：原位置立起钢铁要塞")
-
-	check(r149_built != null and r149_built.health == 100
-
-			and r149_built.owner == GameEngine.SIDE_OPPONENT,
-
-			"R149 要塞满血 100 落地且归属敌方")
-
-	var r149_enemy_n := 0
-
-	for r149_c2: Vector2i in r149_e.state.board:
-
-		var r149_p2: Placement = r149_e.state.unit_at(r149_c2)
-
-		if r149_p2 != null and r149_p2.owner == GameEngine.SIDE_OPPONENT:
-
-			r149_enemy_n += 1
-
-	check(r149_enemy_n == 1,
-
-			"R149 铸成后场上只剩要塞 1 只（赫卡同克瑞斯已自毁，实际 %d）" % r149_enemy_n)
-
-
-
-	# ④ **不是死亡**：提前被打掉 → 什么都不留下（这条最能防「写进 _deathrattle」）
-
-	var r149_e2 := _new_engine([], 30, 30)
-
-	var r149_h2 := r149_e2.state.place(CardData.from_dict(r149_hecate.to_dict()),
+	var r778_h := r778_e.state.place(CardData.from_dict(r149_hecate.to_dict()),
 
 			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
 
-	r149_e2.start_game()
+	var r778_ally := r778_e.state.place(CardData.from_dict(r149_oni.to_dict()),
 
-	r149_e2.end_turn()
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
 
-	r149_e2._destroy(Vector2i(0, 0))
+	r778_e.start_game()
 
-	for r149_j in 8:
+	check(r778_h.fuse_left == 0 and r778_ally.armor == 0,
 
-		r149_e2.end_turn()
+			"R778 铸甲：不再挂铸造倒计时（fuse_left=%d），开局双方护甲都是 0"
 
-	var r149_fort2 := false
+			% r778_h.fuse_left)
 
-	for r149_c3: Vector2i in r149_e2.state.board:
+	r778_e.end_turn()      # → 敌方回合开始
 
-		var r149_p3: Placement = r149_e2.state.unit_at(r149_c3)
+	check(r778_ally.armor == GameEngine.HECATE_ARMOR_GAIN and r778_h.armor == 0,
 
-		if r149_p3 != null and r149_p3.card.id == GameEngine.STEEL_FORTRESS_ID:
+			"R778 铸甲：敌方回合开始 → 随机一个**其他**友方 +10 护甲（俄倪厄 %d / 自己 %d）"
 
-			r149_fort2 = true
+			% [r778_ally.armor, r778_h.armor])
 
-	check(not r149_fort2,
+	r778_e.end_turn()      # → 我方回合
 
-			"R149 **不是死亡**：被提前击破 → 不会铸出要塞")
+	r778_e.end_turn()      # → 敌方回合开始
 
+	check(r778_ally.armor == GameEngine.HECATE_ARMOR_GAIN * 2,
 
+			"R778 铸甲：每回合都结算（两回合累计 %d）" % r778_ally.armor)
 
-	# ⑤ 可见性：倒计时要显示在信息栏（战场另有「倒数 N」徽标，只能靠出图核）
+	check(r778_e.state.unit_at(Vector2i(0, 0)) != null
 
-	var r149_e4 := _new_engine([], 30, 30)
+			and r778_e.state.unit_at(Vector2i(0, 0)).card.id == 9133,
 
-	var r149_h4 := r149_e4.state.place(CardData.from_dict(r149_hecate.to_dict()),
+			"R778 不再变钢铁要塞：量产型赫卡同克瑞斯本体仍在原格")
 
-			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	# ② 场上没有「其他」友方单位 → 跳过，不报错也不加自己
 
-	var r149_show := false
+	var r778_e2 := _new_engine([], 30, 30)
 
-	for r149_ent in r149_h4.status_entries():
+	var r778_h2 := r778_e2.state.place(CardData.from_dict(r149_hecate.to_dict()),
 
-		if str(r149_ent["label"]).contains("铸造"):
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
 
-			r149_show = true
+	r778_e2.start_game()
 
-	check(r149_show, "R149 信息栏：倒计时期间显示「铸造：还剩 N 个我方回合」")
+	r778_e2.end_turn()
 
-	r149_h4.fuse_left = 0
+	check(r778_h2.armor == 0 and r778_e2.state.unit_at(Vector2i(0, 0)) != null,
 
-	var r149_show2 := false
+			"R778 铸甲：只有自己时不给任何人加护甲（armor=%d）" % r778_h2.armor)
 
-	for r149_ent2 in r149_h4.status_entries():
+	# ③ 护甲走 `Placement.armor`，受击时优先吸收（与阿斯克勒庇厄斯共用唯一口）
 
-		if str(r149_ent2["label"]).contains("铸造"):
-
-			r149_show2 = true
-
-	check(not r149_show2, "R149 倒计时归零后不再显示该条目")
+	check(r778_h2.armor == 0, "R778 铸甲：护甲字段初始为 0（受击吸收见 R162 用例）")
 
 
 
@@ -36505,6 +36925,193 @@ func _init() -> void:
 
 
 
+	# ---- R780：赫尔墨斯「每回合最多受到 20 点伤害」----
+
+	var r780_card := repo.get_card(9140)
+
+	check(r780_card != null and r780_card.effect_text.contains("每回合最多受到 20 点伤害"),
+
+			"R780 赫尔墨斯卡面：写明「每回合最多受到 20 点伤害」")
+
+	check(GameEngine.HERMES_ID == 9140 and GameEngine.HERMES_DMG_CAP == 20,
+
+			"R780 常量：HERMES_ID = 9140 / HERMES_DMG_CAP = 20")
+
+
+	var engR780 := _new_engine()
+
+	engR780.state.place(r780_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780: Placement = engR780.state.unit_at(Vector2i(2, 1))
+
+	engR780.turn_number = 1
+
+	check(pR780.health == 80 and pR780.turn_dmg_taken == 0 and pR780.turn_dmg_key == -1,
+
+			"R780 赫尔墨斯上场：80 血，本回合累计 0、key 未记账")
+
+	# ① 额度内照常全额
+
+	var r780_d1: int = engR780._hit_unit(pR780, 12, "技能", false)
+
+	check(r780_d1 == 12 and pR780.health == 68 and pR780.turn_dmg_taken == 12,
+
+			"R780 第 1 下 12 点：全额落地（80 → 68），本回合累计 12")
+
+	# ② 单次远超剩余额度 → 只吃剩下的 8 点
+
+	var r780_d2: int = engR780._hit_unit(pR780, 30, "技能", false)
+
+	check(r780_d2 == 8 and pR780.health == 60 and pR780.turn_dmg_taken == 20,
+
+			"R780 第 2 下 30 点：只吃剩余 8 点（封顶 20），68 → 60")
+
+	# ③ 额度打满 → 全免
+
+	var r780_d3: int = engR780._hit_unit(pR780, 25, "技能", false)
+
+	check(r780_d3 == 0 and pR780.health == 60,
+
+			"R780 第 3 下：本回合已满 20 → 全免，血量不变")
+
+	# ④ 换回合（turn_number +1 = 下一个我方回合开始）→ 额度归零，单次最多 20
+
+	engR780.turn_number += 1
+
+	var r780_d4: int = engR780._hit_unit(pR780, 25, "技能", false)
+
+	check(r780_d4 == 20 and pR780.health == 40 and pR780.turn_dmg_taken == 20,
+
+			"R780 换回合后额度归零：单次 25 点封顶到 20，60 → 40")
+
+	# ⑤ 预览镜像：R384 纪律 —— 预览值必须等于实际扣血值
+
+	engR780.turn_number += 1
+
+	var r780_pv: Dictionary = engR780.preview_hit_damage(pR780, 30, false)
+
+	var r780_d5: int = engR780._hit_unit(pR780, 30, "技能", false)
+
+	check(int(r780_pv["dmg"]) == 20 and r780_d5 == int(r780_pv["dmg"]),
+
+			"R780 预览：满额度 30 点报 20，与实际扣血一致")
+
+	var r780_pv2: Dictionary = engR780.preview_hit_damage(pR780, 30, false)
+
+	check(int(r780_pv2["dmg"]) == 0,
+
+			"R780 预览：本回合额度用满后报 0")
+
+	# ⑥ 单目标技能那条落地口（`_op_deal_damage`）同样封顶（另开一局，满血 80 起算）
+
+	var engR780c := _new_engine()
+
+	engR780c.state.place(r780_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780c: Placement = engR780c.state.unit_at(Vector2i(2, 1))
+
+	engR780c.turn_number = 1
+
+	engR780c._op_deal_damage(GameEngine.SIDE_SELF, 30, Vector2i(2, 1))
+
+	check(pR780c.health == 60 and pR780c.turn_dmg_taken == 20,
+
+			"R780 单目标技能口（_op_deal_damage）同样封顶 20：80 → 60")
+
+	# ⑦ 对照：不是赫尔墨斯的单位不吃这条上限
+
+	var r780_other := repo.get_card(9141)
+
+	var engR780b := _new_engine()
+
+	engR780b.state.place(r780_other, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780b: Placement = engR780b.state.unit_at(Vector2i(2, 1))
+
+	engR780b.turn_number = 1
+
+	var r780_o: int = engR780b._hit_unit(pR780b, 30, "技能", false)
+
+	check(r780_o == 30 and pR780b.turn_dmg_taken == 0,
+
+			"R780 对照：阿斯克勒庇厄斯单次 30 点不封顶（它不在上限名单里）")
+
+	# ---- R780b：量产型赫尔墨斯 9188 同吃「每回合最多受到 20 点伤害」+ 界面判据 ----
+
+	check(GameEngine.is_damage_capped(9140) and GameEngine.is_damage_capped(9188),
+			"R780b 上限名单：9140 赫尔墨斯与 9188 量产型赫尔墨斯都在内")
+
+	check(not GameEngine.is_damage_capped(9141) and not GameEngine.is_damage_capped(9189),
+			"R780b 上限名单边界：9141 阿斯克勒庇厄斯 / 9189 独行 不在内")
+
+	var r780b_card := repo.get_card(9188)
+
+	check(r780b_card != null and r780b_card.card_name == "量产型赫尔墨斯"
+			and r780b_card.effect_text.contains("每回合最多受到 20 点伤害"),
+			"R780b 9188 卡面：写明「每回合最多受到 20 点伤害」")
+
+	var engR780d := _new_engine()
+
+	engR780d.state.place(r780b_card, Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+
+	var pR780d: Placement = engR780d.state.unit_at(Vector2i(2, 1))
+
+	engR780d.turn_number = 1
+
+	# ① 界面判据：开局还剩满额度 → 力场环不亮（亮灯判据是 == 0，不是 > 0）
+
+	check(engR780d.damage_cap_left(pR780d) == 20,
+			"R780b 9188 开局：damage_cap_left = 20（大于 0 就不画环）")
+
+	# ② 一次 30 点只吃 20
+
+	var r780b_d1: int = engR780d._hit_unit(pR780d, 30, "技能", false)
+
+	check(r780b_d1 == 20 and pR780d.health == 35,
+			"R780b 9188 单次 30 点封顶到 20（55 → 35）")
+
+	# ③ 额度吃满 → 判据归 0，卡面力场环 + 「免伤」图标常驻
+
+	check(engR780d.damage_cap_left(pR780d) == 0,
+			"R780b 9188 额度吃满：damage_cap_left = 0 → 力场环与免伤图标常驻")
+
+	# ④ 满额度后再打：一点也进不去（这一下必须发出 damage_capped 让界面有反馈）
+
+	var r780b_hits: Array = []
+
+	engR780d.action.connect(func(kind: String, d: Dictionary):
+			if kind == "damage_capped":
+				r780b_hits.append(int(d.get("blocked", 0))))
+
+	var r780b_d2: int = engR780d._hit_unit(pR780d, 30, "技能", false)
+
+	check(r780b_d2 == 0 and pR780d.health == 35,
+			"R780b 9188 满额度后再挨 30 点：全免、血量不变")
+
+	check(r780b_hits == [30],
+			"R780b 全免时发出 damage_capped(blocked=30) → 界面才有「免伤 30」飘字")
+
+	# ⑤ 换回合：额度回到 20（力场环随之消失）
+
+	engR780d.turn_number += 1
+
+	check(engR780d.damage_cap_left(pR780d) == 20,
+			"R780b 换回合：额度回到 20，力场环跟着灭")
+
+	# ⑥ 部分额度：读数真的按剩余量走（界面不带环，但「还能吃 8 点」是对的）
+
+	var r780b_d3: int = engR780d._hit_unit(pR780d, 12, "技能", false)
+
+	check(r780b_d3 == 12 and engR780d.damage_cap_left(pR780d) == 8,
+			"R780b 9188 吃了 12 点后还剩 8 点额度")
+
+	# ⑦ 对照：名单外的单位返回 -1（不吃上限，也不画力场）
+
+	check(engR780b.damage_cap_left(pR780b) == -1,
+			"R780b 对照：名单外单位 damage_cap_left 返回 -1（不画力场）")
+
+
+
 	# ---- R162：阿斯克勒庇厄斯 + 护甲积攒 ----
 
 	var r162_asc := repo.get_card(9141)
@@ -36523,7 +37130,7 @@ func _init() -> void:
 
 	check(str(r162_lvl["name"]) == "阿斯克勒庇厄斯的试炼"
 
-			and int(r162_lvl["tier"]) == GameLevels.TIER_ELITE_EASY
+			and int(r162_lvl["tier"]) == GameLevels.TIER_NORMAL_HARD
 
 			and GameLevels.layer_of(r162_lvl) == GameLayers.LAYER_TWO
 
@@ -36537,7 +37144,7 @@ func _init() -> void:
 
 			and Vector2i(r162_lvl["enemy_units"][0][6]) == Vector2i(0, 1),
 
-			"R162 阿斯克勒庇厄斯的试炼：第二层·精英简单（R506 与母舰空袭互换档位），1 只阿斯克勒庇厄斯在后排中央（0,1），元组程速 2/2")
+			"R162 阿斯克勒庇厄斯的试炼：第二层·普通敌人-困难（R506 曾下调到精英简单，R778 再降为普通困难），1 只阿斯克勒庇厄斯在后排中央（0,1），元组程速 2/2")
 
 
 
@@ -37405,7 +38012,9 @@ func _init() -> void:
 
 	var r190_face_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-	check_src(r190_face_src.contains("ResourceLoader.exists("),
+	check_src(r190_face_src.contains("DataPaths.asset_exists(")
+
+		and FileAccess.get_file_as_string("res://scripts/data_paths.gd").contains("ResourceLoader.exists("),
 
 		"R190 导出：card_face.art_for 用 ResourceLoader.exists 判存（FileAccess 在包里恒假）")
 
@@ -38257,7 +38866,7 @@ func _init() -> void:
 
 
 
-	# ---- R210：伤害 +10 附魔只给技能卡 / 无限装甲只认「场上被改造」/ 交付后货物移除 ----
+	# ---- R210：伤害 +8 附魔只给技能卡 / 无限装甲只认「场上被改造」/ 交付后货物移除 ----
 
 	var r210_repo := CardRepo.load_json()
 
@@ -38267,7 +38876,7 @@ func _init() -> void:
 
 	var r210_spell_up := CardData.from_dict(r210_spell.to_dict())
 
-	r210_spell_up.power += 10                             # 模拟商店附魔烤进 power
+	r210_spell_up.power += 8                              # 模拟商店附魔烤进 power
 
 	var r210_e0 := _new_engine([], 30, 30, -1, false)
 
@@ -38277,9 +38886,9 @@ func _init() -> void:
 
 		"R210 附魔：技能卡的 power 恒为 0（火焰箭 %d）" % r210_spell.power)
 
-	check(r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up) == 27,
+	check(r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up) == 25,
 
-		"R210 附魔：被「伤害 +10」附魔的技能卡 → 同一张卡 17 伤变 %d"
+		"R210 附魔：被「伤害 +8」附魔的技能卡 → 同一张卡 17 伤变 %d"
 
 			% r210_e0._spell_dmg(GameEngine.SIDE_SELF, 17, r210_spell_up))
 
@@ -38305,11 +38914,11 @@ func _init() -> void:
 
 	RunState.deck_ids = r210_fix.duplicate()
 
-	RunState.deck_mods = [{"power": 10}, {}]
+	RunState.deck_mods = [{"power": 8}, {}]
 
 	var r210_built: Array[CardData] = RunState.build_deck(r210_repo)
 
-	check(r210_built.size() == 2 and r210_built[0].power == 10
+	check(r210_built.size() == 2 and r210_built[0].power == 8
 
 			and r210_built[1].power == r210_ally.power and r210_spell.power == 0,
 
@@ -38319,11 +38928,11 @@ func _init() -> void:
 
 	var r210_noted := CardData.from_dict(r210_spell.to_dict())
 
-	RunState._apply_mod(r210_noted, {"power": 10, "note": "伤害 +10"})
+	RunState._apply_mod(r210_noted, {"power": 8, "note": "伤害 +8"})
 
-	check("【附魔】伤害 +10" in r210_noted.effect_text,
+	check("【附魔】伤害 +8" in r210_noted.effect_text,
 
-		"R210 附魔：技能卡的卡面文字补上「【附魔】伤害 +10」（%s）"
+		"R210 附魔：技能卡的卡面文字补上「【附魔】伤害 +8」（%s）"
 
 			% r210_noted.effect_text.replace("\n", " / "))
 
@@ -38515,6 +39124,17 @@ func _init() -> void:
 
 		"R214 附魔：未知 id → 空 mod（不会凭空造出一张附魔卡）")
 
+	# R787：附魔「伤害 +8」的**数值真源**只有 `enchant_mod()` 一处 ——
+	# 标签（卡面 / 商店 / 左栏都读它）里的数字必须与它逐个对上，
+	# 否则玩家会看到「卡面写 +8、实际打 +10」这种最难查的漂移。
+	var r787_mod: Dictionary = RunState.enchant_mod("damage")
+	var r787_label := str(CardData.ENCHANT_DEFS.get("damage", {}).get("label", ""))
+	check(int(r787_mod.get("power", 0)) == 8
+			and r787_label.ends_with("+8")
+			and str(r787_mod.get("note", "")).ends_with("+8"),
+		"R787 附魔：伤害 +8 的数值与标签同源（power %d / 标签「%s」/ note「%s」）"
+			% [int(r787_mod.get("power", 0)), r787_label, str(r787_mod.get("note", ""))])
+
 	# ② build_deck 把种类写进卡（数值照旧烤）
 
 	var r214_saved_ids: Array[int] = RunState.deck_ids.duplicate()
@@ -38542,8 +39162,9 @@ func _init() -> void:
 	# ---- R229「起手」附魔：必定第 1 回合抽到 + 一张卡只能一个附魔 ----
 
 	# R458：附魔表 6 → 7（+契约核心 core）
+	# R842：附魔表 7 → 8（+力量 +8 brawn；事件「龙石板」独有，不进随机池）
 
-	check(CardData.ENCHANT_DEFS.size() == 7
+	check(CardData.ENCHANT_DEFS.size() == 8
 
 			and CardData.enchant_name("opening") == "起手"
 
@@ -38711,6 +39332,8 @@ func _init() -> void:
 
 			and RunState.enchant_id_of({"affix": "保存"}) == "save"
 
+			# ⚠️ 这里**故意**写 R787 之前的 +10：反推只认「有没有增量」，
+			#    不认具体数值，老存档必须仍然认成 damage。
 			and RunState.enchant_id_of({"power": 10, "note": "伤害 +10"}) == "damage"
 
 			and RunState.enchant_id_of({}) == "",
@@ -39912,7 +40535,7 @@ func _init() -> void:
 
 	check(r306_fs != null and r306_fs.cost == 2 and r306_fs.is_damage_spell(),
 
-			"R306 烈火之剑：2 费技能，且被 is_damage_spell 认成伤害技能（可吃「伤害 +10」附魔）")
+			"R306 烈火之剑：2 费技能，且被 is_damage_spell 认成伤害技能（可吃「伤害 +8」附魔）")
 
 	# 烈火之剑：每列只打**最靠前**的一只（同列后排不掉血）
 
@@ -41475,7 +42098,7 @@ func _init() -> void:
 
 			and r223_fatigue.traits.has("疲惫")
 
-			and r223_fatigue.effect_text == "打出无效果。在手卡时，所有技能卡费用 +1。",
+			and r223_fatigue.effect_text == "打出无效果。在手牌时，所有技能卡费用 +1。",
 
 			"R223 疲惫 9149：1 费诅咒（rarity 6 = 新分类）/ class 留空 / 无目标 / 文案")
 
@@ -41523,13 +42146,13 @@ func _init() -> void:
 
 			"R223 难度 6：敌血 +10% 与敌攻 +1 同时生效 → 4/44")
 
-	var r223_fort0: CardData = CardData.from_dict(r223_repo.get_card(8001).to_dict())  # 木栅栏 0/6 工事
+	var r223_fort0: CardData = CardData.from_dict(r223_repo.get_card(8001).to_dict())  # 木栅栏 0/8 工事
 
 	var r223_fort_s: CardData = RunState.scaled_enemy_card(r223_fort0)
 
-	check(r223_fort_s.power == 0 and r223_fort_s.health == 7,
+	check(r223_fort_s.power == 0 and r223_fort_s.health == 9,
 
-			"R223 难度 6：原本 0 攻工事不吃攻击加成（0/6 → 0/7，只吃生命）")
+			"R223 难度 6：原本 0 攻工事不吃攻击加成（0/8 → 0/9，只吃生命）")
 
 	RunState.set_difficulty(0)
 
@@ -41965,6 +42588,10 @@ func _init() -> void:
 
 			"R232 夜行：史诗 2 费技能（暗影刺客，无目标，非伤害卡）")
 
+	check(r232_cu != null and r232_cu.effect_text.contains("手牌的此卡本局伤害 +3"),
+
+			"R831 蓄势：cards.json 文案统一为「手牌的此卡本局伤害 +3」（%s）" % (r232_cu.effect_text if r232_cu else ""))
+
 	check(r232_cu != null and r232_cu.card_name == "蓄势" and r232_cu.is_spell()
 
 			and r232_cu.cost == 1 and r232_cu.rarity == 0
@@ -42134,6 +42761,12 @@ func _init() -> void:
 	check(r232_g1 != null and r232_g1.effect_text.contains("造成 21 点伤害"),
 
 			"R232 蓄势：卡面文案同步显示当前伤害（%s）" % (r232_g1.effect_text if r232_g1 else ""))
+
+	check(r232_g1 != null and r232_g1.effect_text.contains("手牌的此卡本局伤害 +3")
+
+			and not r232_g1.effect_text.contains("战斗内不重置"),
+
+			"R831 蓄势：运行时文案用「手牌的此卡本局伤害 +3」、不再出现「战斗内不重置」（%s）" % (r232_g1.effect_text if r232_g1 else ""))
 
 
 
@@ -42697,11 +43330,13 @@ func _init() -> void:
 
 	check(r242_bs.spell_bonus_note(r242_sneak, r242_full).contains("满血")
 
-			and r242_bs.spell_bonus_note(r242_sneak, r242_full).contains("12"),
+			and r242_bs.spell_bonus_note(r242_sneak, r242_full).contains(
+				str(GameEngine.SNEAK_FULL_DMG)),
 
-			"R242 偷袭：目标满血 → 金色提示「满血：6 → 12」（%s）"
+			"R242 偷袭：目标满血 → 金色提示「满血：%d → %d」（%s）"
 
-			% r242_bs.spell_bonus_note(r242_sneak, r242_full))
+			% [GameEngine.SNEAK_DMG, GameEngine.SNEAK_FULL_DMG,
+			r242_bs.spell_bonus_note(r242_sneak, r242_full)])
 
 	r242_full.health = 19
 
@@ -42791,9 +43426,9 @@ func _init() -> void:
 
 	var r244_pack := r244_repo.get_relic(6030)
 
-	check(r244_init.size() == 10 and r244_init.has(6030) and not r244_init.has(6003),
+	check(r244_init.size() == 12 and r244_init.has(6030) and not r244_init.has(6003),
 
-			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R745 后共 10 个）")
+			"R244 初始道具池：移除鸡煲 6003、加入行囊 6030（R835 后共 12 个）")
 
 	check(r244_pack != null and r244_pack.source == "初始"
 
@@ -43021,9 +43656,9 @@ func _init() -> void:
 
 	var r447_l1 := GameLayers.event_kinds(GameLayers.LAYER_DEFAULT)
 
-	check(r447_l1.size() == 11 and r447_l1.has("adventurer"),
+	check(r447_l1.size() == 13 and r447_l1.has("adventurer") and r447_l1.has("dragon_slab"),
 
-			"R447 第一层事件池 11 种（+冒险家的遗物；R473 +武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语；R763d +奇异雕像，实际 %d）" % r447_l1.size())
+			"R447 第一层事件池 13 种（+冒险家的遗物；R473 +武术大师；R512 移除卡牌宝箱；R514 移除鸭鸭低语；R763d +奇异雕像；R793 +林中的剑；R842 +龙石板，实际 %d）" % r447_l1.size())
 
 	check(not GameLayers.event_kinds(GameLayers.LAYER_TWO).has("adventurer"),
 
@@ -43663,7 +44298,7 @@ func _init() -> void:
 
 	# ==== R577b：道具小图标（无背景 PNG）+ 界面分发 + 源码锁 ====
 
-	# ① 数据层：63 件道具逐件都有图标（R743 烤肉改成工具 → 61 件；R745 加回工具箱 6068；R761 加吟游诗人赠品「诗」6069）。
+	# ① 数据层：67 件道具逐件都有图标（R743 烤肉改成工具 → 61 件；R745 加回工具箱 6068；R761 加吟游诗人赠品「诗」6069；R792 加板甲 / 兵 / 墙砖）。
 	#    素材断言一律用 ResourceLoader.exists（导出包里 png 会被 .ctex 取代，
 	#    FileAccess.file_exists 会假红）。
 
@@ -43691,10 +44326,9 @@ func _init() -> void:
 
 			"R577b 数据层：relics.json 每件道具都有 relic_icon_<id>.png（缺 %s）" % str(icon577_missing))
 
-	check(icon577_src_ok and icon577_repo.all_relics().size() == 63,
+	check(icon577_src_ok and icon577_repo.all_relics().size() == 85,
 
-			"R577b 保真锁：63 件道具的 id 都能在 relics.json 源文本里找到（R761 +诗 6069）")
-
+			"R577b 保真锁：85 件道具的 id 都能在 relics.json 源文本里找到（R792 +板甲 6070 / 兵 6071 / 墙砖 6072 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R805 +蜂蜜 6079 / R806 +法术卷轴 6080 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087 / R830 +首饰盒 6088 / R835 +空故事书 6089 / R842 +稀有价值 6090）")
 	# ② 取图口：首末两件 + 信物回退
 
 	var icon577_t1 := UiAssets.relic_icon(6001)
@@ -44023,7 +44657,7 @@ func _init() -> void:
 
 	var r245_pot := r245_rrepo.get_relic(6032)
 
-	check(r245_init.size() == 10 and r245_init.has(6031) and r245_init.has(6032),
+	check(r245_init.size() == 12 and r245_init.has(6031) and r245_init.has(6032),
 
 			"R245 初始道具池：勇气徽章 6031 / 陶罐 6032 已在池内（%d 个）" % r245_init.size())
 
@@ -44035,7 +44669,7 @@ func _init() -> void:
 
 	check(r245_pot != null and r245_pot.kind == "即时"
 
-			and r245_pot.desc.contains("2 件奖励道具") and r245_pot.desc.contains("罐子"),
+			and r245_pot.desc.contains("2 件互不重复的奖励道具") and r245_pot.desc.contains("罐子"),
 
 			"R245 陶罐：即时类初始道具，文案写明 2 件奖励道具 + 罐子")
 
@@ -44315,6 +44949,57 @@ func _init() -> void:
 
 	r246_sfx.free()
 
+	# ---- R764：设置是硬闸 —— 浮层里关掉声音，战斗里那份 Sfx 也必须立刻静默 ----
+
+	var r764_sfx_src := FileAccess.get_file_as_string("res://scripts/sfx.gd")
+
+	check_src(r764_sfx_src.contains("static func settings_silent")
+
+			and r764_sfx_src.contains("if settings_silent():")
+
+			and r764_sfx_src.contains("if enabled != _enabled_boot")
+
+			and r764_sfx_src.contains("static func sync_all"),
+
+			"R764 源码：静音走 settings_silent 硬闸 + 退出只写回本实例改过的开关")
+
+	var r764_set_src := FileAccess.get_file_as_string("res://scripts/settings_scene.gd")
+
+	check_src(r764_set_src.count("Sfx.sync_all(get_tree())") >= 2,
+
+			"R764 源码：设置页的开关与音量都广播到宿主那份 Sfx")
+
+	var r764_on0 := GameSettings.sfx_on
+
+	var r764_vol0 := GameSettings.sfx_volume
+
+	# 前提自己摆：玩家档里音效可能就是关的 / 音量就是 0，不能拿它当"开"的基准。
+	GameSettings.set_sfx_on(true)
+
+	GameSettings.set_sfx_volume(1.0)
+
+	check(not Sfx.settings_silent(), "R764 硬闸：开 + 满音量 → 不静默")
+
+	GameSettings.set_sfx_on(false)
+
+	check(Sfx.settings_silent(), "R764 硬闸：关音效 → 静默")
+
+	GameSettings.set_sfx_on(true)
+
+	check(not Sfx.settings_silent(), "R764 硬闸：重新打开 → 恢复发声")
+
+	GameSettings.set_sfx_volume(0.0)
+
+	check(Sfx.settings_silent(), "R764 硬闸：音效音量 0 → 静默")
+
+	GameSettings.set_sfx_volume(1.0)
+
+	check(not Sfx.settings_silent(), "R764 硬闸：音量恢复 → 恢复发声")
+
+	GameSettings.set_sfx_on(r764_on0)
+
+	GameSettings.set_sfx_volume(r764_vol0)
+
 	# ---- 起手附魔：50 → 30 金（价格真源在 shop_scene.ENCHANTS）----
 
 	var r246_shop_map: Dictionary = (load("res://scripts/shop_scene.gd") as Script) 			.get_script_constant_map()
@@ -44341,7 +45026,7 @@ func _init() -> void:
 
 	# R375 起附魔大师 6034 被移出（`not r246_l2.has(6034)`）—— 道具数据本身不动。
 
-	check(r246_l2.size() == 9 and r246_l2.has(6033) and not r246_l2.has(6034),
+	check(r246_l2.size() == 12 and r246_l2.has(6033) and not r246_l2.has(6034),
 
 			"R246 二层起始道具池：兼修 6033 在池里 / 附魔大师 6034 已移出 / R514 +鸭之低语 6010（%d 件）" % r246_l2.size())
 
@@ -47515,7 +48200,7 @@ func _init() -> void:
 
 		"R281 超负荷：0 血在己方回合结束死亡（与卡面「0 或以下」一致）")
 
-	# ---- ④ 卡名恒单行：宽度/高度双约束 + 超宽横向滚动（唯一判定口 name_layout）----
+	# ---- ④ 卡名恒单行：R843d 起宽高双约束完整缩放，不再滚动 ----
 
 	var r281_font := UiTheme.font_bold()
 
@@ -47523,11 +48208,11 @@ func _init() -> void:
 
 	var r281_info_long := CardFace.name_layout("量产型赫卡同克瑞斯", r281_cell, r281_font, 8.4)
 
-	check(bool(r281_info_long["need_scroll"])
+	check(bool(r281_info_long["fits"]) and not bool(r281_info_long["need_scroll"])
 
-			and int(r281_info_long["sz"]) == CardFace.CARD_NAME_MIN_SZ,
+			and float(r281_info_long["text_w"]) <= float(r281_info_long["maxw"]) + 0.5,
 
-		"R281 卡名：超长名在 77×92 上缩到最小号后转横向滚动（sz=%d）"
+		"R843d 卡名：长名自动缩放后完整落在 77×92 名称行（sz=%d）"
 
 			% int(r281_info_long["sz"]))
 
@@ -47538,6 +48223,111 @@ func _init() -> void:
 		"R281 卡名：短名不滚动（text_w=%.0f ≤ maxw=%.0f）"
 
 			% [float(r281_info_short["text_w"]), float(r281_info_short["maxw"])])
+
+	# ---- R843c：稀有度 / 卡名分行；多语言标签定高伸缩；属性整行统一字号 ----
+	var r843_rect := Rect2(Vector2.ZERO, Vector2(99, 119))
+	var r843_rare := CardFace.rarity_tag_layout("Rare", r843_rect, r281_font, true)
+	var r843_starter := CardFace.rarity_tag_layout("Starter", r843_rect, r281_font, true)
+	var r843_japanese := CardFace.rarity_tag_layout("エピック", r843_rect, r281_font, true)
+	var r843_spanish := CardFace.rarity_tag_layout("Maldición", r843_rect, r281_font, true)
+	check(bool(r843_rare["fits"]) and bool(r843_starter["fits"])
+			and bool(r843_japanese["fits"]) and bool(r843_spanish["fits"]),
+			"R843c 稀有度：英 / 日 / 西长译文都完整落在第一行")
+	var r843_rare_box: Rect2 = r843_rare["box"]
+	var r843_starter_box: Rect2 = r843_starter["box"]
+	check(is_equal_approx(r843_rare_box.size.y, r843_starter_box.size.y)
+			and r843_starter_box.size.x > r843_rare_box.size.x,
+			"R843c 稀有度：标签固定高度、按译文自适应宽度")
+	var r843_row: Rect2 = r843_rare["row"]
+	var r843_integrated := CardFace.integrated_frame_rect(r843_rect, true)
+	check(is_equal_approx(r843_integrated.position.x,
+			r843_rect.size.x * UiTheme.CARD_ART_INSET_X)
+			and is_equal_approx(r843_integrated.size.x,
+			r843_rect.size.x * (1.0 - 2.0 * UiTheme.CARD_ART_INSET_X))
+			and is_equal_approx(r843_integrated.end.y, r843_row.end.y)
+			and r843_integrated.encloses(r843_rare_box),
+			"R843e 一体框：与卡图窗同宽并接稀有度底托，不溢出外框")
+	var r843_baseline: float = CardFace.centered_text_baseline(
+			r281_font, int(r843_rare["fs"]), r843_rare_box)
+	var r843_ink_top: float = r843_baseline - r281_font.get_ascent(int(r843_rare["fs"])) - r843_rare_box.position.y
+	var r843_ink_bottom: float = r843_rare_box.end.y - r843_baseline - r281_font.get_descent(int(r843_rare["fs"]))
+	check(is_equal_approx(r843_ink_top, r843_ink_bottom),
+			"R843d 稀有度：文字按字体真实 ascent / descent 纵向居中")
+	var r843_extra_long := CardFace.rarity_tag_layout(
+			"Evento aleatorio excepcionalmente largo", r843_rect, r281_font, true)
+	check(bool(r843_extra_long["fits"]),
+			"R843d 稀有度：超长译文继续缩字，不省略、不出框")
+	var r843_name := CardFace.name_layout("量产型赫卡同克瑞斯", r843_rect, r281_font, 12.0)
+	var r843_name_w: float = r843_rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
+			- UiTheme.CARD_NAMEPLATE_X0) - UiTheme.CARD_PAD * (r843_rect.size.y / 70.0) * 2.0
+	check(is_equal_approx(float(r843_name["maxw"]), r843_name_w),
+			"R843c 卡名：独占第二行，不再为稀有度固定扣除 30% 宽度")
+	var r843_cell := CardFace.stat_cell_rect(r843_rect, 0, 4)
+	var r843_short: Array[String] = ["7", "1", "2", "3"]
+	var r843_long: Array[String] = ["7", "1", "2", "123"]
+	var r843_all_long: Array[String] = ["123", "123", "123", "123"]
+	var r843_short_fs := CardFace.stats_font_size(r281_font, r843_cell, r843_short)
+	var r843_shared_fs := CardFace.stats_font_size(r281_font, r843_cell, r843_long)
+	check(r843_shared_fs < r843_short_fs and r843_shared_fs == CardFace.stats_font_size(
+			r281_font, r843_cell, r843_all_long),
+			"R843c 属性：最长生命决定整行共同字号，不再只有生命格单独缩字")
+	var r843_huge: Array[String] = ["7", "1", "2", "123456789"]
+	var r843_huge_fs := CardFace.stats_font_size(r281_font, r843_cell, r843_huge)
+	var r843_side := CardFace.stat_icon_side(r843_cell)
+	var r843_available: float = r843_cell.size.x - r843_side - maxf(0.6, r843_side * 0.10) - 3.0
+	check(r281_font.get_string_size("123456789", HORIZONTAL_ALIGNMENT_LEFT, -1, r843_huge_fs).x
+			<= r843_available + 0.5,
+			"R843d 属性：极端长数字也继续统一缩字，不冲出属性格")
+	check(CardFace.stats_bar_rect(r843_rect).end.y <= r843_rect.end.y
+			and UiTheme.CARD_COMPACT_NAME_BOTTOM < UiTheme.CARD_BODY_BOTTOM,
+			"R843c 下部黑底：三行顺序排列且属性栏完整留在卡框内")
+	check(UiTheme.CARD_ART_RATIO >= 0.540 and UiTheme.CARD_COMPACT_ART_RATIO >= 0.600
+			and UiTheme.CARD_RARITY_BOTTOM - UiTheme.CARD_RARITY_TOP >= 0.109,
+			"R843g 空间重排：回收重复卡种行后，卡图增高且稀有度底托加厚")
+	var r843_detail_rect := Rect2(Vector2.ZERO, Vector2(198, 238))
+	var r843_detail_card := CardRepo.load_json().get_card(9040)
+	var r843_detail := CardFace.text_zone_layout(r843_detail_card, r843_detail_rect,
+			UiTheme.font(), r281_font, 3.0)
+	check(bool(r843_detail["ok"]) and not bool(r843_detail["has_meta"])
+			and str(r843_detail["eff_text"]).is_empty()
+			and (r843_detail["eff_lines"] as Array).is_empty()
+			and int(r843_detail["eff_n"]) == 0,
+			"R843h 详情：只写卡名，卡种行与效果正文都不再占卡面")
+	var r843_name_ascent: float = r281_font.get_ascent(int(r843_detail["name_sz"]))
+	var r843_name_descent: float = r281_font.get_descent(int(r843_detail["name_sz"]))
+	var r843_name_ink_center: float = float(r843_detail["base_name"]) + (
+			r843_name_descent - r843_name_ascent) * 0.5
+	var r843_name_zone_center: float = (float(r843_detail["top"])
+			+ float(r843_detail["bottom"])) * 0.5
+	check(absf(r843_name_ink_center - r843_name_zone_center) <= 0.6
+			and bool((r843_detail["ninfo"] as Dictionary)["fits"]),
+			"R843h 详情：卡名按真实墨迹在整个名称区纵向居中且不溢出")
+	var r843_old_preferred: int = maxi(9, roundi(UiTheme.CARD_FS_TEXT
+			* minf(r843_detail_rect.size.y / CardFace.CARD_H_DESIGN,
+			UiTheme.CARD_TEXT_SCALE_CAP) * 1.28))
+	check(int(r843_detail["name_sz"]) > r843_old_preferred,
+			"R843h 详情：回收正文空间后短卡名确实放大（%d > %d）"
+			% [int(r843_detail["name_sz"]), r843_old_preferred])
+	for r843_kind in ["forest", "shadow", "mech", "bard", "common", "enemy"]:
+		for r843_compact in [false, true]:
+			var r843_tex := UiAssets.art_rarity_frame(r843_kind, r843_compact)
+			check(r843_tex != null,
+					"R843e 职业一体框：%s 详情 / 紧凑双比例素材齐全（compact=%s）"
+					% [r843_kind, r843_compact])
+			if r843_tex != null:
+				var r843_img := r843_tex.get_image()
+				var r843_used := r843_img.get_used_rect()
+				check(r843_used == Rect2i(Vector2i.ZERO, r843_img.get_size()),
+						"R843f 一体框：%s 实际外缘贴齐画布，详情不再被透明余量推偏（compact=%s）"
+						% [r843_kind, r843_compact])
+				# 42% 处避开暗影中央垂下的宝石；它是有意装饰，不是窗口偏移。
+				var r843_cx := roundi(r843_img.get_width() * 0.42)
+				var r843_opening_top := 62 if r843_compact else 52
+				var r843_band_top := r843_img.get_height() - 96
+				check(r843_img.get_pixel(r843_cx, r843_opening_top + 2).a < 0.10
+						and r843_img.get_pixel(r843_cx, r843_band_top + 2).a > 0.50,
+						"R843g 一体框：%s 内窗顶边与 96px 底托采用统一坐标（compact=%s）"
+						% [r843_kind, r843_compact])
 
 	check(CardFace.marquee_offset(50.0, 60.0, 1234) == 0.0,
 
@@ -47557,7 +48347,31 @@ func _init() -> void:
 
 	check(r281_cf_src.find("wrap_text(font_bold, card.card_name") < 0,
 
-		"R281 卡名：卡面**不再对卡名折行**（单行 + 滚动，防回退）")
+		"R843d 卡名：卡面**不再对卡名折行**（单行 + 自适应缩放，防回退）")
+	check_src(r281_cf_src.contains("cover_region_anchored(tex.get_size(), box, 0.0)"),
+			"R843i-3 卡图：顶部零裁切锚点，纵向余量全让底部（宁可裁脚，不裁头）")
+	check_src(r281_cf_src.contains("var kind_text: String = GameI18n.source(card.kind)"),
+			"R843g 底部黑框：非单位卡种必须走多语译文，不留中文原文")
+	check(not r281_cf_src.contains("fallback_plate")
+			and not r281_cf_src.contains("for i in eff_n"),
+			"R843h 源码：详情效果绘制循环与带框姓名牌回退均已移除")
+	var r843_paper := UiAssets.card_paper().get_image()
+	var r843_frame_dark := 0
+	for r843_x in range(40, 600, 4):
+		if r843_paper.get_pixel(r843_x, 552).get_luminance() < 0.55:
+			r843_frame_dark += 1
+	check(r843_frame_dark == 0,
+			"R843h 纸底：旧姓名牌横向框线已清除，不再给大卡名套背景框")
+	var r843_old_lang := GameSettings.language
+	for r843_lang in ["en", "ja", "es", "zh"]:
+		GameSettings.language = r843_lang
+		var r843_kind_text := GameI18n.source("效果")
+		var r843_kind_fs := CardFace.fitted_font_size(r281_font, r843_kind_text,
+				160.0, 24.0, 18)
+		check(r281_font.get_string_size(r843_kind_text, HORIZONTAL_ALIGNMENT_LEFT,
+				-1, r843_kind_fs).x <= 160.5,
+				"R843g 卡种译文：%s 完整缩放落在底部黑框" % r843_lang)
+	GameSettings.language = r843_old_lang
 
 
 
@@ -49697,21 +50511,23 @@ func _init() -> void:
 
 
 
-	# ---- R363：灰烬龙战吼的演出与口径 / 幼龙死亡不会连带另一只 ----
+	# ---- R363 / R778：灰烬龙卡面与「战吼已下线」/ 幼龙死亡不会连带另一只 ----
 
-	# ① 卡面文案：时机是「登场后首个回合开始时」（引擎在 `_begin_turn` 里跑 `_run_battlecries`），
+	# ① R778：灰烬龙的战吼**整条删除** —— 卡面 effect_text 清空、「战吼」trait 移除，
 
-	#    原来写「登场：」—— 读起来像落地瞬间就炸，而实际要到**该方第一个回合开始**才结算。
+	#    引擎 `_battlecry()` 里的 ash 分支同步下线（`_battlecry_ash` 函数已不存在）。
 
 	var r363_repo := CardRepo.load_json()
 
 	var r363_ash: CardData = r363_repo.get_card(1013)
 
-	check(r363_ash != null and r363_ash.effect_text.begins_with("登场后首个回合开始时"),
+	check(r363_ash != null and r363_ash.effect_text == ""
 
-			"R363 文案：灰烬龙写清战吼时机（实际 %s）"
+			and not r363_ash.traits.has("战吼"),
 
-			% ("?" if r363_ash == null else r363_ash.effect_text))
+			"R778 文案：灰烬龙卡面清空、不再带「战吼」trait（实际 %s）"
+
+			% ("?" if r363_ash == null else str(r363_ash.traits)))
 
 	check(r363_ash != null and not r363_ash.effect_text.begins_with("登场："),
 
@@ -49750,7 +50566,7 @@ func _init() -> void:
 
 
 
-	# ② 真实效果：我方**全部单位（含工事）**各 4；己方大营不动；我方 HP 不动
+	# ② R778：战吼下线后 → 敌方回合开始**谁都不掉血**（原来这里各吃 4 点）
 
 	var r363_e := _new_engine([], 20, 30, -1, false)
 
@@ -49766,57 +50582,27 @@ func _init() -> void:
 
 			GameEngine.SIDE_SELF)
 
-	r363_e.state.place(_card(1014, "幼龙", "盟友", 5, 5, 25), Vector2i(1, 0),
-
-			GameEngine.SIDE_OPPONENT)
-
 	var r363_hp0 := r363_e.state.hp_self
-
-	var r363_fx: Array = []
-
-	r363_e.action.connect(func(k: String, dd: Dictionary) -> void:
-
-		if k == "fx_impact":
-
-			r363_fx.append(dd))
 
 	r363_e._begin_turn(GameEngine.SIDE_OPPONENT)
 
 	var r363_u: Placement = r363_e.state.unit_at(Vector2i(3, 0))
 
-	check(r363_u != null and r363_u.health == 4,
+	check(r363_u != null and r363_u.health == 8,
 
-			"R363 灰烬龙：我方单位 -4（8 → %d）" % (-1 if r363_u == null else r363_u.health))
+			"R778 灰烬龙：战吼已删 → 我方单位不再掉血（8 → %d）"
+
+			% (-1 if r363_u == null else r363_u.health))
 
 	var r363_fc: Placement = r363_e.state.unit_at(Vector2i(4, 1))
 
-	check(r363_fc != null and r363_fc.health == 2,
+	check(r363_fc != null and r363_fc.health == 6,
 
-			"R363 灰烬龙：工事也吃这 4 点（6 → %d）" % (-1 if r363_fc == null else r363_fc.health))
-
-	var r363_al: Placement = r363_e.state.unit_at(Vector2i(1, 0))
-
-	check(r363_al != null and r363_al.health == 25,
-
-			"R363 灰烬龙：己方大营不吃（幼龙仍 25 血）")
+			"R778 灰烬龙：工事也不再掉血（6 → %d）" % (-1 if r363_fc == null else r363_fc.health))
 
 	check(r363_e.state.hp_self == r363_hp0,
 
-			"R363 灰烬龙：只打单位，不直击我方 HP（%d → %d）" % [r363_hp0, r363_e.state.hp_self])
-
-	# 多目标受击带 `seq` 序号（界面按序号逐格错开 90ms 落地，不再同帧齐爆）
-
-	var r363_seqs: Array = []
-
-	for r363_d in r363_fx:
-
-		if r363_d.has("seq"):
-
-			r363_seqs.append(int(r363_d["seq"]))
-
-	check(r363_seqs.size() == 2 and int(r363_seqs[0]) == 0 and int(r363_seqs[1]) == 1,
-
-			"R363 灰烬龙：两个目标的受击带 0/1 序号（实际 %s）" % str(r363_seqs))
+			"R778 灰烬龙：我方 HP 不动（%d → %d）" % [r363_hp0, r363_e.state.hp_self])
 
 
 
@@ -49890,45 +50676,27 @@ func _init() -> void:
 
 
 
-	# ⑤ 源码锁：引擎先报发动者 / 界面有战吼演出与错峰落地
+	# ⑤ 源码锁：`_battlecry_ash` 与 `ASH_DRAGON_AOE` 已从引擎删除（防止被加回来）
 
 	var r363_esrc := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 
-	check_src(r363_esrc.find('_fx_pulse(cell, p.card, "灰烬")') >= 0,
+	check_src(r363_esrc.find("_battlecry_ash") < 0,
 
-			"R363 源码锁：灰烬龙战吼先发 `card_pulse`（卡身脉冲 + 卡名 + 镜头）")
+			"R778 源码锁：引擎里已无 `_battlecry_ash`（战吼整条下线）")
 
-	var r363_ash_i := r363_esrc.find("func _battlecry_ash(")
+	check_src(r363_esrc.find("ASH_DRAGON_AOE") < 0,
 
-	var r363_bc_i := r363_esrc.find('action.emit("battlecry"', r363_ash_i)
-
-	var r363_hit_i := r363_esrc.find("_hit_unit(q2, ASH_DRAGON_AOE", r363_ash_i)
-
-	check_src(r363_ash_i >= 0 and r363_bc_i > r363_ash_i and r363_hit_i > r363_bc_i,
-
-			"R363 源码锁：战吼事件在伤害**之前**发出（播报不会被数字抢先）")
-
-	check_src(r363_esrc.find('fi["seq"] = seq') >= 0,
-
-			"R363 源码锁：多目标受击把 seq 带进 fx_impact")
+			"R778 源码锁：`ASH_DRAGON_AOE` 常量已删")
 
 	var r363_ui2 := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
 
 	check_src(r363_ui2.find('"battlecry":') >= 0,
 
-			"R363 源码锁：界面接了战吼事件（原来完全没接线 = 没有任何特效）")
+			"R363 源码锁：界面仍接着战吼事件（骨架保留，以后加战吼不用再接线）")
 
-	check_src(r363_ui2.find("const FX_MULTI_HIT_GAP_MS := 90") >= 0
+	check_src(r363_esrc.find('fi["seq"] = seq') >= 0,
 
-			and r363_ui2.find("fi_at += fi_seq * FX_MULTI_HIT_GAP_MS") >= 0,
-
-			"R363 源码锁：多目标受击逐格错开落地（不同帧齐爆）")
-
-	check_src(r363_ui2.find("_freeze_hp(fi_pl, fi_dmg)") >= 0
-
-			and r363_ui2.find("_drop_hp(fpl)") >= 0,
-
-			"R363 源码锁：AOE 的卡面生命等爆点落地才掉（不再「血先掉、特效后到」）")
+			"R363 源码锁：多目标受击把 seq 带进 fx_impact")
 
 	check_src(r363_ui2.find('bool(data.get("summon", false))') >= 0
 
@@ -51354,9 +52122,17 @@ func _init() -> void:
 
 	var r312_nonfixed_hidden := true
 
+	# R814：第一层起点邻居**也不在**重摇名单里（R192 要求它保持明牌的战斗/事件）。
+	# 这是本轮唯一的口径变化，来源见 `RogueMap.reroll_as_unknown()` 的 R814 注释。
+	var r312_start_nb := {}
+	var r312_start_i := RogueMap.idx(RogueMap.START_COL, RogueMap.START_ROW)
+	if r312_start_i >= 0 and r312_start_i < r312_dice.size():
+		for r312_nbd: int in (r312_dice[r312_start_i]["doors"] as Array):
+			r312_start_nb[int(r312_nbd)] = true
+
 	for c312: Dictionary in r312_dice:
 
-		if RogueMap.is_fixed_open(c312):
+		if RogueMap.is_fixed_open(c312) or r312_start_nb.has(int(c312.get("id", -1))):
 
 			continue
 
@@ -51366,7 +52142,9 @@ func _init() -> void:
 
 			r312_nonfixed_hidden = false
 
-	check(r312_nonfixed_hidden, "R312 水晶骰子：除固定房间外，所有房间都是「?」")
+	check(r312_nonfixed_hidden,
+
+			"R312/R815 水晶骰子：除固定房间与第一层起点邻居外，所有房间都是「?」")
 
 	# ② 逐格语义：拿**同一张图**的副本重摇再比 —— 不能拿两次 generate 的结果互比。
 
@@ -51472,9 +52250,13 @@ func _init() -> void:
 
 	var r312_live_ok := true
 
+	var r312_live_nb := {}
+	if r312_start_i >= 0 and r312_start_i < r312_live.size():
+		for r312_lnd: int in (r312_live[r312_start_i]["doors"] as Array):
+			r312_live_nb[int(r312_lnd)] = true
 	for c: Dictionary in r312_live:
 
-		if RogueMap.is_fixed_open(c):
+		if RogueMap.is_fixed_open(c) or r312_live_nb.has(int(c.get("id", -1))):
 
 			continue
 
@@ -51482,7 +52264,9 @@ func _init() -> void:
 
 			r312_live_ok = false
 
-	check(r312_live_ok, "R312 水晶骰子：重摇后非固定房间全部读作「?」")
+	check(r312_live_ok,
+
+			"R312/R815 水晶骰子：重摇后非固定房间（起点邻居除外）全部读作「?」")
 
 
 
@@ -51564,6 +52348,11 @@ func _init() -> void:
 
 			40, 40, -1, false)
 
+	# R799：这条断言算的是「盆吃多少 / 玩家吃多少」的精确差值。环境里若挂着
+	# 荒野形态 6022（每场首次受击 -4）之类的道具，3 点会变成 1 点 → 差值对不上。
+	# 与紧随其后那段「商店抵账」同样先清空道具栏，保证可复现。
+	RunState.relics = []
+	r311_beng.self_relics = []
 	r311_beng.basin_charge = 10
 
 	var r311_hp0: int = r311_beng.state.hp_self
@@ -51784,13 +52573,13 @@ func _init() -> void:
 
 			"R313 风妖精 / 快速符文 已进奖励池（%d 件）" % r313_repo.reward_ids().size())
 
-	check(r313_wf.desc.contains("第五张") and r313_wf.desc.contains("4"),
+	check(r313_wf.desc.contains("第 5 张") and r313_wf.desc.contains("4"),
 
 			"R313 风妖精文案：写明「第五张」与 4 点伤害")
 
 	check(r313_rune.desc.contains("5") and r313_rune.desc.contains("加倍")
 
-			and r313_rune.desc.contains("冰封"),
+			and r313_rune.desc.contains("不能行动"),
 
 			"R313 快速符文文案：写明 5% / 加倍 / 冰封沉睡")
 
@@ -52192,15 +52981,18 @@ func _init() -> void:
 	var r662_gt := r662_ge.state.place(_card(1051, "亡灵领主", "盟友", 8, 8, 55, 1, 1),
 			Vector2i(2, 0), GameEngine.SIDE_OPPONENT)
 	r662_ge.self_relics = [GameEngine.SWIFT_RUNE_RELIC_ID]
-	r662_ge.state.self_card_plays = 10   # +50%
+	# R845：疾风改成「每 3 张牌触发一次」—— 先把计数设成 11，打出这张后正好 12（3 的倍数）。
+	r662_ge.state.self_card_plays = GameEngine.GALE_NEED * 4 - 1
 	r662_ge.state.energy = 15
 	r662_ge.state.hand.append(r662_repo.get_card(GameEngine.GALE_ID))
-	r662_ge.use_effect(0)
-	r662_ge._gale_tick(GameEngine.SIDE_SELF, null)
-	check(r662_gt.health == 55 - 2,
-			"R662 疾风：效果卡不吃 +50%%（应 -2，实际 -%d）" % (55 - r662_gt.health))
-	check(r662_ge._spell_dmg(GameEngine.SIDE_SELF, GameEngine.GALE_DMG, null, true) == 3,
-			"R662 对照：同一数值若按技能算会变成 3（证明开关真的在起作用）")
+	r662_ge.use_effect(0)   # 打出即走 `_note_card_played` → 疾风在同一次调用里结算
+	check(r662_gt.health == 55 - GameEngine.GALE_DMG,
+			"R662 疾风：效果卡不吃 +50%%（应 -%d，实际 -%d）"
+			% [GameEngine.GALE_DMG, 55 - r662_gt.health])
+	# 8 点的 50% 是 12 —— 若真按技能算，这里会变成 12。
+	var r662_boosted: int = int(round(GameEngine.GALE_DMG * 1.5))
+	check(r662_ge._spell_dmg(GameEngine.SIDE_SELF, GameEngine.GALE_DMG, null, true) == r662_boosted,
+			"R662 对照：同一数值若按技能算会变成 %d（证明开关真的在起作用）" % r662_boosted)
 
 	# ---- ④ 作用域兜底：脚本错误把 `_spell_scope_depth` 卡在 >0 时，回合开头必须归零 ----
 	var r662_le := _new_engine([], 20, 20)
@@ -52221,13 +53013,23 @@ func _init() -> void:
 
 	var r314_repo := RelicRepo.load_json()
 
-	check(r314_repo.get_relic(6040).tier == RelicData.TIER_LEGENDARY
+	check(r314_repo.get_relic(6044).tier == RelicData.TIER_LEGENDARY
 
-			and r314_repo.get_relic(6044).tier == RelicData.TIER_LEGENDARY
+			and r314_repo.get_relic(6045).tier == RelicData.TIER_LEGENDARY
 
-			and r314_repo.get_relic(6045).tier == RelicData.TIER_LEGENDARY,
+			and r314_repo.get_relic(6040).tier == RelicData.TIER_NORMAL,
 
-			"R314 水晶骰子 / 储物箱 / lucky 7 三件都是「传奇」档")
+			"R314/R813 储物箱 / lucky 7 是「传奇」档；水晶骰子 R813 起降为「一般」")
+
+	# R813（店长口径「骰子降为普通道具」）：光改 tier 字段不够 —— 必须确认**真的换池**。
+	# 一般池 +1 件 / 传奇池 -1 件，两条都锁住；只锁一条时「档位改了但池子没跟上」照样能过。
+	check(r314_repo.normal_reward_ids().has(6040)
+
+			and not r314_repo.legendary_reward_ids().has(6040),
+
+			"R813 水晶骰子：降为一般档后**进一般池、出传奇池**（一般 %d / 传奇 %d）"
+
+			% [r314_repo.normal_reward_ids().size(), r314_repo.legendary_reward_ids().size()])
 
 	check(r314_repo.get_relic(6044).relic_name == "储物箱"
 
@@ -52235,7 +53037,7 @@ func _init() -> void:
 
 			"R314 两件新道具名字正确（储物箱 / lucky 7）")
 
-	check(r314_repo.get_relic(6044).desc.contains("不")
+	check(r314_repo.get_relic(6044).desc.contains("免除")
 
 			and r314_repo.get_relic(6044).desc.contains("手牌"),
 
@@ -53243,7 +54045,7 @@ func _init() -> void:
 
 	check(r316_laser.is_damage_spell() and not r316_rapid.is_damage_spell(),
 
-			"R316：激光扫射能直接造成伤害（吃「伤害 +10」附魔），极速不能")
+			"R316：激光扫射能直接造成伤害（吃「伤害 +8」附魔），极速不能")
 
 
 
@@ -53325,7 +54127,7 @@ func _init() -> void:
 
 	r316_e.state.energy = 20
 
-	# ⚠️ 技能卡的 `power` 会被 `_spell_dmg` 并进伤害（附魔「伤害 +10」走这条路）——
+	# ⚠️ 技能卡的 `power` 会被 `_spell_dmg` 并进伤害（附魔「伤害 +8」走这条路）——
 
 	#    假卡必须写 power=0，否则 4 点会变成 8 点，断言看起来像「易伤加了 6」。
 
@@ -53337,9 +54139,9 @@ func _init() -> void:
 
 	r316_e.use_spell(r316_e.state.hand.size() - 1, Vector2i(0, 2))
 
-	check(r316_foe.health == r316_hp1 - 6,
+	check(r316_foe.health == r316_hp1 - 7,
 
-			"R316 极速：单目标技能卡也吃易伤（4 → 实际 -6，剩 %d/%d）"
+			"R316 极速：单目标技能卡也吃易伤（5 → 实际 -7，剩 %d/%d）"
 
 			% [r316_foe.health, r316_hp1])
 
@@ -53477,11 +54279,11 @@ func _init() -> void:
 
 	check(not r317_reflex.is_damage_spell() and not r317_elim.is_damage_spell(),
 
-			"R317：两张都不直接造成伤害（不吃「伤害 +10」附魔）")
+			"R317：两张都不直接造成伤害（不吃「伤害 +8」附魔）")
 
 
 
-	# ---- 身法：抽 5 张 + 本回合禁用盟友 / 工事 ----
+	# ---- 身法：抽 REFLEX_DRAW 张（R845：5 → 4）+ 本回合禁用盟友 / 工事 ----
 
 	var r317_rf_deck: Array[CardData] = []
 
@@ -53503,9 +54305,10 @@ func _init() -> void:
 
 	var r317_drawn := r317_rf.state.hand.size() - r317_hand0
 
-	check(r317_drawn == 5,
+	check(r317_drawn == GameEngine.REFLEX_DRAW,
 
-			"R317 身法：抽 5 张（手牌 +%d）" % r317_drawn)
+			"R317 身法：抽 %d 张（R845：5 → 4；手牌 +%d）"
+			% [GameEngine.REFLEX_DRAW, r317_drawn])
 
 	check(r317_rf._no_unit_play_this_turn,
 
@@ -54226,243 +55029,32 @@ func _init() -> void:
 
 	# ============================================================
 
-	# R332：暗影刺客稀有技能「本能」9176
-
-	# 2 费：随机打出抽牌库中 3 张费用 ≤1 的技能卡（免费打出、受既有守卫约束）
+	# R332 → R845：本能 9176 已从「随机打出 3 张 ≤1 费技能卡」改成
+	# 「2 费稀有效果卡：挡下一次 >1 伤害并抽 2 张」。
+	# 完整时序（只挡 >1 / 挡完离场进弃牌区 / 1 点不消耗 / 两张各挡一次）由 `_test_r845()` 守；
+	# 这里只留一条「别退回旧实现」的钉子。
 
 	# ============================================================
 
-	var r332_repo := CardRepo.load_json()
+	var r332_innate: CardData = CardRepo.load_json().get_card(9176)
 
-	var r332_innate: CardData = r332_repo.get_card(9176)
+	check(r332_innate != null and r332_innate.kind == "效果" and r332_innate.cost == 2
 
-	check(r332_innate != null and r332_innate.is_spell() and r332_innate.cost == 2
+			and r332_innate.rarity == 1 and r332_innate.card_class == "暗影刺客",
 
-			and r332_innate.rarity == 1 and r332_innate.card_class == "暗影刺客"
+			"R845 本能 9176：已改为 2 费暗影刺客稀有效果卡（实际 %s / %d 费 / 稀有度 %d）"
 
-			and r332_innate.traits.has("本能"),
+			% [r332_innate.kind if r332_innate != null else "null",
 
-			"R332 本能 9176：2 费暗影刺客稀有技能（%s / %d 费 / 稀有度 %d / trait %s）"
+			r332_innate.cost if r332_innate != null else -1,
 
-			% [r332_innate.card_class, r332_innate.cost, r332_innate.rarity,
+			r332_innate.rarity if r332_innate != null else -1])
 
-				str(r332_innate.traits)])
+	check_src(FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 
-	check(r332_innate.effect_text == "随机打出抽牌库中 3 张费用 1 或以下的技能卡。",
+			.find("func _instinct_cast") < 0,
 
-			"R332 本能文案（实际「%s」）" % r332_innate.effect_text)
-
-
-
-	# ---- ① 牌库空：照常付 2 费结算，一张也打不出 ----
-
-	var r332_e1 := _new_engine([], 30, 30, -1, false)
-
-	r332_e1.start_game(0)
-
-	r332_e1.state.deck.clear()
-
-	r332_e1.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e1.state.energy = 5
-
-	var r332_e1_d: int = r332_e1.state.discard.size()
-
-	r332_e1.use_spell(0, null)
-
-	check(r332_e1.state.energy == 3 and r332_e1.state.hand.is_empty()
-
-			and r332_e1.state.discard.size() == r332_e1_d + 1,
-
-			"R332 本能：牌库空 → 仍照常付 2 费、弃牌 +1（费用 %d / 弃牌 +%d）"
-
-			% [r332_e1.state.energy, r332_e1.state.discard.size() - r332_e1_d])
-
-
-
-	# ---- ② 牌库 3 张 ≤1 费技能 → 全部打出 ----
-
-	var r332_e2 := _new_engine([], 30, 30, -1, false)
-
-	r332_e2.start_game(0)
-
-	r332_e2.state.deck = [_card(9801, "本能甲", "技能", 1, 0, 0),
-
-			_card(9802, "本能乙", "技能", 1, 0, 0),
-
-			_card(9803, "本能丙", "技能", 0, 0, 0)]
-
-	r332_e2.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e2.state.energy = 10
-
-	var r332_plays0: int = r332_e2.state.self_card_plays
-
-	r332_e2.use_spell(0, null)
-
-	check(r332_e2.state.deck.is_empty()
-
-			and r332_e2.state.self_card_plays == r332_plays0 + 4,
-
-			"R332 本能：牌库 3 张 ≤1 费技能全部打出（牌库剩 %d / 本次共出 %d 张 = 本能 + 3）"
-
-			% [r332_e2.state.deck.size(), r332_e2.state.self_card_plays - r332_plays0])
-
-
-
-	# ---- ③ 牌库 5 张候选 → 只打 3 张 ----
-
-	var r332_e3 := _new_engine([], 30, 30, -1, false)
-
-	r332_e3.start_game(0)
-
-	r332_e3.state.deck = []
-
-	for i in 5:
-
-		r332_e3.state.deck.append(_card(9810 + i, "本能 %d" % i, "技能", 1, 0, 0))
-
-	r332_e3.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e3.state.energy = 10
-
-	var r332_p3: int = r332_e3.state.self_card_plays
-
-	r332_e3.use_spell(0, null)
-
-	check(r332_e3.state.deck.size() == 2
-
-			and r332_e3.state.self_card_plays == r332_p3 + 4,
-
-			"R332 本能：牌库 5 张候选 → 只打 3 张（牌库剩 %d / 本次共出 %d 张）"
-
-			% [r332_e3.state.deck.size(), r332_e3.state.self_card_plays - r332_p3])
-
-
-
-	# ---- ④ 2 费技能不进候选 ----
-
-	var r332_e4 := _new_engine([], 30, 30, -1, false)
-
-	r332_e4.start_game(0)
-
-	r332_e4.state.deck = [_card(9820, "二费技能", "技能", 2, 0, 0),
-
-			_card(9821, "一费技能", "技能", 1, 0, 0)]
-
-	r332_e4.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e4.state.energy = 10
-
-	r332_e4.use_spell(0, null)
-
-	check(r332_e4.state.deck.size() == 1 and r332_e4.state.deck[0].id == 9820,
-
-			"R332 本能：2 费技能不进候选（牌库剩 %d 张，留下的是 %d）"
-
-			% [r332_e4.state.deck.size(),
-
-				r332_e4.state.deck[0].id if r332_e4.state.deck.size() > 0 else -1])
-
-
-
-	# ---- ⑤ 两段式技能打不出 → 放回牌库原位、不占 3 张配额 ----
-
-	var r332_e5 := _new_engine([], 30, 30, -1, false)
-
-	r332_e5.start_game(0)
-
-	r332_e5.state.deck = [_card(9100, "潜入", "技能", 0, 0, 0),
-
-			_card(9830, "本能丁", "技能", 1, 0, 0),
-
-			_card(9831, "本能戊", "技能", 1, 0, 0),
-
-			_card(9832, "本能己", "技能", 1, 0, 0)]
-
-	r332_e5.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e5.state.energy = 10
-
-	var r332_p5: int = r332_e5.state.self_card_plays
-
-	r332_e5.use_spell(0, null)
-
-	check(r332_e5.state.deck.size() == 1 and r332_e5.state.deck[0].id == 9100
-
-			and r332_e5.state.self_card_plays == r332_p5 + 4,
-
-			"R332 本能：两段式技能（潜入 9100）打不出 → 放回牌库、不占配额（牌库剩 %d / 本次共出 %d 张）"
-
-			% [r332_e5.state.deck.size(), r332_e5.state.self_card_plays - r332_p5])
-
-
-
-	# ---- ⑥ X 费卡不进候选：免费回合里它的 cost_of 也是 0，只能靠 x_cost 排除 ----
-
-	var r332_e6 := _new_engine([], 30, 30, -1, false)
-
-	r332_e6.start_game(0)
-
-	r332_e6.state.turn_all_free = true
-
-	r332_e6.state.energy = 0
-
-	r332_e6.state.deck = [CardData.from_dict(r332_repo.get_card(9083).to_dict()),
-
-			_card(9850, "本能庚", "技能", 1, 0, 0)]
-
-	r332_e6.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-	r332_e6.use_spell(0, null)
-
-	check(r332_e6.state.deck.size() == 1 and r332_e6.state.deck[0].id == 9083,
-
-			"R332 本能：X 费卡（流星雨 9083）不进候选（免费回合里残留 %d 张：%d）"
-
-			% [r332_e6.state.deck.size(),
-
-				r332_e6.state.deck[0].id if r332_e6.state.deck.size() > 0 else -1])
-
-
-
-	# ---- ⑦ 随机可复现：同一种子 → 同一组被抽出 ----
-
-	var r332_left: Array = []
-
-	for _t in 2:
-
-		var r332_e7 := _new_engine([], 30, 30, -1, false)
-
-		r332_e7.start_game(0)
-
-		r332_e7.rng.seed = 424242
-
-		r332_e7.state.deck = []
-
-		for i in 5:
-
-			r332_e7.state.deck.append(_card(9860 + i, "本能 %d" % i, "技能", 1, 0, 0))
-
-		r332_e7.state.hand = [CardData.from_dict(r332_innate.to_dict())]
-
-		r332_e7.state.energy = 10
-
-		r332_e7.use_spell(0, null)
-
-		var left_ids: Array = []
-
-		for c: CardData in r332_e7.state.deck:
-
-			left_ids.append(c.id)
-
-		r332_left.append(str(left_ids))
-
-	check(r332_left[0] == r332_left[1],
-
-			"R332 本能：同一种子下随机结果可复现（两次剩余 %s / %s）"
-
-			% [r332_left[0], r332_left[1]])
+			"R845 本能源码锁：随机打出 3 张的旧实现已整条删除")
 
 
 
@@ -56043,9 +56635,12 @@ func _init() -> void:
 
 		# R352：剧情锁定的卡（locked 且档案里没解锁）不进池，空档案时它们不算数。
 
-		if c0.rarity <= 2 and not c0.traits.has("测试") and not c0.event_only and not (
-
-				c0.locked and not ProfileData.is_card_unlocked(c0.id)):
+		# R773：隐藏职业卡（吟游诗人）也**不进**随机池 —— 以前它们都是 rarity 3 天然被上面
+		# 那道稀有条槛挡住，R773 呼唤 9266 是 rarity 0，这里必须显式对齐 `reward_pool()`。
+		# ⚠️ 条件用括号包住换行，GDScript 不认行尾反斜杠续行。
+		if (c0.rarity <= 2 and not c0.traits.has("测试") and not c0.event_only
+				and not PlayerClass.is_hidden_class(c0.card_class)
+				and not (c0.locked and not ProfileData.is_card_unlocked(c0.id))):
 
 			r346_expect += 1
 
@@ -56451,11 +57046,11 @@ func _init() -> void:
 
 			"R348 固定卡：火焰箭没加成 → 不画（卡面已写 17）")
 
-	r348_fx_card.power = 10      # 附魔「伤害 +10」烤进 power
+	r348_fx_card.power = 8       # 附魔「伤害 +8」烤进 power
 
-	check(int(r348_fx.spell_now(r348_fx_card).get("dmg", -1)) == 27,
+	check(int(r348_fx.spell_now(r348_fx_card).get("dmg", -1)) == 25,
 
-			"R348 固定卡：附魔 +10 → 预览 27 伤")
+			"R348 固定卡：附魔 +8 → 预览 25 伤")
 
 	# ---- ⑧ 只要报数就必须有 note（界面第二行小字）----
 
@@ -56619,13 +57214,13 @@ func _init() -> void:
 
 	var r349_fx_card := _card(9003, "火焰箭", "技能", 2, 0, 0, 0, 0)
 
-	r349_fx_card.power = 10
+	r349_fx_card.power = 8
 
 	var r349_fn := r349_fx.spell_now(r349_fx_card)
 
-	check(int(r349_fn.get("base", -1)) == 17 and str(r349_fn.get("expr", "")) == "17＋10",
+	check(int(r349_fn.get("base", -1)) == 17 and str(r349_fn.get("expr", "")) == "17＋8",
 
-			"R349 引擎：火焰箭附魔 → base=17 / expr=17＋10")
+			"R349 引擎：火焰箭附魔 → base=17 / expr=17＋8")
 
 	# ---- ⑥ 源码守卫：左栏不再画「现在打出」那一行；每处文字都不描边 ----
 
@@ -57410,9 +58005,9 @@ func _init() -> void:
 
 			"R745 工具：野性图腾是使用型、且不是休息处专属（能掉落 / 能上架）")
 
-	check(r744_trepo.random_traps().size() == 10,
+	check(r744_trepo.random_traps().size() == 17,
 
-			"R745 工具池：可随机 7 件（烤肉 7007 仍被 rest_only 排除）")
+			"R745 工具池：可随机 17 件（烤肉 7007 被 rest_only、石头 7012 被 no_drop 排除；R841 +锤子 7018 / +润滑油 7019）")
 
 	# ② 工具箱：获得即给一个工具；满栏不硬塞、转进待领奖励（不吞玩家的东西）。
 	#    ⚠️ 发工具会改全局 RunState，测完逐个还原，别把后面的用例带歪。
@@ -58824,6 +59419,50 @@ func _init() -> void:
 
 		"R367 绳子：灰掉之后 `can_use_cave_rope` 为 false（不能逃第二次）")
 
+	# ---- R772 洞窟绳：逃跑退还 1 块巧克力（第三层不返还）----
+
+	var r772_choco_bak: int = RunState.chocolate
+
+	var r772_layer_bak: int = RunState.current_layer
+
+	var r772_boss_bak: bool = RunState.boss_pending
+
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+
+	RunState.chocolate = 5
+
+	RunState.cave_rope_refund()
+
+	check(RunState.chocolate == 6,
+
+		"R772 洞窟绳：逃跑返还 1 块巧克力（5 → 6）")
+
+	RunState.chocolate = 0
+
+	RunState.boss_pending = true
+
+	RunState.cave_rope_refund()
+
+	check(RunState.chocolate == 1 and not RunState.boss_pending,
+
+		"R772 洞窟绳：最后一格逃了返还 1 块，并撤销 boss_pending")
+
+	RunState.current_layer = GameLayers.LAYER_THREE
+
+	RunState.chocolate = 0
+
+	RunState.cave_rope_refund()
+
+	check(RunState.chocolate == 0,
+
+		"R772 洞窟绳：第三层不收步数，逃跑不返还巧克力")
+
+	RunState.chocolate = r772_choco_bak
+
+	RunState.current_layer = r772_layer_bak
+
+	RunState.boss_pending = r772_boss_bak
+
 
 
 	# ---- 商店抵账：盆灰在栏里，而不是凭空消失 ----
@@ -60088,113 +60727,96 @@ func _init() -> void:
 
 
 
-	# ================= R380：难度 10「精英出现增多」 =================
+	# ================= R380 / R852：难度 10「精英出现增多」 =================
+	# 用户口径（R380）：「当前难度 10 还没有新增效果，做成精英出现增多 —— 各种途径出现
+	#   精英的概率上调约 30%」。
+	# R852（用户口径）：「10 难度起，? 依旧需要刷新商店。概率从事件，普通战斗，宝箱里面扣」
+	#   → 原「10 档「?」房裁掉 shop」撤销；精英 +30% 多出来的权重只从 battle / event / chest
+	#     扣，**shop 一分不扣**（商店占比与低难度逐位相同）。
 
-	# 用户口径：「当前难度 10 还没有新增效果，做成精英出现增多 —— 每层商店数量调整为
-
-	# 固定 2 个（不算右上角），各种途径出现精英的概率上调约 30%」。
-
-	# ① 常量 + 两个取值函数（界面 / 地图生成 / 测试唯一口）
-
+	# ① 常量 + 取值函数（界面 / 地图生成 / 测试唯一口）
 	check(RunState.DIFF_ELITE_FROM == 10 and is_equal_approx(RunState.DIFF_ELITE_MUL, 1.3),
-
 			"R380 常量：10 档起精英出现概率 ×1.3（约 +30%）")
-
 	RunState.set_difficulty(9)
-
-	check(RunState.elite_weight_mul() == 1.0 and RunState.unknown_shop_allowed(),
-
-			"R380 难度 9：精英概率不动、「?」房照样能刷商店（只 10 档变）")
-
+	check(RunState.elite_weight_mul() == 1.0,
+			"R380 难度 9：精英概率不动（只 10 档变）")
 	RunState.set_difficulty(10)
+	check(is_equal_approx(RunState.elite_weight_mul(), 1.3),
+			"R380 难度 10：精英概率 ×1.3")
+	check(RogueMap.WEIGHTS_UNKNOWN.has("shop"),
+			"R852 「?」房权重表：商店键恒在（10 档不再裁 shop）")
 
-	check(is_equal_approx(RunState.elite_weight_mul(), 1.3) and not RunState.unknown_shop_allowed(),
+	# ② 权重占比对拍：直接采 `_weighted_far`（col 3 / row 2 + norm 1.0 → 距离系数恰为 1）
+	var r852_shares := {}
+	for r852_d in 2:
+		RunState.set_difficulty(0 if r852_d == 0 else 10)
+		var r852_rng := RandomNumberGenerator.new()
+		r852_rng.seed = 852000 + r852_d
+		var r852_cnt := {"battle": 0, "event": 0, "elite": 0, "chest": 0, "shop": 0}
+		var r852_n := 120000
+		for r852_t in r852_n:
+			var r852_got := RogueMap._weighted_far(RogueMap.WEIGHTS_UNKNOWN, r852_rng, 3, 2, 1.0)
+			r852_cnt[r852_got] = int(r852_cnt[r852_got]) + 1
+		var r852_sh := {}
+		for r852_k in r852_cnt:
+			r852_sh[r852_k] = 100.0 * float(r852_cnt[r852_k]) / float(r852_n)
+		r852_shares[r852_d] = r852_sh
+	var r852_s0: Dictionary = r852_shares[0]
+	var r852_s1: Dictionary = r852_shares[1]
+	check(absf(float(r852_s1["shop"]) - float(r852_s0["shop"])) < 0.4,
+			"R852 10 档「?」房商店占比 = 0 档（%.2f%% vs %.2f%%）"
+			% [float(r852_s1["shop"]), float(r852_s0["shop"])])
+	var r852_er: float = float(r852_s1["elite"]) / maxf(0.01, float(r852_s0["elite"]))
+	check(r852_er > 1.22 and r852_er < 1.38,
+			"R852 10 档「?」房精英占比 ≈ ×1.3（%.2f%% → %.2f%%，比值 %.3f）"
+			% [float(r852_s0["elite"]), float(r852_s1["elite"]), r852_er])
+	var r852_pool0: float = float(r852_s0["battle"]) + float(r852_s0["event"]) + float(r852_s0["chest"])
+	var r852_pool1: float = float(r852_s1["battle"]) + float(r852_s1["event"]) + float(r852_s1["chest"])
+	check(r852_pool1 < r852_pool0 - 1.0,
+			"R852 代价只从战斗 / 事件 / 宝箱扣（三类合计 %.2f%% → %.2f%%）" % [r852_pool0, r852_pool1])
 
-			"R380 难度 10：精英 ×1.3 且「?」房不再刷商店")
-
-	check(not RogueMap._unknown_table().has("shop") and RogueMap.WEIGHTS_UNKNOWN.has("shop"),
-
-			"R380 「?」房权重表：10 档裁掉 shop（常量表本身不动）")
-
-
-
-	# ② 实测对拍：同一批种子分别按 0 档 / 10 档生成
-
+	# ③ 实测对拍：同一批种子分别按 0 档 / 10 档生成
 	var r380_elite := [0, 0]        # [0 档, 10 档] 精英格总数
-
 	var r380_qshop := [0, 0]        # 「?」房刷出来的商店格数
-
-	var r380_bad3 := 0              # 10 档里商店 != 3 间的图数
-
+	var r380_shop := [0, 0]         # 全部商店格数（含保底）
 	var r380_maps := [0, 0]
-
 	for r380_layer: int in [GameLayers.LAYER_DEFAULT, GameLayers.LAYER_TWO]:
-
 		for r380_k in 120:
-
 			for r380_d in 2:
-
 				RunState.set_difficulty(0 if r380_d == 0 else 10)
-
 				var r380_rng := RandomNumberGenerator.new()
-
 				r380_rng.seed = 380000 + r380_k * 17 + r380_layer
-
 				var r380_map: Array = RogueMap.generate(r380_rng, r380_layer)
-
 				var r380_ns := 0
-
 				for r380_c: Dictionary in r380_map:
-
 					if RogueMap.is_void(r380_c):
-
 						continue
-
 					var r380_t := str(r380_c.get("type", ""))
-
 					if r380_t == "elite":
-
 						r380_elite[r380_d] += 1
-
 					elif r380_t == "shop":
-
 						r380_ns += 1
-
 						if bool(r380_c.get("hidden", false)):
-
 							r380_qshop[r380_d] += 1
-
 				r380_maps[r380_d] += 1
-
-				if r380_d == 1 and r380_ns != 3:
-
-					r380_bad3 += 1
-
+				r380_shop[r380_d] += r380_ns
 	var r380_ratio: float = float(r380_elite[1]) / maxf(1.0, float(r380_elite[0]))
-
 	check(r380_ratio > 1.15 and r380_ratio < 1.45,
-
 			"R380 实测 %d 张图：10 档精英格 / 0 档 = %.2f（用户口径约 +30%%）"
-
 			% [r380_maps[0] + r380_maps[1], r380_ratio])
+	check(r380_qshop[1] > 0 and r380_qshop[0] > 0,
+			"R852 实测：10 档「?」房照旧刷商店（%d 间 vs 0 档 %d 间）"
+			% [r380_qshop[1], r380_qshop[0]])
+	var r380_avg0: float = float(r380_shop[0]) / float(maxi(1, r380_maps[0]))
+	var r380_avg1: float = float(r380_shop[1]) / float(maxi(1, r380_maps[1]))
+	check(absf(r380_avg1 - r380_avg0) < 0.5,
+			"R852 实测：10 档每层商店数 = 0 档（%.2f vs %.2f 间）" % [r380_avg1, r380_avg0])
 
-	check(r380_qshop[1] == 0 and r380_qshop[0] > 0,
-
-			"R380 实测：10 档「?」房一间商店都不刷（0 档 %d 间）" % r380_qshop[0])
-
-	check(r380_bad3 == 0,
-
-			"R380 实测：10 档每层商店恒 3 间（右上角 1 + 固定 2，%d 张图全中）" % r380_maps[1])
-
-	# ③ 源码锁：难度口径必须从 RunState 读，别在 rogue_map 里写死 1.3
-
+	# ④ 源码锁：难度口径必须从 RunState 读，别在 rogue_map 里写死 1.3
 	var r380_src := FileAccess.get_file_as_string("res://scripts/rogue_map.gd")
-
 	check_src(r380_src.find("RunState.elite_weight_mul()") >= 0
-
-			and r380_src.find("RunState.unknown_shop_allowed()") >= 0,
-
-			"R380 源码：rogue_map 的精英概率 / 「?」房表都读 RunState 的唯一口")
+			and r380_src.find("str(k) == \"shop\"") >= 0,
+			"R852 源码：精英概率读 RunState 唯一口，「?」表对 shop 单列豁免")
 
 	RunState.set_difficulty(0)
 
@@ -61310,6 +61932,170 @@ func _init() -> void:
 			and r384_body.find("p.armor -=") < 0,
 
 			"R384 源码：预览口只读 —— 不扣血、不扣护甲（否则拖牌每帧都在扣）")
+	# ══════════════════════════════════════════════════════════════════
+	# R770：伤害数字的美术规格（scripts/dmg_number.gd）
+	# 纯函数、不碰场景 → 曲线 / 分级 / 配色全在这里直接测；「真的画进 _draw 会不会刷
+	# ERROR」交给 smoke。⚠️ 这些数值是观感的**下限**，不是拟合结果：调曲线时要一起改。
+	# ══════════════════════════════════════════════════════════════════
+	var r770_a0: Dictionary = DmgNumber.anim(0.0)
+	var r770_am: Dictionary = DmgNumber.anim(0.5)
+	var r770_a1: Dictionary = DmgNumber.anim(1.0)
+	check(float(r770_a0["alpha"]) < 0.05,
+			"R770 曲线：t=0 不该立刻全亮（前 4% 是显形段）")
+	check(float(r770_am["alpha"]) > 0.9,
+			"R770 曲线：中段要定住不淡（数字得留在眼前读）")
+	check(float(r770_a1["alpha"]) < 0.02, "R770 曲线：t=1 必须淡尽")
+	# 弹性：开段必须冲过 1 再回落 —— 这是「弹」的全部来源，不冲就只是淡入
+	var r770_peak := 0.0
+	for i in 17:
+		var r770_s: Dictionary = DmgNumber.anim(float(i) / 16.0 * 0.16)
+		r770_peak = maxf(r770_peak, float(r770_s["scale"]))
+	check(r770_peak > 1.15,
+			"R770 曲线：开段要冲过 1.15 再回落（实测峰值 %.2f）" % r770_peak)
+	check(absf(float(r770_am["scale"]) - 1.0) < 0.06, "R770 曲线：中段缩放在 1 附近")
+	check(float(r770_a1["dy"]) < -40.0,
+			"R770 曲线：末帧要飘够高度（实测 %.1f）" % float(r770_a1["dy"]))
+	check(float(DmgNumber.anim(0.9)["dy"]) > float(r770_a1["dy"]),
+			"R770 曲线：上飘必须单调（后段变慢但不回头）")
+	# 分级两道坎：店长口径 **严格大于** 20 / 40 —— 20 仍是普通、40 仍是重击
+	check(DmgNumber.tier_of_amount(20) == DmgNumber.TIER_NORMAL, "R770 分级：20 = 普通（门槛是 >20）")
+	check(DmgNumber.tier_of_amount(21) == DmgNumber.TIER_HEAVY, "R770 分级：21 = 重击")
+	check(DmgNumber.tier_of_amount(40) == DmgNumber.TIER_HEAVY, "R770 分级：40 = 重击（门槛是 >40）")
+	check(DmgNumber.tier_of_amount(41) == DmgNumber.TIER_FATAL, "R770 分级：41 = 致命")
+	check(DmgNumber.tier_of_amount(-45) == DmgNumber.TIER_FATAL, "R770 分级：负数取绝对值")
+	check(DmgNumber.HEAVY_AT == 20 and DmgNumber.FATAL_AT == 40,
+			"R770 分级：两道坎常量必须是 20 / 40（改口径要同改断言与 MEMORY_UI）")
+	check(DmgNumber.size_scale(DmgNumber.TIER_FATAL) > DmgNumber.size_scale(DmgNumber.TIER_HEAVY)
+			and DmgNumber.size_scale(DmgNumber.TIER_HEAVY)
+			> DmgNumber.size_scale(DmgNumber.TIER_NORMAL),
+			"R770 分级：字号倍率必须 普通 < 重击 < 致命")
+	# 判据：只认整串数字，说明文字不许被当成分量
+	check(DmgNumber.is_number_text("-12") and DmgNumber.amount_of_text("-12") == -12,
+			"R770 判据：-12 是伤害数字（负号是**数值**，不是「不是数字」）")
+	check(DmgNumber.is_number_text("+7") and DmgNumber.amount_of_text("+7") == 7,
+			"R770 判据：+7 是治疗数字")
+	check(not DmgNumber.is_number_text("接下 5"), "R770 判据：说明文字不当数字画")
+	check(not DmgNumber.is_number_text("-3 暴击"), "R770 判据：带后缀的不当纯数字")
+	check(not DmgNumber.is_number_text("冰封"), "R770 判据：纯中文不当数字画")
+	check(not DmgNumber.is_number_text("-0"), "R770 判据：-0 不算数字（没有这种伤害）")
+	# 配色：默认红走金白分级；特殊色（中毒绿）必须保留色相 —— 功能性区分不能被吞
+	var r770_pn: Dictionary = DmgNumber.palette(DmgNumber.TIER_NORMAL, UiTheme.SIDE_FOE)
+	var r770_pf: Dictionary = DmgNumber.palette(DmgNumber.TIER_FATAL, UiTheme.SIDE_FOE)
+	check((r770_pn["core"] as Color) != (r770_pf["core"] as Color),
+			"R770 配色：普通与致命必须不同色")
+	check((r770_pn["core"] as Color).v - (r770_pn["edge"] as Color).v > 0.65,
+			"R770 配色：core 与 edge 明度差 > 0.65（成对定，符号才立得住）")
+	var r770_pois := Color("6fbf3a")
+	var r770_pp: Dictionary = DmgNumber.palette(DmgNumber.TIER_NORMAL, r770_pois)
+	var r770_pc: Color = r770_pp["core"]
+	check(absf(r770_pc.h - r770_pois.h) < 0.03,
+			"R770 配色：中毒数字保留毒绿色相（不能被金白吞掉）")
+	check(r770_pc.v > 0.9, "R770 配色：保留色相也要提亮到 v>0.9（暗绿读不出来）")
+	# 源码守卫：飘字与拖卡预览必须共用同一套笔法（两处各写一份必然漂移）
+	var r770_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r770_bs.find("DmgNumber.amount_of_text") >= 0
+			and r770_bs.find("_paint_dmg_number(_font_bold, Vector2.ZERO") >= 0
+			and r770_bs.find("_paint_dmg_number(_font_bold, center") >= 0,
+			"R770 源码：飘字与预览共用 _paint_dmg_number（数字 + 预览两个调用点）")
+	# R770b：说明类飘字改走胶囊徽标 —— 守卫换成新口，且**必须是徽标口**，
+	# 不许顺手把它塞进数字的弹字（说明文字要读，不需要「分量」）。
+	check_src(r770_bs.find("_paint_status_label(_font_bold") >= 0
+			and r770_bs.find("StatusBadge.paint(") >= 0,
+			"R770b 源码：说明类飘字走 _paint_status_label → StatusBadge，不再垫直角方块")
+	# 徽标几何：留白随字号长，且上下小于左右（长条胶囊，不是正方形贴纸）
+	var r770_lm := DmgNumber.label_metrics(20)
+	check(int(r770_lm["pad_x"]) > int(r770_lm["pad_y"]),
+			"R770b 徽标：左右留白 > 上下留白（横向长条）")
+	check(int(r770_lm["pad_y"]) * 2 + 20 < 40,
+			"R770b 徽标：胶囊总高要压得住，别把飘字撑成大块")
+	check(int(r770_lm["outline"]) >= 2, "R770b 徽标：描边至少 2px（笔画才立得住）")
+	# 字面比细边亮、且两者都留色相：冰封的冷色不能被洗成灰白
+	var r770_ink := DmgNumber.label_ink(Color("8ad4f0"))
+	var r770_edg := DmgNumber.label_edge(Color("8ad4f0"))
+	check(r770_ink.v > 0.95 and r770_ink.v - r770_edg.v > 0.15,
+			"R770b 徽标：字面接近全亮、细边明显更暗（边比字亮会抢视线）")
+	check(absf(r770_ink.h - Color("8ad4f0").h) < 0.03,
+			"R770b 徽标：字面保留色相（冰封仍是冷色）")
+
+	# R770c：艺术字徽标 —— 关键词配图案，图案全是矢量画的（不依赖素材）
+	check(StatusBadge.glyph_of("冰封") == StatusBadge.GLYPH_ICE, "R770c 图案：冰封 → 雪晶")
+	check(StatusBadge.glyph_of("中毒 -3") == StatusBadge.GLYPH_POISON,
+			"R770c 图案：中毒 → 毒滴")
+	check(StatusBadge.glyph_of("燃烧 2") == StatusBadge.GLYPH_FLAME,
+			"R770c 图案：燃烧 → 火焰")
+	check(StatusBadge.glyph_of("屏障 5") == StatusBadge.GLYPH_SHIELD,
+			"R770c 图案：屏障 → 盾")
+	check(StatusBadge.glyph_of("治疗 +8") == StatusBadge.GLYPH_HEAL,
+			"R770c 图案：治疗 → 十字")
+	check(StatusBadge.glyph_of("隐藏能源 -3") == StatusBadge.GLYPH_ENERGY,
+			"R770c 图案：能源 → 菱形")
+	check(StatusBadge.glyph_of("眩晕") == StatusBadge.GLYPH_STAR, "R770c 图案：眩晕 → 星")
+	check(StatusBadge.glyph_of("嘲讽") == StatusBadge.GLYPH_TAUNT,
+			"R770c 图案：嘲讽 → 感叹号")
+	check(StatusBadge.glyph_of("接下 5") == StatusBadge.GLYPH_NONE,
+			"R770c 图案：没关键词就 NONE（乱配图案比不配更糟，玩家会读出机制）")
+	# R774：状态特效文字 —— AI 素材 + 数字拼接（取代 R770c 的矢量徽标）
+	# 每个主题都要有对应的状态词素材图，防「登记了关键词但缺图」的静默失败
+	var r774_glyphs: Array = [StatusBadge.GLYPH_ICE, StatusBadge.GLYPH_FLAME,
+			StatusBadge.GLYPH_POISON, StatusBadge.GLYPH_BOLT, StatusBadge.GLYPH_SHIELD,
+			StatusBadge.GLYPH_HEAL, StatusBadge.GLYPH_SWORD, StatusBadge.GLYPH_ENERGY,
+			StatusBadge.GLYPH_SKULL, StatusBadge.GLYPH_STAR, StatusBadge.GLYPH_TAUNT]
+	var r774_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not StatusBadge.WORD_TEX.has(r774_g):
+			r774_missing += str(r774_g) + " "
+	check(r774_missing == "", "R774 素材：每个主题都有状态词图（缺 %s）" % r774_missing)
+	# R774d（店长口径「倒回去用之前共用的伤害数字」）：
+	# 状态飘字里的数字不再贴素材，改由 DmgNumber.paint() 的字体五层笔法绘制。
+	# ① 撤干净：源码里不许再出现数字素材常量（残留 = 还有别的绘制路径在用）
+	var r774d_sb := FileAccess.get_file_as_string("res://scripts/status_badge.gd")
+	check_src(r774d_sb.find("DIGIT_TEX") < 0,
+			"R774d 撤素材：StatusBadge 不再引用 DIGIT_TEX（数字走 DmgNumber 笔法）")
+	# ② 数字委托：状态飘字的数字必须真调 DmgNumber.paint（换回贴图会静默退步）
+	check_src(r774d_sb.find("DmgNumber.paint(") >= 0,
+			"R774d 共用：状态飘字的数字走 DmgNumber.paint（与伤害数字同一实现）")
+	# ③ 解析：中毒 -3 → word(中毒) + gap + num(-3)（整串一段，交给字体排版）
+	var r774_seg := StatusBadge._segments("中毒 -3")
+	check(r774_seg.size() == 3 and str(r774_seg[0]["kind"]) == "word"
+			and int(r774_seg[0]["glyph"]) == StatusBadge.GLYPH_POISON,
+			"R774 解析：中毒 -3 首段是「中毒」状态词")
+	check(str(r774_seg[2]["kind"]) == "num" and str(r774_seg[2]["text"]) == "-3",
+			"R774d 解析：-3 收成一段 num（不再逐字符贴素材）")
+	var r774_seg2 := StatusBadge._segments("接下 5")
+	check(str(r774_seg2[0]["kind"]) == "text" and str(r774_seg2[0]["text"]) == "接下",
+			"R774 解析：没关键词的中文走 font 兜底，不硬套图案")
+	check_src(r770_bs.find("StatusBadge.paint(") >= 0,
+			"R774 源码：说明类飘字委托给 StatusBadge（battle_scene 只留一行）")
+	# R774c：非中文语言统一用英文艺术字（店长口径「以后除了中文版，全用英文版艺术字」）
+	var r774c_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not StatusBadge.WORD_TEX_EN.has(r774_g):
+			r774c_missing += str(r774_g) + " "
+	check(r774c_missing == "", "R774c 素材：每个主题都有英文状态词图（缺 %s）" % r774c_missing)
+	# 英文关键词表覆盖 11 主题（缺关键词，英文飘字会退回 font 中文兜底）
+	var r774c_en_seen := {}
+	for r774_rule: Array in StatusBadge.RULES_EN:
+		r774c_en_seen[int(r774_rule[1])] = true
+	var r774c_en_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not r774c_en_seen.has(r774_g):
+			r774c_en_missing += str(r774_g) + " "
+	check(r774c_en_missing == "", "R774c 关键词：RULES_EN 覆盖 11 主题（缺 %s）" % r774c_en_missing)
+	# 中文 / 英文词表一一对应（word_of 靠它切换，漏一个英文词就会飘空串）
+	var r774c_word_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not StatusBadge.WORD_ZH.has(r774_g) or str(StatusBadge.WORD_ZH[r774_g]) == "":
+			r774c_word_missing += "zh" + str(r774_g) + " "
+		if not StatusBadge.WORD_EN.has(r774_g) or str(StatusBadge.WORD_EN[r774_g]) == "":
+			r774c_word_missing += "en" + str(r774_g) + " "
+	check(r774c_word_missing == "", "R774c 词表：WORD_ZH / WORD_EN 一一对应（缺 %s）" % r774c_word_missing)
+	# 英文素材文件真实存在（路径登记了但文件没进 pck 会在实机静默失败）
+	var r774c_file_missing := ""
+	for r774_g: int in r774_glyphs:
+		if not ResourceLoader.exists(str(StatusBadge.WORD_TEX_EN[r774_g])):
+			r774c_file_missing += str(r774_g) + " "
+	check(r774c_file_missing == "", "R774c 素材：英文状态词图文件真实存在（缺 %s）" % r774c_file_missing)
+
 
 
 
@@ -61783,7 +62569,7 @@ func _init() -> void:
 
 
 
-	# ---- ③ 火墙术：单位上限跟着纸面伤害走（R510 后附魔 +10 → 即时 24 / 经过 17 / 上限 24）----
+	# ---- ③ 火墙术：单位上限跟着纸面伤害走（R787 后附魔 +8 → 即时 22 / 经过 15 / 上限 22）----
 
 	var r387_fw := _new_engine([], 30, 30, -1, false)
 
@@ -61807,7 +62593,7 @@ func _init() -> void:
 
 	var r387_spell := CardData.from_dict(repo.get_card(9084).to_dict())
 
-	r387_spell.power = 10   # 商店附魔「技能伤害 +10」：纸面 14 → 24
+	r387_spell.power = 8    # 商店附魔「技能伤害 +8」：纸面 14 → 22
 
 	r387_fw.state.hand = [r387_spell]
 
@@ -61815,9 +62601,9 @@ func _init() -> void:
 
 	r387_fw.use_spell(0, Vector2i(1, 2))
 
-	check(r387_tank.health == r387_tank_hp - 24,
+	check(r387_tank.health == r387_tank_hp - 22,
 
-			"R387 火墙术：附魔 +10 → 即时 24（%d→%d）" % [r387_tank_hp, r387_tank.health])
+			"R387 火墙术：附魔 +8 → 即时 22（%d→%d）" % [r387_tank_hp, r387_tank.health])
 
 	check(r387_walk.health == r387_walk_hp,
 
@@ -61829,9 +62615,9 @@ func _init() -> void:
 
 	r387_fw.move(Vector2i(2, 0), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r387_walk.health == r387_walk_hp - 17,
+	check(r387_walk.health == r387_walk_hp - 15,
 
-			"R387 火墙术：附魔 +10 → 经过灼烧 17（%d→%d）" % [r387_walk_hp, r387_walk.health])
+			"R387 火墙术：附魔 +8 → 经过灼烧 15（%d→%d）" % [r387_walk_hp, r387_walk.health])
 
 	r387_walk.moved = false
 
@@ -61845,9 +62631,9 @@ func _init() -> void:
 
 	r387_fw.move(Vector2i(2, 1), Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
 
-	check(r387_walk.health == r387_walk_hp - 24,
+	check(r387_walk.health == r387_walk_hp - 22,
 
-			"R387 火墙术：上限 24（14+10）→ 第二次只补 7，合计 -%d（旧版会卡在 14）"
+			"R387 火墙术：上限 22（14+8）→ 第二次只补 7，合计 -%d（旧版会卡在 14）"
 
 			% [r387_walk_hp - r387_walk.health])
 
@@ -63000,9 +63786,9 @@ func _init() -> void:
 	# R718：弹窗那句原来是 `naturalize_card(card)`，排版重做后取的是合并表里的
 	# `card`（`_merged_effects` 的条目），字面串对不上 —— 改成锁「desc 字段由它生成」，
 	# 判据比变量名稳（变量名一改就又假红）。
-	check_src(r702_bs.find("CardText.parse_card(card)") >= 0
+	check_src(r702_bs.find("CardText.parse_card_detail(card)") >= 0
 
-			and r702_bs.find("\"desc\": CardText.naturalize_card(") >= 0,
+			and r702_bs.find("\"desc\": CardText.naturalize_detail(") >= 0,
 
 			"R702/R718 源码：战斗左栏 + 敌方效果弹窗都走 parse_card / naturalize_card")
 
@@ -63012,19 +63798,46 @@ func _init() -> void:
 
 	var r702_cfs := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-	check_src(r702_dvs.find("CardText.naturalize_card(c)") >= 0
+	check_src(r702_dvs.find("CardText.naturalize_detail(c)") >= 0
 
-			and r702_dos.find("CardText.naturalize_card(_card)") >= 0
+			and r702_dos.find("CardText.naturalize_detail(_card)") >= 0
 
-			and r702_cfs.find("CardText.naturalize_card(card") >= 0,
+			and r702_cfs.find("CardText.naturalize_card(card") < 0,
 
-			"R702 源码：卡组浏览 / 详情浮层 / 卡面正文同口径")
+			"R702/R843h 源码：卡组浏览与详情浮层同口径；卡面不再绘制正文")
 
-	# R703：卡面窄 → **不带**括号（多那几个字会挤掉末行），只写当前值
+	# R771（店长报「暗影刺客不少卡牌弹出的详细和卡不匹配」）：详情页必须给**全文**。
+	# 卡面格子小 → 继续藏补注；但「点开看全文」的四处（选卡详情 / 卡组浏览 / 图鉴 / 战斗左栏）
+	# 一律走 `*_detail()` 口 —— 藏掉「（本卡自己造成的不算）」等于换了一套规则。
+	var r771_c: CardData = repo.get_card(9234)
+	check(CardText.naturalize_detail(r771_c).contains("本卡自己造成的不算")
 
-	check_src(r702_cfs.find("CardText.HIDE_PARENS, false)") >= 0,
+			and not CardText.naturalize_card(r771_c).contains("本卡自己造成的不算"),
 
-			"R703 源码：卡面用 with_note=false（只写当前值，括号留给左侧详细面板）")
+			"R771 详情口保留括号补注 / 卡面口仍隐藏")
+	# 「造成第 3 次伤害后」是**次数型触发**，显示层以前把它改写成「时」（提前一次）——
+	# 术语统一不许改语义，这条改写在 R771 撤掉了。
+	check(CardText.naturalize_detail(r771_c).contains("造成第 3 次伤害后")
+
+			and not CardText.naturalize_detail(r771_c).contains("造成第 3 次伤害时"),
+
+			"R771 显示层不再把「…后」改写成「…时」（恐惧收割 9234）")
+	var r771_g := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
+	var r771_cd := FileAccess.get_file_as_string("res://scripts/card_detail_overlay.gd")
+	var r771_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r771_g.find("naturalize_detail_text(") >= 0
+
+			and r771_cd.find("naturalize_detail(_card)") >= 0
+
+			and r771_bs.find("CardText.parse_card_detail(card)") >= 0,
+
+			"R771 源码：图鉴右栏 / 选卡详情 / 战斗左栏都走详情口")
+
+	# R703 的卡面正文已被 R843h 移除；当前值与括号补注仍由详情口承担。
+
+	check_src(r702_cfs.find("CardText.HIDE_PARENS, false)") < 0,
+
+			"R703/R843h 源码：卡面正文已移除，数值与括号留给详细面板")
 
 	# 战斗中击杀 → `growth_damage` 必须同步（只抬 value 的话，面板还印 22）
 
@@ -63877,9 +64690,9 @@ func _init() -> void:
 
 		"R397 量产型赫尔墨斯不成长也不疾行（越拖越强只属于本体 9140）")
 
-	check(r397_carrier.effect_text == "",
+	check(r397_carrier.effect_text == "每回合最多受到 20 点伤害。",
 
-		"R483 量产型赫尔墨斯没有效果 → 卡面不写效果文字（effect_text 为空；卡面绘制 `eff != \"\"` 才起笔）")
+		"R780b 9188 卡面只写「每回合最多受到 20 点伤害」一句（R483 那条「卡面为空」已被取代 —— 它现在有被动，仍没有发动式效果）")
 
 	check(CardFace.art_for(9188) != null,
 
@@ -64067,7 +64880,7 @@ func _init() -> void:
 
 	check(r398_pool.size() == 9,
 
-		"R398 三层精英池 = 第二层 9 关（content_layers [2, 3]；R541 普罗诺亚之影 +1；R449 哈气骑士团下调后 −1、R451 母舰空袭 +1、R502 执法者的审判 +1；**R722 巨炮防线上调精英困难 +1**；实际 %d。**实际抽关只取困难档，见 R506b**）" % r398_pool.size())
+		"R398 三层精英池 = 第二层 9 关（R856 太阳熔炉上调精英简单 +1；content_layers [2, 3]；R778 龙族巢穴移走 / 阿斯克勒庇厄斯降档 −2、计量工坊升档 +1；R541 普罗诺亚之影 +1；R451 母舰空袭 +1、R502 执法者的审判 +1；**R722 巨炮防线上调精英困难 +1**；实际 %d。**实际抽关只取困难档，见 R506b**）" % r398_pool.size())
 
 	# 只剩最后一个没用过 → **必然**挑它（这就是「优先避免重复」）
 
@@ -64105,9 +64918,9 @@ func _init() -> void:
 
 	var r506b_pool: Array[Dictionary] = GameLevels.third_elite_pool()
 
-	check(r506b_pool.size() == 4,
+	check(r506b_pool.size() == 5,
 
-		"R506b 三层精英抽关池 = 第二层精英困难 4 关（R722 巨炮防线加入；实际 %d）" % r506b_pool.size())
+		"R506b 三层精英抽关池 = 第二层精英困难 5 关（R722 巨炮防线 + R778 计量工坊；实际 %d）" % r506b_pool.size())
 
 	var r506b_ok := true
 
@@ -64419,11 +65232,11 @@ func _init() -> void:
 
 			% [r405_hand.health, r405_hand.upgrade_stacks])
 
-	check(r405_repo.get_card(8076).effect_text.contains("手卡")
+	check(r405_repo.get_card(8076).effect_text.contains("手牌")
 
 			and not r405_repo.get_card(8076).effect_text.contains("场上"),
 
-			"R523 卡面：改装者只写「手卡中的盟友」（不再提场上）")
+			"R523 卡面：改装者只写「手牌中的盟友」（不再提场上）")
 
 
 
@@ -64765,7 +65578,7 @@ func _init() -> void:
 
 			and r406_c.effect_text.contains("本回合失去 1 点力量")
 
-			and r406_c.effect_text.contains("随机使手卡一张盟友或工事消失")
+			and r406_c.effect_text.contains("随机使手牌一张盟友或工事消失")
 
 			and r406_c.effect_text.contains("降力")
 
@@ -64779,7 +65592,7 @@ func _init() -> void:
 
 	check(r406_c != null and r406_c.is_damage_spell(),
 
-			"R406 独行：算伤害技能（吃「伤害 +10」附魔资格 —— 文案含「造成」「伤害」）")
+			"R406 独行：算伤害技能（吃「伤害 +8」附魔资格 —— 文案含「造成」「伤害」）")
 
 
 
@@ -64909,11 +65722,11 @@ func _init() -> void:
 
 			"R406 预览：独行不报「现在打出」的数字（用户口径：有随机性不展示最终伤害）")
 
-	r406_lone.power = 10      # 附魔「伤害 +10」烤进 power（确定加成）
+	r406_lone.power = 8       # 附魔「伤害 +8」烤进 power（确定加成）
 
 	check(r406_e.spell_now(r406_lone).is_empty(),
 
-			"R406 预览：哪怕有确定加成（附魔 +10）也不报数 —— 报了就会被当成总伤害")
+			"R406 预览：哪怕有确定加成（附魔 +8）也不报数 —— 报了就会被当成总伤害")
 
 	r406_lone.power = 0
 
@@ -65099,11 +65912,13 @@ func _init() -> void:
 
 			"R410 水晶骰子：不靠括号补注（括号在卡面会被剥掉，等于没写）")
 
+	# R813（店长口径「骰子降为普通道具」）：档位已由传奇改为一般，
+	# 本段原本锁的「仍是传奇」正是要推翻的旧口径 —— 改成一般，锁的仍是「档位没被误改」。
 	check(GameEngine.DICE_RELIC_ID == 6040 and r410_dice != null
 
-			and r410_dice.tier == RelicData.TIER_LEGENDARY,
+			and r410_dice.tier == RelicData.TIER_NORMAL,
 
-			"R410 水晶骰子：仍是传奇道具（这次只改文案）")
+			"R410/R813 水晶骰子：档位是「一般」（R813 由传奇降档）")
 
 
 
@@ -66383,7 +67198,7 @@ func _init() -> void:
 
 			"R458 资格：已经附过魔的卡不能再吃第二个附魔")
 
-	# 数值真的进伤害结算（`_spell_dmg` 是「伤害 +10」与契约核心共用的消费点）
+	# 数值真的进伤害结算（`_spell_dmg` 是「伤害 +8」与契约核心共用的消费点）
 
 	var r458_dmg_e := _new_engine([], 20, 20)
 
@@ -69316,19 +70131,34 @@ func _init() -> void:
 
 		"R504 灵魂收割者：再打一次 → 累到 -2（本局一直累加）")
 
+	# R845（用户口径）：击杀奖励从「生命回满」改成「回复 2 点费用 + 抽 2 张牌」。
 	r504_f_me.health = 5
 
 	r504_f_me.tapped = false
 
 	r504_f_foe.health = 1
 
+	r504_f.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+
+	r504_f.state.deck.append(_card(9096, "回旋斩", "技能", 0, 0, 0, 0, 0))
+
+	var r845_sh_e0 := r504_f.state.energy
+
+	var r845_sh_h0 := r504_f.state.hand.size()
+
 	r504_f.attack(Vector2i(4, 1), Vector2i(3, 1), GameEngine.SIDE_SELF)
 
-	check(r504_f_me.health == r504_reaper.health,
+	check(r504_f.state.energy == r845_sh_e0 + GameEngine.SOUL_REAPER_ENERGY
+			and r504_f.state.hand.size() == r845_sh_h0 + GameEngine.SOUL_REAPER_DRAW,
 
-		"R504 灵魂收割者：击杀单位 → 生命回满（5 → %d / 上限 %d）"
+		"R845 灵魂收割者：击杀 → 费用 +%d、抽 %d 张（费用 %d → %d，手牌 %d → %d）"
 
-			% [r504_f_me.health, r504_reaper.health])
+			% [GameEngine.SOUL_REAPER_ENERGY, GameEngine.SOUL_REAPER_DRAW,
+			r845_sh_e0, r504_f.state.energy, r845_sh_h0, r504_f.state.hand.size()])
+
+	check(r504_f_me.health == 5,
+
+		"R845 灵魂收割者：不再「生命回满」（仍 %d）" % r504_f_me.health)
 
 
 
@@ -70884,7 +71714,7 @@ func _init() -> void:
 
 
 
-	# ④ 沉睡：走 place 的唯一初始化口，2 点；挨打也 -1（与恶魔鸭 9116 完全同一套语义）
+	# ④ 沉睡：走 place 的唯一初始化口，2 点；受到伤害也 -1（与恶魔鸭 9116 完全同一套语义）
 
 	var r539_e := _new_engine([], 40, 40)
 
@@ -70898,16 +71728,18 @@ func _init() -> void:
 
 			"R539 激光炮：开局沉睡 %d 点（走 FieldState.place 的唯一初始化口）" % FieldState.SLEEP_TURNS)
 
+	r539_p1.armor = 0   # R859：先破甲，本段只测「与恶魔鸭共用同一套沉睡语义」
 	r539_e._hit_unit(r539_p1, 3, "测试", true, true)
 
 	check(r539_p1.sleep_left == FieldState.SLEEP_TURNS - 1,
 
-			"R539 激光炮：挨打也 -1（与「沉睡」同语义，没有独立机制）")
+			"R539 激光炮：受到伤害也 -1（与「沉睡」同语义，没有独立机制）")
 
 	var r539_duck := r539_e.state.place(CardData.from_dict(repo.get_card(9116).to_dict()),
 
 			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
 
+	r539_duck.armor = 0
 	r539_e._hit_unit(r539_duck, 3, "测试", true, true)
 
 	check(r539_duck.sleep_left == FieldState.SLEEP_TURNS - 1,
@@ -71219,7 +72051,7 @@ func _init() -> void:
 
 			"R722 界面：提示线只在玩家回合亮（敌方回合没有操作空间，只会挡视线）")
 
-	# ===== R541：二层精英简单「普罗诺亚之影」（9242 + 三种构状体）=====
+	# ===== R541：二层精英简单「普罗诺亚之影」（9242 + 三种构装体）=====
 
 
 
@@ -71251,7 +72083,7 @@ func _init() -> void:
 
 			and r541_siege.traits.has(GameEngine.CONSTRUCT_TRAIT),
 
-			"R541 炮击构状体：15 攻 / 50 血 / 程 3 / 速 1，带「构状体」+「炮击」")
+			"R541 炮击构装体：15 攻 / 50 血 / 程 3 / 速 1，带「构装体」+「炮击」")
 
 	check(r541_shield != null and r541_shield.power == 10 and r541_shield.health == 50
 
@@ -71259,7 +72091,7 @@ func _init() -> void:
 
 			and r541_shield.traits.has(GameEngine.SHIELD_TRAIT),
 
-			"R541 护盾构状体：10 攻 / 50 血 / 程 1 / 速 1，带「护盾」")
+			"R541 护盾构装体：10 攻 / 50 血 / 程 1 / 速 1，带「护盾」")
 
 	check(r541_swift != null and r541_swift.power == 10 and r541_swift.health == 50
 
@@ -71267,7 +72099,7 @@ func _init() -> void:
 
 			and r541_swift.actions == 2 and r541_swift.traits.has(GameEngine.SWIFT_TRAIT),
 
-			"R541 迅捷构状体：10 攻 / 50 血 / 程 1 / 速 2 / actions = 2（一回合行动两次）")
+			"R541 迅捷构装体：10 攻 / 50 血 / 程 1 / 速 2 / actions = 2（一回合行动两次）")
 
 
 
@@ -71369,7 +72201,7 @@ func _init() -> void:
 
 	check(r541_cons != null and r541_cons.card.id == 9243,
 
-			"R541 召唤：盟友最多 → 召出炮击构状体 9243")
+			"R541 召唤：盟友最多 → 召出炮击构装体 9243")
 
 	check(r541_cons != null and r541_cons.acts_left == 1 and r541_cons.acts_total == 1,
 
@@ -71377,7 +72209,7 @@ func _init() -> void:
 
 
 
-	# ⑤ 已有构状体 → 原地变形，保留已受伤害、按新卡重算行动轮
+	# ⑤ 已有构装体 → 原地变形，保留已受伤害、按新卡重算行动轮
 
 	if r541_cons != null:
 
@@ -71393,7 +72225,7 @@ func _init() -> void:
 
 		check(r541_b2.health == 140,
 
-				"R541 变形：已有构状体 → 不再扣自己的生命（仍 %d）" % r541_b2.health)
+				"R541 变形：已有构装体 → 不再扣自己的生命（仍 %d）" % r541_b2.health)
 
 		check(r541_cons.acts_total == 1,
 
@@ -71437,7 +72269,7 @@ func _init() -> void:
 
 	check(r541_e3.state.has_shield_construct(GameEngine.SIDE_OPPONENT),
 
-			"R541 护盾光环：护盾构状体在场 → has_shield_construct 为真")
+			"R541 护盾光环：护盾构装体在场 → has_shield_construct 为真")
 
 	var r541_hp0: int = r541_aura_unit.health
 
@@ -71459,11 +72291,11 @@ func _init() -> void:
 
 	check(not r541_e3.state.has_shield_construct(GameEngine.SIDE_OPPONENT),
 
-			"R541 护盾光环：构状体离场 → 光环立刻失效（实时扫场面，不烤进卡）")
+			"R541 护盾光环：构装体离场 → 光环立刻失效（实时扫场面，不烤进卡）")
 
 
 
-	# ⑦ 炮击构状体：每回合给「力量最高的其他友方」+1（自己除外）
+	# ⑦ 炮击构装体：每回合给「力量最高的其他友方」+1（自己除外）
 
 	var r541_e4 := _new_engine([], 40, 40)
 
@@ -71485,13 +72317,13 @@ func _init() -> void:
 
 	check(r541_g_swift.atk_buff == 1 and r541_g_boss.atk_buff == 0,
 
-			"R541 炮击构状体：+1 落在「力量最高的其他友方」（迅捷 10 → 11，普罗诺亚 8 不动）")
+			"R541 炮击构装体：+1 落在「力量最高的其他友方」（迅捷 10 → 11，普罗诺亚 8 不动）")
 
 	r541_e4._siege_construct_tick(GameEngine.SIDE_OPPONENT)
 
 	check(r541_g_swift.atk_buff == 2 and r541_g_swift.effective_power() == 12,
 
-			"R541 炮击构状体：可叠加、无上限（第二次 +1 → 力量 %d）" % r541_g_swift.effective_power())
+			"R541 炮击构装体：可叠加、无上限（第二次 +1 → 力量 %d）" % r541_g_swift.effective_power())
 
 
 
@@ -71543,7 +72375,7 @@ func _init() -> void:
 
 			and (r541_turn_found[1] as Vector2i).x >= 0,
 
-			"R541 回合挂点：敌方回合开始真的结算了召唤（%d → %d，构状体已就位）" % [
+			"R541 回合挂点：敌方回合开始真的结算了召唤（%d → %d，构装体已就位）" % [
 
 					r541_hp6, r541_turn_boss.health])
 
@@ -71571,7 +72403,7 @@ func _init() -> void:
 
 					< r541_src_gd.find("_pronoia_morph(SIDE_OPPONENT)"),
 
-			"R541 源码：敌方回合开始「先成长、后召唤/变形」（新召出的炮击构状体当回合不吃那一口）")
+			"R541 源码：敌方回合开始「先成长、后召唤/变形」（新召出的炮击构装体当回合不吃那一口）")
 
 	check_src(r541_src_gd.find("old.card = proto") >= 0,
 
@@ -71691,6 +72523,8 @@ func _init() -> void:
 
 	var r543_pending_bak: Array = RunState.pending_rewards.duplicate(true)
 
+	var r543_skipped_bak: Array[int] = RunState.skipped_relics.duplicate()
+
 	# ① 信物记账：与道具分开（gain_key 幂等 / has_key / has_all_keys）
 
 	RunState.key_relics = []
@@ -71727,25 +72561,25 @@ func _init() -> void:
 
 			"R543 上锁：难度 10 不锁、恒可进第三层")
 
-	RunState.set_difficulty(11)
+	RunState.set_difficulty(12)
 
 	check(RunState.third_layer_locked() and RunState.can_enter_third_layer(),
 
-			"R543 上锁：难度 11 上锁、信物齐了才放行")
+			"R543/R862 上锁：难度 12 上锁、信物齐了才放行")
 
 	RunState.key_relics = []
 
 	check(not RunState.can_enter_third_layer(),
 
-			"R543 上锁：难度 11 无信物 → 不能进第三层")
+			"R543/R862 上锁：难度 12 无信物 → 不能进第三层")
 
-	# ③ 大宝箱二选一：难度 ≥ 11 且没种子 → relic_or_key 条目；两条领取路 + 放弃
+	# ③ 大宝箱二选一：难度 ≥ 上锁档且没种子 → relic_or_key 条目；两条领取路 + 放弃
 
 	RunState.key_relics = []
 
 	RunState.pending_rewards = []
 
-	RunState.set_difficulty(11)
+	RunState.set_difficulty(12)
 
 	var r543_bak_gold := RunState.gold
 
@@ -71761,9 +72595,11 @@ func _init() -> void:
 
 			and int(r543_last.get("relic_id", -1)) > 0,
 
-			"R543 大宝箱：难度 11 没种子 → 道具那格变成「道具/生命之种」二选一条目")
+			"R543/R862 大宝箱：难度 12 没种子 → 道具那格变成「道具/生命之种」二选一条目")
 
 	var r543_idx := RunState.pending_rewards.find(r543_last)
+
+	var r543_cand := int(r543_last.get("relic_id", -1))
 
 	check(RunState.claim_key_choice(r543_idx, true)
 
@@ -71772,6 +72608,22 @@ func _init() -> void:
 			and str(r543_last.get("state", "")) == RunState.REWARD_CLAIMED,
 
 			"R543 大宝箱：二选一领种子 → 信物入账、条目置 claimed")
+
+	check(r543_cand > 0 and RunState.skipped_relics.has(r543_cand)
+
+			and not RunState.has_relic(r543_cand),
+
+			"R798 二选一没拿道具也算出现过 → 候选道具登记 skipped_relics（本局不再随机出来）、不入道具栏")
+
+	var r543_tier := RelicData.TIER_NORMAL
+
+	if not RelicRepo.load_json().reward_ids(RelicData.TIER_NORMAL).has(r543_cand):
+
+		r543_tier = RelicData.TIER_LEGENDARY
+
+	check(not RunState._reward_pool(r543_tier, []).has(r543_cand),
+
+			"R798 已出现的候选道具从抽取池里剔除（同一件不会第二次摆上二选一）")
 
 	RunState.key_relics = []
 
@@ -71848,6 +72700,8 @@ func _init() -> void:
 	RunState.relics = r543_relics_bak
 
 	RunState.pending_rewards = r543_pending_bak
+
+	RunState.skipped_relics = r543_skipped_bak
 
 	RunState.gold = r543_bak_gold
 
@@ -72195,9 +73049,9 @@ func _init() -> void:
 
 			"R577 高难度成就门槛 = 难度 5")
 
-	check(SteamAchievements.APEX_DIFF == 11,
+	check(SteamAchievements.APEX_DIFF == 13,
 
-			"R740 巅峰成就门槛 = 难度 11（0~11 共 12 档的最高档）")
+			"R740/R862 巅峰成就门槛 = 难度 13（0~13 共 14 档的最高档）")
 
 	check(SteamAchievements.APEX_DIFF == RunState.DIFFICULTY_COUNT - 1,
 
@@ -72357,11 +73211,11 @@ func _init() -> void:
 
 	check(r580_cm != null and r580_cm.card_name == "猫鼠游戏"
 
-			and r580_cm.is_spell() and r580_cm.cost == 5 and r580_cm.rarity == 0
+			and r580_cm.is_spell() and r580_cm.cost == 4 and r580_cm.rarity == 0
 
 			and r580_cm.card_class == PlayerClass.ROGUE and r580_cm.locked,
 
-			"R580 卡数据：猫鼠游戏 = 5 费普通技能 · 暗影刺客 · locked")
+			"R580 卡数据：猫鼠游戏 = 4 费普通技能 · 暗影刺客 · locked（R846：5 → 4）")
 
 	check(r580_df != null and r580_df.card_name == "黑暗嵌合"
 
@@ -72461,7 +73315,7 @@ func _init() -> void:
 
 	var r580_fb := CardData.from_dict(r580_df.to_dict())
 
-	r580_fb.power = 10   # 商店附魔「伤害 +10」烤进技能卡的 power（R210 口径）
+	r580_fb.power = 8    # 商店附魔「伤害 +8」烤进技能卡的 power（R210 口径）
 
 	var r580_fret := r580_fe._dark_fusion_spell(GameEngine.SIDE_SELF, r580_fb)
 
@@ -72495,9 +73349,9 @@ func _init() -> void:
 
 				"R580 黑暗嵌合：组合产物获得「保存」")
 
-		check(r580_foe.health == r580_hp0 - r580_prev.power - 10,
+		check(r580_foe.health == r580_hp0 - r580_prev.power - 8,
 
-				"R580 黑暗嵌合：对所有敌人造成产物力量值 %d + 附魔 10 点伤害" % r580_prev.power)
+				"R580 黑暗嵌合：对所有敌人造成产物力量值 %d + 附魔 8 点伤害" % r580_prev.power)
 
 		check(r580_df.is_damage_spell(),
 
@@ -72576,6 +73430,7 @@ func _init() -> void:
 	# R584 无限装甲 8038 / 集束炮台 9166 再进两张（6 → 8 / 26 → 28），
 
 	# R589 忒修斯奇械 9222 + 七张素材再进一批（8 → 9 / 28 → 36）。
+	# R775 堡垒 8034 / 影子猫 8006 / 幽灵 8008 / 鸭妈妈 9250 再进四张（9 → 10 / 36 → 40）。
 
 	# 构装体 8026 是白板（不补零件、不进池），由 _open_combo 强制注入当底座。
 
@@ -72585,9 +73440,9 @@ func _init() -> void:
 
 	var r582_all: Array = r582_e0._combo_candidate_cards()
 
-	check(r582_mech.size() == 9 and r582_all.size() == 36,
+	check(r582_mech.size() == 10 and r582_all.size() == 40,
 
-			"R589 扩池：机械之心候选 9 张 / 全角色 36 张（实际 %d / %d）"
+			"R589 扩池：机械之心候选 10 张 / 全角色 40 张（实际 %d / %d）"
 
 			% [r582_mech.size(), r582_all.size()])
 
@@ -72847,11 +73702,11 @@ func _init() -> void:
 
 	var r584_all: Array = r584_e0._combo_candidate_cards()
 
-	# R589 扩池后：机械之心 9 张（忒修斯奇械 9222）/ 全角色 36 张。
+	# R589 扩池后：机械之心 9 张（忒修斯奇械 9222）/ 全角色 36 张。R775 起 10 / 40（堡垒 + 影子猫 + 幽灵 + 鸭妈妈）。
 
-	check(r584_mech.size() == 9 and r584_all.size() == 36,
+	check(r584_mech.size() == 10 and r584_all.size() == 40,
 
-			"R589 扩池：机械之心 9 张 / 全角色 36 张（实际 %d / %d）"
+			"R589 扩池：机械之心 10 张 / 全角色 40 张（实际 %d / %d）"
 
 			% [r584_mech.size(), r584_all.size()])
 
@@ -72911,7 +73766,7 @@ func _init() -> void:
 
 	check(r584_rules.valid_effect(r584_fx)
 
-			and r584_rules.effect_text(r584_fx) == "将1张「升级」加入你的手卡"
+			and r584_rules.effect_text(r584_fx) == "将1张「升级」加入你的手牌"
 
 			and not r584_rules.valid_effect({"type": "add_card", "value": 1})
 
@@ -72935,7 +73790,7 @@ func _init() -> void:
 
 	check(r584_built != null
 
-			and r584_built.effect_text == "每次被改造时：将1张「升级」加入你的手卡",
+			and r584_built.effect_text == "每次被改造时：将1张「升级」加入你的手牌",
 
 			"R584：产物卡面 = 扳机 + 加卡文案")
 
@@ -73081,7 +73936,7 @@ func _init() -> void:
 
 	check(r586_rel != null and r586_rel.relic_name == "正义背刺"
 
-			and str(r586_rel.desc).contains("对满血的敌人伤害加倍")
+			and str(r586_rel.desc).contains("满血敌方单位造成的伤害加倍")
 
 			and r586_rel.locked and r586_rel.tier == "一般",
 
@@ -73383,6 +74238,51 @@ func _init() -> void:
 	_test_r761()
 	_test_r762()
 	_test_r763()
+
+	_test_r766()
+	_test_r769()
+
+	_test_r773()
+	_test_r777()
+	_test_r777b()
+	_test_r776()
+	_test_r767()
+	_test_r781()
+	_test_r792()
+	_test_r793()
+	_test_r793s()
+	_test_r794()
+	_test_r796()
+	_test_r797()
+	_test_r799()
+	_test_r800()
+	_test_r805()
+	_test_r806()
+	_test_r807()
+	_test_r809()
+	_test_r810()
+	_test_r811()
+	_test_r814()
+	_test_r817()
+	_test_r819()
+	_test_r822()
+	_test_r825()
+
+	_test_r824()
+	_test_r826()
+	_test_r829()
+	_test_r830()
+	_test_r835()
+	_test_r832()
+	_test_r833()
+	_test_r842()
+	_test_r844()
+	_test_r845()
+	_test_r846()
+	_test_r847()
+	_test_r851()
+	_test_r856()
+	_test_r857()
 
 	print("== 结果：", "全部通过" if fails == 0 else "%d 项失败" % fails, " ==")
 
@@ -73951,7 +74851,7 @@ func _test_r593() -> void:
 
 	check(r593_rel != null and r593_rel.relic_name == "机械臂"
 
-			and r593_rel.desc == "每次战斗开始，把一张随机盟友加入你的手卡，本回合费用-1。"
+			and r593_rel.desc == "每次战斗开始，将一张随机盟友加入手牌，本回合费用-1。"
 
 			and r593_rel.locked and r593_rel.tier == "一般" and r593_rel.source == "奖励",
 
@@ -74613,7 +75513,8 @@ func _test_r592b() -> void:
 
 			and is_equal_approx(slot.size.x, want_d)
 
-			and is_equal_approx(slot.size.x, 2.0 * UiTheme.CARD_BADGE_R * kc),
+			# R843i：badge_radius 统一缩到 78%，槽位直径同步（半径唯一口不变）。
+			and is_equal_approx(slot.size.x, 2.0 * UiTheme.CARD_BADGE_R * kc * 0.78),
 
 			"R592e：槽位是正方形、直径 = 费用徽章（实际 %s / 期望 %.2f）"
 
@@ -74779,7 +75680,7 @@ func _test_r592b() -> void:
 
 	var cfs := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-	check_src(cfs.contains('var affix_txt: String = ""'),
+	check_src(not cfs.contains("var affix_txt") and not cfs.contains("meta_b"),
 
 			"R592b：文字区不再把字段名拼进「种类 · 字段」那行")
 
@@ -75072,7 +75973,7 @@ func _test_r592b() -> void:
 
 			"R638：带「保存」附魔的复制品回合结束照旧消失（衍生物优先于留手）")
 
-	# ④ 复制术 9165：复制场上带「伤害 +10」附魔的盟友 → 复制品回到原攻击力
+	# ④ 复制术 9165：复制场上带「伤害 +8」附魔的盟友 → 复制品回到原攻击力
 
 	var r621_dup_e := _new_engine([], 20, 20)
 
@@ -75082,11 +75983,11 @@ func _test_r592b() -> void:
 
 	var r621_base_power := r621_dp.power
 
-	r621_dp.power += 10
+	r621_dp.power += 8
 
 	r621_dp.enchant = "damage"
 
-	r621_dp.effect_text += "\n【附魔】伤害 +10"
+	r621_dp.effect_text += "\n【附魔】伤害 +8"
 
 	r621_dup_e.state.place(r621_dp, Vector2i(4, 1), GameEngine.SIDE_SELF)
 
@@ -75165,8 +76066,8 @@ func _test_r592b() -> void:
 	var r633_res := RunState.duplicate_deck_cards(r621_repo, [0])
 	check(r633_res["ok"] and RunState.deck_ids.size() == r633_before + 1
 			and RunState.enchant_id_of(RunState.deck_mods[3]) == "damage"
-			and int((RunState.deck_mods[3] as Dictionary).get("power", 0)) == 10,
-			"R636 鸭血：复制品完整继承附魔（damage → 副本也 +10 攻）")
+			and int((RunState.deck_mods[3] as Dictionary).get("power", 0)) == 8,
+			"R636 鸭血：复制品完整继承附魔（damage → 副本也 +8 攻）")
 	# ② 卡组实例化后，原卡与副本的附魔数值 / 标记必须一致（展示层同一个口）
 	var r633_a: CardData = RunState.card_with_mod(r621_repo, 0)
 	var r633_b: CardData = RunState.card_with_mod(r621_repo, 3)
@@ -75176,9 +76077,9 @@ func _test_r592b() -> void:
 			"R636 鸭血：原卡与副本的附魔数值 / 标记一致")
 	# ③ deep 拷贝：改副本的 mod 不许污染原卡
 	(RunState.deck_mods[3] as Dictionary)["power"] = 99
-	check(int((RunState.deck_mods[0] as Dictionary).get("power", 0)) == 10,
+	check(int((RunState.deck_mods[0] as Dictionary).get("power", 0)) == 8,
 			"R636 鸭血：副本附魔是 deep 拷贝（改副本不污染原卡）")
-	(RunState.deck_mods[3] as Dictionary)["power"] = 10
+	(RunState.deck_mods[3] as Dictionary)["power"] = 8
 	# ④ deck_mods 与 deck_ids 不等长（读档 / 演示路径）→ 先对齐再取附魔，不许崩 / 错位
 	RunState.deck_ids = [8001]
 	RunState.deck_mods = []
@@ -75256,8 +76157,20 @@ func _test_r592b() -> void:
 	# ② 源码锁：锁挂在版本闸门上；顶栏也不再报未解锁张数
 	var r753_gs_src := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
 	check_src(r753_gs_src.contains("static func gallery_locked(")
-			and r753_gs_src.contains("return gallery_locked(c, GameBuild.is_release())"),
-			"R753 源码锁：`_locked()` 走 `gallery_locked(c, GameBuild.is_release())`")
+			and r753_gs_src.contains("return gallery_locked(c, GameBuild.is_published())"),
+			"R753/R848 源码锁：`_locked()` 走 `gallery_locked(c, GameBuild.is_published())`（试玩版同口径）")
+
+	# ---- R848（店长口径「试玩版在图鉴机制上要和发布版一致」）----
+	# 判据：`is_published()` = 发布版 ∪ 试玩版；图鉴的收录 / 锁 / 收集分母都挂在它上面。
+	var r848_gs = preload("res://scripts/gallery_scene.gd")
+	GameBuild.set_test_demo(1)
+	check(GameBuild.is_published() and not GameBuild.is_release(),
+			"R848 判据：试玩版算「面向玩家的成品包」，且不冒充发布版")
+	check(not r848_gs.gallery_visible(r642_new_card, GameBuild.is_published()),
+			"R848 判据：试玩版图鉴同样「没见过就没有条目」（与发布版一致）")
+	GameBuild.set_test_demo(-1)
+	check(not GameBuild.is_published(),
+			"R848 复位：测试版不是成品包（图鉴全解锁）")
 	check_src(not r753_gs_src.contains("GALLERY_SUMMARY_LOCKED"),
 			"R753 源码锁：测试版顶栏不再报未解锁张数")
 
@@ -75610,8 +76523,8 @@ func _test_r675() -> void:
 			and ResourceLoader.exists(FxArt.path_of(FxArt.BOLT))
 			and FxArt.tex(FxArt.BOLT) != null,
 			"R675：闪电有专属素材（bx_bolt.png，可解码）")
-	check(FxArt.all_names().has(FxArt.BOLT) and FxArt.all_names().size() == 11,
-			"R675：bx_ 清单已含 bolt 共 11 张（少了就是素材没落盘）")
+	check(FxArt.all_names().has(FxArt.BOLT) and FxArt.all_names().size() == 12,
+			"R675：bx_ 清单已含 bolt 共 12 张（少了就是素材没落盘）")
 	var r675_arms: Array[String] = ["fear_projection", "fear_incarnate",
 			"harvest_hit", "armor_gain"]
 	var r675_arm_miss: Array[String] = []
@@ -75701,8 +76614,8 @@ func _test_r679() -> void:
 			and ResourceLoader.exists(FxArt.path_of(FxArt.POISON))
 			and FxArt.tex(FxArt.POISON) != null,
 			"R679：中毒借用毒瓶那张毒绿（trap_fx_7003，可解码）")
-	check(not FxArt.all_names().has(FxArt.POISON) and FxArt.all_names().size() == 11,
-			"R679：POISON 不进 bx_ 清单（仍 11 张，别名混进来会撑爆 R670 断言）")
+	check(not FxArt.all_names().has(FxArt.POISON) and FxArt.all_names().size() == 12,
+			"R679：POISON 不进 bx_ 清单（仍 12 张，别名混进来会撑爆 R670 断言）")
 	check_src(r679_bs.contains("\t\t\"中毒\":")
 			and FileAccess.get_file_as_string("res://scripts/game_engine.gd").contains("\"中毒\""),
 			"R679：中毒进机制表，且名字与引擎 source 字面量一致")
@@ -75713,8 +76626,8 @@ func _test_r679() -> void:
 			"R679：中毒的掉血数字也换毒绿（`fx_hit` 原本一律写死 SIDE_FOE，"
 			+ "只改 `fi_col` 是改不到数字的）")
 	check_src(r679_bs.contains("\t\t\"soul_harvest\":")
-			and r679_bs.contains("↑ 回满 %d"),
-			"R679：灵魂收割者从「零臂」变成有演出（暗影图 + 回满飘字）")
+			and r679_bs.contains("+%d 费 抽%d"),
+			"R679/R845：灵魂收割者击杀有演出（暗影图 + 「+2 费 抽2」飘字）")
 	check_src(r679_bs.contains("_fx_push_cell(FxArt.BLAST, rs_cell, rs_at, BATTLE_FX_MS, 124.0)"),
 			"R679：折射炮流弹补了命中爆点")
 	check_src(r679_bs.contains("_fx_push_cell(FxArt.SKILL_SHADOW, hd_t, n, BATTLE_FX_MS, 132.0)"),
@@ -76074,15 +76987,15 @@ func _test_r679() -> void:
 
 	check(str(r758_lvl["key"]) == "metrology_works"
 
-			and int(r758_lvl["tier"]) == GameLevels.TIER_NORMAL_HARD
+			and int(r758_lvl["tier"]) == GameLevels.TIER_ELITE_HARD
 
 			and int(r758_lvl["layer"]) == GameLayers.LAYER_TWO
 
 			and r758_units.size() == 3,
 
-			"R758 计量工坊：二层普通困难关卡，三只单位")
+			"R758 计量工坊：二层精英困难关卡（R778 由普通困难升档），三只单位")
 
-	check(int(r758_units[0][0]) == 9260 and int(r758_units[0][3]) == 60
+	check(int(r758_units[0][0]) == 9260 and int(r758_units[0][3]) == 80
 
 			and (r758_units[0][6] as Vector2i) == Vector2i(0, 1)
 
@@ -76094,7 +77007,7 @@ func _test_r679() -> void:
 
 			and (r758_units[2][6] as Vector2i) == Vector2i(2, 1),
 
-			"R758 计量工坊：后排 0/60 常数测量员 · 中排 6/60 速2 精密计算者 · 前排 4/60 负载增量员")
+			"R758 计量工坊：后排 0/80 常数测量员 · 中排 6/80 速2 精密计算者 · 前排 4/80 负载增量员（R778 统一 60→80）")
 
 	# ⑧ 三套机制一律按 trait 判（不认 id）：换了 id、trait 还在，机制照跑。
 
@@ -76191,12 +77104,14 @@ func _test_r761() -> void:
 			r761_reward_bad.append(c2.id)
 	check(r761_reward_bad.is_empty(),
 			"R761 卡池：奖励池同样不含（异常 %s）" % str(r761_reward_bad))
+	# R773：呼唤 9266 是 rarity 0 的**普通卡** → 它本来就该在 include_hidden 里
+	#（吟游诗人本人开局要抽得到自己的新卡）。所以这道闸改成「不许 rarity>2 的隐藏卡」。
 	var r761_hidden_in_all: Array = []
 	for c3: CardData in r761_repo.obtainable_cards(true):
-		if PlayerClass.is_hidden_class(c3.card_class):
+		if PlayerClass.is_hidden_class(c3.card_class) and c3.rarity > 2:
 			r761_hidden_in_all.append(c3.id)
 	check(r761_hidden_in_all.is_empty(),
-			"R761 卡池：连 include_hidden 也进不去 —— 初始卡 rarity 3 是第二道闸")
+			"R761 卡池：include_hidden 里也不许混进 rarity>2 的隐藏职业卡（初始卡是第二道闸）")
 
 	# ⑤ 图鉴查不到（发布 / 测试两种模式都 false，与「见过没见过」无关）
 	check(not r761_gs.gallery_visible(r761_duck, false)
@@ -76350,6 +77265,627 @@ func _test_r761() -> void:
 	RunState.run_active = r761_sv_active
 
 
+# ================= R773：吟游诗人「呼唤」9266 =================
+# 店长口径（原话）：
+#   「0费。这张卡使用后，本局费用＋1。将一张随机比这张卡费用高1的其他职业盟友加入手卡，
+#    其费用本局变成0。」
+# 落地口径：
+#   * 「本局」按项目术语 = **本场战斗内**（跨回合、跨层不成立）→ 费用上限记在
+#     `_battle_energy_bonus`（引擎实例字段，一场一个引擎 → 自然复位），
+#     `_begin_turn` 发费与 `max_energy()` 分母同一口径；
+#   * 「比这张卡费用高 1」读**卡面费用**（`card.cost`，不是 `cost_of()`）—— 减费 / 免费
+#     不该改变这条判据；本卡 0 费 → 找 1 费；
+#   * 「其他职业盟友」唯一判据 `_other_class_card()`（有归属 + 不是自己；公用卡不算）；
+#   * 「其费用本局变成 0」复用 `state.hand_free`（判据带 `state.hand.has`）→ 离手自动恢复原价。
+func _test_r773() -> void:
+	var r773_gs = preload("res://scripts/gallery_scene.gd")
+	var r773_repo := CardRepo.load_json()
+	var r773_call: CardData = r773_repo.get_card(9266)
+	var r773_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r773_sv_spent: Array[int] = RunState.spent_relics.duplicate()
+	var r773_sv_active: bool = RunState.run_active
+	var r773_sv_class: String = RunState.player_class
+	RunState.run_active = false   # 测试里打的牌不许写进玩家成就统计
+	# 本卡的真实场景只有一种：玩家是吟游诗人（隐藏职业）。`_other_class_card()` 读的就是
+	# `RunState.player_class`，所以整段测试都钉在这个身份上，否则测出来的不是真实行为。
+	RunState.player_class = PlayerClass.BARD
+	RunState.relics = []
+	RunState.spent_relics = []
+
+	# ① 数据
+	check(r773_call != null and r773_call.card_name == "呼唤"
+			and r773_call.kind == "技能" and r773_call.cost == 0
+			and r773_call.rarity == 0 and r773_call.card_class == PlayerClass.BARD
+			and r773_call.target_mode == "none",
+			"R773 数据：呼唤 9266 = 吟游诗人 0 费普通技能（rarity 0）")
+	if r773_call == null:
+		RunState.relics = r773_sv_relics
+		RunState.spent_relics = r773_sv_spent
+		RunState.run_active = r773_sv_active
+		RunState.player_class = r773_sv_class
+		return
+	check(r773_call.color == "水风"
+			and r773_call.effect_text.contains("费用本局 +1")
+			and r773_call.effect_text.contains("其他职业盟友"),
+			"R773 数据：卡色水风（与杜鹃 / 招募同族）、卡面两条效果都写了")
+
+	# ② 隐藏职业口径不因「普通稀有度」而破
+	check(not r773_gs.gallery_visible(r773_call, false)
+			and not r773_gs.gallery_visible(r773_call, true),
+			"R773 隐藏：普通稀有度也不进图鉴（判据在职业，不在稀有度）")
+	var r773_in_default := false
+	for c0: CardData in r773_repo.obtainable_cards():
+		if c0.id == 9266:
+			r773_in_default = true
+	check(not r773_in_default,
+			"R773 卡池：默认可获得池不含 9266（三个可见职业抽不到）")
+	var r773_in_hidden := false
+	for c1: CardData in r773_repo.obtainable_cards(true):
+		if c1.id == 9266:
+			r773_in_hidden = true
+	check(r773_in_hidden,
+			"R773 卡池：include_hidden 含 9266 —— 吟游诗人本人开局抽得到")
+	var r773_bard_has := false
+	for c2: CardData in r773_repo.reward_pool_for(PlayerClass.BARD):
+		if c2.id == 9266:
+			r773_bard_has = true
+	check(r773_bard_has,
+			"R773 卡池：吟游诗人的奖励池含 9266（进得去才玩得到）")
+
+	# ③ 随机源：只出「1 费 + 其他职业 + 盟友」
+	var r773_probe := _new_engine([], 20, 20, -1, false)
+	var r773_bad: Array = []
+	var r773_cls_seen := {}
+	for _i in range(200):
+		var pick := r773_probe._random_call_ally(r773_call)
+		if pick == null:
+			r773_bad.append("null")
+			continue
+		r773_cls_seen[pick.card_class] = true
+		if pick.kind != "盟友" or pick.cost != 1 \
+				or pick.card_class == PlayerClass.BARD or pick.card_class == "":
+			r773_bad.append(pick.id)
+	check(r773_bad.is_empty(),
+			"R773 随机源：200 抽全是 1 费其他职业盟友（异常 %s）" % str(r773_bad))
+	check(r773_cls_seen.size() >= 2,
+			"R773 随机源：三个职业都摇得到（本次出现 %s）" % str(r773_cls_seen.keys()))
+	# 判据读的是**玩家当前职业**，不是在库里给呼唤定性 —— 所以两种身份都要验。
+	# （_random_call_ally 也靠它排除「自己家」的卡，这里顺带把测试前提钉死。）
+	RunState.player_class = PlayerClass.BARD
+	check(not r773_probe._other_class_card(r773_call),
+			"R773 判据：吟游诗人自己手里，呼唤不算「其他职业卡」")
+	RunState.player_class = PlayerClass.DRUID
+	check(r773_probe._other_class_card(r773_call),
+			"R773 判据：换成森林精魄，呼唤就是「其他职业卡」（判据读当前职业）")
+	RunState.player_class = PlayerClass.BARD
+
+	# ④ 打出第一张：当回合费用 +1、上限 +1、入手那张费用归 0
+	var r773_d1: Array[CardData] = []
+	r773_d1.append(r773_call)
+	r773_d1.append(r773_call)
+	var r773_e := _new_engine(r773_d1, 20, 20, -1, false)
+	r773_e.start_game(1)
+	r773_e.state.energy = 3
+	var r773_base_cap := r773_e.max_energy()
+	var r773_hand_before: int = r773_e.state.hand.size()
+	r773_e.use_spell(_find(r773_e.state.hand, 9266))
+	check(r773_e.state.energy == 4 and r773_e._battle_energy_bonus == 1,
+			"R773 打出：0 费技能不扣费、本局费用 +1（3 → %d，累计 %d）"
+			% [r773_e.state.energy, r773_e._battle_energy_bonus])
+	check(r773_e.max_energy() == r773_base_cap + 1,
+			"R773 打出：费用上限同步 +1（%d → %d）"
+			% [r773_base_cap, r773_e.max_energy()])
+	check(r773_e.state.hand.size() == r773_hand_before,
+			"R773 打出：手牌数不变（打出 1 张、入手 1 张）")
+	var r773_got: CardData = null
+	for c3: CardData in r773_e.state.hand:
+		if r773_e.state.hand_free.has(c3):
+			r773_got = c3
+	check(r773_got != null and r773_got.kind == "盟友" and r773_got.cost == 1
+			and r773_got.card_class != PlayerClass.BARD and r773_got.card_class != "",
+			"R773 打出：入手的盟友是 1 费其他职业（%s）"
+			% (r773_got.card_name if r773_got != null else "无"))
+	if r773_got != null:
+		check(r773_e.cost_of(r773_got) == 0,
+				"R773 打出：那张盟友本局费用为 0（卡面 %d 费）" % r773_got.cost)
+		check(r773_e.state.hand.has(r773_got),
+				"R773 打出：它真在手牌里（归零判据靠 hand.has）")
+
+	# ⑤ 叠层：第二张再 +1
+	r773_e.use_spell(_find(r773_e.state.hand, 9266))
+	check(r773_e.state.energy == 5 and r773_e._battle_energy_bonus == 2,
+			"R773 叠加：第二张呼唤 → 本局费用再 +1（累计 %d）" % r773_e._battle_energy_bonus)
+	check(r773_e.max_energy() == r773_base_cap + 2,
+			"R773 叠加：上限跟着累计走（%d）" % r773_e.max_energy())
+
+	# ⑥ 「本局」的成色：新回合发费带加成、hand_free 不清（与 turn_free 的回合制相反）
+	var r773_next_expected: int = RunState.energy_per_turn() + 2
+	r773_e.state.energy = 0
+	r773_e._begin_turn(GameEngine.SIDE_SELF)
+	check(r773_e.state.energy == r773_next_expected,
+			"R773 本局：新回合发费 = 基础 %d + 累计 2（实际 %d）"
+			% [RunState.energy_per_turn(), r773_e.state.energy])
+	check(r773_e.max_energy() == r773_next_expected,
+			"R773 本局：上限与实发同一口径（%d）" % r773_e.max_energy())
+	if r773_got != null:
+		check(r773_e.state.hand_free.has(r773_got) and r773_e.cost_of(r773_got) == 0,
+				"R773 本局：跨回合仍是 0 费（hand_free 不在回合结束清空）")
+
+	# ⑦ 离手即恢复原价（归零只认「此刻还在手牌里」）
+	if r773_got != null:
+		r773_e.state.hand.erase(r773_got)
+		check(r773_e.cost_of(r773_got) == r773_got.cost,
+				"R773 离手：不在手牌里就恢复卡面费用（%d）" % r773_e.cost_of(r773_got))
+
+	# ⑧ 空池自愈：卡池里没有 1 费其他职业盟友时，费用照给、效果落空（不炸）
+	var r773_d2: Array[CardData] = []
+	r773_d2.append(r773_call)
+	var r773_e2 := _new_engine(r773_d2, 20, 20, -1, false)
+	r773_e2.start_game(1)
+	r773_e2.state.energy = 2
+	var r773_none := r773_e2._random_call_ally(_card(19999, "零费探针", "技能", 89, 0, 0))
+	check(r773_none == null,
+			"R773 空池：费用 +89 找不到对应盟友 → 返回 null（不是随便塞一张）")
+	r773_e2.use_spell(_find(r773_e2.state.hand, 9266))
+	check(r773_e2.state.energy == 3 and r773_e2._battle_energy_bonus == 1,
+			"R773 空池：效果落空但费用照给（2 → %d）" % r773_e2.state.energy)
+
+	# ⑨ 三语：en / ja 都要真有译文（R702 / R718 都踩过「改了中文忘同步 → 静默掉回中文」）。
+	# 判据读显示层输出（`CardText.naturalize_card`），不是查 json 里有没有这个键。
+	var r773_lang_bak: String = GameSettings.language
+	GameSettings.language = "en"
+	GameI18n.reset_cache()
+	var r773_en: String = CardText.naturalize_card(r773_call)
+	GameSettings.language = "ja"
+	GameI18n.reset_cache()
+	var r773_ja: String = CardText.naturalize_card(r773_call)
+	GameSettings.language = r773_lang_bak
+	GameI18n.reset_cache()
+	check(r773_en.find("Energy") >= 0 and r773_en.find("Ally") >= 0
+			and r773_en.find("费用") < 0 and r773_en.find("盟友") < 0,
+			"R773 译文：en 下卡名与效果都是英文（%s）" % r773_en.replace("\n", " ").left(40))
+	check(r773_ja.find("戦闘") >= 0 and r773_ja.find("味方") >= 0
+			and r773_ja.find("费用") < 0 and r773_ja.find("盟友") < 0,
+			"R773 译文：ja 下卡名与效果都是日文（%s）" % r773_ja.replace("\n", " ").left(40))
+
+	# 收尾还原
+	RunState.relics = r773_sv_relics
+	RunState.spent_relics = r773_sv_spent
+	RunState.run_active = r773_sv_active
+	RunState.player_class = r773_sv_class
+
+
+# ================= R777：吟游诗人「彩虹诗」9269 =================
+# 店长口径（原话）：
+#   「2费，从随机3个不同其他职业的盟友或技能卡中各随机一张加入手卡，
+#    并使这些卡本局费用-1。」
+# 落地口径：
+#   * 「随机 3 个不同**其他职业**」= `PlayerClass.ids()` 去掉玩家当前职业后洗牌取前 3 ——
+#     隐藏职业（吟游诗人）天然不在 ids() 里，所以非吟游诗人永远摇不到它那几张；
+#   * 「盟友或技能卡」= kind 二选一，工事 / 效果 / 诅咒一律不进；
+#   * 「本局费用 -1」= `state.hand_cost_delta`（手卡内减费唯一口径）：表在 FieldState 上，
+#     一场战斗一个 → 跨回合有效、新战斗自然复位；**不是** `hand_free`（那是归 0 且不可叠）。
+func _test_r777() -> void:
+	var r777_gs = preload("res://scripts/gallery_scene.gd")
+	var r777_repo := CardRepo.load_json()
+	var r777_card: CardData = r777_repo.get_card(9269)
+	var r777_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r777_sv_spent: Array[int] = RunState.spent_relics.duplicate()
+	var r777_sv_active: bool = RunState.run_active
+	var r777_sv_class: String = RunState.player_class
+	RunState.run_active = false   # 测试里打的牌不许写进玩家成就统计
+	RunState.player_class = PlayerClass.BARD
+	RunState.relics = []
+	RunState.spent_relics = []
+
+	# ① 数据
+	check(r777_card != null and r777_card.card_name == "彩虹诗"
+			and r777_card.kind == "技能" and r777_card.cost == 2
+			and r777_card.rarity == 1
+			and r777_card.card_class == PlayerClass.BARD
+			and r777_card.target_mode == "none",
+			"R777 数据：彩虹诗 9269 = 吟游诗人 2 费稀有技能（rarity 1）")
+	if r777_card == null:
+		RunState.relics = r777_sv_relics
+		RunState.spent_relics = r777_sv_spent
+		RunState.run_active = r777_sv_active
+		RunState.player_class = r777_sv_class
+		return
+	check(r777_card.color == "水风"
+			and r777_card.effect_text.contains("3 个不同其他职业")
+			and r777_card.effect_text.contains("费用本局 -1"),
+			"R777 数据：卡色水风（与杜鹃 / 招募 / 呼唤同族）、卡面写明 3 个职业与 -1")
+
+	# ② 隐藏职业口径：与呼唤同一套（图鉴 / 默认池都不进）
+	check(not r777_gs.gallery_visible(r777_card, false)
+			and not r777_gs.gallery_visible(r777_card, true),
+			"R777 隐藏：吟游诗人卡不进图鉴（判据在职业，不在稀有度）")
+	var r777_in_default := false
+	for c0: CardData in r777_repo.obtainable_cards():
+		if c0.id == 9269:
+			r777_in_default = true
+	check(not r777_in_default,
+			"R777 卡池：默认可获得池不含 9269（三个可见职业抽不到）")
+	var r777_bard_has := false
+	for c1: CardData in r777_repo.reward_pool_for(PlayerClass.BARD):
+		if c1.id == 9269:
+			r777_bard_has = true
+	check(r777_bard_has, "R777 卡池：吟游诗人的奖励池含 9269（进得去才玩得到）")
+
+	# ③ 随机源：200 抽 —— 每次 ≤3 张、职业互不相同、都不是自己家、只出盟友 / 技能
+	var r777_probe := _new_engine([], 20, 20, -1, false)
+	var r777_bad: Array = []
+	var r777_cls_seen := {}
+	var r777_kind_seen := {}
+	var r777_full3 := 0
+	for _i77 in range(200):
+		var lst := r777_probe._roll_rainbow_cards()
+		if lst.size() > 3:
+			r777_bad.append("超量 %d" % lst.size())
+		if lst.size() == 3:
+			r777_full3 += 1
+		var seen := {}
+		for c2: CardData in lst:
+			if seen.has(c2.card_class):
+				r777_bad.append("同职业重复 %d" % c2.id)
+			seen[c2.card_class] = true
+			r777_cls_seen[c2.card_class] = true
+			r777_kind_seen[c2.kind] = true
+			if c2.card_class == PlayerClass.BARD or c2.card_class == "":
+				r777_bad.append("串职业 %d" % c2.id)
+			if c2.kind != "盟友" and c2.kind != "技能":
+				r777_bad.append("卡种 %s" % c2.kind)
+	check(r777_bad.is_empty(),
+			"R777 随机源：200 抽全是「不同其他职业的盟友 / 技能」（异常 %s）"
+			% str(r777_bad.slice(0, 5)))
+	check(r777_full3 == 200,
+			"R777 随机源：三个可见职业时每抽都给满 3 张（%d / 200）" % r777_full3)
+	check(r777_cls_seen.size() == 3,
+			"R777 随机源：三个职业都摇得到（本次 %s）" % str(r777_cls_seen.keys()))
+	check(r777_kind_seen.has("盟友") and r777_kind_seen.has("技能"),
+			"R777 随机源：盟友与技能卡都摇得到（本次 %s）" % str(r777_kind_seen.keys()))
+
+	# ④ 只有两个其他职业时给 2 张（不硬凑第 3 张，也不跨到隐藏职业）
+	RunState.player_class = PlayerClass.DRUID
+	var r777_two := r777_probe._roll_rainbow_cards()
+	var r777_two_bad := false
+	for c3: CardData in r777_two:
+		if c3.card_class == PlayerClass.DRUID or c3.card_class == PlayerClass.BARD:
+			r777_two_bad = true
+	check(r777_two.size() == 2 and not r777_two_bad,
+			"R777 少职业：森林精魄视角只有 2 个其他职业 → 给 2 张（实得 %d）"
+			% r777_two.size())
+	RunState.player_class = PlayerClass.BARD
+
+	# ⑤ 打出：2 费照扣、3 张入手、各自费用本局 -1
+	var r777_deck: Array[CardData] = []
+	r777_deck.append(r777_card)
+	var r777_e := _new_engine(r777_deck, 20, 20, -1, false)
+	r777_e.start_game(1)
+	r777_e.state.energy = 5
+	var r777_hand_before: int = r777_e.state.hand.size()
+	r777_e.use_spell(_find(r777_e.state.hand, 9269))
+	check(r777_e.state.energy == 3,
+			"R777 打出：2 费照扣（5 → %d）" % r777_e.state.energy)
+	check(r777_e.state.hand.size() == r777_hand_before + 2,
+			"R777 打出：打出 1 张、入手 3 张（%d → %d）"
+			% [r777_hand_before, r777_e.state.hand.size()])
+	var r777_got: Array[CardData] = []
+	for c4: CardData in r777_e.state.hand:
+		if r777_e.state.hand_cost_delta.has(c4):
+			r777_got.append(c4)
+	check(r777_got.size() == 3,
+			"R777 打出：3 张都记了手卡内减费（实得 %d）" % r777_got.size())
+	var r777_cost_bad: Array = []
+	var r777_got_cls := {}
+	for c5: CardData in r777_got:
+		r777_got_cls[c5.card_class] = true
+		# 职业 / 卡种先查 —— 它们与费用无关，不能因为下面的 X 费特例被跳过。
+		if c5.card_class == PlayerClass.BARD or c5.card_class == "":
+			r777_cost_bad.append("串职业 %s" % c5.card_name)
+		if c5.kind != "盟友" and c5.kind != "技能":
+			r777_cost_bad.append("卡种 %s" % c5.kind)
+		# R780 顺手修：原来写死 `cost_of == cost - 1`，随机抽到两张特例就必红 ——
+		#   * 回响 9102 卡面「费用最低为 1」→ `_cost_floor()` 压住彩虹诗的 -1（1 → 仍是 1）；
+		#   * 魔像术 9079「每回合第一次用技能时，手卡这张本回合 -1」→ 叠加彩虹诗 = -2（4 → 2）。
+		#   前者是卡面写死的下限（优先于彩虹诗）→ 跳过精确比较；
+		#   后者只会更便宜 → 用「不高于期望」判，不该算坏。
+		# R791：X 费卡（流星雨 9083 等）`cost_of` 读的是**当前剩余能量**，与卡面 cost
+		#   无固定关系（卡面 0 / 实测 3 是正常的），彩虹诗的 -1 对它也不适用 → 跳过费用比较。
+		if c5.x_cost:
+			continue
+		var r777_expect: int = maxi(0, c5.cost - 1)
+		if r777_e._cost_floor(c5, 0) > r777_expect:
+			continue
+		if r777_e.cost_of(c5) > r777_expect:
+			r777_cost_bad.append("%s %d→%d" % [c5.card_name, c5.cost, r777_e.cost_of(c5)])
+	check(r777_cost_bad.is_empty(),
+			"R777 打出：3 张都是其他职业的盟友 / 技能，费用各 -1（异常 %s）"
+			% str(r777_cost_bad))
+	check(r777_got_cls.size() == 3,
+			"R777 打出：3 张来自 3 个不同职业（本次 %s）" % str(r777_got_cls.keys()))
+
+	# R791：X 费卡（流星雨 9083）必须按**剩余能量**计费，不能被手卡内 -1 改写 ——
+	# 否则彩虹诗给它减费会算出「卡面 0 → 实际 3」，先前那条随机断言就是这么红的。
+	var r777_x_deck: Array[CardData] = []
+	var r777_x_e := _new_engine(r777_x_deck, 20, 20, -1, false)
+	r777_x_e.start_game(1)
+	var r777_x_card: CardData = r777_x_e._new_own_card(CardRepo.load_json().get_card(9083))
+	if r777_x_card != null and r777_x_card.x_cost:
+		r777_x_e.state.hand.append(r777_x_card)
+		r777_x_e.state.hand_cost_delta[r777_x_card] = 3
+		r777_x_e.state.energy = 4
+		check(r777_x_e.cost_of(r777_x_card) == 4,
+				"R777 X 费卡：费用跟剩余能量走、不吃手卡减费（实得 %d）"
+				% r777_x_e.cost_of(r777_x_card))
+	else:
+		check(false, "R777 X 费卡：9083 读不到或不是 x_cost 卡")
+
+	# ⑥ 「本局」的成色：换回合仍然 -1（hand_cost_delta 不在 end_turn / _begin_turn 清空）
+	var r777_probe_card: CardData = null
+	for c7: CardData in r777_got:
+		# R791：X 费卡的 `cost_of` 跟剩余能量走，验「本局 -1 / 叠加」没有意义 → 优先普通费卡。
+		if not c7.x_cost and c7.id != GameEngine.GOLEM_SPELL_ID and c7.id != GameEngine.ECHO_ID:
+			r777_probe_card = c7
+			break
+	if r777_probe_card == null and not r777_got.is_empty():
+		r777_probe_card = r777_got[0]
+	var r777_base_cost := -1
+	var r777_after := -1
+	if r777_probe_card != null:
+		r777_base_cost = r777_probe_card.cost
+		r777_e.state.energy = 0
+		r777_e._begin_turn(GameEngine.SIDE_SELF)
+		r777_after = r777_e.cost_of(r777_probe_card)
+	check(r777_probe_card != null and r777_after == maxi(0, r777_base_cost - 1),
+			"R777 本局：新回合仍是 -1 费（卡面 %d → %d）" % [r777_base_cost, r777_after])
+
+	# ⑦ 可叠：同一张再吃一张彩虹诗 → 合计 -2（hand_cost_delta 是累加语义）
+	if r777_probe_card != null:
+		var r777_prev := int(r777_e.state.hand_cost_delta.get(r777_probe_card, 0))
+		r777_e.state.hand_cost_delta[r777_probe_card] = r777_prev + 1
+		check(r777_e.cost_of(r777_probe_card) == maxi(0, r777_base_cost - 2),
+				"R777 叠加：同一张 -1 再 -1 → 合计 -2（%d）"
+				% r777_e.cost_of(r777_probe_card))
+
+	# ⑧ 离手即恢复原价（判据是「此刻还在手牌里」，与隐藏能源 / 小精灵同一条路）
+	if r777_probe_card != null:
+		r777_e.state.hand.erase(r777_probe_card)
+		check(r777_e.cost_of(r777_probe_card) == r777_base_cost,
+				"R777 离手：不在手牌里就恢复卡面费用（%d）"
+				% r777_e.cost_of(r777_probe_card))
+
+	# ⑨ 手牌满：3 张改投弃牌区（不蒸发、也不按 -1 记账生效）
+	var r777_deck2: Array[CardData] = []
+	r777_deck2.append(r777_card)
+	var r777_e2 := _new_engine(r777_deck2, 20, 20, -1, false)
+	r777_e2.start_game(1)
+	r777_e2.state.energy = 5
+	var r777_fill := _card(19001, "占位", "技能", 1, 0, 0)
+	var r777_guard := 0
+	while not r777_e2.state.hand_full() and r777_guard < 24:
+		r777_e2.state.hand.append(r777_e2._new_own_card(r777_fill))
+		r777_guard += 1
+	var r777_discard_before: int = r777_e2.state.discard.size()
+	var r777_hand_full_n: int = r777_e2.state.hand.size()
+	r777_e2.use_spell(_find(r777_e2.state.hand, 9269))
+	# 手牌满 → 打出本卡先腾出 1 位 → 第 1 张补进手牌、其余 2 张进弃牌区；
+	# 弃牌区 +3 = 溢出的 2 张 + 打出的本卡本身（技能卡打出进弃牌区）。
+	check(r777_e2.state.hand.size() == r777_hand_full_n
+			and r777_e2.state.discard.size() == r777_discard_before + 3,
+			"R777 满手：腾出的 1 位补进 1 张、另 2 张进弃牌区（手 %d→%d / 弃 %d→%d）"
+			% [r777_hand_full_n, r777_e2.state.hand.size(),
+					r777_discard_before, r777_e2.state.discard.size()])
+
+	# ⑩ 三语：en / ja 都要真有译文（R702 / R718 都踩过「改了中文忘同步」）
+	var r777_lang_bak: String = GameSettings.language
+	# ⚠️ `naturalize_card` 只出**效果正文**，卡名不在里面（R773 的检查同样只查效果）——
+	#   卡名另走 `GameI18n.card_name`，两样都验才叫「三语齐了」。
+	GameSettings.language = "en"
+	GameI18n.reset_cache()
+	var r777_en_name: String = GameI18n.card_name(9269, r777_card.card_name)
+	var r777_en: String = CardText.naturalize_card(r777_card)
+	GameSettings.language = "ja"
+	GameI18n.reset_cache()
+	var r777_ja_name: String = GameI18n.card_name(9269, r777_card.card_name)
+	var r777_ja: String = CardText.naturalize_card(r777_card)
+	GameSettings.language = r777_lang_bak
+	GameI18n.reset_cache()
+	check(r777_en_name == "Rainbow Verse",
+			"R777 译文：en 卡名走 i18n（%s）" % r777_en_name)
+	check(r777_en.find("Ally") >= 0 and r777_en.find("Skill") >= 0
+			and r777_en.find("费用") < 0 and r777_en.find("盟友") < 0,
+			"R777 译文：en 下效果正文是英文（%s）" % r777_en.replace("\n", " ").left(40))
+	check(r777_ja_name == "虹の詩",
+			"R777 译文：ja 卡名走 i18n（%s）" % r777_ja_name)
+	check(r777_ja.find("味方") >= 0 and r777_ja.find("スキル") >= 0
+			and r777_ja.find("费用") < 0 and r777_ja.find("盟友") < 0,
+			"R777 译文：ja 下效果正文是日文（%s）" % r777_ja.replace("\n", " ").left(40))
+
+	# 收尾还原
+	RunState.relics = r777_sv_relics
+	RunState.spent_relics = r777_sv_spent
+	RunState.run_active = r777_sv_active
+	RunState.player_class = r777_sv_class
+
+
+# ================= R777b：吟游诗人「疾风乐章」9270 =================
+# 店长口径（原话）：
+#   「2费，疾风乐章。所有盟友移动速度+1.若为其他职业盟友，改为一回合行动两次」
+# 落地口径：
+#   * 「所有盟友」= 己方场上 `kind == "盟友"`（工事 / 场地不算）；
+#   * 「移动速度 +1」直接抬场上 `card.move_speed`（与「改造」同一口径，场上实例是独立副本）；
+#   * 「其他职业盟友」走 `_other_class_card()` 唯一判据（有归属 + 不是玩家当前职业；
+#     公用卡 class 留空 → 不算「其他职业」→ 照常吃移速）；
+#   * 「改为一回合行动两次」= **替代**移速，复用哈气的 `Placement.haste_double`
+#     （单点永久、离场消失）→ `unit_actions()` 每回合自动给到，不必重算。
+func _test_r777b() -> void:
+	var r777b_gs = preload("res://scripts/gallery_scene.gd")
+	var r777b_repo := CardRepo.load_json()
+	var r777b_card: CardData = r777b_repo.get_card(9270)
+	var r777b_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r777b_sv_spent: Array[int] = RunState.spent_relics.duplicate()
+	var r777b_sv_active: bool = RunState.run_active
+	var r777b_sv_class: String = RunState.player_class
+	RunState.run_active = false
+	RunState.player_class = PlayerClass.BARD
+	RunState.relics = []
+	RunState.spent_relics = []
+
+	# ① 数据
+	check(r777b_card != null and r777b_card.card_name == "疾风乐章"
+			and r777b_card.kind == "效果" and r777b_card.cost == 2
+			and r777b_card.rarity == 2
+			and r777b_card.card_class == PlayerClass.BARD
+			and r777b_card.traits.has("疾风乐章")
+			and r777b_card.target_mode == "none",
+			"R777b 数据：疾风乐章 9270 = 吟游诗人 2 费史诗效果卡（rarity 2）")
+	if r777b_card == null:
+		RunState.relics = r777b_sv_relics
+		RunState.spent_relics = r777b_sv_spent
+		RunState.run_active = r777b_sv_active
+		RunState.player_class = r777b_sv_class
+		return
+	check(r777b_card.color == "水风"
+			and r777b_card.effect_text.contains("移动速度 +1")
+			and r777b_card.effect_text.contains("一回合行动两次"),
+			"R777b 数据：卡色水风、卡面两条都写了（移速 / 双动）")
+
+	# ② 隐藏职业口径
+	check(not r777b_gs.gallery_visible(r777b_card, false)
+			and not r777b_gs.gallery_visible(r777b_card, true),
+			"R777b 隐藏：吟游诗人卡不进图鉴（判据在职业）")
+	var r777b_in_default := false
+	for c0: CardData in r777b_repo.obtainable_cards():
+		if c0.id == 9270:
+			r777b_in_default = true
+	check(not r777b_in_default, "R777b 卡池：默认可获得池不含 9270")
+	var r777b_bard_has := false
+	for c1: CardData in r777b_repo.reward_pool_for(PlayerClass.BARD):
+		if c1.id == 9270:
+			r777b_bard_has = true
+	check(r777b_bard_has, "R777b 卡池：吟游诗人的奖励池含 9270")
+
+	# ③ 打出：本职业盟友 +1 移速；其他职业盟友改双动（不给移速）；工事不沾
+	var r777b_deck: Array[CardData] = []
+	r777b_deck.append(r777b_card)
+	var r777b_e := _new_engine(r777b_deck, 20, 20, -1, false)
+	r777b_e.start_game(1)
+	r777b_e.state.energy = 5
+	var r777b_own: Placement = r777b_e.state.place(
+			CardData.from_dict(r777b_repo.get_card(9263).to_dict()),
+			Vector2i(1, 3), GameEngine.SIDE_SELF)          # 杜鹃：吟游诗人（本职业）
+	var r777b_alien: Placement = r777b_e.state.place(
+			CardData.from_dict(r777b_repo.get_card(8003).to_dict()),
+			Vector2i(1, 4), GameEngine.SIDE_SELF)          # 树人：森林精魄（其他职业）
+	var r777b_fort: Placement = r777b_e.state.place(
+			CardData.from_dict(r777b_repo.get_card(8001).to_dict()),
+			Vector2i(2, 4), GameEngine.SIDE_SELF)          # 木栅栏：工事
+	check(r777b_own != null and r777b_alien != null and r777b_fort != null,
+			"R777b 摆放：三个单位都上场了（盟友 ×2 + 工事 ×1）")
+	if r777b_own == null or r777b_alien == null or r777b_fort == null:
+		RunState.relics = r777b_sv_relics
+		RunState.spent_relics = r777b_sv_spent
+		RunState.run_active = r777b_sv_active
+		RunState.player_class = r777b_sv_class
+		return
+	var r777b_own_spd0: int = r777b_own.card.move_speed
+	var r777b_alien_spd0: int = r777b_alien.card.move_speed
+	var r777b_fort_spd0: int = r777b_fort.card.move_speed
+	var r777b_effects0: int = r777b_e.state.effects.size()
+	r777b_e.use_effect(_find(r777b_e.state.hand, 9270))
+	check(r777b_e.state.energy == 3,
+			"R777b 打出：2 费照扣（5 → %d）" % r777b_e.state.energy)
+	check(r777b_e.state.effects.size() == r777b_effects0 + 1,
+			"R777b 打出：进了效果区（%d → %d）"
+			% [r777b_effects0, r777b_e.state.effects.size()])
+	check(r777b_own.card.move_speed == r777b_own_spd0 + 1,
+			"R777b 移速：本职业盟友 %d → %d"
+			% [r777b_own_spd0, r777b_own.card.move_speed])
+	check(r777b_alien.card.move_speed == r777b_alien_spd0,
+			"R777b 替代：其他职业盟友**没有**拿到移速（%d → %d）"
+			% [r777b_alien_spd0, r777b_alien.card.move_speed])
+	check(r777b_alien.haste_double
+			and r777b_e.state.unit_actions(r777b_alien, GameEngine.SIDE_SELF)
+					== FieldState.HASTE_ACTIONS,
+			"R777b 双动：其他职业盟友改为每回合行动 %d 次"
+			% FieldState.HASTE_ACTIONS)
+	check(r777b_alien.acts_left >= 2,
+			"R777b 双动：打出当回合就补足行动轮数（acts_left=%d）" % r777b_alien.acts_left)
+	check(r777b_fort.card.move_speed == r777b_fort_spd0
+			and not r777b_fort.haste_double,
+			"R777b 工事：不算盟友，移速与双动都不沾")
+
+	# ④ 跨回合仍在（haste_double 是单点永久字段，移速是卡面数值）
+	r777b_e.state.reset_units(GameEngine.SIDE_SELF)
+	check(r777b_e.state.unit_actions(r777b_alien, GameEngine.SIDE_SELF)
+			== FieldState.HASTE_ACTIONS,
+			"R777b 本场：新回合仍是每回合两次（reset_units 后不变）")
+	check(r777b_own.card.move_speed == r777b_own_spd0 + 1,
+			"R777b 本场：新回合移速仍是 +1（%d）" % r777b_own.card.move_speed)
+
+	# ⑤ 叠两张：移速再 +1（双动不会重复叠成 3 次）
+	var r777b_deck2: Array[CardData] = []
+	r777b_deck2.append(r777b_card)
+	r777b_deck2.append(r777b_card)
+	var r777b_e2 := _new_engine(r777b_deck2, 20, 20, -1, false)
+	r777b_e2.start_game(1)
+	r777b_e2.state.energy = 9
+	var r777b_own2: Placement = r777b_e2.state.place(
+			CardData.from_dict(r777b_repo.get_card(9263).to_dict()),
+			Vector2i(1, 3), GameEngine.SIDE_SELF)
+	var r777b_alien2: Placement = r777b_e2.state.place(
+			CardData.from_dict(r777b_repo.get_card(8003).to_dict()),
+			Vector2i(1, 4), GameEngine.SIDE_SELF)
+	var r777b_own2_spd0: int = r777b_own2.card.move_speed
+	r777b_e2.use_effect(_find(r777b_e2.state.hand, 9270))
+	r777b_e2.use_effect(_find(r777b_e2.state.hand, 9270))
+	check(r777b_own2.card.move_speed == r777b_own2_spd0 + 2,
+			"R777b 叠加：两张 → 移速 +2（%d）" % r777b_own2.card.move_speed)
+	check(r777b_e2.state.unit_actions(r777b_alien2, GameEngine.SIDE_SELF)
+			== FieldState.HASTE_ACTIONS,
+			"R777b 叠加：双动仍是 2 次（不会叠成 3 次）")
+
+	# ⑥ 空场：没有盟友时照常吃掉费用、不崩
+	var r777b_deck3: Array[CardData] = []
+	r777b_deck3.append(r777b_card)
+	var r777b_e3 := _new_engine(r777b_deck3, 20, 20, -1, false)
+	r777b_e3.start_game(1)
+	r777b_e3.state.energy = 4
+	var r777b_msg: String = r777b_e3.use_effect(_find(r777b_e3.state.hand, 9270))
+	check(r777b_e3.state.energy == 2 and r777b_msg != "",
+			"R777b 空场：照常扣 2 费并生效（%s）" % r777b_msg)
+
+	# ⑦ 三语（`naturalize_card` 只出效果正文；卡名另走 GameI18n.card_name）
+	var r777b_lang_bak: String = GameSettings.language
+	GameSettings.language = "en"
+	GameI18n.reset_cache()
+	var r777b_en_name: String = GameI18n.card_name(9270, r777b_card.card_name)
+	var r777b_en: String = CardText.naturalize_card(r777b_card)
+	GameSettings.language = "ja"
+	GameI18n.reset_cache()
+	var r777b_ja_name: String = GameI18n.card_name(9270, r777b_card.card_name)
+	var r777b_ja: String = CardText.naturalize_card(r777b_card)
+	GameSettings.language = r777b_lang_bak
+	GameI18n.reset_cache()
+	check(r777b_en_name == "Wind Song",
+			"R777b 译文：en 卡名走 i18n（%s）" % r777b_en_name)
+	check(r777b_en.find("Move Speed") >= 0 and r777b_en.find("twice") >= 0
+			and r777b_en.find("移动速度") < 0 and r777b_en.find("盟友") < 0,
+			"R777b 译文：en 效果正文是英文（%s）" % r777b_en.replace("\n", " ").left(40))
+	check(r777b_ja_name == "疾風の楽章",
+			"R777b 译文：ja 卡名走 i18n（%s）" % r777b_ja_name)
+	check(r777b_ja.find("移動速度") >= 0 and r777b_ja.find("味方") >= 0
+			and r777b_ja.find("移动速度") < 0 and r777b_ja.find("盟友") < 0,
+			"R777b 译文：ja 效果正文是日文（%s）" % r777b_ja.replace("\n", " ").left(40))
+
+	# 收尾还原
+	RunState.relics = r777b_sv_relics
+	RunState.spent_relics = r777b_sv_spent
+	RunState.run_active = r777b_sv_active
+	RunState.player_class = r777b_sv_class
+
+
 # ================= R762：开始游戏 → 标准 / 每日挑战 =================
 func _test_r762() -> void:
 	DailyChallenge.set_test_mode()
@@ -76359,6 +77895,13 @@ func _test_r762() -> void:
 	var d0 := "2026-11-16"
 	var d1 := "2027-02-28"
 	var c0 := DailyChallenge.config_for_date(d0)
+	# R850：日界固定 UTC+8 午夜 —— 国内玩家本地 0 点换日，全球仍是同一份种子。
+	# 1763740800 = 2025-11-21 16:00:00Z = 2025-11-22 00:00 (UTC+8)
+	check(DailyChallenge.date_for_unix(1763740799) == "2025-11-21"
+			and DailyChallenge.date_for_unix(1763740800) == "2025-11-22"
+			and DailyChallenge.today() == DailyChallenge.date_for_unix(
+					int(Time.get_unix_time_from_system())),
+			"R850 日界：UTC+8 午夜换日（今日 %s）" % DailyChallenge.today())
 	var c1 := DailyChallenge.config_for_date(d1)
 	check(DailyChallenge.valid_date(d0) and DailyChallenge.valid_date("2028-02-29")
 			and not DailyChallenge.valid_date("2027-02-29"),
@@ -76366,10 +77909,12 @@ func _test_r762() -> void:
 	check(c0 == DailyChallenge.config_for_date(d0)
 			and int(c0.get("seed", 0)) != int(c1.get("seed", 0)),
 			"R762 根种子：同日确定、异日不同，不依赖上一局 run_seed")
+	# R767：卡组不再是「标准 13 张」，改成每日随机构筑（15 张起）—— 结构细节交给 `_test_r767`，
+	# 这里只锁「角色在可见三职业里 + 难度固定 + 卡组非空」。
 	check(PlayerClass.ids().has(str(c0.get("class", "")))
 			and int(c0.get("difficulty", -1)) == DailyChallenge.FIXED_DIFFICULTY
-			and c0.get("deck", []) == PlayerClass.start_deck_ids(str(c0.get("class", ""))),
-			"R762 固定配置：可见职业轮换 / 难度 2 / 标准初始 13 张，隐藏职业不入池")
+			and (c0.get("deck", []) as Array).size() >= 13,
+			"R762 固定配置：可见职业轮换 / 固定难度 / 卡组非空（R767 起为随机构筑）")
 	var r762_rng_state: int = RunState.run_rng.state
 	DailyChallenge.config_for_date(d0)
 	check(RunState.run_rng.state == r762_rng_state,
@@ -76398,8 +77943,9 @@ func _test_r762() -> void:
 			and DailyChallenge.attempt_for("2027-03-01").is_empty(),
 			"R762 次数写盘失败：返回拒绝并回滚内存，不白扣今日次数")
 	DailyChallenge._path = DailyChallenge.TEST_PATH
-	check(DailyChallenge.leaderboard_name(d0) == "DAILY_20261116_V1",
-			"R762 Steam 榜名：每天 + 规则版本各一张")
+	# R767：榜名里的版本号写成表达式 —— 修饰池一变就得升 `RULES_VERSION`，别回来改字符串。
+	check(DailyChallenge.leaderboard_name(d0) == "DAILY_20261116_V%d" % DailyChallenge.RULES_VERSION,
+			"R762 Steam 榜名：每天 + 规则版本各一张（V%d）" % DailyChallenge.RULES_VERSION)
 	check(not DailyLeaderboard.submit_score(d0, DailyChallenge.RULES_VERSION, 12345),
 			"R762 离线降级：Steam 未连接时拒绝上传，不阻塞本地成绩与游玩")
 
@@ -76411,12 +77957,19 @@ func _test_r762() -> void:
 			and RunState.difficulty == DailyChallenge.FIXED_DIFFICULTY,
 			"R762 发布版：固定难度不被解锁上限钳回 0（seed=%d/%d daily=%s rules=%d diff=%d）"
 			% [RunState.run_seed, int(c0["seed"]), RunState.daily_date, RunState.daily_rules, RunState.difficulty])
+	# R767：塞一个**非空**的修饰汇总再存档 —— 摇到的东西可能是空效果，
+	# 拿它当基准测不出「有没有进档」。
+	RunState.daily_fx = {"gold": 42, "energy": 1}
 	var r762_snap := RunSave.snapshot()
 	RunState.daily_date = ""
 	RunState.daily_rules = 0
+	RunState.daily_fx = {}
 	RunSave.apply(r762_snap)
 	check(RunState.daily_date == d0 and RunState.daily_rules == DailyChallenge.RULES_VERSION,
 			"R762 续档：daily_date / rules 随 snapshot → apply 往返")
+	check(int(RunState.daily_fx.get("gold", 0)) == 42
+			and int(RunState.daily_fx.get("energy", 0)) == 1,
+			"R767 续档：修饰汇总随存档往返（漏了它续档后换层金币 / 费用会跳变）")
 	RunRecord.begin_run(str(c0["class"]))
 	RunRecord.finish("lose", true)
 	var r762_records := RunRecord.list_records()
@@ -76526,3 +78079,4677 @@ func _test_r763() -> void:
 			and r763_settings.contains("DiagnosticBundle.create()")
 			and r763_settings.contains("func _diag_rect()"),
 			"R763 设置页：诊断按钮有几何 / 点击 / 导出三处接线")
+
+# ================= R766：猴爪（6066）+ 懊悔（9265）=================
+# 店长口径（原话）：
+#   「新增道具 猴爪 —— 每场战斗前三个回合，将一张任意其他职业随机卡加入你的手卡，
+#    将一张懊悔加入你的卡组。懊悔：1费诅咒。选弃牌区一张其他职业卡消失。次元。」
+# 三处口径都在这里钉住：
+#   ① 「其他职业」唯一判据 `_other_class_card()`（有归属 + 不是自己）—— 公用卡与诅咒都不算；
+#   ② 「加入卡组」= 永久 `RunState.deck_ids`，**本场抽牌堆不掺**；
+#   ③ 「消失」= 本场对战移除（从弃牌区抹掉），不是「删除」。
+func _test_r766() -> void:
+	var r766_repo := CardRepo.load_json()
+	var r766_regret: CardData = r766_repo.get_card(9265)
+	var r766_claw = RelicRepo.load_json().get_relic(6066)
+
+	# 收尾要还原的全局
+	var r766_sv_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r766_sv_cls: String = RunState.player_class
+	var r766_sv_active: bool = RunState.run_active
+	RunState.run_active = false   # 别把测试里打的牌写进玩家成就统计
+
+	# ① 数据真在库
+	check(r766_regret != null and r766_regret.kind == "诅咒" and r766_regret.cost == 1
+			and r766_regret.affixes.has("次元") and r766_regret.target_mode == "none",
+			"R766 数据：懊悔 9265 = 1 费诅咒 · 带「次元」· 不取场地目标")
+	check(r766_regret != null and r766_regret.effect_text.contains("弃牌区")
+			and r766_regret.effect_text.contains("其他职业"),
+			"R766 数据：懊悔文案同时写明「弃牌区」与「其他职业」")
+	check(r766_claw != null and str(r766_claw.kind) == "战斗",
+			"R766 数据：猴爪 6066 在库，kind = 战斗")
+
+	# ② 「其他职业」判据：本职业 false / 别职业 true / 公用卡 false
+	RunState.player_class = PlayerClass.DRUID
+	var r766_own: CardData = null
+	var r766_other: CardData = null
+	var r766_common: CardData = null
+	for c: CardData in r766_repo.reward_pool():
+		if c.card_class == PlayerClass.DRUID and r766_own == null:
+			r766_own = c
+		elif c.card_class != "" and c.card_class != PlayerClass.DRUID and r766_other == null:
+			r766_other = c
+		elif c.card_class == "" and r766_common == null:
+			r766_common = c
+	var r766_probe := _new_engine([], 20, 20, -1, false)
+	check(r766_own != null and r766_other != null,
+			"R766 判据：卡池里能同时找到本职业卡与别职业卡（否则后面的断言是空的）")
+	if r766_own != null and r766_other != null:
+		check(not r766_probe._other_class_card(r766_own),
+				"R766 判据：本职业卡「%s」不算其他职业" % r766_own.card_name)
+		check(r766_probe._other_class_card(r766_other),
+				"R766 判据：别职业卡「%s」算其他职业" % r766_other.card_name)
+		check(not r766_probe._other_class_card(r766_regret),
+				"R766 判据：诅咒（class 留空）不算其他职业")
+	if r766_common != null:
+		check(not r766_probe._other_class_card(r766_common),
+				"R766 判据：公用卡「%s」不算其他职业（与诗 6069 的口径故意不同）"
+				% r766_common.card_name)
+
+	# ③ 猴爪：前三个回合各发一张外来卡 + 一张「懊悔」进卡组；第 4 回合不再发
+	# ⚠️ 用空 deck 开战 → 正常抽牌抽不到东西，手牌里留下的就是猴爪发的那张。
+	var r766_e := _new_engine([], 20, 20, -1, false)
+	r766_e.self_relics = [GameEngine.MONKEY_CLAW_RELIC_ID]
+	var r766_base := RunState.deck_ids.size()
+	r766_e.start_game(0)
+	check(RunState.deck_ids.size() == r766_base + 1
+			and RunState.deck_ids[RunState.deck_ids.size() - 1] == 9265,
+			"R766 猴爪：第 1 回合「懊悔」进卡组（%d → %d）"
+			% [r766_base, RunState.deck_ids.size()])
+	var r766_hand_alien := []
+	for c: CardData in r766_e.state.hand:
+		if r766_e._other_class_card(c):
+			r766_hand_alien.append(c.card_name)
+	check(r766_hand_alien.size() == 1,
+			"R766 猴爪：第 1 回合手牌多一张其他职业卡（%s）" % str(r766_hand_alien))
+	check(r766_e.state.deck.is_empty(),
+			"R766 猴爪：外来卡只进手牌 —— 本场抽牌堆里没有被塞东西")
+
+	for r766_t in [2, 3]:
+		r766_e.state.hand.clear()
+		r766_e._begin_turn(GameEngine.SIDE_SELF)
+		check(RunState.deck_ids.size() == r766_base + r766_t,
+				"R766 猴爪：第 %d 回合再进一张「懊悔」（卡组 %d 张）"
+				% [r766_t, RunState.deck_ids.size()])
+	r766_e.state.hand.clear()
+	r766_e._begin_turn(GameEngine.SIDE_SELF)
+	check(RunState.deck_ids.size() == r766_base + 3,
+			"R766 猴爪：第 4 回合停手（卡组仍是 %d 张）" % RunState.deck_ids.size())
+	check(r766_e.state.hand.is_empty(),
+			"R766 猴爪：第 4 回合不再发外来卡")
+
+	# ④ 没有猴爪时一张都不发（判据是道具，不是「回合数到了」）
+	RunState.deck_ids = r766_sv_deck.duplicate()
+	var r766_no := _new_engine([], 20, 20, -1, false)
+	r766_no.self_relics = []
+	var r766_no_base := RunState.deck_ids.size()
+	r766_no.start_game(0)
+	check(RunState.deck_ids.size() == r766_no_base,
+			"R766 猴爪：没这件道具 → 卡组不变")
+	var r766_no_alien := 0
+	for c2: CardData in r766_no.state.hand:
+		if r766_no._other_class_card(c2):
+			r766_no_alien += 1
+	check(r766_no_alien == 0, "R766 猴爪：没这件道具 → 不发外来卡")
+
+	# ⑤ 懊悔：只列弃牌区的**其他职业卡**，选中即本场消失
+	var r766_rg := _new_engine([], 20, 20, -1, false)
+	r766_rg.start_game(0)
+	r766_rg.state.hand.clear()
+	r766_rg.state.discard.clear()
+	if r766_other != null:
+		r766_rg.state.discard.append(CardData.from_dict(r766_other.to_dict()))
+	if r766_own != null:
+		r766_rg.state.discard.append(CardData.from_dict(r766_own.to_dict()))
+	var r766_opts: Array = r766_rg.regret_options()
+	check(r766_opts.size() == 1,
+			"R766 懊悔：候选只列其他职业卡（弃牌区 2 张，候选 %d 张）" % r766_opts.size())
+	r766_rg.state.hand.append(CardData.from_dict(r766_regret.to_dict()))
+	var r766_cast := r766_rg.use_spell(0)
+	check(r766_rg.regret_pending,
+			"R766 懊悔：打出后进入「从弃牌区选一张」状态（引擎返回：%s）" % str(r766_cast))
+	var r766_dsize := r766_rg.state.discard.size()
+	var r766_target_name: String = r766_rg.state.discard[r766_opts[0]].card_name
+	check(r766_rg.regret_pick(int(r766_opts[0])),
+			"R766 懊悔：选中「%s」→ 结算成功" % r766_target_name)
+	check(r766_rg.state.discard.size() == r766_dsize - 1,
+			"R766 懊悔：那张卡从弃牌区移除（消失 = 本场对战移除）")
+	check(not r766_rg.regret_pending, "R766 懊悔：结算后状态收口")
+	var r766_left_other := 0
+	for i3 in r766_rg.state.discard.size():
+		if r766_rg._other_class_card(r766_rg.state.discard[i3]):
+			r766_left_other += 1
+	check(r766_left_other == 0, "R766 懊悔：弃牌区不再剩其他职业卡")
+
+	# ⑥ 弃牌区没有其他职业卡 → 白打，不开面板（不会卡在选卡页）
+	var r766_rg2 := _new_engine([], 20, 20, -1, false)
+	r766_rg2.start_game(0)
+	r766_rg2.state.hand.clear()
+	r766_rg2.state.discard.clear()
+	r766_rg2.state.hand.append(CardData.from_dict(r766_regret.to_dict()))
+	var r766_cast2 := r766_rg2.use_spell(0)
+	check(not r766_rg2.regret_pending,
+			"R766 懊悔：弃牌区没有其他职业卡 → 不开面板（返回：%s）" % str(r766_cast2))
+
+	# ⑦ 选卡期间不许再出别的牌（引擎兜底，界面另有模态）
+	var r766_rg3 := _new_engine([], 20, 20, -1, false)
+	r766_rg3.start_game(0)
+	r766_rg3.state.hand.clear()
+	r766_rg3.state.discard.clear()
+	if r766_other != null:
+		r766_rg3.state.discard.append(CardData.from_dict(r766_other.to_dict()))
+	r766_rg3.state.hand.append(CardData.from_dict(r766_regret.to_dict()))
+	r766_rg3.regret_pending = true
+	r766_rg3.state.hand.append(CardData.from_dict(r766_regret.to_dict()))
+	var r766_block := r766_rg3.use_spell(1)
+	check(r766_block.contains("懊悔"),
+			"R766 懊悔：选卡期间出别的牌被拦（返回：%s）" % str(r766_block))
+
+	# 还原
+	RunState.deck_ids = r766_sv_deck
+	RunState.player_class = r766_sv_cls
+	RunState.run_active = r766_sv_active
+func _test_r767() -> void:
+	# R767 每日挑战：修饰池 / 随机卡组 / 效果落地。
+	# 这三块都是「同一天所有人完全一样」的东西，所以每条断言都在**可复现**这一侧使劲。
+	var r767_date := "2026-11-16"
+	var r767_cfg := DailyChallenge.config_for_date(r767_date)
+
+	# ① 规则版本：两个模块必须同步
+	check(DailyChallenge.RULES_VERSION == DailyModifiers.RULES_VERSION,
+			"R767 规则版本：DailyChallenge 与 DailyModifiers 同步（%d）" % DailyChallenge.RULES_VERSION)
+	check(int(r767_cfg.get("rules", 0)) == DailyModifiers.RULES_VERSION,
+			"R767 配置：rules 写进 config（%d）" % int(r767_cfg.get("rules", 0)))
+
+	# ② 每天 4 条修饰 = 2 增益 + 2 减益，且每条都在池里、都带 fx
+	var r767_mods: Array = r767_cfg.get("mods", [])
+	check(r767_mods.size() == DailyModifiers.BUFF_COUNT + DailyModifiers.DEBUFF_COUNT,
+			"R767 修饰：每天 4 条（实得 %d）" % r767_mods.size())
+	var r767_buff := 0
+	var r767_debuff := 0
+	var r767_all_ok := true
+	for k: Variant in r767_mods:
+		var e := DailyModifiers.entry(str(k))
+		if e.is_empty() or (e.get("fx", {}) as Dictionary).is_empty():
+			r767_all_ok = false
+			continue
+		if str(e.get("kind", "")) == "buff":
+			r767_buff += 1
+		else:
+			r767_debuff += 1
+	check(r767_all_ok, "R767 修饰：每条都在池里且带 fx")
+	check(r767_buff == DailyModifiers.BUFF_COUNT and r767_debuff == DailyModifiers.DEBUFF_COUNT,
+			"R767 修饰：2 增益 + 2 减益（实得 %d / %d）" % [r767_buff, r767_debuff])
+
+	# ③ 确定性：同日两次一致、连续几天基本不同（Steam 榜的前提）
+	var r767_again: Array = DailyChallenge.config_for_date(r767_date).get("mods", [])
+	check(str(r767_again) == str(r767_mods), "R767 确定性：同一天两次 config 完全一致")
+	var r767_diff := 0
+	for d: String in ["2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21"]:
+		if str(DailyChallenge.config_for_date(d).get("mods", [])) != str(r767_mods):
+			r767_diff += 1
+	check(r767_diff >= 3, "R767 确定性：连续 5 天至少 3 天修饰不同（实得 %d）" % r767_diff)
+
+	# ④ 效果合并：`_mul` 后缀相乘，其余相加
+	var r767_fx := DailyModifiers.fx_of(["STURDY", "ANEMIC"])
+	check(absf(float(r767_fx.get("hp_mul", 0.0)) - 1.15 * 0.88) < 0.0001,
+			"R767 合并：两条 _mul 相乘（实得 %.4f）" % float(r767_fx.get("hp_mul", 0.0)))
+	var r767_fx2 := DailyModifiers.fx_of(["RICH", "POOR"])
+	check(absf(float(r767_fx2.get("gold", 0.0)) - 30.0) < 0.0001,
+			"R767 合并：金币修饰相加（实得 %.1f）" % float(r767_fx2.get("gold", 0.0)))
+
+	# ⑤ 随机卡组：15 张 · 栅栏与攻击各至少 4 · 至少 1 张盟友 · 同日一致 · 无隐藏职业
+	var r767_deck: Array = r767_cfg.get("deck", [])
+	check(r767_deck.size() >= DailyModifiers.DECK_TOTAL,
+			"R767 卡组：至少 %d 张（实得 %d）" % [DailyModifiers.DECK_TOTAL, r767_deck.size()])
+	var r767_fence := 0
+	var r767_atk := 0
+	for v: Variant in r767_deck:
+		if int(v) == DailyModifiers.FENCE_ID:
+			r767_fence += 1
+		elif int(v) == DailyModifiers.ATTACK_ID:
+			r767_atk += 1
+	check(r767_fence >= 4 and r767_atk >= 4,
+			"R767 卡组：木栅栏 %d / 攻击 %d（各至少 4，保住开局下限）" % [r767_fence, r767_atk])
+	var r767_repo := CardRepo.load_json()
+	var r767_ally := 0
+	var r767_hidden := 0
+	for v: Variant in r767_deck:
+		var c: CardData = r767_repo.get_card(int(v))
+		if c == null:
+			continue
+		if c.kind == "盟友":
+			r767_ally += 1
+		if PlayerClass.is_hidden_class(c.card_class):
+			r767_hidden += 1
+	check(r767_ally >= 1, "R767 卡组：至少 1 张盟友（实得 %d）" % r767_ally)
+	check(r767_hidden == 0, "R767 卡组：不含隐藏职业卡（实得 %d）" % r767_hidden)
+	var r767_deck2: Array = DailyChallenge.config_for_date(r767_date).get("deck", [])
+	check(str(r767_deck2) == str(r767_deck), "R767 卡组：同一天两次一致")
+
+	# ⑥ 修饰真的作用到 RunState 那几个唯一取数口
+	var r767_sv_fx: Dictionary = RunState.daily_fx.duplicate(true)
+	var r767_sv_diff := RunState.difficulty
+	RunState.set_difficulty(0)
+	RunState.daily_fx = {}
+	var r767_base_gold := RunState.start_gold()
+	var r767_base_hp := RunState.max_hp_mul()
+	var r767_base_energy := RunState.energy_per_turn()
+	var r767_base_choco := RunState.chocolate_per_layer()
+	var r767_base_rest := RunState.rest_pct()
+	RunState.daily_fx = {"gold": 80, "hp_mul": 1.15, "energy": 1, "choco": 3,
+			"rare_mul": 1.6, "rest": 0.15, "enemy_hp": 0.2, "enemy_power": 1}
+	check(RunState.start_gold() == r767_base_gold + 80, "R767 生效：金币修饰叠进 start_gold()")
+	check(absf(RunState.max_hp_mul() - r767_base_hp * 1.15) < 0.0001,
+			"R767 生效：生命修饰乘进 max_hp_mul()")
+	check(RunState.energy_per_turn() == r767_base_energy + 1,
+			"R767 生效：费用修饰叠进 energy_per_turn()（%d）" % RunState.energy_per_turn())
+	check(RunState.chocolate_per_layer() == r767_base_choco + 3,
+			"R767 生效：巧克力修饰叠进 chocolate_per_layer()（%d）" % RunState.chocolate_per_layer())
+	check(absf(RunState.rare_weight_mul() - 1.6) < 0.0001,
+			"R767 生效：稀有度修饰乘进 rare_weight_mul()")
+	check(absf(RunState.rest_pct() - r767_base_rest - 0.15) < 0.0001,
+			"R767 生效：休息回复叠进 rest_pct()")
+	check(absf(RunState.enemy_hp_bonus_pct() - 0.2) < 0.0001,
+			"R767 生效：敌人生命叠进 enemy_hp_bonus_pct()")
+	check(RunState.enemy_power_bonus() == 1,
+			"R767 生效：敌人攻击叠进 enemy_power_bonus()")
+
+	# ⑦ 下限保护：费用不许被减到 0；金币不许为负
+	RunState.daily_fx = {"energy": -99, "gold": -9999}
+	check(RunState.energy_per_turn() >= 1,
+			"R767 下限：费用修饰不会把每回合费用抹到 0（%d）" % RunState.energy_per_turn())
+	check(RunState.start_gold() == 0, "R767 下限：金币修饰不会让初始金币为负（%d）" % RunState.start_gold())
+
+	# ⑧ 标准局必须是「零影响」：daily_fx 为空时四个口回到原值
+	RunState.daily_fx = {}
+	check(RunState.start_gold() == r767_base_gold and RunState.energy_per_turn() == r767_base_energy
+			and is_equal_approx(RunState.max_hp_mul(), r767_base_hp),
+			"R767 标准局：daily_fx 为空时取数口与改动前完全一致")
+
+	# ⑨ 每日修饰只属于这一局：end_run 要把它清干净
+	RunState.daily_fx = {"gold": 80}
+	RunState.end_run(false)
+	check(RunState.daily_fx.is_empty(), "R767 收尾：end_run 清空 daily_fx（不带到下一局）")
+
+	# ⑩ 接线锁：预热链与转场收口（这两处删掉都不会报错，只会悄悄变回「卡一下」）
+	var r767_title_src := FileAccess.get_file_as_string("res://scripts/title_scene.gd")
+	var r767_mode_src := FileAccess.get_file_as_string("res://scripts/mode_select_scene.gd")
+	var r767_pick_src := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd")
+	var r767_fx_src := FileAccess.get_file_as_string("res://scripts/scene_fx.gd")
+	check_src(r767_title_src.contains("SceneWarm.warm_all(")
+			and r767_mode_src.contains("SceneWarm.warm_all(")
+			and r767_pick_src.contains("SceneWarm.warm_all("),
+			"R767 预热链：标题 / 模式选择 / 选人页三处都挂了后台预加载")
+	check_src(r767_fx_src.contains("SceneWarm.take(path) as PackedScene")
+			and r767_fx_src.contains("_t0 = -1"),
+			"R767 转场：优先用预加载成品，且擦入从新场景出现那一帧起表")
+
+	# 还原
+	RunState.daily_fx = r767_sv_fx
+	RunState.set_difficulty(r767_sv_diff)
+
+
+func _test_r769() -> void:
+	## R769 猴爪：发进手牌的**那张**，本回合费用 -2（R769 建机制 -1，R823 店长上调为 -2）。
+	## 走的是既有 `state.hand_cost_turn`（R276 随心组装同一张表），所以验的不是「新机制」，
+	## 而是**接得对不对**：标记写进去、cost_of 真降、离手与回合末都自动复原。
+	var r769_sv_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r769_sv_active: bool = RunState.run_active
+	RunState.run_active = false
+
+	var r769_e := _new_engine([], 20, 20, -1, false)
+	r769_e.self_relics = [GameEngine.MONKEY_CLAW_RELIC_ID]
+	r769_e.start_game(0)
+	var r769_alien: CardData = null
+	for c: CardData in r769_e.state.hand:
+		# 排除回响 9102：它卡面写死「最低 1 费」，_cost_floor 会压住这次减费，断言会假红
+		if r769_e._other_class_card(c) and c.id != GameEngine.ECHO_ID:
+			r769_alien = c
+	check(r769_alien != null,
+			"R769 准备：第 1 回合手牌里拿到一张其他职业卡（否则后面的断言是空的）")
+	if r769_alien != null:
+		check(int(r769_e.state.hand_cost_turn.get(r769_alien, 0)) == GameEngine.MONKEY_CLAW_DISCOUNT,
+				"R769 猴爪：发进手牌的那张打上「本回合费用 -%d」标记"
+				% GameEngine.MONKEY_CLAW_DISCOUNT)
+		var r769_before: int = r769_alien.cost
+		var r769_after: int = r769_e.cost_of(r769_alien)
+		check(r769_after == maxi(0, r769_before - GameEngine.MONKEY_CLAW_DISCOUNT),
+				"R769 猴爪：「%s」本回合费用 %d → %d（cost_of 唯一口）"
+				% [r769_alien.card_name, r769_before, r769_after])
+		check(r769_alien.cost == r769_before,
+				"R769 猴爪：**不改卡面原型**（card.cost 仍是 %d）—— 减费只按实例记账"
+				% r769_alien.cost)
+
+		# ③ 离手即复原
+		r769_e.state.hand.erase(r769_alien)
+		check(r769_e.cost_of(r769_alien) == r769_before,
+				"R769 猴爪：离手后立刻恢复原价（%d）" % r769_e.cost_of(r769_alien))
+		r769_e.state.hand.append(r769_alien)
+
+		# ④ 回合结束清表
+		r769_e.end_turn()
+		check(r769_e.state.hand_cost_turn.is_empty(),
+				"R769 猴爪：回合结束清空本回合减费表（剩 %d 条）"
+				% r769_e.state.hand_cost_turn.size())
+
+	# ④' 「减费真生效」的硬证据：上面那张是随机摇的，可能是低费（减完被 maxi(0,…) 夹住，
+	#     断言虽过却嚼不出味道）。这里另取一张**确定 >= 减费量**的别职业卡，挂同一个标记，
+	#     直接验 cost_of 真降 N —— 前者证接线，这条证效果。
+	var r769_pick: CardData = null
+	for pc: CardData in CardRepo.load_json().reward_pool():
+		if (r769_e._other_class_card(pc) and pc.cost >= GameEngine.MONKEY_CLAW_DISCOUNT
+				and pc.id != GameEngine.ECHO_ID):
+			r769_pick = pc
+			break
+	check(r769_pick != null, "R769 准备：卡池里有够减 %d 费的别职业卡" % GameEngine.MONKEY_CLAW_DISCOUNT)
+	if r769_pick != null:
+		var r769_inst := r769_e._new_own_card(r769_pick)
+		r769_e.state.hand.append(r769_inst)
+		r769_e.state.hand_cost_turn[r769_inst] = GameEngine.MONKEY_CLAW_DISCOUNT
+		check(r769_e.cost_of(r769_inst) == r769_pick.cost - GameEngine.MONKEY_CLAW_DISCOUNT,
+				"R769 猴爪：「%s」%d 费 → 本回合 %d 费（-%d 真落地，没被 0 费夹住）"
+				% [r769_pick.card_name, r769_pick.cost, r769_e.cost_of(r769_inst),
+						GameEngine.MONKEY_CLAW_DISCOUNT])
+		r769_e.state.hand.erase(r769_inst)
+		r769_e.state.hand_cost_turn.erase(r769_inst)
+
+	# ⑤ 满手 → 改投弃牌区的那张不带标记
+	var r769_full := _new_engine([], 20, 20, -1, false)
+	r769_full.self_relics = [GameEngine.MONKEY_CLAW_RELIC_ID]
+	r769_full.start_game(0)
+	r769_full.state.hand.clear()
+	r769_full.state.hand_cost_turn.clear()
+	var r769_proto: CardData = CardRepo.load_json().get_card(8002)
+	while r769_full.state.hand.size() < FieldState.HAND_LIMIT:
+		r769_full.state.hand.append(CardData.from_dict(r769_proto.to_dict()))
+	var r769_disc_before: int = r769_full.state.discard.size()
+	r769_full.turn_number = 1
+	r769_full._claw_tick()
+	check(r769_full.state.discard.size() == r769_disc_before + 1,
+			"R769 猴爪：满手时那张照样有去处（进弃牌区，不蒸发）")
+	check(r769_full.state.hand_cost_turn.is_empty(),
+			"R769 猴爪：满手没进手牌 → 不写减费标记（剩 %d 条）"
+			% r769_full.state.hand_cost_turn.size())
+
+	# ⑥ 第 4 回合连发都不发，更不会带标记
+	r769_full.state.hand.clear()
+	r769_full.state.hand_cost_turn.clear()
+	r769_full.turn_number = GameEngine.MONKEY_CLAW_TURNS + 1
+	var r769_d4: int = r769_full.state.discard.size()
+	r769_full._claw_tick()
+	check(r769_full.state.discard.size() == r769_d4
+			and r769_full.state.hand.is_empty() and r769_full.state.hand_cost_turn.is_empty(),
+			"R769 猴爪：第 4 回合不再发卡、也不留减费标记")
+
+	RunState.deck_ids = r769_sv_deck.duplicate()
+	RunState.run_active = r769_sv_active
+
+
+# ================= R776：吟游诗人「激励乐章」9267 / 「管风琴」9268 =================
+func _test_r776() -> void:
+	var r776_repo := CardRepo.load_json()
+	var r776_sv_class: String = RunState.player_class
+	var r776_sv_active: bool = RunState.run_active
+	var r776_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r776_sv_spent: Array[int] = RunState.spent_relics.duplicate()
+	RunState.run_active = false   # 测试里打的牌不许写进玩家成就统计
+	# 两张都是吟游诗人卡，「其他职业」判据读 `RunState.player_class` → 整段钉在这个身份上。
+	RunState.player_class = PlayerClass.BARD
+	RunState.relics = []
+	RunState.spent_relics = []
+
+	var r776_anthem: CardData = r776_repo.get_card(9267)
+	var r776_organ: CardData = r776_repo.get_card(9268)
+	# ① 数据
+	check(r776_anthem != null and r776_anthem.card_name == "激励乐章"
+			and r776_anthem.kind == "技能" and r776_anthem.cost == 1
+			and r776_anthem.rarity == 0 and r776_anthem.card_class == PlayerClass.BARD
+			and r776_anthem.target_mode == "none",
+			"R776 数据：激励乐章 9267 = 吟游诗人 1 费普通技能（无目标）")
+	check(r776_organ != null and r776_organ.card_name == "管风琴"
+			and r776_organ.kind == "工事" and r776_organ.cost == 4
+			and r776_organ.power == 0 and r776_organ.attack_range == 7
+			and r776_organ.health == 19 and r776_organ.rarity == 2
+			and r776_organ.card_class == PlayerClass.BARD
+			and r776_organ.traits.has("工事") and r776_organ.traits.has("管风琴"),
+			"R776 数据：管风琴 9268 = 吟游诗人 4 费史诗工事（0 力量 / 射程 7 / 19 生命）")
+	if r776_anthem == null or r776_organ == null:
+		RunState.player_class = r776_sv_class
+		RunState.relics = r776_sv_relics
+		RunState.spent_relics = r776_sv_spent
+		RunState.run_active = r776_sv_active
+		return
+	check(r776_anthem.color == "水风" and r776_organ.color == "水风",
+			"R776 数据：两张都是水风（与杜鹃 / 招募 / 呼唤同族）")
+	# 射程 7 是「0 攻也能攻击」的前提：0 攻程才不能攻击，所以它必须真有射程。
+	check(r776_organ.attack_range > 0 and r776_organ.power == 0,
+			"R776 数据：0 力量但有射程 —— 「攻击时」才触发得了（0 攻程不能攻击）")
+
+	# ② 隐藏职业口径不因稀有度松动
+	var r776_gs = preload("res://scripts/gallery_scene.gd")
+	check(not r776_gs.gallery_visible(r776_anthem, false)
+			and not r776_gs.gallery_visible(r776_anthem, true)
+			and not r776_gs.gallery_visible(r776_organ, false)
+			and not r776_gs.gallery_visible(r776_organ, true),
+			"R776 隐藏：两张都不进图鉴（判据在职业，不在稀有度）")
+	var r776_pool_hit: Array = []
+	for c0: CardData in r776_repo.reward_pool_for(PlayerClass.BARD):
+		if c0.id == 9267 or c0.id == 9268:
+			r776_pool_hit.append(c0.id)
+	check(r776_pool_hit.size() == 2,
+			"R776 卡池：吟游诗人的奖励池里两张都在（进得去才玩得到，实际 %s）"
+			% str(r776_pool_hit))
+
+	# ③ 激励乐章：本回合力量分层
+	var r776_d1: Array[CardData] = []
+	r776_d1.append(CardData.from_dict(r776_anthem.to_dict()))
+	var r776_e1 := _new_engine(r776_d1, 20, 20, -1, false)
+	r776_e1.start_game(1)
+	r776_e1.state.energy = 5
+	var r776_own := _card(1101, "自家盟友", "盟友", 1, 2, 10)
+	r776_own.card_class = PlayerClass.BARD
+	var r776_other := _card(1102, "他家盟友", "盟友", 1, 3, 10)   # 默认 card_class = 森林精魄
+	var r776_fort := _card(1103, "自家工事", "工事", 1, 0, 5)
+	var r776_p_own := r776_e1.state.place(r776_own, Vector2i(4, 0))
+	var r776_p_other := r776_e1.state.place(r776_other, Vector2i(4, 1))
+	var r776_p_fort := r776_e1.state.place(r776_fort, Vector2i(4, 2))
+	var r776_pow_own: int = r776_p_own.effective_power()
+	var r776_pow_other: int = r776_p_other.effective_power()
+	var r776_pow_fort: int = r776_p_fort.effective_power()
+	check(r776_e1._other_class_card(r776_other)
+			and not r776_e1._other_class_card(r776_own),
+			"R776 判据：默认职业盟友算「其他职业」，钉成吟游诗人的那张不算")
+	r776_e1.use_spell(_find(r776_e1.state.hand, 9267))
+	check(r776_p_own.effective_power() == r776_pow_own + 4,
+			"R776 激励乐章：同职业盟友本回合力量 +4（%d → %d）"
+			% [r776_pow_own, r776_p_own.effective_power()])
+	check(r776_p_other.effective_power() == r776_pow_other + 6,
+			"R776 激励乐章：原本职业非自己的盟友改为 +6（%d → %d）"
+			% [r776_pow_other, r776_p_other.effective_power()])
+	check(r776_p_fort.effective_power() == r776_pow_fort,
+			"R776 激励乐章：工事不是盟友，不吃这份力量")
+	check(r776_p_own.atk_buff_turn == 4 and r776_p_other.atk_buff_turn == 6,
+			"R776 激励乐章：记在 atk_buff_turn（本回合那一层），不是持续 buff")
+
+	# ④ 回合结束 → 清零（「本回合」不是「本局」）
+	r776_e1.end_turn()
+	check(r776_p_own.effective_power() == r776_pow_own
+			and r776_p_other.effective_power() == r776_pow_other,
+			"R776 激励乐章：回合结束清零（%d / %d）"
+			% [r776_p_own.effective_power(), r776_p_other.effective_power()])
+
+	# ⑤ 空场：照常吃费，不炸、不开空面板
+	var r776_d2: Array[CardData] = []
+	r776_d2.append(CardData.from_dict(r776_anthem.to_dict()))
+	var r776_e2 := _new_engine(r776_d2, 20, 20, -1, false)
+	r776_e2.start_game(1)
+	r776_e2.state.energy = 3
+	var r776_res: String = r776_e2.use_spell(_find(r776_e2.state.hand, 9267))
+	check(r776_e2.state.energy == 2 and r776_res.contains("没有盟友"),
+			"R776 激励乐章：场上没盟友 → 照常扣 1 费并明说（%s）" % r776_res)
+
+	# ⑥ 管风琴：攻击时取一张技能卡入手，且只有它本回合 -1 费
+	var r776_d3: Array[CardData] = []
+	for i3 in 10:
+		r776_d3.append(_card(1200 + i3, "测试技能%d" % i3, "技能", 1, 0, 0))
+	var r776_e3 := _new_engine(r776_d3, 20, 20, -1, false)
+	r776_e3.start_game(1)
+	r776_e3.state.energy = 5
+	var r776_org_card := CardData.from_dict(r776_organ.to_dict())
+	var r776_org_p := r776_e3.state.place(r776_org_card, Vector2i(4, 1))
+	var r776_foe_p := r776_e3.state.place(_card(1301, "木桩", "盟友", 1, 0, 60),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	check(r776_org_p != null and r776_foe_p != null and r776_foe_p.health == 60,
+			"R776 布场：管风琴在 (4,1)，木桩在 (1,1)（3 格，射程 7 够得着）")
+	var r776_hand_before: int = r776_e3.state.hand.size()
+	r776_e3.attack(Vector2i(4, 1), Vector2i(1, 1))
+	check(r776_e3.state.hand.size() == r776_hand_before + 1,
+			"R776 管风琴：攻击时从卡组取一张技能卡入手（%d → %d）"
+			% [r776_hand_before, r776_e3.state.hand.size()])
+	var r776_fetched: CardData = null
+	for c1: CardData in r776_e3.state.hand:
+		if r776_e3.state.turn_card_discount.has(c1):
+			r776_fetched = c1
+	check(r776_fetched != null and r776_fetched.kind == "技能",
+			"R776 管风琴：取到的是一张技能卡（%s）"
+			% (r776_fetched.card_name if r776_fetched != null else "无"))
+	if r776_fetched != null:
+		check(r776_e3.cost_of(r776_fetched) == maxi(0, r776_fetched.cost - 1),
+				"R776 管风琴：该卡本回合费用 -1（%d → %d）"
+				% [r776_fetched.cost, r776_e3.cost_of(r776_fetched)])
+
+	# ⑦ 每用一张技能卡 → 所有敌人 3 伤
+	var r776_hp1: int = r776_foe_p.health
+	r776_e3.state.energy = 9
+	var r776_sk1: int = -1
+	for i4 in r776_e3.state.hand.size():
+		if r776_e3.state.hand[i4].kind == "技能" and r776_e3.state.hand[i4] != r776_fetched:
+			r776_sk1 = i4
+			break
+	r776_e3.use_spell(r776_sk1)
+	check(r776_foe_p.health == r776_hp1 - 3,
+			"R776 管风琴：用一张技能卡 → 敌人 -3（%d → %d）"
+			% [r776_hp1, r776_foe_p.health])
+
+	# ⑧ 打盟友卡不触发（只认技能卡）
+	var r776_hp2: int = r776_foe_p.health
+	r776_e3.state.energy = 9
+	r776_e3.state.hand.append(_card(1302, "手卡盟友", "盟友", 1, 1, 8))
+	r776_e3.play_from_hand(r776_e3.state.hand.size() - 1, Vector2i(4, 0))
+	check(r776_foe_p.health == r776_hp2,
+			"R776 管风琴：打出盟友卡不触发（%d 不变）" % r776_hp2)
+
+	# ⑨ 场上两台 → 每张技能各结算一份（3 × 2）
+	r776_e3.state.place(CardData.from_dict(r776_organ.to_dict()), Vector2i(4, 2))
+	var r776_hp3: int = r776_foe_p.health
+	r776_e3.state.energy = 9
+	var r776_sk2: int = -1
+	for i5 in r776_e3.state.hand.size():
+		if r776_e3.state.hand[i5].kind == "技能":
+			r776_sk2 = i5
+			break
+	r776_e3.use_spell(r776_sk2)
+	check(r776_foe_p.health == r776_hp3 - 6,
+			"R776 管风琴：两台各结算一份（%d → %d，3×2）"
+			% [r776_hp3, r776_foe_p.health])
+
+	# ⑩ 离场即失效（结构体被打掉就没有这个被动）
+	var r776_hp4: int = r776_foe_p.health
+	r776_e3.state.board.erase(Vector2i(4, 1))
+	r776_e3.state.board.erase(Vector2i(4, 2))
+	r776_e3.state.energy = 9
+	var r776_sk3: int = -1
+	for i6 in r776_e3.state.hand.size():
+		if r776_e3.state.hand[i6].kind == "技能":
+			r776_sk3 = i6
+			break
+	if r776_sk3 >= 0:
+		r776_e3.use_spell(r776_sk3)
+	check(r776_foe_p.health == r776_hp4,
+			"R776 管风琴：离场后不再触发（%d 不变）" % r776_hp4)
+
+	# ⑪ 三语：en / ja 都要真有译文（判据读显示层，不查 json 有没有键）
+	var r776_lang_bak: String = GameSettings.language
+	GameSettings.language = "en"
+	GameI18n.reset_cache()
+	var r776_en_a: String = CardText.naturalize_card(r776_anthem)
+	var r776_en_o: String = CardText.naturalize_card(r776_organ)
+	GameSettings.language = "ja"
+	GameI18n.reset_cache()
+	var r776_ja_a: String = CardText.naturalize_card(r776_anthem)
+	var r776_ja_o: String = CardText.naturalize_card(r776_organ)
+	GameSettings.language = r776_lang_bak
+	GameI18n.reset_cache()
+	check(r776_en_a.find("Power") >= 0 and r776_en_a.find("力量") < 0,
+			"R776 译文：激励乐章 en（%s）" % r776_en_a.replace("\n", " ").left(40))
+	check(r776_en_o.find("Skill") >= 0 and r776_en_o.find("攻击时") < 0,
+			"R776 译文：管风琴 en（%s）" % r776_en_o.replace("\n", " ").left(40))
+	check(r776_ja_a.find("ターン") >= 0 and r776_ja_a.find("力量") < 0,
+			"R776 译文：激励乐章 ja（%s）" % r776_ja_a.replace("\n", " ").left(40))
+	check(r776_ja_o.find("スキル") >= 0 and r776_ja_o.find("技能") < 0,
+			"R776 译文：管风琴 ja（%s）" % r776_ja_o.replace("\n", " ").left(40))
+
+	# 收尾还原
+	RunState.relics = r776_sv_relics
+	RunState.spent_relics = r776_sv_spent
+	RunState.run_active = r776_sv_active
+	RunState.player_class = r776_sv_class
+
+func _test_r781() -> void:
+	# R781 每日修饰四条改写：巧克力 ±2 / 温暖=火堆选两项 / 阴冷=火堆全换战斗 / 滞涩=抽卡−1。
+	# 改的是**修饰语义**，所以每条都按「fx 汇总 → 唯一取数口 → 实际效果」整链验一遍。
+	# R792：奖励池变动后升到 4，这条从「写死 == 3」改成「两处一致 + 不低于 3」——
+	# 守的是**两处必须同升**这条铁律，而不是某一个具体数字（写死会让每次升级都假红）。
+	check(DailyChallenge.RULES_VERSION == DailyModifiers.RULES_VERSION and DailyChallenge.RULES_VERSION >= 3,
+			"R781 规则版本：两处必须一致且不低于 3（%d/%d）" % [
+					DailyChallenge.RULES_VERSION, DailyModifiers.RULES_VERSION])
+
+	var r781_rations := DailyModifiers.fx_of(["RATIONS"])
+	var r781_hungry := DailyModifiers.fx_of(["HUNGRY"])
+	check(absf(float(r781_rations.get("choco", 0.0)) - 2.0) < 0.0001
+			and absf(float(r781_hungry.get("choco", 0.0)) + 2.0) < 0.0001,
+			"R781 巧克力：旅粮 +2 / 饥饿 −2（实得 %s / %s）" % [
+					str(r781_rations.get("choco")), str(r781_hungry.get("choco"))])
+
+	var r781_drain := DailyModifiers.fx_of(["DRAINED"])
+	check(absf(float(r781_drain.get("draw", 0.0)) + 1.0) < 0.0001 and not r781_drain.has("energy"),
+			"R781 滞涩：改成每回合抽卡 −1，不再碰费用（fx=%s）" % str(r781_drain))
+
+	var r781_warm := DailyModifiers.fx_of(["WARM"])
+	var r781_cold := DailyModifiers.fx_of(["COLD"])
+	check(int(r781_warm.get("rest_pick", 0)) == 1
+			and bool(r781_cold.get("rest_to_battle", false)),
+			"R781 火堆两条：温暖 = 多选一份，阴冷 = 全换战斗（fx=%s / %s）" % [
+					str(r781_warm), str(r781_cold)])
+	# 布尔键必须走「或」，不能被加进 float 里 —— R781 把 `fatigue` 特例改成通用布尔分支的回归。
+	var r781_both := DailyModifiers.fx_of(["COLD", "COLD"])
+	check(bool(r781_both.get("rest_to_battle", false)),
+			"R781 布尔修饰：叠加两次仍是 true（不是被加成 2.0）")
+
+	# 抽卡取数口：基础 5、滞涩 4、下限 1。敌人侧仍读 `FieldState` 常量，不受影响。
+	var r781_sv_fx: Dictionary = RunState.daily_fx.duplicate(true)
+	RunState.daily_fx = {}
+	var r781_base_draw := RunState.hand_draw_per_turn()
+	RunState.daily_fx = {"draw": -1}
+	var r781_drain_draw := RunState.hand_draw_per_turn()
+	RunState.daily_fx = {"draw": -99}
+	var r781_floor := RunState.hand_draw_per_turn()
+	check(r781_base_draw == FieldState.HAND_DRAW_PER_TURN
+			and r781_drain_draw == r781_base_draw - 1 and r781_floor == 1,
+			"R781 抽卡：%d → %d（滞涩）→ 夹到 %d" % [
+					r781_base_draw, r781_drain_draw, r781_floor])
+
+	# 火堆配额：普通 1 份、温暖 2 份；记账按房间（层 + 节点）走，换一间就重新计数。
+	var r781_sv_layer := RunState.current_layer
+	var r781_sv_node := RunState.current_node_id
+	RunState.daily_fx = {}
+	RunState.rest_pick_node = -1
+	RunState.rest_pick_used = 0
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+	RunState.current_node_id = 7
+	var r781_q1 := RunState.rest_pick_quota()
+	var r781_first := RunState.rest_pick_mark()
+	RunState.daily_fx = {"rest_pick": 1}
+	var r781_q2 := RunState.rest_pick_quota()
+	var r781_second := RunState.rest_pick_mark()
+	var r781_left2 := RunState.rest_pick_quota() - RunState.rest_pick_used_here()
+	RunState.current_node_id = 8
+	var r781_other_room := RunState.rest_pick_used_here()
+	check(r781_q1 == 1 and r781_first == 1,
+			"R781 火堆配额：普通局一间只能选一份（quota=%d used=%d）" % [r781_q1, r781_first])
+	check(r781_q2 == 2 and r781_second == 2 and r781_left2 == 0,
+			"R781 火堆配额：温暖下一间能选两份（quota=%d used=%d）" % [r781_q2, r781_second])
+	check(r781_other_room == 0, "R781 火堆配额：换一间火堆重新计数（实得 %d）" % r781_other_room)
+	RunState.current_layer = r781_sv_layer
+	RunState.current_node_id = r781_sv_node
+	RunState.rest_pick_node = -1
+	RunState.rest_pick_used = 0
+
+	# 阴冷真的改地图：同一颗种子，普通局刷得出休息格，阴冷下一格都不剩。
+	var r781_map_rng := RandomNumberGenerator.new()
+	r781_map_rng.seed = 20261117
+	RunState.daily_fx = {}
+	var r781_map_normal := RogueMap.generate(r781_map_rng, GameLayers.LAYER_DEFAULT)
+	var r781_rest_normal := 0
+	for cell: Variant in r781_map_normal:
+		if str((cell as Dictionary).get("type", "")) == "rest":
+			r781_rest_normal += 1
+	var r781_map_rng2 := RandomNumberGenerator.new()
+	r781_map_rng2.seed = 20261117
+	RunState.daily_fx = {"rest_to_battle": true}
+	var r781_map_cold := RogueMap.generate(r781_map_rng2, GameLayers.LAYER_DEFAULT)
+	var r781_rest_cold := 0
+	for cell: Variant in r781_map_cold:
+		if str((cell as Dictionary).get("type", "")) == "rest":
+			r781_rest_cold += 1
+	check(r781_rest_normal > 0 and r781_rest_cold == 0,
+			"R781 阴冷：休息格全部换成战斗（普通 %d 间 → 阴冷 %d 间）" % [
+					r781_rest_normal, r781_rest_cold])
+	RunState.daily_fx = r781_sv_fx
+
+	# 源码守卫：火堆三条出口必须走同一个收尾口，别再各写一套「选完就收起」。
+	var r781_es := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	var r781_map_src := FileAccess.get_file_as_string("res://scripts/rogue_map.gd")
+	check_src(r781_es.contains("func _rest_after_pick(") and r781_es.contains("RunState.rest_pick_quota()")
+			and r781_es.contains("REST_WARM_NOTE") and r781_map_src.contains("RunState.rest_to_battle()"),
+			"R781 火堆：收尾统一走 _rest_after_pick；地图侧只读 RunState.rest_to_battle()")
+
+
+func _test_r792() -> void:
+	## R792（用户口径）：板甲 / 兵 / 墙砖 三件新道具 + 猴爪进奖励池 + 第三层不再注册事件。
+	var r792_cards := CardRepo.load_json()
+
+	# ================= R792：板甲 / 兵 / 墙砖 + 猴爪进池 + 第三层事件 ==============
+	# ① 数据层：三件在库、都进奖励池；猴爪 6066 不再是「标着奖励却摇不到」的孤儿道具。
+
+	var r792_sv_relics := RunState.relics.duplicate()
+
+	var r792_repo := RelicRepo.load_json()
+
+	check(r792_repo.get_relic(6070) != null and r792_repo.get_relic(6071) != null and r792_repo.get_relic(6072) != null,
+			"R792 数据层：板甲 6070 / 兵 6071 / 墙砖 6072 三件都在库")
+
+	check(r792_repo.get_relic(6070).tier == "一般" and r792_repo.get_relic(6071).tier == "一般" and r792_repo.get_relic(6072).tier == "一般",
+			"R792 数据层：三件新道具都是一般档")
+
+	check(r792_repo.reward_ids().has(6066),
+			"R792 猴爪 6066 已进奖励池（此前标「奖励」却永远摇不到）")
+
+	check(r792_repo.reward_ids().has(6070) and r792_repo.reward_ids().has(6071) and r792_repo.reward_ids().has(6072),
+			"R792 三件新道具都进奖励池")
+
+	# ⚠️ 不能断言 `event_weights(3).is_empty()` —— `content_layers: [2, 3]` 会把
+	# 第二层的 events 表摊进来（关卡池与事件池共用这份配置）。真正该守的是
+	# 「LAYERS[3] 自己不再登记 events 表」：第三层没有事件节点，登记了也抽不到。
+	var r792_l3: Dictionary = GameLayers.LAYERS.get(GameLayers.LAYER_THREE, {})
+
+	check(not r792_l3.has("events"),
+			"R792 第三层不再注册 events 表（内容池仍与第二层共用）")
+
+	var r792_en := FileAccess.get_file_as_string("res://i18n/noncard_en.json")
+
+	var r792_ja := FileAccess.get_file_as_string("res://i18n/noncard_ja.json")
+
+	var r792_es := FileAccess.get_file_as_string("res://i18n/noncard_es.json")
+
+	check(r792_en.contains('"6070"') and r792_ja.contains('"6070"') and r792_es.contains('"6070"') and r792_en.contains('"6071"') and r792_ja.contains('"6071"') and r792_es.contains('"6072"'),
+			"R792 三语条目齐（6070 / 6071 / 6072）")
+
+	# ② 板甲：第一个盟友获得「当前层数 × 3」生命、移速 5 → 1；第二个盟友完全不受影响
+	var r792_layer_save: int = RunState.current_layer
+	var r792_plate_relics: Array[int] = [6070]
+
+	RunState.relics = r792_plate_relics
+
+	RunState.current_layer = GameLayers.LAYER_DEFAULT
+
+	var r792_plate := _new_engine([], 40, 40)
+
+	r792_plate.state.energy = 30
+
+	r792_plate.state.hand.clear()
+
+	r792_plate.state.hand.append(CardData.from_dict(r792_cards.get_card(8006).to_dict()))   # 影子猫 1 费 1 血 速 5
+
+	r792_plate.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))   # 龙裔 1 费 12 血 速 1
+
+	var r792_p1 := r792_plate.play_from_hand(0, Vector2i(5, 1))
+
+	var r792_p2 := r792_plate.play_from_hand(0, Vector2i(4, 1))
+
+	check(r792_p1 != null and r792_p1.health == 4 and r792_p1.card.health == 4,
+			"R792 板甲：第一层第一个盟友 1+3=4 生命（实得 %d）" % (r792_p1.health if r792_p1 != null else -1))
+
+	check(r792_p1 != null and r792_p1.effective_speed() == 1 and r792_p1.speed_cap == 1,
+			"R792 板甲：第一个盟友移速 5 → 1（实得 %d）" % (r792_p1.effective_speed() if r792_p1 != null else -1))
+
+	check(r792_p2 != null and r792_p2.health == 12 and r792_p2.speed_cap == 0 and r792_p2.relic_bonus_hp == 0,
+			"R792 板甲：第二个盟友不受影响（生命 %d、无移速上限）" % (r792_p2.health if r792_p2 != null else -1))
+
+	# R828：第二层 2×3=6、第三层 3×3=9 —— 加值随层数放大，仍是「第一个盟友」同一额度
+	RunState.current_layer = GameLayers.LAYER_TWO
+
+	var r792_plate_l2 := _new_engine([], 40, 40)
+
+	r792_plate_l2.state.energy = 30
+
+	r792_plate_l2.state.hand.clear()
+
+	r792_plate_l2.state.hand.append(CardData.from_dict(r792_cards.get_card(8006).to_dict()))
+
+	var r792_l2p := r792_plate_l2.play_from_hand(0, Vector2i(5, 1))
+
+	check(r792_l2p != null and r792_l2p.health == 7,
+			"R792 板甲：第二层第一个盟友 1+6=7 生命（实得 %d）" % (r792_l2p.health if r792_l2p != null else -1))
+
+	RunState.current_layer = GameLayers.LAYER_THREE
+
+	var r792_plate_l3 := _new_engine([], 40, 40)
+
+	r792_plate_l3.state.energy = 30
+
+	r792_plate_l3.state.hand.clear()
+
+	r792_plate_l3.state.hand.append(CardData.from_dict(r792_cards.get_card(8006).to_dict()))
+
+	var r792_l3p := r792_plate_l3.play_from_hand(0, Vector2i(5, 1))
+
+	check(r792_l3p != null and r792_l3p.health == 10,
+			"R792 板甲：第三层第一个盟友 1+9=10 生命（实得 %d）" % (r792_l3p.health if r792_l3p != null else -1))
+
+	RunState.current_layer = r792_layer_save
+
+	# ③ 兵：第一个盟友当回合就有 2 轮行动；第二个只 1 轮
+	var r792_pawn_relics: Array[int] = [6071]
+
+	RunState.relics = r792_pawn_relics
+
+	var r792_pawn := _new_engine([], 40, 40)
+
+	r792_pawn.state.energy = 30
+
+	r792_pawn.state.hand.clear()
+
+	r792_pawn.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))
+
+	r792_pawn.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))
+
+	var r792_n1 := r792_pawn.play_from_hand(0, Vector2i(5, 1))
+
+	var r792_n2 := r792_pawn.play_from_hand(0, Vector2i(4, 1))
+
+	check(r792_n1 != null and r792_n1.acts_left == 2 and r792_pawn.state.unit_actions(r792_n1, "self") == 2,
+			"R792 兵：第一个盟友本回合就有 2 轮行动（acts_left=%d）" % (r792_n1.acts_left if r792_n1 != null else -1))
+
+	check(r792_n2 != null and r792_n2.acts_left == 1 and not r792_n2.first_ally_twice,
+			"R792 兵：第二个盟友只行动一次")
+
+	# ④ 墙砖：工事 6+4=10；离场还原成 6（同一张回手再上场不会叠成 +8）
+	var r792_brick_relics: Array[int] = [6072]
+
+	RunState.relics = r792_brick_relics
+
+	var r792_brick := _new_engine([], 40, 40)
+
+	r792_brick.state.energy = 30
+
+	r792_brick.state.hand.clear()
+
+	r792_brick.state.hand.append(CardData.from_dict(r792_cards.get_card(8001).to_dict()))   # 木栅栏 2 费 8 血
+
+	var r792_w := r792_brick.play_from_hand(0, Vector2i(5, 1))
+
+	check(r792_w != null and r792_w.health == 12 and r792_w.card.health == 12 and r792_w.relic_bonus_hp == 4,
+			"R792 墙砖：木栅栏 8+4=12 生命（实得 %d）" % (r792_w.health if r792_w != null else -1))
+
+	var r792_back := r792_brick._card_leaving_field(r792_w)
+
+	check(r792_back != null and r792_back.health == 8,
+			"R792 墙砖：离场还原成 8 血（实得 %d）" % (r792_back.health if r792_back != null else -1))
+
+	# ⑤ 源码守卫：「第一个盟友」两个额度各只发一次，重置点在 start_game
+	var r792_ge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+
+	check_src(r792_ge_src.contains("_plate_first_ally_done = false") and r792_ge_src.contains("_pawn_first_ally_done = false") and r792_ge_src.contains("state.grant_actions(p, state.unit_actions(p, SIDE_SELF))"),
+			"R792 源码守卫：兵的双动走 grant_actions 补发，两个额度在 start_game 重置")
+
+	RunState.relics = r792_sv_relics
+
+
+
+
+func _test_r796() -> void:
+	## R796（用户口径）：刺墙**扩面**（工事 + HP 被攻击）/ 兔脚 6076 / 钻头 6077 /
+	## 卡牌包 7013（随机卡填满手牌）/ 智慧药剂 7014（抽 3 张）。
+	var r796_cards := CardRepo.load_json()
+	var r796_relic_repo := RelicRepo.load_json()
+	var r796_trap_repo := TrapRepo.load_json()
+	var r796_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r796_sv_traps: Array[int] = RunState.traps.duplicate()
+	var r796_sv_seq := RunState.tool_roll_seq
+	var r796_sv_pledge := RunState.tool_drop_pledge
+
+	# ① 数据层：两件道具在库、都进奖励池且是一般档；两件工具在库
+	check(r796_relic_repo.get_relic(6076) != null and r796_relic_repo.get_relic(6077) != null,
+			"R796 数据层：兔脚 6076 / 钻头 6077 都在库")
+	check(r796_relic_repo.reward_ids().has(6076) and r796_relic_repo.reward_ids().has(6077)
+			and r796_relic_repo.normal_reward_ids().has(6076)
+			and r796_relic_repo.normal_reward_ids().has(6077),
+			"R796 兔脚 / 钻头都进奖励池且都在「一般」档")
+	check(r796_trap_repo.get_trap(7013) != null and r796_trap_repo.get_trap(7014) != null
+			and r796_trap_repo.get_trap(7013).fill_hand
+			and r796_trap_repo.get_trap(7014).draw_cards == 3
+			and r796_trap_repo.get_trap(7013).is_usable()
+			and r796_trap_repo.get_trap(7014).is_usable(),
+			"R796 数据层：卡牌包 7013（fill_hand）/ 智慧药剂 7014（draw_cards 3）都是使用型")
+
+	# ② 刺墙扩面：敌人**直击我方 HP** → 攻击者 -5（原来只管工事，这条永远不触发）
+	var r796_sw_relics: Array[int] = [6073]
+	RunState.relics = r796_sw_relics
+	var r796_sw := _new_engine([], 40, 40)
+	var r796_foe := r796_sw.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r796_foe != null, "R796 刺墙扩面：攻击者就位")
+	var r796_foe_hp0: int = r796_foe.health
+	r796_sw.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r796_foe.health == r796_foe_hp0 - 5,
+			"R796 刺墙扩面：直击 HP → 攻击者 -5（%d → %d）" % [r796_foe_hp0, r796_foe.health])
+
+	# ②b 刺墙一回合一次（R827）：工事反过之后，同回合直击 HP 不再反（共享额度）
+	RunState.relics = [6073]
+	var r827_sh := _new_engine([], 40, 40)
+	r827_sh.state.energy = 30
+	r827_sh.state.hand.clear()
+	r827_sh.state.hand.append(CardData.from_dict(r796_cards.get_card(8001).to_dict()))
+	var r827_shw := r827_sh.play_from_hand(0, Vector2i(5, 0))
+	var r827_she1 := r827_sh.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 0), GameEngine.SIDE_OPPONENT)
+	var r827_she2 := r827_sh.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	var r827_she1hp0: int = r827_she1.health
+	var r827_she2hp0: int = r827_she2.health
+	r827_sh.attack(Vector2i(4, 0), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
+	r827_sh.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r827_she1.health == r827_she1hp0 - 5 and r827_she2.health == r827_she2hp0,
+			"R827 刺墙一回合一次：工事反过后同回合 HP 直击不反（共享额度 %d/%d）" % [
+				r827_she1.health, r827_she2.health])
+	# ③ 不持道具时直击 HP 不反伤
+	RunState.relics = []
+	var r796_sw2 := _new_engine([], 40, 40)
+	var r796_foe2 := r796_sw2.state.place(
+			CardData.from_dict(r796_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	var r796_foe2_hp0: int = r796_foe2.health
+	r796_sw2.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r796_foe2.health == r796_foe2_hp0,
+			"R796 刺墙扩面：没持道具 → 直击 HP 不反伤（攻击者仍 %d）" % r796_foe2.health)
+
+	# ④ 兔脚：战后金币 +10（没有道具 = 0）
+	check(RunState.rabbit_foot_gold() == 0, "R796 兔脚：没有道具 → 战后金币 +0")
+	RunState.relics = [6076]
+	check(RunState.rabbit_foot_gold() == 10, "R796 兔脚：持有 → 战后金币 +10")
+
+	# ⑤ 兔脚：工具掉率**加算** 10%（300 场对比，走派生流所以确定性）
+	# R853：钉在难度 1（10% → 20%）上，免得难度 0 的 33% 把基线挪走。
+	var r796_sv_diff := RunState.difficulty
+	RunState.set_difficulty(1)
+	RunState.relics = []
+	RunState.tool_drop_pledge = 0
+	RunState.tool_roll_seq = 0
+	var r796_hits_plain := 0
+	for i in 300:
+		if RunState.roll_battle_tool_drop() > 0:
+			r796_hits_plain += 1
+	RunState.relics = [6076]
+	RunState.tool_drop_pledge = 0
+	RunState.tool_roll_seq = 0
+	var r796_hits_rabbit := 0
+	for i in 300:
+		if RunState.roll_battle_tool_drop() > 0:
+			r796_hits_rabbit += 1
+	check(r796_hits_rabbit > r796_hits_plain + 15,
+			"R796 兔脚：掉率加算 10%%（300 场 %d → %d 次掉落）"
+			% [r796_hits_plain, r796_hits_rabbit])
+	RunState.set_difficulty(r796_sv_diff)
+
+	# ⑥ 钻头：X ≥ 6 翻倍、X < 6 不动；没道具一律不翻
+	RunState.relics = [6077]
+	var r796_dr := _new_engine([], 40, 40)
+	check(r796_dr._drill_x(5) == 5 and r796_dr._drill_x(6) == 12 and r796_dr._drill_x(9) == 18,
+			"R796 钻头：X<6 不变 / X=6 → 12 / X=9 → 18")
+	RunState.relics = []
+	check(r796_dr._drill_x(6) == 6, "R796 钻头：没持道具 → X 不翻倍")
+
+	# ⑦ 钻头：法术（流星雨）与单位（枭熊）两条 X 必须同一个口
+	var r796_ge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r796_ge_src.contains("_x_spell_value = _drill_x(")
+			and r796_ge_src.contains("x_unit = _drill_x("),
+			"R796 钻头：法术与枭熊两条 X 都过 `_drill_x()`（半边生效是最难查的一类）")
+
+	# ⑧ 智慧药剂：抽 3 张
+	RunState.traps = [7014, -1, -1]
+	var r796_deck: Array[CardData] = []
+	for i in 5:
+		r796_deck.append(CardData.from_dict(r796_cards.get_card(8001).to_dict()))
+	var r796_wis := _new_engine(r796_deck, 40, 40)
+	var r796_hand0: int = r796_wis.state.hand.size()
+	var r796_wis_ok := r796_wis.use_tool(7014, 0)
+	check(r796_wis_ok and r796_wis.state.hand.size() == r796_hand0 + 3,
+			"R796 智慧药剂：抽 3 张（%d → %d）" % [r796_hand0, r796_wis.state.hand.size()])
+
+	# ⑨ 卡牌包：把空手牌填到上限；手牌已满时**拒绝使用**（不能白吃一件消耗品）
+	RunState.traps = [7013, -1, -1]
+	var r796_pack := _new_engine([], 40, 40)
+	r796_pack.state.hand.clear()
+	var r796_pack_ok := r796_pack.use_tool(7013, 0)
+	check(r796_pack_ok and r796_pack.state.hand.size() == FieldState.HAND_LIMIT,
+			"R796 卡牌包：手牌填到上限 %d（实际 %d）"
+			% [FieldState.HAND_LIMIT, r796_pack.state.hand.size()])
+	check(not r796_pack.use_tool(7013, 0), "R796 卡牌包：手牌已满时拒绝使用")
+
+	RunState.relics = r796_sv_relics
+	RunState.traps = r796_sv_traps
+	RunState.tool_roll_seq = r796_sv_seq
+	RunState.tool_drop_pledge = r796_sv_pledge
+	print("  · R796：刺墙扩面 / 兔脚 / 钻头 / 卡牌包 / 智慧药剂")
+
+
+func _test_r797() -> void:
+	## R797（用户口径）：龟壳 6078 —— **上回合没有攻击过的己方单位**受到的伤害 -2（至少 1）。
+	## 判据 `Placement.attacked_prev_turn`：attack / attack_hp 置位、reset_units 复位。
+	var r797_cards := CardRepo.load_json()
+	var r797_repo := RelicRepo.load_json()
+	var r797_sv: Array[int] = RunState.relics.duplicate()
+
+	# ① 数据层
+	check(r797_repo.get_relic(6078) != null, "R797 数据层：龟壳 6078 在库")
+	check(r797_repo.reward_ids().has(6078) and r797_repo.normal_reward_ids().has(6078),
+			"R797 龟壳进奖励池（一般档）")
+
+	# ② 上回合没攻击过 → 10 点伤害只吃 8
+	RunState.relics = [6078]
+	var r797_e1 := _new_engine([], 40, 40)
+	var r797_a1 := r797_e1.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	check(r797_a1 != null, "R797 龟壳：己方单位就位")
+	var r797_hp0: int = r797_a1.health
+	r797_e1._hit_unit(r797_a1, 10, "测试")
+	check(r797_a1.health == r797_hp0 - 8,
+			"R797 龟壳：上回合没攻击过 → 10 点只受 8（%d → %d）" % [r797_hp0, r797_a1.health])
+	check(not r797_a1.attacked_prev_turn, "R797 龟壳：挨打不算「攻击过」")
+
+	# ③ 普攻落地 → 置位，之后再挨打就不减了
+	var r797_e2 := _new_engine([], 40, 40)
+	var r797_a2 := r797_e2.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r797_f2 := r797_e2.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	check(r797_a2 != null and r797_f2 != null, "R797 龟壳：攻守双方就位")
+	r797_e2.attack(Vector2i(4, 1), Vector2i(4, 2), GameEngine.SIDE_SELF)
+	check(r797_a2.attacked_prev_turn, "R797 龟壳：普攻落地 → 记下「这回合打过」")
+	var r797_hp2: int = r797_a2.health
+	r797_e2._hit_unit(r797_a2, 10, "测试")
+	check(r797_a2.health == r797_hp2 - 10,
+			"R797 龟壳：打过就吃满伤害（%d → %d）" % [r797_hp2, r797_a2.health])
+
+	# ④ 新回合开始复位
+	r797_e2.state.reset_units(GameEngine.SIDE_SELF)
+	check(not r797_a2.attacked_prev_turn, "R797 龟壳：自己的回合开始 → 标记复位")
+
+	# ⑤ 至少仍受 1 点 / 敌人不减 / 没道具不减
+	var r797_e3 := _new_engine([], 40, 40)
+	var r797_a3 := r797_e3.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r797_f3 := r797_e3.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	var r797_hp3: int = r797_a3.health
+	r797_e3._hit_unit(r797_a3, 1, "测试")
+	check(r797_a3.health == r797_hp3 - 1, "R797 龟壳：1 点伤害仍受 1 点（不会减成 0）")
+	var r797_hp4: int = r797_f3.health
+	r797_e3._hit_unit(r797_f3, 10, "测试")
+	check(r797_f3.health == r797_hp4 - 10, "R797 龟壳：只保护己方，敌人照吃满伤害")
+	RunState.relics = []
+	var r797_e4 := _new_engine([], 40, 40)
+	var r797_a4 := r797_e4.state.place(
+			CardData.from_dict(r797_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r797_hp5: int = r797_a4.health
+	r797_e4._hit_unit(r797_a4, 10, "测试")
+	check(r797_a4.health == r797_hp5 - 10, "R797 龟壳：没持道具 → 不减伤")
+
+	# ⑥ 源码锁：减伤必须挂在 `_unit_damage_taken()`（两个扣血落地口共用）
+	var r797_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r797_ge.contains("and not p.attacked_prev_turn")
+			and r797_ge.contains("SHELL_RELIC_ID"),
+			"R797 龟壳：减伤在减伤唯一口里，两条扣血落地口都吃得到")
+
+	RunState.relics = r797_sv
+	print("  · R797：龟壳 6078（受伤 -2，上回合未攻击）")
+
+
+func _test_r799() -> void:
+	## R799（用户口径）：两张新的 **X 费** 技能卡
+	##   · 9272 连斩（暗影刺客 · 稀有）：对一个目标 7 伤 × X 次
+	##   · 9273 炮火就位（机械之心 · 史诗）：X 张「聚能炮击」进抽牌库 + 全体 3 伤 × X 次
+	## X 一律走 `_x_spell_value` —— 钻头 6077 的「X ≥ 6 翻倍」因此在两处同源生效。
+	var r799_repo := CardRepo.load_json()
+	var r799_sv: Array[int] = RunState.relics.duplicate()
+	var r799_c1: CardData = r799_repo.get_card(9272)
+	var r799_c2: CardData = r799_repo.get_card(9273)
+
+	# ① 数据层
+	check(r799_c1 != null and r799_c1.is_spell() and r799_c1.x_cost and r799_c1.cost == 0
+			and r799_c1.rarity == 1 and r799_c1.card_class == "暗影刺客"
+			and r799_c1.target_mode == "unit" and r799_c1.needs_target(),
+			"R799 数据层：连斩 9272 = 暗影刺客稀有 X 费技能，需要选目标")
+	check(r799_c2 != null and r799_c2.is_spell() and r799_c2.x_cost and r799_c2.cost == 0
+			and r799_c2.rarity == 2 and r799_c2.card_class == "机械之心"
+			and r799_c2.target_mode == "none" and not r799_c2.needs_target(),
+			"R799 数据层：炮火就位 9273 = 机械之心史诗 X 费技能，全体无需选目标")
+
+	# ② 连斩：X = 3 → 3 刀 × 7 = 21，费用清空，不溢到任何一方 HP
+	RunState.relics = []
+	var r799_e1 := _new_engine([], 40, 40)
+	var r799_f1 := r799_e1.state.place(
+			CardData.from_dict(r799_repo.get_card(1051).to_dict()),   # 亡灵领主 8/55
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r799_hp1: int = r799_f1.health
+	r799_e1.state.hand.clear()
+	r799_e1.state.hand.append(CardData.from_dict(r799_c1.to_dict()))
+	r799_e1.state.energy = 3
+	r799_e1.use_spell(0, Vector2i(2, 1))
+	check(r799_hp1 - r799_f1.health == 21,
+			"R799 连斩：X=3 → 3 刀 × 7 = 21 点伤害（实际 %d）" % (r799_hp1 - r799_f1.health))
+	check(r799_e1.state.energy == 0, "R799 连斩：一次吃掉全部费用（3 → 0）")
+	check(r799_e1.state.hp_self == 40 and r799_e1.state.hp_opponent == 40,
+			"R799 连斩：伤害没有溢到任何一方 HP")
+
+	# ③ 连斩 X = 0：合法施放，一刀不出
+	var r799_e2 := _new_engine([], 40, 40)
+	var r799_f2 := r799_e2.state.place(
+			CardData.from_dict(r799_repo.get_card(1051).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r799_hp2: int = r799_f2.health
+	r799_e2.state.hand.clear()
+	r799_e2.state.hand.append(CardData.from_dict(r799_c1.to_dict()))
+	r799_e2.state.energy = 0
+	check(r799_e2.can_pay_card(r799_e2.state.hand[0]), "R799 连斩：0 费也能使用（X 记 0）")
+	r799_e2.use_spell(0, Vector2i(2, 1))
+	check(r799_f2.health == r799_hp2 and r799_e2.state.hp_opponent == 40,
+			"R799 连斩：X=0 时一刀不出、不产生任何伤害")
+
+	# ④ 连斩：目标中途倒下 → 剩余段数作废，**不能**落到空格上溢成对敌方 HP 的伤害
+	RunState.relics = []
+	var r799_e3 := _new_engine([], 40, 40)
+	var r799_f3 := r799_e3.state.place(
+			CardData.from_dict(r799_repo.get_card(1051).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r799_f3.health = 8     # 第 1 刀 7 → 剩 1；第 2 刀倒；第 3 刀应作废
+	r799_e3.state.hand.clear()
+	r799_e3.state.hand.append(CardData.from_dict(r799_c1.to_dict()))
+	r799_e3.state.energy = 3
+	r799_e3.use_spell(0, Vector2i(2, 1))
+	check(r799_f3.health <= 0, "R799 连斩：目标在第 2 刀倒下")
+	check(r799_e3.state.hp_opponent == 40 and r799_e3.state.hp_self == 40,
+			"R799 连斩：目标倒下后剩余次数作废，没有幽灵伤害漏到 HP（2 排非后排，本就不该溢出）")
+
+	# ⑤ 炮火就位：X = 2 → 抽牌库 +2 张聚能炮击，场上两个敌人各吃 3 × 2 = 6
+	RunState.relics = []
+	var r799_e4 := _new_engine([], 40, 40)
+	var r799_g1 := r799_e4.state.place(
+			CardData.from_dict(r799_repo.get_card(1051).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r799_g2 := r799_e4.state.place(
+			CardData.from_dict(r799_repo.get_card(1013).to_dict()),   # 灰烬龙 9/45
+			Vector2i(2, 2), GameEngine.SIDE_OPPONENT)
+	var r799_g1hp: int = r799_g1.health
+	var r799_g2hp: int = r799_g2.health
+	r799_e4.state.hand.clear()
+	r799_e4.state.hand.append(CardData.from_dict(r799_c2.to_dict()))
+	r799_e4.state.energy = 2
+	check(r799_e4.state.deck.is_empty(), "R799 炮火就位：施放前抽牌库为空")
+	r799_e4.use_spell(0)
+	check(r799_e4.state.deck.size() == 2,
+			"R799 炮火就位：X=2 → 抽牌库 +2 张（实际 %d）" % r799_e4.state.deck.size())
+	var r799_ok := true
+	for r799_dc: CardData in r799_e4.state.deck:
+		if r799_dc == null or r799_dc.id != 9145:
+			r799_ok = false
+	check(r799_ok, "R799 炮火就位：加进抽牌库的是「聚能炮击」9145")
+	check(r799_g1hp - r799_g1.health == 6 and r799_g2hp - r799_g2.health == 6,
+			"R799 炮火就位：X=2 → 两个敌人各吃 3 × 2 = 6 点（%d / %d）" % [
+					r799_g1hp - r799_g1.health, r799_g2hp - r799_g2.health])
+	check(r799_e4.state.energy == 0, "R799 炮火就位：一次吃掉全部费用（2 → 0）")
+
+	# ⑥ 炮火就位 X = 0：不加卡也不伤害
+	var r799_e5 := _new_engine([], 40, 40)
+	var r799_h1 := r799_e5.state.place(
+			CardData.from_dict(r799_repo.get_card(1051).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	var r799_h1hp: int = r799_h1.health
+	r799_e5.state.hand.clear()
+	r799_e5.state.hand.append(CardData.from_dict(r799_c2.to_dict()))
+	r799_e5.state.energy = 0
+	r799_e5.use_spell(0)
+	check(r799_e5.state.deck.is_empty() and r799_h1.health == r799_h1hp,
+			"R799 炮火就位：X=0 时不加卡、不造成伤害")
+
+	# ⑦ 钻头 6077：X ≥ 6 → 翻倍，且**两处效果同源**（次数与卡数一起翻）
+	RunState.relics = [6077]
+	var r799_e6 := _new_engine([], 40, 40)
+	var r799_k1 := r799_e6.state.place(
+			CardData.from_dict(r799_repo.get_card(1051).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r799_k1.health = 200
+	var r799_k1hp: int = r799_k1.health
+	r799_e6.state.hand.clear()
+	r799_e6.state.hand.append(CardData.from_dict(r799_c1.to_dict()))
+	r799_e6.state.energy = 6
+	r799_e6.use_spell(0, Vector2i(2, 1))
+	check(r799_k1hp - r799_k1.health == 84,
+			"R799 钻头：连斩 X=6 → 翻倍成 12 → 12 × 7 = 84（实际 %d）" % (r799_k1hp - r799_k1.health))
+	var r799_e7 := _new_engine([], 40, 40)
+	r799_e7.state.place(CardData.from_dict(r799_repo.get_card(1051).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	r799_e7.state.hand.clear()
+	r799_e7.state.hand.append(CardData.from_dict(r799_c2.to_dict()))
+	r799_e7.state.energy = 6
+	r799_e7.use_spell(0)
+	check(r799_e7.state.deck.size() == 12,
+			"R799 钻头：炮火就位 X=6 → 12 张聚能炮击进抽牌库（卡数也跟着翻，实际 %d）"
+					% r799_e7.state.deck.size())
+
+	# ⑧ 源码锁：两张卡的 X 都读 `_x_spell_value`，不许各写一套
+	var r799_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r799_ge.contains("func _link_slash(")
+			and r799_ge.contains("func _barrage(")
+			and r799_ge.contains("maxi(0, _x_spell_value)"),
+			"R799 源码锁：连斩 / 炮火就位的 X 同走 _x_spell_value（钻头一处翻倍两处生效）")
+
+	RunState.relics = r799_sv
+	print("  · R799：连斩 9272 / 炮火就位 9273（X 费，钻头同源翻倍）")
+
+func _test_r800() -> void:
+	## R800（用户口径）：吟游诗人稀有技能「余音」9274 + 内部卡「音符」9275
+	##   · 9274 余音（吟游诗人 · 稀有 · X 费）：将 X 张「音符」加入抽牌库
+	##   · 9275 音符（0 费技能 · 次元）：获得 2 点费用，抽 2 张卡；用后进消耗区
+	## 「次元」在这里是**机制而不是装饰**：音符若进弃牌区就会被洗回牌库，
+	## 一张余音就能变成「+2 费 + 抽 2 张」的永动机 —— ④ 专门盯这条。
+	var r800_repo := CardRepo.load_json()
+	var r800_sv: Array[int] = RunState.relics.duplicate()
+	var r800_c1: CardData = r800_repo.get_card(9274)
+	var r800_c2: CardData = r800_repo.get_card(9275)
+
+	# ① 数据层
+	check(r800_c1 != null and r800_c1.is_spell() and r800_c1.x_cost and r800_c1.cost == 0
+			and r800_c1.rarity == 1 and r800_c1.card_class == "吟游诗人"
+			and r800_c1.target_mode == "none" and not r800_c1.needs_target(),
+			"R800 数据层：余音 9274 = 吟游诗人稀有 X 费技能，无需选目标")
+	check(r800_c2 != null and r800_c2.is_spell() and r800_c2.cost == 0
+			and not r800_c2.x_cost and r800_c2.has_affix("次元"),
+			"R800 数据层：音符 9275 = 0 费技能，带「次元」（用后消失）")
+	check(r800_c2 != null and r800_c2.event_only,
+			"R800 数据层：音符是内部卡（event_only → 不进任何获得池）")
+
+	# ② 余音 X = 3 → 抽牌库 +3 张音符，费用清空
+	RunState.relics = []
+	var r800_e1 := _new_engine([], 40, 40)
+	r800_e1.state.hand.clear()
+	r800_e1.state.hand.append(CardData.from_dict(r800_c1.to_dict()))
+	r800_e1.state.energy = 3
+	check(r800_e1.state.deck.is_empty(), "R800 余音：施放前抽牌库为空")
+	r800_e1.use_spell(0)
+	check(r800_e1.state.deck.size() == 3,
+			"R800 余音：X=3 → 抽牌库 +3 张（实际 %d）" % r800_e1.state.deck.size())
+	var r800_ok := true
+	for r800_dc: CardData in r800_e1.state.deck:
+		if r800_dc == null or r800_dc.id != 9275:
+			r800_ok = false
+	check(r800_ok, "R800 余音：塞进抽牌库的是「音符」9275")
+	check(r800_e1.state.energy == 0, "R800 余音：一次吃掉全部费用（3 → 0）")
+
+	# ③ 余音 X = 0：合法施放，一张都不加
+	var r800_e2 := _new_engine([], 40, 40)
+	r800_e2.state.hand.clear()
+	r800_e2.state.hand.append(CardData.from_dict(r800_c1.to_dict()))
+	r800_e2.state.energy = 0
+	check(r800_e2.can_pay_card(r800_e2.state.hand[0]), "R800 余音：0 费也能使用（X 记 0）")
+	r800_e2.use_spell(0)
+	check(r800_e2.state.deck.is_empty(), "R800 余音：X=0 时一张音符都不加")
+
+	# ④ 音符：+2 费、抽 2 张、用后进消耗区（不进弃牌区 → 不会被洗回牌库）
+	RunState.relics = []
+	var r800_e3 := _new_engine([], 40, 40)
+	r800_e3.state.deck.clear()
+	for _i in 3:
+		r800_e3.state.deck.append(CardData.from_dict(r800_repo.get_card(1051).to_dict()))
+	r800_e3.state.hand.clear()
+	r800_e3.state.hand.append(CardData.from_dict(r800_c2.to_dict()))
+	r800_e3.state.energy = 0
+	var r800_disc0: int = r800_e3.state.discard.size()
+	var r800_void0: int = r800_e3.state.void_count
+	r800_e3.use_spell(0)
+	check(r800_e3.state.energy == 2,
+			"R800 音符：获得 2 点费用（0 → %d）" % r800_e3.state.energy)
+	check(r800_e3.state.hand.size() == 2,
+			"R800 音符：抽 2 张进手牌（实际 %d）" % r800_e3.state.hand.size())
+	check(r800_e3.state.void_count == r800_void0 + 1,
+			"R800 音符：带「次元」→ 用后进消耗区（void %d → %d）"
+					% [r800_void0, r800_e3.state.void_count])
+	check(r800_e3.state.discard.size() == r800_disc0,
+			"R800 音符：不进弃牌区（否则会被洗回牌库，变成无限回费）")
+	var r800_note_in_discard := false
+	for r800_dc2: CardData in r800_e3.state.discard:
+		if r800_dc2 != null and r800_dc2.id == 9275:
+			r800_note_in_discard = true
+	check(not r800_note_in_discard, "R800 音符：弃牌区里一张音符都没有")
+
+	# ⑤ 奖励池：音符是内部卡（event_only）→ 连含隐藏职业的池子都不该收；余音正常在池内
+	var r800_pool: Array[CardData] = r800_repo.reward_pool(true)
+	var r800_has_note := false
+	var r800_has_encore := false
+	for r800_pc: CardData in r800_pool:
+		if r800_pc.id == 9275:
+			r800_has_note = true
+		if r800_pc.id == 9274:
+			r800_has_encore = true
+	check(not r800_has_note, "R800 奖励池：音符 9275 不进任何获得池（event_only 生效）")
+	check(r800_has_encore, "R800 奖励池：余音 9274 本身是可获得的正常卡")
+
+	# ⑥ 钻头 6077：余音 X ≥ 6 → 翻倍；与连斩 / 炮火就位共用同一个 `_x_spell_value`
+	RunState.relics = [6077]
+	var r800_e4 := _new_engine([], 40, 40)
+	r800_e4.state.hand.clear()
+	r800_e4.state.hand.append(CardData.from_dict(r800_c1.to_dict()))
+	r800_e4.state.energy = 6
+	r800_e4.use_spell(0)
+	check(r800_e4.state.deck.size() == 12,
+			"R800 钻头：余音 X=6 → 翻倍成 12 张音符（实际 %d）" % r800_e4.state.deck.size())
+
+	# ⑦ 源码锁：两个结算口都在，且 X 只读 `_x_spell_value`（别各写一套）
+	var r800_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r800_ge.contains("func _encore(")
+			and r800_ge.contains("func _note_spell(")
+			and r800_ge.contains("const NOTE_ID:= 9275")
+			and r800_ge.contains("maxi(0, _x_spell_value)"),
+			"R800 源码锁：余音 / 音符走 _encore / _note_spell，X 仍是 _x_spell_value 一条口")
+
+	RunState.relics = r800_sv
+	print("  · R800：余音 9274 / 音符 9275（X 费塞 X 张，音符 0 费 · 次元）")
+
+
+func _test_r793() -> void:
+	## R793（用户口径）：刺墙 6073（己方工事被攻击 → 攻击者受 5 伤）/
+	## 应急装甲 6074（玩家 HP 每回合最多受 20 伤）。
+	var r793_cards := CardRepo.load_json()
+	var r793_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r793_repo := RelicRepo.load_json()
+
+	# ① 数据层：两件在库、都进奖励池、都是一般档
+	check(r793_repo.get_relic(6073) != null and r793_repo.get_relic(6074) != null,
+			"R793 数据层：刺墙 6073 / 应急装甲 6074 都在库")
+	check(r793_repo.reward_ids().has(6073) and r793_repo.reward_ids().has(6074),
+			"R793 两件新道具都进奖励池")
+	check(r793_repo.normal_reward_ids().has(6073) and r793_repo.normal_reward_ids().has(6074),
+			"R793 两件都在「一般」档（normal_reward_ids 含）")
+
+	# ② 刺墙：敌方普攻打我方工事 → 攻击者 -5
+	# 木栅栏 8001 是 2 费 6 血工事；铁壁卫兵 1011 是 4 攻近战 —— 各打一下都活得下来，
+	# 所以这里量的是「反伤有没有落地」，不是「谁先死」。
+	var r793_sw_relics: Array[int] = [6073]
+	RunState.relics = r793_sw_relics
+	var r793_sw := _new_engine([], 40, 40)
+	r793_sw.state.energy = 30
+	r793_sw.state.hand.clear()
+	r793_sw.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	var r793_wall := r793_sw.play_from_hand(0, Vector2i(5, 2))
+	var r793_foe := r793_sw.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	check(r793_wall != null and r793_wall.card.kind == "工事" and r793_foe != null,
+			"R793 刺墙：工事与攻击者都就位")
+	var r793_foe_hp0: int = r793_foe.health
+	r793_sw.attack(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+	check(r793_foe.health == r793_foe_hp0 - 5,
+			"R793 刺墙：攻击工事 → 攻击者 -5（%d → %d）" % [r793_foe_hp0, r793_foe.health])
+
+	# ②b 刺墙一回合一次（R827）：同回合第二刀不反；换回合恢复额度
+	var r827_w_relics: Array[int] = [6073]
+	RunState.relics = r827_w_relics
+	var r827_w := _new_engine([], 40, 40)
+	r827_w.state.energy = 30
+	r827_w.state.hand.clear()
+	r827_w.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	r827_w.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	var r827_w1 := r827_w.play_from_hand(0, Vector2i(5, 0))
+	var r827_w2 := r827_w.play_from_hand(0, Vector2i(5, 1))
+	var r827_e1 := r827_w.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 0), GameEngine.SIDE_OPPONENT)
+	var r827_e2 := r827_w.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_OPPONENT)
+	check(r827_w1 != null and r827_w2 != null and r827_e1 != null and r827_e2 != null,
+			"R827 刺墙一回合一次：两个工事与两个攻击者就位")
+	var r827_e1hp0: int = r827_e1.health
+	var r827_e2hp0: int = r827_e2.health
+	r827_w.attack(Vector2i(4, 0), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
+	r827_w.attack(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
+	check(r827_e1.health == r827_e1hp0 - 5 and r827_e2.health == r827_e2hp0,
+			"R827 刺墙一回合一次：同回合两刀只反第一刀（%d/%d）" % [
+				r827_e1.health, r827_e2.health])
+	r827_w.turn_number += 1
+	r827_w.state.hand.clear()
+	r827_w.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	var r827_w3 := r827_w.play_from_hand(0, Vector2i(5, 2))
+	var r827_e3 := r827_w.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	var r827_e3hp0: int = r827_e3.health
+	r827_w.attack(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+	check(r827_e3.health == r827_e3hp0 - 5,
+			"R827 刺墙一回合一次：换回合后额度恢复（%d → %d）" % [r827_e3hp0, r827_e3.health])
+	# ③ 刺墙只认工事：同样的位置换成盟友，攻击者不掉血
+	RunState.relics = r793_sw_relics
+	var r793_sw2 := _new_engine([], 40, 40)
+	r793_sw2.state.energy = 30
+	r793_sw2.state.hand.clear()
+	r793_sw2.state.hand.append(CardData.from_dict(r793_cards.get_card(9028).to_dict()))   # 龙裔 1 费 12 血
+	var r793_ally := r793_sw2.play_from_hand(0, Vector2i(5, 2))
+	var r793_foe2 := r793_sw2.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	var r793_foe2_hp0: int = r793_foe2.health
+	r793_sw2.attack(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+	check(r793_ally != null and r793_foe2.health == r793_foe2_hp0,
+			"R793 刺墙：打的是盟友 → 不反伤（攻击者仍 %d）" % r793_foe2.health)
+
+	# ④ 不持道具时工事被打也不反伤
+	RunState.relics = []
+	var r793_sw3 := _new_engine([], 40, 40)
+	r793_sw3.state.energy = 30
+	r793_sw3.state.hand.clear()
+	r793_sw3.state.hand.append(CardData.from_dict(r793_cards.get_card(8001).to_dict()))
+	r793_sw3.play_from_hand(0, Vector2i(5, 2))
+	var r793_foe3 := r793_sw3.state.place(
+			CardData.from_dict(r793_cards.get_card(1011).to_dict()),
+			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
+	var r793_foe3_hp0: int = r793_foe3.health
+	r793_sw3.attack(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
+	check(r793_foe3.health == r793_foe3_hp0,
+			"R793 刺墙：没持道具 → 工事被打不反伤")
+
+	# ⑤ 应急装甲：一回合 30 伤只落地 20，额度用满后全免，换回合恢复
+	var r793_ar_relics: Array[int] = [6074]
+	RunState.relics = r793_ar_relics
+	var r793_ar := _new_engine([], 40, 40)
+	r793_ar.turn_number = 7
+	var r793_hp0: int = r793_ar.state.hp_self
+	r793_ar._damage_player(GameEngine.SIDE_SELF, 30, "测试")
+	check(r793_hp0 - r793_ar.state.hp_self == 20,
+			"R793 应急装甲：一回合 30 伤封顶到 20（实掉 %d）" % (r793_hp0 - r793_ar.state.hp_self))
+	var r793_hp1: int = r793_ar.state.hp_self
+	r793_ar._damage_player(GameEngine.SIDE_SELF, 15, "测试")
+	check(r793_ar.state.hp_self == r793_hp1,
+			"R793 应急装甲：额度用满后这一下全免（HP 仍 %d）" % r793_ar.state.hp_self)
+	var r793_hp2: int = r793_ar.state.hp_self
+	r793_ar.turn_number = 8
+	r793_ar._damage_player(GameEngine.SIDE_SELF, 15, "测试")
+	check(r793_hp2 - r793_ar.state.hp_self == 15,
+			"R793 应急装甲：换回合额度自动恢复（掉 %d）" % (r793_hp2 - r793_ar.state.hp_self))
+
+	# ⑥ 不持道具时 30 伤全额落地（确认封顶没顺手改掉通用口径）
+	RunState.relics = []
+	var r793_plain := _new_engine([], 40, 40)
+	r793_plain.turn_number = 3
+	var r793_plain_hp0: int = r793_plain.state.hp_self
+	r793_plain._damage_player(GameEngine.SIDE_SELF, 30, "测试")
+	check(r793_plain_hp0 - r793_plain.state.hp_self == 30,
+			"R793 应急装甲：没持道具时 30 伤全额（实掉 %d）" % (r793_plain_hp0 - r793_plain.state.hp_self))
+
+	# ⑦ 源码守卫：封顶挂在 `_hp_damage_taken()`（玩家 HP 两条落地路的**共同上游**），
+	#    不能挂 `_damage_player()` —— 那会漏掉 `attack_hp()` 的普攻直击。
+	var r793_ge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r793_ge_src.contains("_emergency_armor_cap(_relic_damage_taken(dmg))")
+			and r793_ge_src.contains("_armor_turn_key = -1")
+			and r793_ge_src.contains("RunState.has_relic(SPIKE_WALL_RELIC_ID)"),
+			"R793 源码守卫：封顶挂在 _hp_damage_taken、额度在 start_game 重置、刺墙走道具判据")
+
+	RunState.relics = r793_sv_relics
+
+
+func _test_r793s() -> void:
+	## R793 林中的剑（第一层事件）+ 道具「圣剑」6075：
+	##   拔剑 = 失去 13 点最大生命 → 每场战斗使用的第一个盟友 +10 力量。
+	var r793_cards := CardRepo.load_json()
+	var r793_repo := RelicRepo.load_json()
+	var r793_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r793_sv_spent: Array[int] = RunState.spent_relics.duplicate()
+	var r793_sv_mhp := RunState.max_hp
+	var r793_sv_hp := RunState.hp
+
+	# ① 数据层
+	var r793_relic := r793_repo.get_relic(6075)
+	check(r793_relic != null, "R793 数据：圣剑 6075 在库")
+	if r793_relic != null:
+		check(r793_relic.relic_name == "圣剑" and r793_relic.source == "事件"
+				and r793_relic.kind == "战斗" and r793_relic.tier == "一般",
+				"R793 数据：6075 = 圣剑 / 事件 / 战斗 / 一般（实得 %s / %s / %s / %s）" % [
+						r793_relic.relic_name, r793_relic.source,
+						r793_relic.kind, r793_relic.tier])
+	check(not r793_repo.reward_ids().has(6075),
+			"R793 数据：事件专属 → 不进奖励池（只有林中的剑给得出）")
+
+	# ② 事件注册：第一层专属，第二层不登记
+	var r793_w1 := GameLayers.event_weights(GameLayers.LAYER_DEFAULT)
+	var r793_w2 := GameLayers.event_weights(GameLayers.LAYER_TWO)
+	check(r793_w1.has("sword") and int(r793_w1["sword"]) > 0,
+			"R793 事件：第一层事件池含林中的剑（权重 %d）" % int(r793_w1.get("sword", 0)))
+	check(not r793_w2.has("sword"),
+			"R793 事件：第二层不登记（第一层专属，别顺手抄过去）")
+	check(str(GameLayers.EVENT_NAMES.get("sword", "")) == "林中的剑",
+			"R793 事件：EVENT_NAMES 有中文名（日志 / 界面读它）")
+
+	# ③ 四语文案
+	for r793_code in ["zh_canonical", "en", "ja", "es"]:
+		var r793_nc := FileAccess.get_file_as_string("res://i18n/noncard_%s.json" % r793_code)
+		check_src(r793_nc.contains('"6075"'), "R793 文案：noncard_%s 有 6075" % r793_code)
+	for r793_code2 in ["zh_canonical", "en", "ja", "es"]:
+		var r793_nar := FileAccess.get_file_as_string("res://i18n/narrative_%s.json" % r793_code2)
+		check_src(r793_nar.contains("SWORD_DESC") and r793_nar.contains("SWORD_TAKEN_DESC")
+				and r793_nar.contains('"sword"'),
+				"R793 文案：narrative_%s 有事件长文" % r793_code2)
+	var r793_ui_en := FileAccess.get_file_as_string("res://i18n/event_ui_en.json")
+	check_src(r793_ui_en.contains("TAKE_SWORD") and r793_ui_en.contains("SWORD_GAINED"),
+			"R793 文案：event_ui 有选项与结果 key")
+
+	# ④ 源码口径（导出包里 .gd 是 binary tokens → 必须走 check_src）
+	var r793_es := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r793_es.contains("const SWORD_MASTER_ID := 6075")
+			and r793_es.contains("const SWORD_LIFE_COST := 13"),
+			"R793 事件：道具 6075 / 代价 13 点最大生命 的常量对")
+	check_src(r793_es.contains("and not _is_sword()"),
+			"R793 事件：_is_treasure() 兜底排除 sword（漏了整场事件都会退化成小宝箱）")
+	check_src(r793_es.contains('if _is_sword():\n\t\treturn "sword"'),
+			"R793 事件：_kind() 认 sword（漏了会点亮休息处的篝火背景）")
+	check_src(r793_es.contains("or _is_statue() or _is_sword() \\")
+			and r793_es.contains("or _is_choco_factory() or _is_haunted_house():"),
+			"R793/R794 事件：_refresh() 白名单含 sword / factory（漏了按钮文案会被刷成「在这里休息」）")
+	check_src(r793_es.contains('event_name.text.replace(" ", "")'),
+			"R793 事件：标题去排版空格后再查 i18n（否则外语版每个事件标题都是中文）")
+	check_src(r793_es.contains("RunState.lose_max_hp(SWORD_LIFE_COST)")
+			and r793_es.contains("RunState.has_relic(SWORD_MASTER_ID)"),
+			"R793 事件：结算走 lose_max_hp 唯一口，且已持有 / 上限不足都拦在结算里")
+
+	# ⑤ 行为：第一个盟友 +10 力量，第二个完全不受影响
+	var r793_on: Array[int] = [6075]
+	RunState.relics = r793_on
+	var r793_eng := _new_engine([], 40, 40)
+	r793_eng.state.energy = 30
+	r793_eng.state.hand.clear()
+	r793_eng.state.hand.append(CardData.from_dict(r793_cards.get_card(8003).to_dict()))
+	r793_eng.state.hand.append(CardData.from_dict(r793_cards.get_card(8003).to_dict()))
+	var r793_a := r793_eng.play_from_hand(0, Vector2i(5, 1))
+	var r793_b := r793_eng.play_from_hand(0, Vector2i(4, 1))
+	check(r793_a != null and r793_a.master_sword_atk == 10
+			and r793_a.effective_power() == r793_a.card.power + 10,
+			"R793 圣剑：第一个盟友 +10 力量（字段 %d / 实际 %d）" % [
+					r793_a.master_sword_atk if r793_a != null else -1,
+					(r793_a.effective_power() - r793_a.card.power) if r793_a != null else -999])
+	check(r793_a != null and r793_a.card.power == r793_cards.get_card(8003).power,
+			"R793 圣剑：没有烤进共享 CardData（卡库实例仍是原值 %d）" % [
+					r793_cards.get_card(8003).power])
+	check(r793_b != null and r793_b.master_sword_atk == 0
+			and r793_b.effective_power() == r793_b.card.power,
+			"R793 圣剑：第二个盟友不受影响")
+	check(r793_a != null and r793_a.to_save().has("master_sword_atk"),
+			"R793 存档：to_save 带 master_sword_atk")
+	check(Placement._SAVE_FIELDS.has("master_sword_atk"),
+			"R793 存档：master_sword_atk 在 _SAVE_FIELDS 里（漏了战斗续档归零）")
+
+	# ⑥ 每场战斗重新发一份额度
+	r793_eng.start_game(0, 50, true)
+	check(not r793_eng._master_sword_first_ally_done,
+			"R793 圣剑：start_game 重置「第一个盟友」额度")
+	r793_eng.state.energy = 30
+	r793_eng.state.hand.clear()
+	r793_eng.state.hand.append(CardData.from_dict(r793_cards.get_card(8003).to_dict()))
+	var r793_c := r793_eng.play_from_hand(0, Vector2i(5, 1))
+	check(r793_c != null and r793_c.master_sword_atk == 10,
+			"R793 圣剑：第二场战斗的第一个盟友照样 +10")
+
+	# ⑦ 没这件道具 → 一点都不加
+	var r793_off: Array[int] = []
+	RunState.relics = r793_off
+	var r793_eng2 := _new_engine([], 40, 40)
+	r793_eng2.state.energy = 30
+	r793_eng2.state.hand.clear()
+	r793_eng2.state.hand.append(CardData.from_dict(r793_cards.get_card(8003).to_dict()))
+	var r793_d := r793_eng2.play_from_hand(0, Vector2i(5, 1))
+	check(r793_d != null and r793_d.master_sword_atk == 0
+			and r793_d.effective_power() == r793_d.card.power,
+			"R793 圣剑：不持有道具时第一个盟友不加力量")
+
+	# ⑧ 代价口径：至少保留 1 点最大生命（与占卜室 / 源数之力同一条 lose_max_hp）
+	RunState.max_hp = 14
+	RunState.hp = 14
+	var r793_lost := RunState.lose_max_hp(13)
+	check(r793_lost == 13 and RunState.max_hp == 1,
+			"R793 代价：14 → 失去 13 点最大生命，剩 1 点（实得 %d）" % r793_lost)
+	RunState.max_hp = 10
+	RunState.hp = 10
+	var r793_lost2 := RunState.lose_max_hp(13)
+	check(r793_lost2 == 9 and RunState.max_hp == 1,
+			"R793 代价：最大生命不足 13 → 只扣到 1 点为止（实失 %d）" % r793_lost2)
+
+	# 收尾还原（本函数动过道具表与最大 / 当前生命）
+	RunState.relics = r793_sv_relics
+	RunState.spent_relics = r793_sv_spent
+	RunState.max_hp = r793_sv_mhp
+	RunState.hp = r793_sv_hp
+
+
+func _test_r806() -> void:
+	## R806 法术卷轴（6080，一般档）：每场战斗**第一次使用技能卡**时，把那张卡带「次元」的
+	## 复制加进手牌。
+	## 四条关键口径（每条都在下面有独立断言）：
+	##   * 只认 `kind == "技能"` —— `_spell_card_gone()` 也收诅咒（破绽 9154），不判卡种
+	##     的话打个诅咒就把额度花了；
+	##   * 每场只一次（`_scroll_used`，新 GameEngine 自动复位）；
+	##   * 复制品是独立实例，卡库那张**不会被写脏**；
+	##   * 复制品不继承商店附魔（R624 口径），但保留卡面费用与卡种。
+	var r806_repo := RelicRepo.load_json()
+	var r806_r: Variant = r806_repo.get_relic(6080)
+	check(r806_r != null, "R806 数据层：法术卷轴 6080 在库")
+	check(r806_r != null and r806_r.relic_name == "法术卷轴" and r806_r.tier == "一般"
+			and r806_r.source == "奖励" and r806_r.kind == "战斗",
+			"R806 数据层：法术卷轴 = 一般档 · 奖励来源 · 战斗类")
+	check(r806_repo.reward_ids().has(6080), "R806 法术卷轴进奖励池（硬编码 id 表）")
+
+	var r806_en := FileAccess.get_file_as_string("res://i18n/noncard_en.json")
+	var r806_ja := FileAccess.get_file_as_string("res://i18n/noncard_ja.json")
+	var r806_es := FileAccess.get_file_as_string("res://i18n/noncard_es.json")
+	check(r806_en.contains('"6080"') and r806_ja.contains('"6080"') and r806_es.contains('"6080"'),
+			"R806 三语条目齐（6080 法术卷轴）")
+
+	check(GameEngine.SCROLL_RELIC_ID == 6080, "R806 常量：SCROLL_RELIC_ID 6080")
+
+	var r806_cards := CardRepo.load_json()
+	var r806_none: Array[int] = []
+	var r806_scroll: Array[int] = [6080]
+
+	# 「手牌里有几张带「次元」的 9005」—— 用它当判据，比数总手牌数抗干扰
+	#（智慧 9005 本身会抽 2 张，空牌堆时手牌张数会随疲劳/洗牌逻辑浮动）。
+	# ① 端到端：智慧 9005（1 费技能「抽 2 张牌」）打出 → 多一张带「次元」的副本
+	RunState.relics = r806_scroll
+	var r806_e := _new_engine([], 40, 40)
+	r806_e.state.energy = 30
+	r806_e.state.hand.clear()
+	r806_e.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e.use_spell(0)
+	var r806_dim := 0
+	var r806_copy: CardData = null
+	for c in r806_e.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim += 1
+			r806_copy = c
+	check(r806_dim == 1,
+			"R806 卷轴：打出技能卡后手牌里出现 1 张带「次元」的复制（实得 %d）" % r806_dim)
+	check(r806_copy != null and r806_copy.own_copy,
+			"R806 卷轴：复制品是独立实例（own_copy=true）")
+	check(r806_copy != null and r806_copy.kind == "技能" and r806_copy.cost == 1,
+			"R806 卷轴：复制品保留卡面（技能 · 1 费）")
+
+	# ② 每场只有一次：再打一张技能卡，不该再冒出新的次元复制
+	var r806_dim2 := 0
+	r806_e.state.energy = 30
+	r806_e.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e.use_spell(0)
+	for c in r806_e.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim2 += 1
+	check(r806_dim2 == 0,
+			"R806 每场一次：第二次用技能卡不再复制（实得 %d 张次元复制）" % r806_dim2)
+
+	# ③ 没有卷轴就不复制
+	RunState.relics = r806_none
+	var r806_e2 := _new_engine([], 40, 40)
+	r806_e2.state.energy = 30
+	r806_e2.state.hand.clear()
+	r806_e2.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e2.use_spell(0)
+	var r806_dim3 := 0
+	for c in r806_e2.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim3 += 1
+	check(r806_dim3 == 0, "R806 没卷轴：不复制（实得 %d）" % r806_dim3)
+
+	# ④ 只认技能卡：先打盟友，额度不能被吃掉
+	RunState.relics = r806_scroll
+	var r806_e3 := _new_engine([], 40, 40)
+	r806_e3.state.energy = 30
+	r806_e3.state.hand.clear()
+	r806_e3.state.hand.append(CardData.from_dict(r806_cards.get_card(8006).to_dict()))
+	r806_e3.play_from_hand(0, Vector2i(5, 1))
+	check(r806_e3.state.hand.is_empty(),
+			"R806 只认技能卡：打盟友卡不产生复制（手牌仍为空）")
+	r806_e3.state.hand.append(CardData.from_dict(r806_cards.get_card(9005).to_dict()))
+	r806_e3.use_spell(0)
+	var r806_dim4 := 0
+	for c in r806_e3.state.hand:
+		if c != null and c.id == 9005 and c.has_affix("次元"):
+			r806_dim4 += 1
+	check(r806_dim4 == 1,
+			"R806 只认技能卡：打过盟友之后额度还在（技能卡照常复制，实得 %d）" % r806_dim4)
+
+	# ⑤ 卡库不被写脏：共享实例上不能长出「次元」
+	check(not r806_cards.get_card(9005).has_affix("次元"),
+			"R806 卡库：智慧 9005 的共享实例没被写上次元")
+
+	# ⑥ 每场复位 + 高亮
+	# ⚠️ `relic_highlight()` 读的是**引擎快照** `self_relics`（只在构造 / 读档时填），
+	#    不是 `RunState.relics` —— 只设后者的话入口第一句就 return false，
+	#    「额度还在时亮」会红、「用完不亮」却是**假绿**（两边都返回 false）。两个引擎都填上。
+	var r806_e4 := _new_engine([], 40, 40)
+	r806_e4.self_relics = r806_scroll
+	r806_e.self_relics = r806_scroll
+	check(not r806_e4._scroll_used, "R806 每场复位：新引擎的 _scroll_used 是 false")
+	check(r806_e4.relic_highlight(6080), "R806 高亮：额度还在时道具栏亮起")
+	check(not r806_e.relic_highlight(6080), "R806 高亮：本场用完就不再亮")
+
+	# ⑦ 源码守卫：挂在唯一去向口，且限定技能卡
+	var r806_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r806_src.contains("_scroll_try_copy(card)"),
+			"R806 挂点在 _spell_card_gone（所有技能卡用完的唯一去向口）")
+	check_src(r806_src.contains("card.kind != \"技能\""),
+			"R806 判据限定技能卡（_spell_card_gone 也收诅咒）")
+
+	RunState.relics = r806_none
+
+
+func _test_r805() -> void:
+	## R805 蜂蜜（6079，一般档）：**所有**己方盟友移动速度 +1。
+	## 与竖琴 6052 逐字同构 —— 只写 `Placement.honey_spd`，由 `effective_speed()` 唯一出口读，
+	## 随单位离场消失；**不烤进共享 CardData**，同一张卡再上场不会叠成 +2。
+	## 判据是 `p.owner == SIDE_SELF and card.kind == "盟友"`：工事是 0 速建筑，
+	## 被 +1 的话栅栏会自己走起来，所以 kind 那一半不是多余的。
+	var r804_repo := RelicRepo.load_json()
+	var r804_r: Variant = r804_repo.get_relic(6079)
+	check(r804_r != null, "R805 数据层：蜂蜜 6079 在库")
+	check(r804_r != null and r804_r.relic_name == "蜂蜜" and r804_r.tier == "一般"
+			and r804_r.source == "奖励" and r804_r.kind == "战斗",
+			"R805 数据层：蜂蜜 = 一般档 · 奖励来源 · 战斗类")
+	check(r804_repo.reward_ids().has(6079), "R805 蜂蜜进奖励池")
+
+	var r804_en := FileAccess.get_file_as_string("res://i18n/noncard_en.json")
+	var r804_ja := FileAccess.get_file_as_string("res://i18n/noncard_ja.json")
+	var r804_es := FileAccess.get_file_as_string("res://i18n/noncard_es.json")
+	check(r804_en.contains('"6079"') and r804_ja.contains('"6079"') and r804_es.contains('"6079"'),
+			"R805 三语条目齐（6079 蜂蜜）")
+
+	check(GameEngine.HONEY_RELIC_ID == 6079 and GameEngine.HONEY_SPEED == 1,
+			"R805 常量：HONEY_RELIC_ID 6079 / HONEY_SPEED 1")
+
+	var r804_cards := CardRepo.load_json()
+	var r804_none: Array[int] = []
+
+	# ① 带蜂蜜：影子猫 8006（速 5）→ 6；龙裔 9028（速 1）→ 2
+	#    **不设「第一个」闸门** —— 第二个盟友照样 +1，这是与板甲 / 兵最大的区别。
+	var r804_honey: Array[int] = [6079]
+	RunState.relics = r804_honey
+	var r804_e := _new_engine([], 40, 40)
+	r804_e.state.energy = 30
+	r804_e.state.hand.clear()
+	r804_e.state.hand.append(CardData.from_dict(r804_cards.get_card(8006).to_dict()))
+	r804_e.state.hand.append(CardData.from_dict(r804_cards.get_card(9028).to_dict()))
+	var r804_p1 := r804_e.play_from_hand(0, Vector2i(5, 1))
+	var r804_p2 := r804_e.play_from_hand(0, Vector2i(4, 1))
+	check(r804_p1 != null and r804_p1.effective_speed() == 3,
+			"R805 蜂蜜：影子猫移速 2 → 3（R846 从 5 降；实得 %d）"
+			% (r804_p1.effective_speed() if r804_p1 != null else -1))
+	check(r804_p2 != null and r804_p2.effective_speed() == 2,
+			"R805 蜂蜜：第二个盟友也 +1（速 1 → 2，不是「只有第一个」）")
+
+	# ② 工事不吃：木栅栏 8001 是 0 速建筑，被加成就会「自己走起来」
+	r804_e.state.hand.clear()
+	r804_e.state.hand.append(CardData.from_dict(r804_cards.get_card(8001).to_dict()))
+	var r804_p3 := r804_e.play_from_hand(0, Vector2i(3, 1))
+	check(r804_p3 != null and r804_p3.effective_speed() == 0 and r804_p3.honey_spd == 0,
+			"R805 蜂蜜：工事（木栅栏 0 速）不被加成（实得 %d）"
+			% (r804_p3.effective_speed() if r804_p3 != null else -1))
+
+	# ③ 没有蜂蜜就不加（同一张卡、同一个位置）
+	RunState.relics = r804_none
+	var r804_e2 := _new_engine([], 40, 40)
+	r804_e2.state.energy = 30
+	r804_e2.state.hand.clear()
+	r804_e2.state.hand.append(CardData.from_dict(r804_cards.get_card(8006).to_dict()))
+	var r804_p4 := r804_e2.play_from_hand(0, Vector2i(5, 1))
+	check(r804_p4 != null and r804_p4.effective_speed() == 2 and r804_p4.honey_spd == 0,
+			"R805 没蜂蜜：移速保持 2（加成不烤进 CardData 留残留）")
+
+	# ④ 与板甲 6070 叠加：板甲的「移速变为 1」是 mini，压在上面 —— 蜂蜜 +1 后仍是 1
+	var r804_plate: Array[int] = [6070, 6079]
+	RunState.relics = r804_plate
+	var r804_e3 := _new_engine([], 40, 40)
+	r804_e3.state.energy = 30
+	r804_e3.state.hand.clear()
+	r804_e3.state.hand.append(CardData.from_dict(r804_cards.get_card(8006).to_dict()))
+	var r804_p5 := r804_e3.play_from_hand(0, Vector2i(5, 1))
+	check(r804_p5 != null and r804_p5.honey_spd == 1 and r804_p5.speed_cap == 1
+			and r804_p5.effective_speed() == 1,
+			"R805 与板甲叠加：蜂蜜 +1 仍被上限压回 1（实得 %d）"
+			% (r804_p5.effective_speed() if r804_p5 != null else -1))
+
+	# ⑤ 卡库不被写脏：加速只发生在 Placement 上
+	check(r804_cards.get_card(8006).move_speed == 2,
+			"R805 卡库里的影子猫仍是 2 速（R846 从 5 降；蜂蜜没烤进共享 CardData）")
+
+	# ⑥ 源码守卫：走唯一出口，别在 `_move_bfs` / AI 里另写分支
+	var r804_src := FileAccess.get_file_as_string("res://scripts/placement.gd")
+	check_src(r804_src.contains("+ honey_spd"), "R805 蜂蜜加成走 effective_speed 唯一出口")
+	check_src(r804_src.contains("蜂蜜：移动速度 +%d"), "R805 蜂蜜在左侧信息栏有可见来源")
+
+	RunState.relics = r804_none
+
+func _test_r809() -> void:
+	## R809：道具计数角标 —— lucky 7 / 火柴 / 洞窟绳（+ 雕像、盆）在**图标上**就能看到数字。
+	## 修的两件事：
+	##   ① 图标模式不画名字，「还剩几次 / 还差几回合」原本只有悬停能看到（触摸端看不见）；
+	##   ② 战斗道具面板只在「已耗尽」时才补状态注，活着的 lucky 7 / 火柴读不到倒计时
+	##      （地图面板一直是无条件的 —— 同名函数两套口径）。
+	RunState.relics = []
+	RunState.spent_relics = []
+	RunState.lucky7_turns = 0
+	RunState.match_charge = 0
+	RunState.statue_charge = 0
+	RunState.basin_charge = 0
+
+	check(RunState.relic_badge_text(6045) == "",
+			"R809 角标：未持有 lucky 7 → 不画")
+
+	RunState.relics = [6045]
+	for r809_pair in [[0, "7"], [1, "6"], [3, "4"], [6, "1"], [8, "6"], [13, "1"]]:
+		RunState.lucky7_turns = int(r809_pair[0])
+		check(RunState.relic_badge_text(6045) == str(r809_pair[1]),
+				"R809 角标：lucky 7 计数 %d → 「%s」（实际「%s」）" % [
+						int(r809_pair[0]), str(r809_pair[1]),
+						RunState.relic_badge_text(6045)])
+	RunState.lucky7_turns = 7
+	check(RunState.relic_badge_text(6045) == "",
+			"R809 角标：lucky 7 生效回合不画数字（转动弧已经在说「就是现在」）")
+	RunState.lucky7_turns = 14
+	check(RunState.relic_badge_text(6045) == "",
+			"R809 角标：lucky 7 第 14 回合（第二次生效）同样不画")
+
+	RunState.relics = [6051]
+	RunState.match_charge = 2
+	check(RunState.relic_badge_text(6051) == "2",
+			"R809 角标：火柴剩 2 次 → 「2」（实际「%s」）" % RunState.relic_badge_text(6051))
+	RunState.match_charge = 0
+	check(RunState.relic_badge_text(6051) == "0",
+			"R809 角标：火柴用光 → 照画「0」，别让玩家以为还能刷")
+
+	RunState.relics = [6048]
+	RunState.spent_relics = []
+	check(RunState.relic_badge_text(6048) == "1",
+			"R809 角标：洞窟绳只有一个「1」（实际「%s」）" % RunState.relic_badge_text(6048))
+	RunState.spend_relic(6048)
+	check(RunState.relic_badge_text(6048) == "",
+			"R809 角标：洞窟绳用掉（画灰）→ 角标收掉，别留着「1」骗人")
+
+	RunState.relics = [6039, 6041]
+	RunState.spent_relics = []
+	RunState.statue_charge = 3
+	RunState.basin_charge = 7
+	check(RunState.relic_badge_text(6039) == "3" and RunState.relic_badge_text(6041) == "7",
+			"R809 角标：雕像 3 / 盆 7 —— 图标上看得见余量（名字那对括号只在缺图时才露）")
+	RunState.statue_charge = 0
+	RunState.basin_charge = 0
+	check(RunState.relic_badge_text(6039) == "" and RunState.relic_badge_text(6041) == "",
+			"R809 角标：计数归零 → 不画（免得顶着「0」）")
+
+	# 没有可数东西的道具一律不画（别全栏挂上角标）
+	RunState.relics = [6013, 6044]
+	check(RunState.relic_badge_text(6013) == "" and RunState.relic_badge_text(6044) == "",
+			"R809 角标：叠鸭 / 储物箱这种没有「次数」的不画角标")
+
+	# 面板口径：活着的 lucky 7 也要有状态注（旧版只在已耗尽时才补）
+	RunState.relics = [6045]
+	RunState.spent_relics = []
+	RunState.lucky7_turns = 3
+	check(RunState.relic_state_note(6045).contains("4"),
+			"R809 面板：活着的 lucky 7 状态注写「还差 4 回合」（%s）"
+				% RunState.relic_state_note(6045))
+
+	# 源码守卫：面板里那句 note 必须在 `if rspent:` **外面**（缩进 2 个 tab）
+	var r809_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r809_tabs := -1
+	for ln in r809_src.split("\n"):
+		if ln.contains("RunState.relic_state_note(int(ids[i]))"):
+			r809_tabs = 0
+			for ch in ln:
+				if ch == "\t":
+					r809_tabs += 1
+				else:
+					break
+	check_src(r809_tabs == 2,
+			"R809 面板：状态注在 spent 分支外面（缩进 %d 个 tab，应为 2）" % r809_tabs)
+	check_src(r809_src.contains("_draw_relic_badge(rect, int(ids[i]))"),
+			"R809 角标：道具栏每格都接上了 `_draw_relic_badge`")
+	check_src(r809_src.contains("RunState.relic_badge_text(id, engine.defect_clock_left())"),
+			"R809 角标：绘制口走唯一取数口，不自己算数字")
+
+	RunState.relics = []
+	RunState.spent_relics = []
+	RunState.lucky7_turns = 0
+	RunState.match_charge = 0
+	RunState.statue_charge = 0
+	RunState.basin_charge = 0
+
+
+func _test_r807() -> void:
+	## R807：新诅咒「诅咒娃娃」9276 + 第二层事件「诡异洋房」haunted_house。
+	##   · 诅咒娃娃：不可打出 · 带「保存」（回合结束不弃）· 回合结束自己受 3 伤 ·
+	##     回合开始时它若在弃牌区就自己爬回手牌（丢出去也甩不掉）。
+	##   · 诡异洋房：探索 = 一件随机**传奇**道具 + 一组**史诗**卡牌，当场开奖励页领取
+	##     （直连 `_reward_panel.open()`，**不经过战斗胜利面板**）＋ 强制一张诅咒娃娃入组。
+	var r807_repo := CardRepo.load_json()
+	var r807_doll: CardData = r807_repo.get_card(9276)
+
+	# ① 数据层
+	check(r807_doll != null and r807_doll.is_curse() and r807_doll.unplayable
+			and r807_doll.rarity == 6 and r807_doll.cost == 0,
+			"R807 数据层：诅咒娃娃 9276 = 诅咒卡 · 不可打出 · 0 费 · rarity 6")
+	check(r807_doll != null and r807_doll.has_affix("保存"),
+			"R807 数据层：诅咒娃娃带「保存」——回合结束不弃，常驻手牌")
+	var r807_in_pool := false
+	for c: CardData in r807_repo.reward_pool():
+		if c.id == 9276:
+			r807_in_pool = true
+	check(not r807_in_pool,
+			"R807 数据层：诅咒娃娃不进随机奖励池（只能从事件拿，不许从三选一刷出来）")
+
+	# ② 回合结束：手上有它 → 自己受 3 点伤害
+	RunState.relics = []
+	var r807_e1 := _new_engine([], 40, 40)
+	r807_e1.state.hand.clear()
+	r807_e1.state.hand.append(CardData.from_dict(r807_doll.to_dict()))
+	r807_e1._curse_doll_tick()
+	check(r807_e1.state.hp_self == 37,
+			"R807 诅咒娃娃：回合结束手上一张 → 自己受 3 伤（40 → %d）" % r807_e1.state.hp_self)
+
+	# ③ 走 end_turn() 的真接入点（只测单函数证明不了接线）
+	var r807_e2 := _new_engine([], 40, 40)
+	r807_e2.state.hand.clear()
+	r807_e2.state.hand.append(CardData.from_dict(r807_doll.to_dict()))
+	r807_e2.end_turn()
+	check(r807_e2.state.hp_self == 37,
+			"R807 诅咒娃娃：接在 end_turn 上同样扣 3（40 → %d）" % r807_e2.state.hp_self)
+	var r807_kept := false
+	for c: CardData in r807_e2.state.hand:
+		if c.id == 9276:
+			r807_kept = true
+	check(r807_kept,
+			"R807 诅咒娃娃：「保存」生效 —— 回合结束没被弃掉，仍在手牌里继续扣血")
+
+	# ④ 同名多张各算一次
+	var r807_e3 := _new_engine([], 40, 40)
+	r807_e3.state.hand.clear()
+	r807_e3.state.hand.append(CardData.from_dict(r807_doll.to_dict()))
+	r807_e3.state.hand.append(CardData.from_dict(r807_doll.to_dict()))
+	r807_e3._curse_doll_tick()
+	check(r807_e3.state.hp_self == 34,
+			"R807 诅咒娃娃：手上两张 → 6 点伤害（40 → %d）" % r807_e3.state.hp_self)
+
+	# ⑤ 回合开始：它在弃牌区 → 回手
+	var r807_e4 := _new_engine([], 40, 40)
+	r807_e4.state.hand.clear()
+	r807_e4.state.discard.clear()
+	r807_e4.state.discard.append(CardData.from_dict(r807_doll.to_dict()))
+	r807_e4._curse_doll_return()
+	var r807_back := 0
+	for c: CardData in r807_e4.state.hand:
+		if c.id == 9276:
+			r807_back += 1
+	check(r807_back == 1 and r807_e4.state.discard.is_empty(),
+			"R807 诅咒娃娃：回合开始它在弃牌区 → 自己爬回手牌（丢出去也甩不掉）")
+
+	# ⑥ 手牌满 → 留在弃牌区（不消失、不破上限；下个回合再试）
+	var r807_e5 := _new_engine([], 40, 40)
+	r807_e5.state.hand.clear()
+	r807_e5.state.discard.clear()
+	var r807_filler: CardData = r807_repo.get_card(1051)
+	for _i in FieldState.HAND_LIMIT:
+		r807_e5.state.hand.append(CardData.from_dict(r807_filler.to_dict()))
+	r807_e5.state.discard.append(CardData.from_dict(r807_doll.to_dict()))
+	r807_e5._curse_doll_return()
+	var r807_still := 0
+	for c: CardData in r807_e5.state.discard:
+		if c.id == 9276:
+			r807_still += 1
+	check(r807_still == 1 and r807_e5.state.hand.size() == FieldState.HAND_LIMIT,
+			"R807 诅咒娃娃：手牌满时留在弃牌区（不静默消失，也不突破 HAND_LIMIT）")
+
+	# ⑦ 事件注册：第二层 16 种、显示名
+	var r807_l2 := GameLayers.event_kinds(GameLayers.LAYER_TWO)
+	check(r807_l2.has("haunted_house") and r807_l2.size() == 16,
+			"R807 事件：诡异洋房登记在第二层（事件池 %d 种）" % r807_l2.size())
+	check(GameLayers.event_name("haunted_house") == "诡异洋房",
+			"R807 事件：显示名「诡异洋房」")
+
+	# ⑧ 必定传奇：`roll_legendary_relic()` 只从传奇档取
+	RunState.relics = []
+	var r807_lid := RunState.roll_legendary_relic()
+	var r807_rel := RelicRepo.load_json().get_relic(r807_lid) if r807_lid > 0 else null
+	check(r807_rel != null and r807_rel.is_legendary(),
+			"R807 事件：`roll_legendary_relic()` 必定从传奇档取（拿到 %d / %s）" % [
+				r807_lid, r807_rel.tier if r807_rel != null else "空"])
+
+	# ⑨ 事件源码契约：探索 = 史诗卡牌 + 诅咒入组 + 直开奖励页
+	var r807_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	var r807_at := r807_src.find("func _explore_haunted_house()")
+	var r807_body := ""
+	if r807_at >= 0:
+		var r807_end := r807_src.find("\nfunc ", r807_at + 10)
+		r807_body = r807_src.substr(r807_at,
+				(r807_end - r807_at) if r807_end > r807_at else 2600)
+	check_src(r807_body.contains("queue_card_reward(\"epic\"")
+			and r807_body.contains("add_card(HAUNTED_CURSE_ID)")
+			and r807_body.contains("_reward_panel.open()"),
+			"R807 事件：探索 = 史诗卡牌三选一 + 诅咒娃娃入组 + 当场开奖励页")
+	# 注释里为了说明「战斗那边走的是 _present_win_panel」也带了这个词，
+	# 所以先剥掉注释行再判，否则断言验的是注释而不是代码。
+	var r807_code := ""
+	for r807_ln in r807_body.split("\n"):
+		if r807_ln.strip_edges().begins_with("#"):
+			continue
+		r807_code += r807_ln + "\n"
+	check_src(r807_code.contains("_reward_panel.open()")
+			and not r807_code.contains("_present_win_panel"),
+			"R807 事件：奖励页直连 —— 探索函数（剥注释后）直接开奖励面板，不调战斗胜利面板")
+
+func _test_r794() -> void:
+	## R794：二层事件「巧克力工厂」+ 卡「巧克力工厂」9271
+	## （2 费工事 0/0/30 · 次元 · 回合开始 +1 费用并抽 1 张）+ 四连点试吃。
+	var r794_cards := CardRepo.load_json()
+	var r794_sv_choco := RunState.chocolate
+	var r794_sv_mhp := RunState.max_hp
+	var r794_sv_hp := RunState.hp
+	var r794_sv_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r794_sv_mods: Array = RunState.deck_mods.duplicate()
+
+	# ① 数据层
+	var r794_card := r794_cards.get_card(9271)
+	check(r794_card != null, "R794 数据：巧克力工厂 9271 在库")
+	if r794_card != null:
+		check(r794_card.card_name == "巧克力工厂" and r794_card.kind == "工事"
+				and r794_card.cost == 2 and r794_card.power == 0 and r794_card.health == 30,
+				"R794 数据：巧克力工厂 = 2 费工事 0/0/30（实得 %s / %d费 %d/%d）" % [
+						r794_card.card_name, r794_card.cost, r794_card.power, r794_card.health])
+		check(r794_card.traits.has("工事") and r794_card.traits.has("巧克力工厂")
+				and r794_card.traits.has("事件") and r794_card.rarity == 5
+				and r794_card.has_affix("次元"),
+				"R794 数据：traits 工事/巧克力工厂/事件 · rarity 5（事件专属不进池）· 带次元")
+		check(not r794_cards.reward_pool().has(r794_card),
+				"R794 数据：事件专属卡不进奖励池（只有工厂事件给得出）")
+
+	# ② 事件注册：第二层专属，第一层不登记
+	var r794_w2 := GameLayers.event_weights(GameLayers.LAYER_TWO)
+	var r794_w1 := GameLayers.event_weights(GameLayers.LAYER_DEFAULT)
+	check(r794_w2.has("factory") and int(r794_w2["factory"]) > 0,
+			"R794 事件：第二层事件池含巧克力工厂（权重 %d）" % int(r794_w2.get("factory", 0)))
+	check(not r794_w1.has("factory"),
+			"R794 事件：第一层不登记（第二层专属，别顺手抄过去）")
+	check(str(GameLayers.EVENT_NAMES.get("factory", "")) == "巧克力工厂",
+			"R794 事件：EVENT_NAMES 有中文名（日志 / 界面读它）")
+
+	# ③ 四语文案
+	for r794_code in ["zh_canonical", "en", "ja", "es"]:
+		var r794_nar := FileAccess.get_file_as_string("res://i18n/narrative_%s.json" % r794_code)
+		check_src(r794_nar.contains("FACTORY_DESC") and r794_nar.contains("FACTORY_DONE_DESC")
+				and r794_nar.contains('"factory"'),
+				"R794 文案：narrative_%s 有事件长文" % r794_code)
+	var r794_ui_en := FileAccess.get_file_as_string("res://i18n/event_ui_en.json")
+	check_src(r794_ui_en.contains("FACTORY_STAGE_4") and r794_ui_en.contains("FACTORY_CARD"),
+			"R794 文案：event_ui 有选项与结果 key")
+
+	# ④ 源码口径（导出包里 .gd 是 binary tokens → 必须走 check_src）
+	var r794_es := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r794_es.contains("const FACTORY_CARD_ID := 9271")
+			and r794_es.contains("RunState.add_chocolate(1)")
+			and r794_es.contains("and not _is_choco_factory()"),
+			"R794 事件：发巧克力走 add_chocolate、_is_treasure 兜底排除 factory")
+	var r794_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r794_ge.contains("func _choco_factory_draw()")
+			and r794_ge.contains("_choco_factory_draw()             # 巧克力工厂 9271"),
+			"R794 引擎：回合开始钩子挂 _begin_turn（漏挂 = 卡面效果永远不触发）")
+
+	# ⑤ 机制：场上每座 → 我方回合开始 +1 费用并抽 1 张（分裂之影 8067 同范式）
+	var r794_deck: Array[CardData] = []
+	for r794_i in 30:
+		r794_deck.append(_card(7200 + r794_i, "抽牌测试%d" % r794_i, "盟友", 1, 1, 1, 1, 1))
+	var r794_one := _new_engine(r794_deck.duplicate(), 30, 30, -1, false)
+	r794_one.state.place(CardData.from_dict(r794_card.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r794_one.state.hand.clear()
+	r794_one._begin_turn(GameEngine.SIDE_SELF)
+	check(r794_one.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 1
+			and r794_one.state.energy == FieldState.ENERGY_PER_TURN + 1,
+			"R794 工厂：1 座在场 → 回合开始 +1 费用并多抽 1 张（费用 %d / 手牌 %d）" % [
+					r794_one.state.energy, r794_one.state.hand.size()])
+	var r794_two := _new_engine(r794_deck.duplicate(), 30, 30, -1, false)
+	for r794_col in 2:
+		r794_two.state.place(CardData.from_dict(r794_card.to_dict()),
+				Vector2i(4, r794_col), GameEngine.SIDE_SELF)
+	r794_two.state.hand.clear()
+	r794_two._begin_turn(GameEngine.SIDE_SELF)
+	check(r794_two.state.hand.size() == FieldState.HAND_DRAW_PER_TURN + 2
+			and r794_two.state.energy == FieldState.ENERGY_PER_TURN + 2,
+			"R794 工厂：2 座在场 → +2 费用并多抽 2 张（多座叠加，费用 %d / 手牌 %d）" % [
+					r794_two.state.energy, r794_two.state.hand.size()])
+	var r794_none := _new_engine(r794_deck.duplicate(), 30, 30, -1, false)
+	r794_none.state.hand.clear()
+	r794_none._begin_turn(GameEngine.SIDE_SELF)
+	check(r794_none.state.hand.size() == FieldState.HAND_DRAW_PER_TURN
+			and r794_none.state.energy == FieldState.ENERGY_PER_TURN,
+			"R794 工厂：不在场 → 不加费用不多抽（标准回合）")
+
+	# ⑥ 次元：离场即消失（进消耗区，不进弃牌区 —— R93 的既有口径，别串成「死亡」）
+	var r794_dim := _new_engine([], 30, 30, -1, false)
+	var r794_p := r794_dim.state.place(CardData.from_dict(r794_card.to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r794_dim._destroy(Vector2i(4, 1))
+	check(r794_dim.state.void_count == 1 and r794_dim.state.discard.is_empty(),
+			"R794 次元：工厂被破坏 → 进消耗区不进弃牌区（消耗区 %d / 弃牌 %d）" % [
+					r794_dim.state.void_count, r794_dim.state.discard.size()])
+
+	# ⑦ 资源与发卡口
+	RunState.max_hp = 40
+	RunState.hp = 40
+	RunState.chocolate = 5
+	RunState.add_chocolate(1)
+	check(RunState.chocolate == 6,
+			"R794 资源：add_chocolate +1（%d 块）" % RunState.chocolate)
+	RunState.add_card(9271)
+	check(RunState.deck_ids.has(9271),
+			"R794 发卡：add_card → 巧克力工厂进卡组")
+	check(RunState.deck_mods.size() == RunState.deck_ids.size(),
+			"R794 发卡：附魔槽位随 add_card 对齐（%d / %d）" % [
+					RunState.deck_mods.size(), RunState.deck_ids.size()])
+
+	# 收尾还原（本函数动过巧克力 / 上限 / 卡组）
+	RunState.chocolate = r794_sv_choco
+	RunState.max_hp = r794_sv_mhp
+	RunState.hp = r794_sv_hp
+	RunState.deck_ids = r794_sv_deck
+	RunState.deck_mods = r794_sv_mods
+
+func _test_r810() -> void:
+	## R810：四件新道具。
+	##   新月耳饰 6081（一般）：每 3 场战斗，在该场第一回合 +1 费用（**括号里那句不写进描述**）；
+	##   太阳指环 6082（一般）：每个我方回合开始，对所有敌方单位 3 点伤害（走 `_hit_unit`）；
+	##   海妖鱼叉 6083（一般）：同一回合内同一个敌人每挨 3 次伤害 → 追加 4 点；
+	##   缺陷时钟 6084（传奇）：每场打出第 12 张牌 → 结束当前回合、**跳过敌方回合**。
+	## 每条都先验「数据层进了池」，再验机制，最后验「没有这件道具时什么也不发生」。
+	var r810_sv_relics := RunState.relics
+	var r810_sv_spent := RunState.spent_relics
+	var r810_sv_crescent := RunState.crescent_battles
+	RunState.spent_relics = []
+
+	# ── ① 数据层 ──
+	var r810_repo := RelicRepo.load_json()
+	var r810_expect := {
+		6081: ["新月耳饰", "一般", "每 3 场战斗，获得 1 点费用。"],
+		6082: ["太阳指环", "一般", "每场战斗一次，对所有敌方单位造成 3 点伤害。"],
+		6083: ["海妖鱼叉", "一般", "同一回合内，每对一个敌人造成 3 次伤害，对其造成 4 点伤害。"],
+		6084: ["缺陷时钟", "传奇", ""],
+	}
+	var r810_bad: Array = []
+	for r810_id: int in r810_expect.keys():
+		var r810_r: Variant = r810_repo.get_relic(r810_id)
+		if r810_r == null:
+			r810_bad.append("%d 不在库" % r810_id)
+			continue
+		if r810_r.relic_name != r810_expect[r810_id][0]:
+			r810_bad.append("%d 名字「%s」" % [r810_id, r810_r.relic_name])
+		if r810_r.tier != r810_expect[r810_id][1]:
+			r810_bad.append("%d 档位「%s」" % [r810_id, r810_r.tier])
+		if r810_r.kind != "战斗" or r810_r.source != "奖励":
+			r810_bad.append("%d 分类漂移" % r810_id)
+		if not r810_repo.reward_ids().has(r810_id):
+			r810_bad.append("%d 不在奖励池" % r810_id)
+	check(r810_bad.is_empty(), "R810 数据层：四件都在库 · 战斗类 · 奖励来源 · 进奖励池（%s）"
+			% str(r810_bad))
+	check(r810_repo.all_relics().size() == 85, "R824 数据层：道具总数 85 件（+鸭子闹钟 6085 / R826 音乐盒 6086 / R829 这是礼帽 6087 / R830 首饰盒 6088 / R835 空故事书 6089）")
+	check(r810_repo.normal_reward_ids().size() == 30
+			and r810_repo.legendary_reward_ids().size() == 6,
+			"R810/R813 数据层：奖励池 30 一般 + 6 传奇 = 36")
+	check(r810_repo.get_relic(6081).desc == "每 3 场战斗，获得 1 点费用。",
+			"R810 新月耳饰：描述只写「每 3 场战斗，获得 1 点费用。」（%s）"
+					% r810_repo.get_relic(6081).desc)
+	check(not r810_repo.get_relic(6081).desc.contains("第一回合"),
+			"R810 新月耳饰：括号里那句「在第一回合获得」不写进描述")
+	check(r810_repo.get_relic(6084).desc.contains("12")
+			and r810_repo.get_relic(6084).desc.contains("敌方回合"),
+			"R810 缺陷时钟：描述写明「第 12 张牌」与「不进行敌方回合」")
+	check(GameEngine.CRESCENT_EARING_ID == 6081 and GameEngine.SUN_RING_ID == 6082
+			and GameEngine.HARPOON_ID == 6083 and GameEngine.DEFECT_CLOCK_ID == 6084,
+			"R810 常量：6081 / 6082 / 6083 / 6084 与数据层同号")
+
+	# ── ② 新月耳饰：3 场发 1 费 ──
+	RunState.relics = [6081]
+	RunState.crescent_battles = 0
+	check(RunState.crescent_left() == 3, "R810 新月耳饰：刚拿到时还差 3 场")
+	check(RunState.crescent_tick() == false and RunState.crescent_left() == 2,
+			"R810 新月耳饰：第 1 场不发，还差 2 场")
+	check(RunState.crescent_tick() == false and RunState.crescent_left() == 1,
+			"R810 新月耳饰：第 2 场不发，还差 1 场")
+	check(RunState.crescent_tick() == true and RunState.crescent_battles == 0,
+			"R810 新月耳饰：第 3 场发钱并归零重数")
+	check(RunState.relic_badge_text(6081) == "3", "R810 角标：刚发完 → 画 3")
+	RunState.crescent_battles = 1
+	check(RunState.relic_badge_text(6081) == "2", "R810 角标：打过 1 场 → 画 2")
+	check(RunState.relic_state_note(6081).contains("2"),
+			"R810 面板：状态注写「还差 2 场」（%s）" % RunState.relic_state_note(6081))
+
+	# 引擎侧：首回合的费用确实多 1 点（与「什么都不带」逐字对比）
+	RunState.relics = []
+	RunState.crescent_battles = 0
+	var r810_e0 := _new_engine([], 40, 40)
+	r810_e0.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	r810_e0._begin_turn(GameEngine.SIDE_SELF)
+	var r810_base: int = r810_e0.state.energy
+	RunState.relics = [6081]
+	RunState.crescent_battles = 2      # 这一场正好是第 3 场
+	var r810_e1 := _new_engine([], 40, 40)
+	r810_e1.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	r810_e1._begin_turn(GameEngine.SIDE_SELF)
+	check(r810_e1.state.energy == r810_base + 1,
+			"R810 新月耳饰：第 3 场首回合费用 %d → %d（+1）"
+			% [r810_base, r810_e1.state.energy])
+	RunState.crescent_battles = 0      # 刚落过账 → 下一场不该再发
+	var r810_e2 := _new_engine([], 40, 40)
+	r810_e2.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	r810_e2._begin_turn(GameEngine.SIDE_SELF)
+	check(r810_e2.state.energy == r810_base,
+			"R810 新月耳饰：计数归零后的那一场不发（%d == %d）"
+			% [r810_e2.state.energy, r810_base])
+
+	# ── ③ 太阳指环：**每场战斗一次**，打全体敌人 3 点（R812 由「每回合」改来）──
+	var r810_cards := CardRepo.load_json()
+	RunState.relics = [6082]
+	var r810_e3 := _new_engine([], 40, 40)
+	r810_e3.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	var r810_foe := r810_e3.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_ally := r810_e3.state.place(
+			CardData.from_dict(r810_cards.get_card(1011).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r810_f0: int = r810_foe.health
+	var r810_a0: int = r810_ally.health
+	r810_e3._begin_turn(GameEngine.SIDE_SELF)
+	check(r810_foe.health == r810_f0 - 3,
+			"R810 太阳指环：我方回合开始，敌人 %d → %d（-3）"
+			% [r810_f0, r810_foe.health])
+	check(r810_ally.health == r810_a0,
+			"R810 太阳指环：只打敌人，己方单位不掉血")
+	r810_e3.end_turn()     # 我方 → 敌方
+	r810_e3.end_turn()     # 敌方 → 我方（第二个我方回合）
+	check(r810_foe.health == r810_f0 - 3,
+			"R812 太阳指环：**每场只打一次** —— 第二个我方回合不再掉血（仍是 -3，实际 %d）"
+			% (r810_f0 - r810_foe.health))
+
+	# 换一场战斗（= 新引擎实例）→ 一次性额度重新可用
+	var r810_e3b := _new_engine([], 40, 40)
+	r810_e3b.self_relics = RunState.active_relics()
+	var r810_foe_b := r810_e3b.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_fb0: int = r810_foe_b.health
+	r810_e3b._begin_turn(GameEngine.SIDE_SELF)
+	check(r810_foe_b.health == r810_fb0 - 3,
+			"R812 太阳指环：换一场战斗后重新可用（%d → %d）"
+			% [r810_fb0, r810_foe_b.health])
+
+	# 空场不白烧额度：开场没有敌人时不置位，敌人后到场仍吃得到
+	var r810_e3c := _new_engine([], 40, 40)
+	r810_e3c.self_relics = RunState.active_relics()
+	r810_e3c._begin_turn(GameEngine.SIDE_SELF)     # 场上一个敌人都没有
+	check(not r810_e3c._sun_ring_used,
+			"R812 太阳指环：空场不消耗「每场一次」的额度")
+	var r810_late := r810_e3c.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_l0: int = r810_late.health
+	r810_e3c._sun_ring_tick()
+	check(r810_late.health == r810_l0 - 3 and r810_e3c._sun_ring_used,
+			"R812 太阳指环：敌人后到场仍吃得到，吃到后额度才置位（%d → %d）"
+			% [r810_l0, r810_late.health])
+
+	# 没有道具 → 一点血都不掉
+	RunState.relics = []
+	var r810_e4 := _new_engine([], 40, 40)
+	r810_e4.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	var r810_foe2 := r810_e4.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_f2: int = r810_foe2.health
+	r810_e4._begin_turn(GameEngine.SIDE_SELF)
+	check(r810_foe2.health == r810_f2, "R810 太阳指环：没道具时回合开始不掉血")
+
+	# ── ④ 海妖鱼叉：同一回合内同一个敌人每 3 次伤害 → 追加 4（R812 由 6 下调）──
+	RunState.relics = [6083]
+	var r810_e5 := _new_engine([], 40, 40)
+	r810_e5.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	r810_e5.current_side = GameEngine.SIDE_SELF
+	var r810_p5 := r810_e5.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_other := r810_e5.state.place(
+			CardData.from_dict(r810_cards.get_card(1011).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var r810_h5: int = r810_p5.health
+	var r810_ho: int = r810_other.health
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	check(r810_p5.health == r810_h5 - 2,
+			"R810 海妖鱼叉：前 2 次不追加（%d）" % (r810_h5 - r810_p5.health))
+	check(r810_other.health == r810_ho,
+			"R810 海妖鱼叉：另一个敌人各自记账，不会被牵连")
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	check(r810_p5.health == r810_h5 - 3 - 4,
+			"R812 海妖鱼叉：第 3 次 → 1 点 + 追加 4 点（累计 %d）"
+			% (r810_h5 - r810_p5.health))
+	# ⚠️ 关键断言：追加的那一笔**不许把自己算成第 4 次命中**。
+	# 老测试只比总伤害，分辨不出这件事 —— 两种口径的总数都是 18（6 基础 + 6×2 追加）。
+	check(r810_p5.harpoon_hits == 3,
+			"R812 海妖鱼叉：追加伤害不进计数（第 3 次命中后仍是 3，实际 %d）"
+			% r810_p5.harpoon_hits)
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	check(r810_p5.health == r810_h5 - 6 - 8,
+			"R812 海妖鱼叉：第 6 次再追加一次（累计 %d）" % (r810_h5 - r810_p5.health))
+	check(r810_p5.harpoon_hits == 6,
+			"R812 海妖鱼叉：两次追加都没混进计数（6 次命中 = 6，实际 %d）"
+			% r810_p5.harpoon_hits)
+	# 换回合（turn_number +1）→ 计数从 0 重算
+	var r810_h5b: int = r810_p5.health
+	r810_e5.turn_number += 1
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	r810_e5._hit_unit(r810_p5, 1, "测试")
+	check(r810_p5.health == r810_h5b - 2,
+			"R810 海妖鱼叉：新回合从 0 数，前两次不追加")
+	# 敌方回合里打的不算（「同一回合」= 我方回合）
+	var r810_h5c: int = r810_p5.health
+	r810_e5.turn_number += 1
+	r810_e5.current_side = GameEngine.SIDE_OPPONENT
+	for _k in 3:
+		r810_e5._hit_unit(r810_p5, 1, "测试")
+	check(r810_p5.health == r810_h5c - 3,
+			"R810 海妖鱼叉：敌方回合里的伤害不攒层（只掉 3 点）")
+	# 没道具 → 怎么打都不追加
+	RunState.relics = []
+	var r810_e6 := _new_engine([], 40, 40)
+	r810_e6.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	r810_e6.current_side = GameEngine.SIDE_SELF
+	var r810_p6 := r810_e6.state.place(
+			CardData.from_dict(r810_cards.get_card(1051).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r810_h6: int = r810_p6.health
+	for _k2 in 6:
+		r810_e6._hit_unit(r810_p6, 1, "测试")
+	check(r810_p6.health == r810_h6 - 6, "R810 海妖鱼叉：没道具时打 6 次只掉 6 点")
+
+	# ── ⑤ 缺陷时钟：第 12 张牌 → 跳过敌方回合 ──
+	RunState.relics = [6084]
+	var r810_e7 := _new_engine([], 40, 40)
+	r810_e7.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	r810_e7._begin_turn(GameEngine.SIDE_SELF)
+	var r810_t0: int = r810_e7.turn_number
+	# 第 11 张：不触发
+	r810_e7.state.energy = 30
+	r810_e7.state.hand.clear()
+	r810_e7.state.hand.append(CardData.from_dict(r810_cards.get_card(8006).to_dict()))
+	r810_e7._clock_plays = 10
+	r810_e7.play_from_hand(0, Vector2i(4, 1))
+	check(r810_e7.current_side == GameEngine.SIDE_SELF
+			and r810_e7.turn_number == r810_t0 and r810_e7.opp_turns == 0,
+			"R810 缺陷时钟：第 11 张牌不触发（仍在第 %d 回合）" % r810_e7.turn_number)
+	# 第 12 张：结束当前回合 + 立刻开始新的我方回合，敌方回合一次都没走
+	r810_e7.state.energy = 30
+	r810_e7.state.hand.clear()
+	r810_e7.state.hand.append(CardData.from_dict(r810_cards.get_card(8006).to_dict()))
+	r810_e7.play_from_hand(0, Vector2i(4, 0))
+	check(r810_e7.turn_number == r810_t0 + 1,
+			"R810 缺陷时钟：第 12 张牌 → 新回合（%d → %d）"
+			% [r810_t0, r810_e7.turn_number])
+	check(r810_e7.current_side == GameEngine.SIDE_SELF,
+			"R810 缺陷时钟：回合仍是我方")
+	check(r810_e7.opp_turns == 0,
+			"R810 缺陷时钟：敌方回合完全没有开始（opp_turns %d）" % r810_e7.opp_turns)
+	check(r810_e7.state.energy > 0,
+			"R810 缺陷时钟：新回合照常发费（%d）" % r810_e7.state.energy)
+	# 一场只触发一次：再打一张不会又跳回合
+	var r810_t1: int = r810_e7.turn_number
+	r810_e7.state.energy = 30
+	r810_e7.state.hand.clear()
+	r810_e7.state.hand.append(CardData.from_dict(r810_cards.get_card(8006).to_dict()))
+	r810_e7.play_from_hand(0, Vector2i(4, 1))
+	check(r810_e7.turn_number == r810_t1 and r810_e7.opp_turns == 0,
+			"R810 缺陷时钟：一场只触发一次（第 13 张不再跳）")
+	# 没道具 → 第 12 张什么也不发生
+	RunState.relics = []
+	var r810_e8 := _new_engine([], 40, 40)
+	r810_e8.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照，测试照抄
+	r810_e8._begin_turn(GameEngine.SIDE_SELF)
+	var r810_t8: int = r810_e8.turn_number
+	r810_e8.state.energy = 30
+	r810_e8.state.hand.clear()
+	r810_e8.state.hand.append(CardData.from_dict(r810_cards.get_card(8006).to_dict()))
+	r810_e8._clock_plays = 11
+	r810_e8.play_from_hand(0, Vector2i(4, 1))
+	check(r810_e8.turn_number == r810_t8 and r810_e8.current_side == GameEngine.SIDE_SELF
+			and r810_e8.opp_turns == 0,
+			"R810 缺陷时钟：没道具时第 12 张不跳回合")
+
+	# ── ⑥ 源码守卫（口径不许被后来的改动悄悄改回去）──
+	var r810_eng_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r810_eng_src.contains("func end_turn(skip_enemy: bool = false) -> void :"),
+			"R810 守卫：`end_turn` 保留 `skip_enemy` 形参（缺陷时钟唯一的换回合通道）")
+	var r810_clock_calls := 0
+	for r810_ln in r810_eng_src.split("\n"):
+		if r810_ln.strip_edges() == "_clock_maybe_switch()":
+			r810_clock_calls += 1
+	check_src(r810_clock_calls == 3,
+			"R810 守卫：三个公共出牌入口（play_from_hand / use_spell / use_effect）各调一次"
+					+ " `_clock_maybe_switch`（实际 %d 处）" % r810_clock_calls)
+	check_src(r810_eng_src.contains("_sun_ring_used"),
+			"R812 守卫：太阳指环有「每场一次」的保险丝 `_sun_ring_used`")
+	check_src(r810_eng_src.contains("or _sun_ring_used"),
+			"R812 守卫：`_sun_ring_tick` 的入口判据带上 `_sun_ring_used`")
+	var r810_place_src := FileAccess.get_file_as_string("res://scripts/placement.gd")
+	check_src(r810_place_src.contains('"harpoon_hits", "harpoon_turn"'),
+			"R810 守卫：鱼叉计数进了 Placement 存档字段（否则续档归零）")
+
+	# 收尾还原
+	RunState.relics = r810_sv_relics
+	RunState.spent_relics = r810_sv_spent
+	RunState.crescent_battles = r810_sv_crescent
+
+func _test_r811() -> void :
+	## R811：初始道具「栅栏修复术」6021 加强 —— **叠加后栅栏回满血**。
+	## 旧口径只把「新栅栏的生命」加到当前值（2/6 的残墙叠一张 6 血木栅栏只到 8/12），
+	## 一堵被打残的墙叠上去等于白亏一截。新口径 = 上限相加之后**直接把当前值填满**。
+	var r811_repo := CardRepo.load_json()
+
+	# ── ① 残墙 + 同款木栅栏 → 上限 12、直接回满 ──
+	var r811_e1 := _new_engine([], 20, 20, -1, false)
+	r811_e1.self_relics = [6021]
+	r811_e1.start_game()
+	var r811_p1 := r811_e1.state.place(r811_repo.get_card(8001), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r811_p1.health = 2                                  # 打成 2/6 的残墙
+	r811_e1.state.hand = [CardData.from_dict(r811_repo.get_card(8001).to_dict())]
+	r811_e1.state.energy = 5
+	var r811_ev: Array = []
+	r811_e1.action.connect(func(k: String, d: Dictionary) -> void:
+		if k == "fence_merge":
+			r811_ev.append(int(d.get("gained", -1))))
+	r811_e1.play_from_hand(0, Vector2i(4, 1))
+	check(r811_p1.health == 16 and r811_p1.card.health == 16,
+			"R811 栅栏回满：2/8 的残墙叠一张木栅栏 → 16/16（旧行为只会到 10/16）")
+	check(r811_ev.size() == 1 and int(r811_ev[0]) == 14,
+			"R811 栅栏回满：飘字按「实际涨了多少」算（2 → 16 = +14），不是新栅栏的 8")
+
+	# ── ② 残墙 + 铁栅栏 → 上限 6+12=18 并回满（跨种类叠加同样回满）──
+	var r811_e2 := _new_engine([], 20, 20, -1, false)
+	r811_e2.self_relics = [6021]
+	r811_e2.start_game()
+	var r811_p2 := r811_e2.state.place(r811_repo.get_card(9072), Vector2i(3, 1), GameEngine.SIDE_SELF)
+	r811_p2.health = 3                                  # 3/12 的铁栅栏
+	r811_e2.state.hand = [CardData.from_dict(r811_repo.get_card(8001).to_dict())]
+	r811_e2.state.energy = 5
+	r811_e2.play_from_hand(0, Vector2i(3, 1))
+	check(r811_p2.health == 20 and r811_p2.card.health == 20,
+			"R811 栅栏回满：3/12 的铁栅栏叠一张木栅栏 → 20/20（上限 12+8 并回满）")
+
+	# ── ③ 回满只动当前值：离场交出去的仍是原始卡 ──
+	var r811_out := r811_e1._card_leaving_field(r811_p1)
+	check(r811_out != null and r811_out.health == 8 and not r811_out.traits.has("铁栅栏"),
+			"R811 栅栏回满：上限仍由 fence_bonus_hp 还原（离场交回 8 血原卡、没偷来的特性）")
+	var r811_out2 := r811_e2._card_leaving_field(r811_p2)
+	var r811_tr2: Array = r811_out2.traits if r811_out2 != null else []
+	check(r811_out2 != null and r811_out2.health == 12 and r811_tr2.has("铁栅栏") and not r811_tr2.has("防御"),
+			"R811 栅栏回满：铁栅栏离场还原成 12 血、特性只留自己的（叠来的「防御」被摘掉）")
+
+	# ── ④ 没道具 → 不触发合并（残墙一滴血都不涨）──
+	## 注：这里打的是**空地**。无道具时把栅栏拍到已占用格上会走到 `state.place` 直接覆盖，
+	## 那是另一条既存路径（界面根本点不出来），与本轮无关，别拿它当断言。
+	var r811_e3 := _new_engine([], 20, 20, -1, false)
+	r811_e3.start_game()
+	var r811_p3 := r811_e3.state.place(r811_repo.get_card(8001), Vector2i(4, 1), GameEngine.SIDE_SELF)
+	r811_p3.health = 2
+	r811_e3.state.hand = [CardData.from_dict(r811_repo.get_card(8001).to_dict())]
+	r811_e3.state.energy = 5
+	var r811_ev3: Array = []
+	r811_e3.action.connect(func(k: String, _d: Dictionary) -> void:
+		if k == "fence_merge":
+			r811_ev3.append(k))
+	r811_e3.play_from_hand(0, Vector2i(4, 0))          # 4,0 是空着的己方格
+	check(r811_ev3.is_empty() and r811_p3.health == 2,
+			"R811 栅栏回满：没「栅栏修复术」时不触发合并、残墙不被回血")
+
+	# ── ⑤ 源码守卫（口径不许被后来的改动悄悄改回去）──
+	var r811_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r811_src.contains("p.health = p.card.health"),
+			"R811 守卫：`_merge_fence` 用 `p.health = p.card.health` 回满")
+	check_src(not r811_src.contains("p.health += card.health"),
+			"R811 守卫：旧的 `p.health += card.health`（只加新栅栏血量）已移除")
+
+
+func _test_r814() -> void:
+	## R814 试玩版（Steam 试玩切片）：只开森林精魄 + 暗影刺客、难度≤1、每职业 60 张卡、
+	## 组合素材与组合触发卡一张不少、事件与道具全量可用、剧情不可解锁、二层 Boss 即收尾。
+	## 口径来源：用户 2026-11-19 的试玩版需求。改这几个数字之前先确认需求有没有变。
+	var r814_repo := CardRepo.load_json()
+	var r814_relics := RelicRepo.load_json()
+
+	# ── ① 闸门：默认不是试玩版；试玩版优先级高于发布版 ──
+	GameBuild.set_test_demo(-1)
+	check(not GameBuild.is_demo(), "R814 闸门：默认（编辑器 / 普通导出）不是试玩版")
+	GameBuild.set_test_release(1)
+	GameBuild.set_test_demo(1)
+	check(GameBuild.is_demo(), "R814 闸门：set_test_demo(1) 后 is_demo 为真")
+	check(not GameBuild.is_release(),
+			"R814 闸门：试玩版压过发布版 —— 即使强开 release，is_release 也恒 false")
+
+	# ── ② 职业 / 难度：只开两个职业，上限 1 ──
+	check(UnlockSystem.is_class_unlocked(PlayerClass.DRUID), "R814 职业：森林精魄可选")
+	check(UnlockSystem.is_class_unlocked(PlayerClass.ROGUE), "R814 职业：暗影刺客可选")
+	check(not UnlockSystem.is_class_unlocked(PlayerClass.MECH),
+			"R814 职业：机械之心在试玩版不可选（选人界面显示「未解锁」）")
+	check(UnlockSystem.difficulty_cap(PlayerClass.DRUID) == 1,
+			"R814 难度：森林精魄上限 = 1（0 轻松 + 1 微恙）")
+	check(UnlockSystem.difficulty_cap(PlayerClass.ROGUE) == 1, "R814 难度：暗影刺客上限 = 1")
+	check(UnlockSystem.global_max_difficulty() == 1,
+			"R814 难度：随机摇人的「尽可能高」也封在 1")
+
+	# ── ③ 卡池：每职业正好 60 张 ──
+	for r814_cid: String in [PlayerClass.DRUID, PlayerClass.ROGUE]:
+		# R817：口径从 `reward_pool_for()` 换成「本职业自有卡」。前者会再减掉玩家账号
+		# 禁卡表里的卡（本机森林精魄禁了 4 张），于是「60 张」实际是「本机 60 张」，
+		# 换台机器 / 玩家解禁就变 61/63 —— 内容条数必须与玩家档案无关。
+		var r814_pool: Array[CardData] = []
+		for r814_c: CardData in r814_repo.obtainable_cards():
+			if r814_c.card_class == r814_cid:
+				r814_pool.append(r814_c)
+		check(r814_pool.size() == 60,
+				"R814 卡池：%s 自有卡 = 60 张（实际 %d）" % [r814_cid, r814_pool.size()])
+		var r814_ids := {}
+		for r814_c: CardData in r814_pool:
+			r814_ids[r814_c.id] = true
+		# 组合链必须全在池里：素材（带 upper_effect 的卡）+ 触发卡（传授 / 影缚 / 宝石兽）。
+		# 判据刻意用「该进池的卡」集合去比对，而不是写死 id 名单 —— 新增素材卡会自动被覆盖。
+		var r814_missing: Array[String] = []
+		for r814_c: CardData in r814_repo.all_cards():
+			if r814_c.card_class != r814_cid or r814_c.rarity > 2:
+				continue
+			if r814_c.locked or r814_c.event_only:
+				continue
+			var r814_is_mat: bool = r814_c.upper_effect.size() > 0 or r814_c.combo_trigger != ""
+			if r814_is_mat and not r814_ids.has(r814_c.id):
+				r814_missing.append("%d %s" % [r814_c.id, r814_c.name])
+		check(r814_missing.is_empty(),
+				"R814 组合：%s 的组合素材 / 触发卡全在池内（缺 %s）" % [r814_cid, str(r814_missing)])
+
+	# 传授 8084（森林精魄）/ 影缚 8085（暗影刺客）/ 宝石兽 9246（死亡触发组合）三张是组合入口。
+	for r814_id: int in [8084, 8085, 9246]:
+		var r814_cls := r814_repo.get_card(r814_id).card_class
+		var r814_hit := false
+		for r814_c: CardData in r814_repo.obtainable_cards():
+			if r814_c.id == r814_id and r814_repo.is_own_class_card(r814_c, r814_cls):
+				r814_hit = true
+		check(r814_hit, "R814 组合：%d 在 %s 的试玩版可获得池里" % [r814_id, r814_cls])
+
+	# ── ④ 事件 / 道具：试玩版一件都不裁 ──
+	var r814_ev := GameLayers.event_weights(GameLayers.LAYER_DEFAULT).size()
+	var r814_relic_n := r814_relics.reward_ids().size()
+	check(r814_ev >= 10 and r814_relic_n >= 20,
+			"R814 内容：试玩版事件 %d 种 / 奖励道具 %d 件照常可用" % [r814_ev, r814_relic_n])
+
+	# ── ⑤ 剧情：恒不解锁（剧情锁卡连带进不了池）──
+	check(not ProfileData.is_story_unlocked("episode1"),
+			"R814 剧情：试玩版里 episode1 也是未解锁状态")
+	var r814_goose := r814_repo.get_card(9187)
+	check(r814_goose != null and r814_goose.locked,
+			"R814 剧情：鹅 9187 仍是剧情锁卡（试玩版不放进奖励池）")
+	var r814_goose_in := false
+	for r814_c: CardData in r814_repo.obtainable_cards():
+		if r814_c.id == 9187:
+			r814_goose_in = true
+	check(not r814_goose_in, "R814 剧情：剧情锁卡（鹅 9187）不在试玩版可获得池里")
+
+	# ── ⑥ 图鉴 / 可获得池同步：被裁的卡在试玩版里「不存在」──
+	check(not CardRepo.demo_allows(r814_repo.get_card(9077)),
+			"R814 图鉴：被裁掉的陨石术 9077 在试玩版里不存在")
+	check(CardRepo.demo_allows(r814_repo.get_card(8001)),
+			"R814 图鉴：初始卡（木栅栏 8001）不被裁")
+	check(CardRepo.demo_allows(r814_repo.get_card(8004)),
+			"R814 图鉴：初始专属卡（熊 8004）不被裁")
+
+	# ── ⑦ 结算：二层 Boss 打完后不进第三层 → 走「胜利？」──
+	var r814_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r814_bs.contains(
+			"if GameBuild.is_demo() and _run_next_layer == GameLayers.LAYER_THREE:"),
+			"R814 结算：试玩版把「二层 Boss 的下一层」截成 0")
+	var r814_sum := FileAccess.get_file_as_string("res://scripts/run_summary_scene.gd")
+	check_src(r814_sum.contains("!= GameLayers.LAYER_THREE"),
+			"R814 结算：标题判据「没停在第三层 → 胜利？」未变，试玩版直接复用")
+
+	# ── ⑧ 复位（后面的用例不该继承试玩版状态）──
+	GameBuild.set_test_demo(-1)
+	GameBuild.set_test_release(-1)
+	check(not GameBuild.is_demo() and not GameBuild.is_release(),
+			"R814 复位：用例结束后回到测试版口径")
+
+
+func _test_r817() -> void:
+	## R817：试玩版「**修复跟着走、新增不跟着走**」的机制守卫。
+	## 判据全部落在 `demo_scope.json`（准入白名单）上：老内容改数值 / 修 bug 用的是同一个
+	## id，自动同步；新内容 id 不在表里，默认不进试玩。要放新品进去必须显式改基线 ——
+	## 本用例会当场发现「加了内容却没决定去留」的漂移。
+	var r817_repo := CardRepo.load_json()
+	var r817_relics := RelicRepo.load_json()
+	var r817_traps := TrapRepo.load_json()
+
+	GameBuild.set_test_demo(1)
+
+	# ── ① 基线文件本身：读不进来会 fail-open（试玩版多给内容），必须当场发现 ──
+	check(DemoScope.is_loaded_ok(),
+			"R817 基线：demo_scope.json 已加载（丢了会 fail-open，新增内容会漏进试玩）")
+
+	# ── ② 条目数 = 试玩版真实内容量。改这几个数之前先确认店长的需求有没有变 ──
+	check(DemoScope.baseline_count("cards") == 120,
+			"R817 基线：卡 = 120 张（森林精魄 60 + 暗影刺客 60，实际 %d）"
+			% DemoScope.baseline_count("cards"))
+	check(DemoScope.baseline_count("relics") == r817_relics.all_relics().size(),
+			"R817 基线：道具 = relics.json 全量 %d 件（试玩版一件不裁）"
+			% r817_relics.all_relics().size())
+	check(DemoScope.baseline_count("traps") == 19,
+			"R817 基线：工具 = 19 件（R841 锤子 7018 / 润滑油 7019、R841d 大蒜 7017 进试玩，实际 %d）" % DemoScope.baseline_count("traps"))
+	check(DemoScope.baseline_count("events") == 25,
+			"R817 基线：事件 = 25 种子类型（一层 13 + 二层 16，去重后 25，实际 %d）"
+			% DemoScope.baseline_count("events"))
+
+	# ── ③ 基线不许留脏：表里的每个 id 都必须在数据文件里真实存在 ──
+	# （删卡 / 删道具之后忘了同步基线，就是这里红 —— 不会静默变成「少一张」）
+	var r817_dirty: Array[String] = []
+	for r817_id: Variant in DemoScope.baseline_ids("cards"):
+		if r817_repo.get_card(int(r817_id)) == null:
+			r817_dirty.append("卡 %d" % int(r817_id))
+	for r817_id: Variant in DemoScope.baseline_ids("relics"):
+		if r817_relics.get_relic(int(r817_id)) == null:
+			r817_dirty.append("道具 %d" % int(r817_id))
+	for r817_id: Variant in DemoScope.baseline_ids("traps"):
+		if r817_traps.get_trap(int(r817_id)) == null:
+			r817_dirty.append("工具 %d" % int(r817_id))
+	check(r817_dirty.is_empty(),
+			"R817 基线：表里的条目都还在数据文件里（残留 %s）" % str(r817_dirty))
+
+	# ── ④ 新增内容默认**不进**试玩版：不在表里的 id 一律 false ──
+	check(not DemoScope.allows_card(999999), "R817 新增：未登记的卡 id 不进试玩")
+	check(not DemoScope.allows_relic(9999), "R817 新增：未登记的道具 id 不进试玩")
+	check(not DemoScope.allows_trap(7999), "R817 新增：未登记的工具 id 不进试玩")
+	check(not DemoScope.allows_event("__r817_new_event__"),
+			"R817 新增：未登记的事件子类型不进试玩")
+
+	# 真实对象也挡得住（造一张「明天新加的卡」：森林精魄、普通档、id 不在基线）
+	var r817_fake := CardData.new()
+	r817_fake.id = 999998
+	r817_fake.card_class = PlayerClass.DRUID
+	r817_fake.rarity = 0
+	check(not CardRepo.demo_allows(r817_fake),
+			"R817 新增：一张没登记的卡在试玩版里「不存在」（图鉴 / 奖励 / 商店同源）")
+	check(not r817_repo.obtainable_cards().any(func(c: CardData): return c.id == 999998),
+			"R817 新增：这张卡也确实没进可获得池")
+
+	# ── ⑤ 修复自动跟随：基线内的老内容照常可用（改数值 / 修 bug 不碰本表）──
+	check(CardRepo.demo_allows(r817_repo.get_card(8001)),
+			"R817 修复：基线内的老卡（木栅栏 8001）照常在试玩版 —— 改它的数据不用动基线")
+
+	# ── ⑥ 同一条规则在测试版 / 发布版**完全不生效** ──
+	GameBuild.set_test_demo(-1)
+	check(CardRepo.demo_allows(r817_fake),
+			"R817 隔离：切回测试版后，同一张未登记的卡照常存在（基线不误伤正式流程）")
+	check(DemoScope.baseline_count("cards") == 120,
+			"R817 隔离：基线的存在与否不影响测试版内容量")
+
+	# ── ⑦ 复位 ──
+	GameBuild.set_test_demo(-1)
+	GameBuild.set_test_release(-1)
+	check(not GameBuild.is_demo() and not GameBuild.is_release(),
+			"R817 复位：用例结束后回到测试版口径")
+
+
+func _test_r819() -> void:
+	## R819：占卜室「实际扣血」+ 幻象不可重摇 + 代价行的三语模板。
+	##   ① 代价只削上限（`lose_max_hp`），当前血只在新上限以下被钳；
+	##   ② 幻象由「种子 + 层 + 节点」派生 —— 回标题继续 / 重进本房都换不了同房间的结果；
+	##   ③ 代价结果行与解读结果行走 i18n 模板，不再回落中文。
+	print("-- R819 占卜室扣血与代价行")
+
+	# ── ① 扣血语义（与 R727 同一条 `lose_max_hp`）──
+	RunState.max_hp = 60
+	RunState.hp = 60
+	check(RunState.lose_max_hp(5) == 5 and RunState.max_hp == 55 and RunState.hp == 55,
+			"R819 满血 60/60 占卜 → 55/55（上限 -5，当前血跟降）")
+	RunState.max_hp = 55
+	RunState.hp = 30
+	check(RunState.lose_max_hp(5) == 5 and RunState.max_hp == 50 and RunState.hp == 30,
+			"R819 残血 30/55 占卜 → 30/50（当前血一点都不掉）")
+	RunState.max_hp = 6
+	RunState.hp = 3
+	check(RunState.lose_max_hp(5) == 5 and RunState.max_hp == 1 and RunState.hp == 1,
+			"R819 上限 6 时占卜 → 1/1（至少留 1 点，当前血被钳到 1）")
+
+	# ── ② 幻象派生：同房间必然同一结果 ──
+	var r819_one: int = RunState.divination_roll_for(20261119, 1, 7, 4)
+	check(r819_one >= 1 and r819_one <= 4, "R819 幻象编号落在 1~4（实际 %d）" % r819_one)
+	check(RunState.divination_roll_for(20261119, 1, 7, 4) == r819_one,
+			"R819 同种子 / 同层 / 同节点 → 同一种幻象（回标题继续也换不了）")
+	var r819_seen := {}
+	for r819_i in 40:
+		r819_seen[RunState.divination_roll_for(20261119, 1, r819_i, 4)] = true
+	check(r819_seen.size() >= 3, "R819 幻象确实按房间变化（40 间出现 %d 种）" % r819_seen.size())
+	var r819_moved := 0
+	for r819_i in 20:
+		var r819_a: int = RunState.divination_roll_for(20261119, 1, r819_i, 4)
+		var r819_b: int = RunState.divination_roll_for(20261119, 2, r819_i, 4)
+		if r819_a != r819_b:
+			r819_moved += 1
+	check(r819_moved > 0, "R819 换层后幻象重排（20 间里 %d 间变了）" % r819_moved)
+	var r819_seed_b: int = RunState.divination_roll_for(7, 1, 7, 4)
+	check(r819_seed_b >= 1 and r819_seed_b <= 4, "R819 换种子照样落在 1~4（实际 %d）" % r819_seed_b)
+
+	# ── ③ 源码锁 ──
+	var ev_src := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(ev_src.contains("const DIVINATION_HP_COST := 5"),
+			"R819 占卜代价常量仍是 5 点最大生命")
+	check_src(not ev_src.contains("_div_rolled = RunState.run_rng.randi_range"),
+			"R819 占卜幻象不再走 run_rng（否则退出重进能重摇）")
+	check_src(ev_src.count("RunState.divination_roll_for(") == 2,
+			"R819 幻象派生只有两处：进房铺场 + 结算兜底")
+	check_src(ev_src.contains("result_label.text = GameI18n.source(_div_result)"),
+			"R819 解读结果行走 i18n 模板（带 %s 的卡名 / 道具名）")
+	var r819_cost_line := ev_src.find(
+			'"（占卜的代价：失去 %d 点最大生命 → %d / %d）"')
+	var r819_src_at := ev_src.substr(0, maxi(0, r819_cost_line)).rfind("GameI18n.source(")
+	check_src(r819_cost_line > 0 and r819_src_at > 0
+			and r819_cost_line - r819_src_at < 80,
+			"R819 代价结果行包在 GameI18n.source() 里（含三个动态数值）")
+
+	# ── ④ 中文模板串必须与代码字面串逐字一致（模板匹配靠它）──
+	var r819_ui: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/event_ui_zh_canonical.json"))
+	var r819_row := ""
+	if r819_ui is Dictionary:
+		var r819_res: Variant = (r819_ui as Dictionary).get("results", {})
+		if r819_res is Dictionary:
+			var r819_div: Variant = (r819_res as Dictionary).get("divination", {})
+			if r819_div is Dictionary:
+				r819_row = str((r819_div as Dictionary).get("DIVINATION_COST_PAID", ""))
+	check_src(r819_row == "（占卜的代价：失去 %d 点最大生命 → %d / %d）",
+			"R819 中文模板与代码字面串逐字一致")
+
+func _test_r822() -> void:
+	## R822（店长口径）：第二层起点**新增「鸭绅士」这场事件，与卷卷权重相等**；
+	## 4 件「带鸭」的道具归属移到鸭绅士；依然是随机 3 选 1。
+	##
+	## 四条容易被写漏的判据：
+	##   ① 「遇到谁」必须由**种子派生**（不摇 rng、不进存档）—— 存场景变量 / 存档里，
+	##      退出去再进就能重摇，等于让玩家自选主持人（R819 占卜室的原坑）。
+	##   ② 两位主持人的道具池**互斥**，且并集必须是二层池全量（R822 是 9 件，R824 起 10 件）
+	##      —— 少一件就是内容凭空蒸发。
+	##   ③ 「带鸭」的判据用**名字里有没有「鸭」**，不写死 id 名单：以后新增带鸭道具会自动归位。
+	##   ④ 试玩版不进鸭绅士（R817「新增不跟着走」），但那 4 件要留在卷卷池里发得出去。
+	var r822_seed_bak := RunState.run_seed
+	var r822_rng_seed_bak := RunState.run_rng.seed
+	var r822_rng_state_bak := RunState.run_rng.state
+	var r822_relics := RelicRepo.load_json()
+
+	# ── ① 派生稳定：同一种子，反复问都是同一位 ──
+	RunState.run_seed = 424242
+	var r822_a := RunState.layer2_host()
+	var r822_b := RunState.layer2_host()
+	check(r822_a == r822_b,
+			"R822 宿主：同一种子两次调用必然同一位（%d / %d）" % [r822_a, r822_b])
+
+	# ── ② 不花随机数：连问 20 次，run_rng 的状态一格不动 ──
+	# （动了就说明它偷用了顺序链，同种子重跑的地图 / 掉落会跟着变）
+	var r822_state0 := RunState.run_rng.state
+	for _r822_i in 20:
+		RunState.layer2_host()
+	check(RunState.run_rng.state == r822_state0,
+			"R822 宿主：派生不消耗 run_rng（状态 %d → %d）" % [r822_state0, RunState.run_rng.state])
+
+	# ── ③ 与 rng 状态无关：把随机源打乱，答案不许变 ──
+	RunState.run_rng.seed = 999
+	var r822_c := RunState.layer2_host()
+	RunState.run_rng.seed = 1
+	var r822_d := RunState.layer2_host()
+	check(r822_c == r822_a and r822_d == r822_a,
+			"R822 宿主：只认种子，不认 rng 当前状态（%d / %d / %d）" % [r822_a, r822_c, r822_d])
+
+	# ── ④ 权重相等：扫 1000 个种子，鸭绅士那一边落在 40%~60% ──
+	var r822_cnt := [0, 0]
+	for r822_s in 1000:
+		var r822_h := RunState.layer2_host(r822_s)
+		r822_cnt[r822_h] = int(r822_cnt[r822_h]) + 1
+	var r822_ratio := float(r822_cnt[1]) / 1000.0
+	check(r822_ratio > 0.40 and r822_ratio < 0.60,
+			"R822 宿主：权重相等（鸭绅士 %.1f%%）" % (r822_ratio * 100.0))
+	check(int(r822_cnt[0]) > 0 and int(r822_cnt[1]) > 0,
+			"R822 宿主：两种结果都能出现（卷卷 %d / 鸭绅士 %d）" % [int(r822_cnt[0]), int(r822_cnt[1])])
+
+	# ── ⑤ 池子分流：12 = 6 + 6，互不重叠（R824 鸭子闹钟 6085 / R829 这是礼帽 6087 归鸭绅士，R826 音乐盒 6086 归卷卷）──
+	var r822_all := r822_relics.layer2_ids()
+	var r822_duck := r822_relics.duck_host_ids()
+	var r822_bun := r822_relics.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN)
+	var r822_duck_pool := r822_relics.layer2_ids_for(RunState.LAYER2_HOST_DUCK)
+	check(r822_all.size() == 12,
+
+			"R824 池：二层起始池全量 12 件（R822 的 9 + 鸭子闹钟 6085 + 音乐盒 6086 + 这是礼帽 6087，实际 %d）"
+
+			% r822_all.size())
+	check(r822_duck.size() == 6,
+
+			"R824 池：鸭绅士 6 件（含鸭子闹钟 + 礼帽，实际 %d）" % r822_duck.size())
+	check(r822_bun.size() == 6, "R822 池：卷卷 6 件（实际 %d）" % r822_bun.size())
+	check(r822_duck_pool == r822_duck, "R824 池：遇到鸭绅士时出的就是那 6 件")
+	var r822_overlap: Array[int] = []
+	for r822_id: int in r822_bun:
+		if r822_duck.has(r822_id):
+			r822_overlap.append(r822_id)
+	check(r822_overlap.is_empty(), "R822 池：两位主持人的池子不重叠（重叠 %s）" % str(r822_overlap))
+	var r822_union := r822_bun.duplicate()
+	for r822_id2: int in r822_duck:
+		if not r822_union.has(r822_id2):
+			r822_union.append(r822_id2)
+	check(r822_union.size() == 12,
+			"R824 池：6 + 6 = 12 件，一件没丢（实际 %d）" % r822_union.size())
+
+	# ── ⑥ 归属：名字带「鸭」的道具全部在鸭绅士池，鸭绅士池里也只有带鸭的 ──
+	var r822_missing: Array[String] = []
+	for r822_id3: int in r822_all:
+		var r822_rel := r822_relics.get_relic(r822_id3)
+		if r822_rel == null:
+			continue
+		if r822_rel.relic_name.contains("鸭") and not r822_duck.has(r822_id3):
+			r822_missing.append("%d %s" % [r822_id3, r822_rel.relic_name])
+	check(r822_missing.is_empty(),
+			"R822 归属：带「鸭」的道具都归鸭绅士（漏 %s）" % str(r822_missing))
+	var r822_extra: Array[String] = []
+	for r822_id4: int in r822_duck:
+		var r822_rel2 := r822_relics.get_relic(r822_id4)
+		if r822_rel2 == null or (not r822_rel2.relic_name.contains("鸭") and r822_id4 != GameEngine.TOP_HAT_RELIC_ID):
+			r822_extra.append(str(r822_id4))
+	check(r822_extra.is_empty(),
+			"R822 归属：鸭绅士池里只有带鸭道具（多出 %s）" % str(r822_extra))
+
+	# ── ⑦ 三选一：两位都凑得出 3 件不重复 ──
+	for r822_host: int in [RunState.LAYER2_HOST_BUNBUN, RunState.LAYER2_HOST_DUCK]:
+		var r822_pool := r822_relics.layer2_ids_for(r822_host)
+		var r822_bag := r822_pool.duplicate()
+		var r822_pick: Array[int] = []
+		while r822_pick.size() < 3 and not r822_bag.is_empty():
+			r822_pick.append(r822_bag.pop_front())
+		var r822_uniq: Dictionary = {}
+		for r822_p: int in r822_pick:
+			r822_uniq[r822_p] = true
+		check(r822_pick.size() == 3,
+				"R822 三选一：host=%d 能凑够 3 件（池 %d）" % [r822_host, r822_pool.size()])
+		check(r822_uniq.size() == r822_pick.size(),
+				"R822 三选一：host=%d 的 3 件互不重复" % r822_host)
+
+	# ── ⑧ 文案：三个职业都有自己的两句，且与卷卷那套不同 ──
+	check(CurtainLines.speaker_of(CurtainLines.HOST_DUCK)
+			!= CurtainLines.speaker_of(CurtainLines.HOST_BUNBUN),
+			"R822 文案：两位主持人的名称牌不同")
+	for r822_cls: String in [PlayerClass.DRUID, PlayerClass.ROGUE, PlayerClass.MECH]:
+		var r822_g := CurtainLines.greeting(GameLayers.LAYER_TWO, r822_cls, CurtainLines.HOST_DUCK)
+		var r822_r := CurtainLines.reply(GameLayers.LAYER_TWO, r822_cls, CurtainLines.HOST_DUCK)
+		check(r822_g != "" and not r822_g.begins_with("CURTAIN_"),
+				"R822 文案：%s 的招呼取到了（%s）" % [r822_cls, r822_g])
+		check(r822_r != "" and not r822_r.begins_with("CURTAIN_"),
+				"R822 文案：%s 的回答取到了（%s）" % [r822_cls, r822_r])
+		check(r822_g != CurtainLines.greeting(GameLayers.LAYER_TWO, r822_cls,
+				CurtainLines.HOST_BUNBUN),
+				"R822 文案：%s 鸭绅士那句与卷卷那句不是同一句" % r822_cls)
+		check(r822_g != r822_r, "R822 文案：%s 招呼与回答不重复" % r822_cls)
+		check(CurtainLines.greeting(GameLayers.LAYER_DEFAULT, r822_cls, CurtainLines.HOST_DUCK)
+				== CurtainLines.greeting(GameLayers.LAYER_DEFAULT, r822_cls,
+						CurtainLines.HOST_BUNBUN),
+				"R822 文案：第一层恒为卷卷（鸭绅士只在第二层起点出场）")
+	check(CurtainLines.has_reply(GameLayers.LAYER_TWO, CurtainLines.HOST_DUCK),
+			"R822 文案：鸭绅士也是「对方一句 + 玩家一句」的两句制")
+	check(not CurtainLines.has_reply(GameLayers.LAYER_DEFAULT, CurtainLines.HOST_DUCK),
+			"R822 文案：第一层不出回答")
+
+	# ── ⑨ 四语齐：新加的 7 个 key 在 en / ja / es 里都有字 ──
+	var r822_keys := ["CURTAIN_DUCK_SPEAKER", "CURTAIN_DUCK_GREETING_DRUID",
+			"CURTAIN_DUCK_GREETING_ROGUE", "CURTAIN_DUCK_GREETING_MECH",
+			"CURTAIN_DUCK_REPLY_DRUID", "CURTAIN_DUCK_REPLY_ROGUE",
+			"CURTAIN_DUCK_REPLY_MECH"]
+	for r822_lang: String in ["zh", "en", "ja", "es"]:
+		var r822_name := "interface_zh_canonical.json" if r822_lang == "zh" 				else "interface_%s.json" % r822_lang
+		var r822_file := FileAccess.open("res://i18n/" + r822_name, FileAccess.READ)
+		check(r822_file != null, "R822 文案：%s 表可读" % r822_lang)
+		if r822_file == null:
+			continue
+		var r822_data: Variant = JSON.parse_string(r822_file.get_as_text())
+		var r822_rows: Dictionary = {}
+		if r822_data is Dictionary:
+			var r822_scopes: Variant = (r822_data as Dictionary).get("scopes", {})
+			if r822_scopes is Dictionary:
+				var r822_shell: Variant = (r822_scopes as Dictionary).get("shell", {})
+				if r822_shell is Dictionary:
+					r822_rows = r822_shell
+		var r822_lack: Array[String] = []
+		for r822_k: String in r822_keys:
+			if not r822_rows.has(r822_k):
+				r822_lack.append(r822_k)
+				continue
+			var r822_cell: Variant = r822_rows[r822_k]
+			var r822_text := ""
+			if r822_cell is Dictionary:
+				r822_text = str((r822_cell as Dictionary).get("zh", ""))
+			else:
+				r822_text = str(r822_cell)
+			if r822_text.strip_edges() == "":
+				r822_lack.append(r822_k)
+		check(r822_lack.is_empty(),
+				"R822 文案：%s 七条齐全（缺 %s）" % [r822_lang, str(r822_lack)])
+
+	# ── ⑩ 背景素材在位（缺图会退回暗底，看着像「事件没加载」）──
+	check(CurtainLines.backdrop_name(CurtainLines.HOST_DUCK) == "bg_curtain_duck",
+			"R822 素材：鸭绅士走 bg_curtain_duck")
+	check(CurtainLines.backdrop_name(CurtainLines.HOST_BUNBUN) == "bg_curtain",
+			"R822 素材：卷卷仍走 bg_curtain（老图不动）")
+	check(ResourceLoader.exists("res://assets/ui/bg_curtain_duck.png"),
+			"R822 素材：bg_curtain_duck.png 在包里")
+
+	# ── ⑪ 试玩版（R824 店长口径「试玩版改为给鸭绅士」）：主持人与池子都不再例外 ──
+
+	GameBuild.set_test_demo(1)
+
+	check(RunState.layer2_host(424242) == r822_a,
+
+			"R824 试玩版：主持人与正式版同一条派生（不再恒卷卷）")
+
+	check(r822_relics.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN) == r822_bun,
+
+			"R824 试玩版：卷卷池与正式版一致（5 件）")
+
+	check(r822_relics.layer2_ids_for(RunState.LAYER2_HOST_DUCK) == r822_duck_pool,
+
+			"R824 试玩版：鸭绅士池与正式版一致（5 件，含鸭子闹钟）")
+
+	GameBuild.set_test_demo(-1)
+
+	# ── ⑫ 老调用点不受影响：不传 host 按卷卷算 ──
+	check(r822_relics.start_ids_for_layer(GameLayers.LAYER_TWO) == r822_bun,
+			"R822 兼容：start_ids_for_layer(2) 省略 host 时仍是卷卷池")
+
+	# ── 还原现场 ──
+	RunState.run_seed = r822_seed_bak
+	RunState.run_rng.seed = r822_rng_seed_bak
+	RunState.run_rng.state = r822_rng_state_bak
+
+
+func _test_r824() -> void:
+
+	## R824：试玩版也出鸭绅士；新增二层鸭绅士道具「鸭子闹钟」6085。
+	## R844：6085 的旧双效果全部删除，改为第 5 回合对全体敌人各造成 33 点伤害。
+	## 这里继续守数据 / 池子 / 试玩可达性；新机制的完整时序由 `_test_r844()` 守。
+
+	var r824_repo := RelicRepo.load_json()
+
+	var r824_rel: RelicData = r824_repo.get_relic(6085)
+
+	check(r824_rel != null and r824_rel.relic_name == "鸭子闹钟",
+
+			"R824 数据层：6085 鸭子闹钟在库")
+
+	check(r824_rel.kind == "战斗" and r824_rel.source == "二层" and r824_rel.tier == "一般",
+
+			"R824 数据层：战斗类 · 二层来源 · 一般档（实际 %s / %s / %s）"
+
+			% [r824_rel.kind, r824_rel.source, r824_rel.tier])
+
+	check(r824_rel.desc == "每场战斗的第 5 回合，对所有敌人造成 33 点伤害。",
+
+			"R844 文案：第 5 回合 / 全体敌人 / 33 伤（%s）" % r824_rel.desc)
+
+	# 常量为唯一数值来源：5 / 33 与卡面一致，旧的 ENERGY / DRAW / SPELL 常量均删除。
+
+	check(GameEngine.DUCK_ALARM_RELIC_ID == 6085 and GameEngine.DUCK_ALARM_TURN == 5
+
+			and GameEngine.DUCK_ALARM_DMG == 33,
+
+			"R844 常量：6085 / 第 5 回合 / 全体 33 伤")
+
+	# 图标（每个道具都必须有 relic_icon_<id>.png，缺一张 R577b 就红）
+
+	check(ResourceLoader.exists(UiAssets.relic_icon_path(6085)),
+
+			"R824 素材：relic_icon_6085.png 在包里")
+
+	# ── ① 池子归属：只归鸭绅士；第一层初始池 / 奖励池 / 事件池都不许有它 ──
+
+	check(r824_repo.duck_host_ids().has(6085), "R824 池：鸭子闹钟归鸭绅士")
+
+	check(r824_repo.layer2_ids_for(RunState.LAYER2_HOST_DUCK).has(6085),
+
+			"R824 池：遇到鸭绅士能抽到鸭子闹钟")
+
+	check(not r824_repo.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN).has(6085),
+
+			"R824 池：遇到卷卷没有鸭子闹钟（归属不重叠）")
+
+	check(not r824_repo.initial_ids().has(6085) and not r824_repo.reward_ids().has(6085)
+
+			and not r824_repo.event_ids().has(6085),
+
+			"R824 池：不进第一层初始池 / 奖励池 / 事件池")
+
+	# ── ② 试玩版：6085 在基线里（R814 口径「道具全部登陆」），且鸭绅士在试玩版可达 ──
+
+	check(DemoScope.allows_relic(6085), "R824 试玩版：6085 在 demo_scope 基线里")
+
+	var r824_demo_backup := RunState.run_seed
+
+	GameBuild.set_test_demo(1)
+
+	var r824_demo_host := RunState.layer2_host(424242)
+
+	check(r824_repo.layer2_ids_for(RunState.LAYER2_HOST_DUCK).has(6085),
+
+			"R824 试玩版：鸭绅士池里仍有鸭子闹钟")
+
+	GameBuild.set_test_demo(-1)
+
+	check(r824_demo_host == RunState.layer2_host(424242),
+
+			"R824 试玩版：主持人派生与正式版一致（%d / %d）"
+
+			% [r824_demo_host, RunState.layer2_host(424242)])
+
+	RunState.run_seed = r824_demo_backup
+
+	# ── ③ 机制：R844 已删除旧双效果，完整时序 / 多目标 / 对照组见 `_test_r844()` ──
+
+func _test_r825() -> void:
+	## R825：战斗 / 奖励 / 商店共用存档的真实写盘 + 读盘，不只测 snapshot 字典。
+	## 运行入口已 set_test_mode()，这里只碰 run_save_test.sav，不碰玩家真档。
+	print("-- R825 存档时序与上下文恢复")
+	var r825_rng := RandomNumberGenerator.new()
+	r825_rng.seed = 8252026
+	RunState.start_run(RogueMap.generate(r825_rng), GameLayers.LAYER_DEFAULT)
+	RunState.relic_choice = []
+	RunState.max_hp = 60
+	RunState.hp = 17
+	RunState.gold = 237
+	RunState.chocolate = 4
+	RunState.traps = [7001, -1, -1]
+	RunState.pending_rewards = []
+	RunState.queue_relic_reward(6005)
+	var r825_idx := RunState.pending_rewards.size() - 1
+	var r825_node := RunState.current_node_id
+	var r825_shop := {"row1": [[8001, 1, 0]], "row2": [["trap", 7001, 1]],
+			"row3": [["maxhp", 1], ["choco", 0]]}
+	RunState.store_shop_state(r825_node, r825_shop)
+	RunState.shop_mark_revisit(r825_node)
+	check(RunSave.save_run(), "R825 真写盘：组合状态能写入测试存档")
+	RunState.hp = 60
+	RunState.gold = 0
+	RunState.chocolate = 0
+	RunState.traps = [-1, -1, -1]
+	RunState.pending_rewards = []
+	RunState.shop_states = {}
+	RunState.shop_revisit_id = -1
+	check(RunSave.load_run(), "R825 真读档：%s" % RunSave.last_error)
+	check(RunState.hp == 17 and RunState.max_hp == 60,
+			"R825 生命：读档保持战后 17/60，不恢复成满血（实际 %d/%d）" % [RunState.hp, RunState.max_hp])
+	check(RunState.gold == 237 and RunState.chocolate == 4,
+			"R825 资源：金币 237 / 巧克力 4 原样恢复")
+	check(RunState.pending_reward_count() == 1 and not RunState.has_relic(6005),
+			"R825 奖励：未领道具仍在队列，且没有提前入库")
+	check(RunState.traps == [7001, -1, -1],
+			"R825 工具：栏位与空格位置原样恢复（%s）" % str(RunState.traps))
+	check(JSON.stringify(RunState.shop_state_of(r825_node)) == JSON.stringify(r825_shop)
+			and RunState.shop_revisit_ok(r825_node),
+			"R825 商店：同一货架、售罄位和重进窗口一起恢复")
+
+	# 已领取状态也必须落盘；读档后再次领取要拒绝，不能多发一件。
+	check(RunState.claim_pending_reward(r825_idx) and RunState.has_relic(6005),
+			"R825 领奖：道具正常入库")
+	check(RunSave.save_run(), "R825 领奖后写盘成功")
+	RunState.relics = []
+	RunState.pending_rewards[r825_idx]["state"] = RunState.REWARD_PENDING
+	check(RunSave.load_run(), "R825 领奖后读档成功")
+	check(str((RunState.pending_rewards[r825_idx] as Dictionary).get("state", "")) == RunState.REWARD_CLAIMED
+			and RunState.pending_reward_count() == 0 and RunState.relics.count(6005) == 1,
+			"R825 领奖后读档：claimed 与持有件数都保留")
+	check(not RunState.claim_pending_reward(r825_idx) and RunState.relics.count(6005) == 1,
+			"R825 防重复：已领条目不能再次发奖")
+
+	# 时序守卫：结算后的覆盖写必须真的位于生命、金币、奖励入队之后。
+	var r825_battle_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r825_show := r825_battle_src.find("func _show_over(win: bool)")
+	var r825_save := r825_battle_src.find("# R825：函数开头", r825_show)
+	check_src(r825_show >= 0 and r825_save > r825_battle_src.find("RunState.hp = maxi", r825_show)
+			and r825_save > r825_battle_src.find("RunState.gain_gold(gold_gain)", r825_show)
+			and r825_save > r825_battle_src.find("RunState.queue_battle_card_rewards", r825_show),
+			"R825 战斗：最终检查点位于战后生命 / 金币 / 奖励结算之后")
+	var r825_map_src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	check_src(r825_map_src.contains("RunState.boss_beaten and RunState.pending_reward_count() == 0")
+			and r825_map_src.contains("func _on_map_reward_closed()"),
+			"R825 Boss：有待领奖励时暂缓换层，关窗后交还原路由")
+	var r825_reward_src := FileAccess.get_file_as_string("res://scripts/reward_panel.gd")
+	var r825_shop_src := FileAccess.get_file_as_string("res://scripts/shop_scene.gd")
+	check_src(r825_reward_src.contains("if not RunState.claim_pending_reward(i):\n\t\treturn\n\t_save_reward_checkpoint()")
+			and r825_reward_src.contains("if not RunState.pick_pending_card(i, card_id):\n\t\treturn\n\t_save_reward_checkpoint()")
+			and r825_reward_src.contains("if RunState.claim_all_relic_rewards() > 0:\n\t\t\t\t\t_save_reward_checkpoint()")
+			and r825_reward_src.contains("_save_reward_checkpoint()\n\tif not _closing_to_route"),
+			"R825 奖励：领取 / 选卡 / 一键领取成交当刻落盘，关窗再兜底")
+	check_src(r825_shop_src.contains("func _row3_template(for_restore := false)")
+			and r825_shop_src.contains("for_restore or not RunState.has_key")
+			and r825_shop_src.contains("for d: Dictionary in _row3_template(true):"),
+			"R825 商店：已持有匕首也能恢复原货位，新货架仍不重复出售")
+	var r825_trap_fn := r825_shop_src.find("func _buy_trap")
+	check_src(r825_trap_fn >= 0 and r825_shop_src.find("RunState.gain_trap", r825_trap_fn)
+			< r825_shop_src.find("_sync_shop_state()", r825_trap_fn),
+			"R825 商店：工具先发放再保存售罄状态")
+
+
+func _test_r826() -> void:
+	## R826（店长口径）：二层卷卷初始道具「音乐盒」6086 —— 每场战斗开始把 2 张随机音符加入抽牌库；
+	## 新增 7 张音符卡 Do~Si（9277~9283，吟游诗人 · rarity 5 · 次元）。这些**不是奖励卡牌**，
+	## 唯一获得途径是音乐盒，不进任何玩家可见的池（奖励 / 商店 / 禁卡表 / 图鉴）。
+	var repo := CardRepo.load_json()
+	var rrepo := RelicRepo.load_json()
+
+	# ── ① 数据层：7 张音符卡 + 音乐盒 ──
+	var notes: Array[CardData] = []
+	for cid in [9277, 9278, 9279, 9280, 9281, 9282, 9283]:
+		var c := repo.get_card(cid)
+		check(c != null, "R826 数据：%d 在库" % cid)
+		if c != null:
+			notes.append(c)
+			check(c.kind == "技能" and c.card_class == "吟游诗人" and c.rarity == 5
+					and c.traits.has("音符") and c.affixes.has("次元"),
+					"R826 数据：%d 是吟游诗人技能 · rarity5 · 音符 · 次元" % cid)
+	var r826_rel := rrepo.get_relic(6086)
+	check(r826_rel != null and r826_rel.relic_name == "音乐盒"
+			and r826_rel.kind == "战斗" and r826_rel.source == "二层" and r826_rel.tier == "一般",
+			"R826 数据：6086 音乐盒（战斗 · 二层 · 一般）")
+
+	# ── ② 音符卡不是奖励卡：不进可获得池 / 奖励池 / 图鉴 ──
+	for c in notes:
+		check(not repo.obtainable_cards(false).has(c), "R826 隐藏：%d 不进可获得池" % c.id)
+		check(not repo.reward_pool(false).has(c), "R826 隐藏：%d 不进奖励池" % c.id)
+		check(not preload("res://scripts/gallery_scene.gd").gallery_visible(c, false),
+				"R826 隐藏：%d 不进图鉴" % c.id)
+
+	# ── ③ 池子：音乐盒归卷卷，不进鸭绅士 / 初始 / 奖励 / 事件池 ──
+	check(rrepo.layer2_ids().has(6086), "R826 池：音乐盒在二层起始池")
+	check(rrepo.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN).has(6086),
+			"R826 池：卷卷能抽到音乐盒")
+	check(not rrepo.layer2_ids_for(RunState.LAYER2_HOST_DUCK).has(6086),
+			"R826 池：鸭绅士没有音乐盒")
+	check(not rrepo.initial_ids().has(6086) and not rrepo.reward_ids().has(6086)
+			and not rrepo.event_ids().has(6086), "R826 池：不进初始 / 奖励 / 事件池")
+	check(DemoScope.allows_relic(6086), "R826 试玩版：6086 在 demo_scope 基线里")
+
+	# ── ④ 引擎：音乐盒战斗开始把 2 张随机音符加进抽牌库 ──
+	var r826_e := _new_engine([], 40, 40, -1, false)
+	r826_e.self_relics = [6086]
+	r826_e.apply_battle_start_relics(repo)
+	var r826_note_in_deck := 0
+	for c in r826_e.state.deck:
+		if c.traits.has("音符"):
+			r826_note_in_deck += 1
+	check(r826_e.state.deck.size() == 3 and r826_note_in_deck == 3,
+			"R826 引擎：音乐盒加 3 张音符进抽牌库（deck %d / 音符 %d）"
+			% [r826_e.state.deck.size(), r826_note_in_deck])
+
+	# ── ⑤ Do：抽 2 张；下回合 +1 费 + 多抽 1 张 ──
+	var e_do := _new_engine([], 40, 40, -1, false)
+	e_do.state.energy = 10
+	e_do.state.hand.append(CardData.from_dict(repo.get_card(9277).to_dict()))
+	for _i in 3:
+		e_do.state.deck.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	var do_h0 := e_do.state.hand.size()
+	e_do.use_spell(0)
+	check(e_do.state.hand.size() == do_h0 + 1, "R826 Do：抽 2 张（手牌净 +1，实际 %d）" % e_do.state.hand.size())
+	check(e_do.state.self_next_energy == 1 and e_do.state.self_next_draw == 1,
+			"R826 Do：下回合 +1 费 + 多抽 1 张（%d / %d）"
+			% [e_do.state.self_next_energy, e_do.state.self_next_draw])
+
+	# ── ⑥ Re：对全体敌人 4 伤 + 把另一张随机音符加入抽牌库 ──
+	var e_re := _new_engine([], 40, 40, -1, false)
+	e_re.state.energy = 10
+	e_re.state.hand.append(CardData.from_dict(repo.get_card(9278).to_dict()))
+	var re_f1 := e_re.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var re_f2 := e_re.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	e_re.use_spell(0)
+	check(re_f1.health == 36 and re_f2.health == 36,
+			"R826 Re：全体敌人各 4 伤（%d / %d）" % [re_f1.health, re_f2.health])
+
+	# ── ⑦ Mi：随机 2 个敌人本回合力量 -6 ──
+	var e_mi := _new_engine([], 40, 40, -1, false)
+	e_mi.state.energy = 10
+	e_mi.state.hand.append(CardData.from_dict(repo.get_card(9279).to_dict()))
+	var mi_f1 := e_mi.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var mi_f2 := e_mi.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	e_mi.use_spell(0)
+	check(mi_f1.atk_buff_turn == -6 and mi_f2.atk_buff_turn == -6,
+			"R826 Mi：两个敌人本回合力量 -6（%d / %d）" % [mi_f1.atk_buff_turn, mi_f2.atk_buff_turn])
+
+	# ── ⑧ Fa：目标 18 伤 + 其余敌人各 5 伤 ──
+	var e_fa := _new_engine([], 40, 40, -1, false)
+	e_fa.state.energy = 10
+	e_fa.state.hand.append(CardData.from_dict(repo.get_card(9280).to_dict()))
+	var fa_f1 := e_fa.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var fa_f2 := e_fa.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	e_fa.use_spell(0, Vector2i(1, 0))
+	check(fa_f1.health == 22 and fa_f2.health == 35,
+			"R826 Fa：目标 18 + 其余 5（%d / %d）" % [fa_f1.health, fa_f2.health])
+
+	# ── ⑨ Sol：目标眩晕 + 全体 6 伤 ──
+	var e_sol := _new_engine([], 40, 40, -1, false)
+	e_sol.state.energy = 10
+	e_sol.state.hand.append(CardData.from_dict(repo.get_card(9281).to_dict()))
+	var sol_f1 := e_sol.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var sol_f2 := e_sol.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	e_sol.use_spell(0, Vector2i(1, 0))
+	check(sol_f1.stun_left > 0 and sol_f1.health == 34 and sol_f2.health == 34,
+			"R826 Sol：目标眩晕 + 全体 6 伤（stun %d / %d / %d）"
+			% [sol_f1.stun_left, sol_f1.health, sol_f2.health])
+
+	# ── ⑩ La：抽 4 张各 -1 费；盟友 / 工事力量 +2 ──
+	var e_la := _new_engine([], 40, 40, -1, false)
+	e_la.state.energy = 10
+	e_la.state.hand.append(CardData.from_dict(repo.get_card(9282).to_dict()))
+	for _i in 4:
+		e_la.state.deck.append(CardData.from_dict(repo.get_card(8003).to_dict()))
+	e_la.use_spell(0)
+	var la_farmers := 0
+	var la_ok := true
+	for c in e_la.state.hand:
+		if c.id == 8003:
+			la_farmers += 1
+			if int(e_la.state.card_discount.get(c, 0)) != 1 or c.power != 5:
+				la_ok = false
+	check(la_farmers == 4 and la_ok,
+			"R826 La：抽 4 张农民，各 -1 费、力量 +2（%d 张 / ok=%s）"
+			% [la_farmers, str(la_ok)])
+
+	# ── ⑪ Si：随机敌方单位 7 伤 × 7（单目标 40 血 → 49 伤击破） ──
+	var e_si := _new_engine([], 40, 40, -1, false)
+	e_si.state.energy = 10
+	e_si.state.hand.append(CardData.from_dict(repo.get_card(9283).to_dict()))
+	e_si.state.place(CardData.from_dict(repo.get_card(1011).to_dict()),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	e_si.use_spell(0)
+	check(e_si.state.unit_at(Vector2i(1, 0)) == null,
+			"R826 Si：随机 7×7 = 49 伤击破 40 血敌人")
+
+
+func _test_r829() -> void:
+	## R829（店长口径）：① 音乐盒 6086 从「2 张」改「3 种」；② La 9282 从「抽 3 +3 力」改「抽 4 +2 力」；
+	## ③ 新增二层鸭绅士道具「这是礼帽」6087 —— 己方盟友/工事死亡 → 洗回抽牌库 + 本局费用 -2 + 获得次元。
+	var repo := CardRepo.load_json()
+	var rrepo := RelicRepo.load_json()
+
+	# ── ① 数据层：音乐盒 3 种 / La 抽4+2 / 礼帽在库 ──
+	check(rrepo.get_relic(6086).desc.contains("3 种"),
+			"R829 数据：音乐盒 desc 写「3 种」（%s）" % rrepo.get_relic(6086).desc)
+	check(repo.get_card(9282).effect_text.contains("抽 4")
+			and repo.get_card(9282).effect_text.contains("力量 +2"),
+			"R829 数据：La 写「抽 4」「力量 +2」（%s）" % repo.get_card(9282).effect_text)
+	var r828_hat := rrepo.get_relic(6087)
+	check(r828_hat != null and r828_hat.relic_name == "这是礼帽"
+			and r828_hat.kind == "战斗" and r828_hat.source == "二层" and r828_hat.tier == "一般",
+			"R829 数据：6087 这是礼帽（战斗 · 二层 · 一般）")
+	check(r828_hat.desc.contains("洗回") and r828_hat.desc.contains("次元")
+			and r828_hat.desc.contains("费用 -2"),
+			"R829 文案：写着洗回 / 次元 / 费用 -2（%s）" % r828_hat.desc)
+	check(GameEngine.TOP_HAT_RELIC_ID == 6087 and GameEngine.TOP_HAT_DISCOUNT == 2,
+			"R829 常量：6087 / -2 费")
+
+	# ── ② 池子：礼帽归鸭绅士，不进卷卷 / 初始 / 奖励 / 事件 ──
+	check(rrepo.layer2_ids().has(6087), "R829 池：礼帽在二层起始池")
+	check(rrepo.duck_host_ids().has(6087), "R829 池：礼帽归鸭绅士")
+	check(rrepo.layer2_ids_for(RunState.LAYER2_HOST_DUCK).has(6087),
+			"R829 池：遇到鸭绅士能抽到礼帽")
+	check(not rrepo.layer2_ids_for(RunState.LAYER2_HOST_BUNBUN).has(6087),
+			"R829 池：卷卷没有礼帽（归属不重叠）")
+	check(not rrepo.initial_ids().has(6087) and not rrepo.reward_ids().has(6087)
+			and not rrepo.event_ids().has(6087), "R829 池：不进初始 / 奖励 / 事件池")
+	check(DemoScope.allows_relic(6087), "R829 试玩版：6087 在 demo_scope 基线里")
+	# R834（店长口径「本对话新增的两样道具要进试玩版」）：上面那条只证明「在基线表里」，
+	# 锁不住「demo 下发放池会不会被裁掉」。这里注入 demo 后按**真实发放池**再核一遍 ——
+	# 起点三选一读的是 `start_ids_for_layer()`，只查 `layer2_ids_for()` 会漏掉场景那一层。
+	# ⚠️ 必须复位成 -1：后面的用例全部依赖「自动判定 = 测试版」的口径。
+	GameBuild.set_test_demo(1)
+	var r834_demo_duck: Array[int] = rrepo.layer2_ids_for(RunState.LAYER2_HOST_DUCK)
+	var r834_demo_start2: Array[int] = rrepo.start_ids_for_layer(2, RunState.LAYER2_HOST_DUCK)
+	var r834_demo_all: int = rrepo.all_relics().size()
+	GameBuild.set_test_demo(-1)
+	check(r834_demo_duck.has(6087) and r834_demo_start2.has(6087),
+			"R829 试玩版：demo 下鸭绅士池（%d 件）与二层起点池都含礼帽 6087"
+			% r834_demo_duck.size())
+	check(r834_demo_all == 85,
+			"R829 试玩版：demo 下 all_relics 仍是 85（道具档「全部登陆」）")
+
+	# ── ③ 引擎：礼帽 —— 己方盟友死亡 → 洗回抽牌库 + 本局 -2 费 + 次元 ──
+	var r828_e := _new_engine([], 40, 40, -1, false)
+	r828_e.self_relics = [6087]
+	var r828_ally := r828_e.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+	check(r828_ally != null, "R829 礼帽：树人（盟友）成功上场")
+	r828_ally.health = 0
+	r828_e._destroy_dead()
+	var r828_hat_back := 0
+	var r828_hat_cut := 0
+	for c in r828_e.state.deck:
+		if c.id == 8003 and c.has_affix(GameEngine.AFFIX_DIMENSION):
+			r828_hat_back += 1
+			if int(r828_e.state.card_discount.get(c, 0)) == 2:
+				r828_hat_cut += 1
+	check(r828_hat_back == 1 and r828_hat_cut == 1,
+			"R829 礼帽：盟友死亡洗回抽牌库并带次元、-2 费（deck 里 %d 张 / %d 张 -2 费）"
+			% [r828_hat_back, r828_hat_cut])
+
+	# ── ④ 不带礼帽 → 盟友死亡进弃牌区（对照）──
+	var r828_e2 := _new_engine([], 40, 40, -1, false)
+	r828_e2.self_relics = []
+	var r828_ally2 := r828_e2.state.place(CardData.from_dict(repo.get_card(8003).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+	r828_ally2.health = 0
+	r828_e2._destroy_dead()
+	check(r828_e2.state.discard.size() == 1 and r828_e2.state.deck.is_empty(),
+			"R829 礼帽：不带礼帽盟友进弃牌区（discard %d / deck %d）"
+			% [r828_e2.state.discard.size(), r828_e2.state.deck.size()])
+
+	# ── ⑤ 工事也触发 ──
+	var r828_e3 := _new_engine([], 40, 40, -1, false)
+	r828_e3.self_relics = [6087]
+	var r828_fort := r828_e3.state.place(CardData.from_dict(repo.get_card(8001).to_dict()),
+			Vector2i(2, 0), GameEngine.SIDE_SELF)
+	r828_fort.health = 0
+	r828_e3._destroy_dead()
+	var r828_fort_back := 0
+	for c in r828_e3.state.deck:
+		if c.id == 8001 and c.has_affix(GameEngine.AFFIX_DIMENSION):
+			r828_fort_back += 1
+	check(r828_fort_back == 1, "R829 礼帽：工事死亡也洗回抽牌库并带次元（%d）" % r828_fort_back)
+
+
+func _test_r832() -> void:
+	## R832：缺陷时钟（6084）**角标不显示计数**（用户实测）。
+	## 根因不是画不出来，是取数口没这一支：它的计数是「本场已打出张数」，
+	## 活在引擎 `_clock_plays` 里，而 `RunState.relic_badge_text()` 只认 RunState 的静态状态。
+	## 现在第二参 `clock_left` 由 `battle_scene._draw_relic_badge()` 把
+	## `engine.defect_clock_left()` 递进来 —— 与 `relic_display_name(id, plays)` 同一套先例。
+	var r832_sv_relics := RunState.relics
+	var r832_sv_spent := RunState.spent_relics
+	var r832_cards := CardRepo.load_json()
+	RunState.relics = [6084]
+	RunState.spent_relics = []
+
+	# ① 没有战斗上下文（图鉴 / 商店 / 奖励页）→ 不画（默认参 -1）
+	check(RunState.relic_badge_text(6084) == "",
+			"R832 缺陷时钟：非战斗界面不画角标（实际「%s」）"
+				% RunState.relic_badge_text(6084))
+
+	# ② 战斗开场 → 还差 12 张
+	var r832_e := _new_engine([], 40, 40)
+	r832_e.self_relics = RunState.active_relics()   # 真实开局是 battle_scene 填的快照
+	r832_e._begin_turn(GameEngine.SIDE_SELF)
+	check(r832_e.defect_clock_left() == 12,
+			"R832 缺陷时钟：开场还差 12 张（实际 %d）" % r832_e.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "12",
+			"R832 角标：开场画「12」（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
+
+	# ③ 真打一张 → 11（走真实出牌口，验「引擎计数 → 角标」这条链是活的）
+	r832_e.state.energy = 30
+	r832_e.state.hand.clear()
+	r832_e.state.hand.append(CardData.from_dict(r832_cards.get_card(8006).to_dict()))
+	r832_e.play_from_hand(0, Vector2i(4, 1))
+	check(r832_e.defect_clock_left() == 11,
+			"R832 缺陷时钟：打 1 张后还差 11 张（实际 %d）" % r832_e.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "11",
+			"R832 角标：打 1 张后画「11」（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
+
+	# ④ 第 12 张 → 触发（换回合），角标「0」＝本场用光
+	r832_e.state.energy = 30
+	r832_e.state.hand.clear()
+	r832_e.state.hand.append(CardData.from_dict(r832_cards.get_card(8006).to_dict()))
+	r832_e._clock_plays = 11
+	var r832_t0: int = r832_e.turn_number
+	r832_e.play_from_hand(0, Vector2i(4, 0))
+	check(r832_e.turn_number == r832_t0 + 1 and r832_e.opp_turns == 0,
+			"R832 缺陷时钟：第 12 张照旧跳过敌方回合（回合 %d → %d，opp_turns %d）"
+				% [r832_t0, r832_e.turn_number, r832_e.opp_turns])
+	check(r832_e.defect_clock_left() == 0,
+			"R832 缺陷时钟：触发后还差 0 张（实际 %d）" % r832_e.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "",
+			"R836 角标：触发后本场**不画**（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
+
+	# ⑤ 触发之后**计数就停住**（R832b，用户追问「是不是不再计数」）：
+	#    原先只是靠 `== 12` 去重，`_clock_plays` 会一路涨到 25 —— 谁把判据改成 `>=`
+	#    就会每张都换回合。现在封顶在 12，两种写法都安全。
+	r832_e.state.energy = 30
+	r832_e.state.hand.clear()
+	r832_e.state.hand.append(CardData.from_dict(r832_cards.get_card(8006).to_dict()))
+	r832_e.play_from_hand(0, Vector2i(4, 2))
+	check(r832_e._clock_plays == 12,
+			"R832 缺陷时钟：触发后计数封顶在 12，不再累加（实际 %d）" % r832_e._clock_plays)
+	check(r832_e.defect_clock_left() == 0,
+			"R832 缺陷时钟：第 13 张后仍为 0，不出负数（实际 %d）" % r832_e.defect_clock_left())
+	# ⑤b 再往唯一计数口直压 6 次（相当于本场第 14~19 张）：一步都不动、回合一次都不跳
+	var r832_t1: int = r832_e.turn_number
+	var r832_card := CardData.from_dict(r832_cards.get_card(8006).to_dict())
+	for i in 6:
+		r832_e._note_card_played(GameEngine.SIDE_SELF, r832_card)
+		r832_e._clock_maybe_switch()
+	check(r832_e._clock_plays == 12,
+			"R832 缺陷时钟：再打 6 张，计数仍是 12（实际 %d）" % r832_e._clock_plays)
+	check(r832_e.turn_number == r832_t1 and r832_e.opp_turns == 0,
+			"R832 缺陷时钟：再打 6 张一次都不换回合（turn %d / opp %d）"
+				% [r832_e.turn_number, r832_e.opp_turns])
+	check(RunState.relic_badge_text(6084, r832_e.defect_clock_left()) == "",
+			"R836 角标：再打 6 张仍然不画（实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e.defect_clock_left()))
+
+	# ⑥ 下一场（新引擎）→ 回到 12（每场复位是设计口径，不是漏清）
+	var r832_e2 := _new_engine([], 40, 40)
+	r832_e2.self_relics = RunState.active_relics()
+	r832_e2._begin_turn(GameEngine.SIDE_SELF)
+	check(r832_e2.defect_clock_left() == 12,
+			"R832 缺陷时钟：下一场重新数到 12（实际 %d）" % r832_e2.defect_clock_left())
+	check(RunState.relic_badge_text(6084, r832_e2.defect_clock_left()) == "12",
+			"R836 角标：下一场重新出现（画「12」，实际「%s」）"
+				% RunState.relic_badge_text(6084, r832_e2.defect_clock_left()))
+
+	# ⑦ 没这件道具 → 不画（传了引擎值也不画）
+	RunState.relics = []
+	check(RunState.relic_badge_text(6084, 7) == "",
+			"R832 角标：没持有缺陷时钟时不画（实际「%s」）" % RunState.relic_badge_text(6084, 7))
+
+	# ⑧ 源码守卫：绘制口必须把引擎计数递进唯一取数口，不许界面自己算
+	var r832_bs_src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	check_src(r832_bs_src.contains("RunState.relic_badge_text(id, engine.defect_clock_left())"),
+			"R832 守卫：角标绘制口把 `engine.defect_clock_left()` 递进取数口")
+
+	RunState.relics = r832_sv_relics
+	RunState.spent_relics = r832_sv_spent
+
+
+func _test_r830() -> void:
+	## R830（店长口径）：新增一层初始道具「首饰盒」6088 —— 获得即随机一张史诗卡加入卡组。
+	var repo := CardRepo.load_json()
+	var rrepo := RelicRepo.load_json()
+
+	# ── ① 数据层：6088 在库 · 即时 · 初始 · 一般 ──
+	var r830_jb := rrepo.get_relic(6088)
+	check(r830_jb != null and r830_jb.relic_name == "首饰盒"
+			and r830_jb.kind == "即时" and r830_jb.source == "初始" and r830_jb.tier == "一般",
+			"R830 数据：6088 首饰盒（即时 · 初始 · 一般）")
+	check(r830_jb.desc.contains("史诗") and r830_jb.desc.contains("卡组"),
+			"R830 文案：写着史诗 / 卡组（%s）" % r830_jb.desc)
+
+	# ── ② 池子：首饰盒进初始池，不进奖励 / 事件 / 二层起始 ──
+	check(rrepo.initial_ids().has(6088), "R830 池：首饰盒在一层初始池")
+	check(not rrepo.reward_ids().has(6088) and not rrepo.event_ids().has(6088)
+			and not rrepo.layer2_ids().has(6088), "R830 池：不进奖励 / 事件 / 二层起始池")
+	check(DemoScope.allows_relic(6088), "R830 试玩版：6088 在 demo_scope 基线里")
+	# R834：同 R829 —— demo 下「发得出来」才算数（初始池 + 第一层起点池两处都要有）。
+	GameBuild.set_test_demo(1)
+	var r834_demo_init: Array[int] = rrepo.initial_ids()
+	var r834_demo_start1: Array[int] = rrepo.start_ids_for_layer(1)
+	var r834_demo_reward: Array[int] = rrepo.reward_ids()
+	GameBuild.set_test_demo(-1)
+	check(r834_demo_init.has(6088) and r834_demo_start1.has(6088),
+			"R830 试玩版：demo 下初始池（%d 件）与第一层起点池都含首饰盒 6088"
+			% r834_demo_init.size())
+	check(not r834_demo_reward.has(6088),
+			"R830 试玩版：demo 下首饰盒仍不进奖励池（来源口径不变）")
+
+	# ── ③ 逻辑：获得即随机一张史诗卡加入卡组 ──
+	RunState.deck_ids = [8001, 8002]
+	RunState.ensure_deck_mods()
+	var r830_deck0 := RunState.deck_ids.size()
+	RunState.gain_relic(RunState.JEWELRY_BOX_RELIC_ID)
+	var r830_last := RunState.deck_ids[RunState.deck_ids.size() - 1]
+	var r830_c := repo.get_card(r830_last)
+	check(RunState.deck_ids.size() == r830_deck0 + 1 and r830_c != null and r830_c.rarity == 2,
+			"R830 首饰盒：获得即随机一张史诗卡加入卡组（%s）"
+			% (r830_c.card_name if r830_c != null else "?"))
+
+
+func _test_r833() -> void:
+	## R833：多来源文案同源检查 —— 玩家看到的中文（cards.json / relics.json）必须与
+	## 译文的母本（zh_canonical / noncard_zh_canonical）逐字一致；否则中文玩家与
+	## 英日西玩家会看到两种说法（历史事故：46 张卡 + 47 件道具停在旧术语，
+	## 中文写「从卡组」而英文写 "from your Draw Pile"）。
+	var r833_cards_raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://cards.json"))
+	var r833_zh: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/zh_canonical.json"))
+	var r833_zh_cards: Dictionary = r833_zh.get("cards", {}) if r833_zh is Dictionary else {}
+	var r833_bad: Array[String] = []
+	for r833_c: Dictionary in (r833_cards_raw.get("cards", []) if r833_cards_raw is Dictionary else []):
+		var r833_id := str(int(r833_c.get("id", 0)))
+		var r833_ent: Variant = r833_zh_cards.get(r833_id)
+		if not (r833_ent is Dictionary):
+			r833_bad.append("%s 无 canonical" % r833_id)
+			continue
+		if str(r833_ent.get("effect_text", "")) != str(r833_c.get("effect_text", "")):
+			r833_bad.append("%s %s 效果文" % [r833_id, str(r833_c.get("name", ""))])
+		if str(r833_ent.get("name", "")) != str(r833_c.get("name", "")):
+			r833_bad.append("%s 卡名" % r833_id)
+	check(r833_bad.is_empty(),
+			"R833 卡面中文与 zh_canonical 逐字一致（%d 条不符：%s）"
+			% [r833_bad.size(), ", ".join(r833_bad.slice(0, 5))])
+
+	var r833_rel_raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://relics.json"))
+	var r833_nz: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/noncard_zh_canonical.json"))
+	var r833_nz_rel: Dictionary = r833_nz.get("relics", {}) if r833_nz is Dictionary else {}
+	var r833_badr: Array[String] = []
+	for r833_r: Dictionary in (r833_rel_raw.get("relics", []) if r833_rel_raw is Dictionary else []):
+		var r833_rid := str(int(r833_r.get("id", 0)))
+		var r833_rent: Variant = r833_nz_rel.get(r833_rid)
+		if not (r833_rent is Dictionary):
+			r833_badr.append("%s 无 canonical" % r833_rid)
+			continue
+		if str(r833_rent.get("desc", "")) != str(r833_r.get("desc", "")):
+			r833_badr.append("%s %s 描述" % [r833_rid, str(r833_r.get("name", ""))])
+		if str(r833_rent.get("name", "")) != str(r833_r.get("name", "")):
+			r833_badr.append("%s 道具名" % r833_rid)
+	check(r833_badr.is_empty(),
+			"R833 道具中文与 noncard_zh_canonical 逐字一致（%d 条不符：%s）"
+			% [r833_badr.size(), ", ".join(r833_badr.slice(0, 5))])
+
+func _test_r842() -> void:
+	## R842（店长口径）：新增一层事件「龙石板」——
+	##   选项 1「强力的龙」= 卡组一张盟友 / 工事吃附魔「力量 +8」
+	##     （`brawn`，事件独有：沿用「伤害 +8」的标记外观，不进商店 / 随机池）；
+	##   选项 2「尊贵的龙」= 道具「稀有价值」6090：同名卡最多留 3 张，多出来的随机撕掉，
+	##     **每因此效果删除一张卡**失去 5 点生命；会当场致死时不能选。
+	var repo := CardRepo.load_json()
+	var rrepo := RelicRepo.load_json()
+	var r842_sv_deck: Array[int] = RunState.deck_ids.duplicate()
+	var r842_sv_mods: Array = RunState.deck_mods.duplicate()
+	var r842_sv_hp := RunState.hp
+	var r842_sv_max := RunState.max_hp
+	var r842_sv_relics: Array[int] = RunState.relics.duplicate()
+	var r842_sv_seed := RunState.run_seed
+	var r842_sv_layer := RunState.current_layer
+	var r842_sv_node := RunState.current_node_id
+
+	# ── ① 附魔数据层：brawn 定义齐，且**只有盟友 / 工事**能吃 ──
+	check(CardData.ENCHANT_DEFS.has("brawn")
+			and CardData.enchant_name("brawn") == "力量 +8"
+			and CardData.enchant_icon_name("brawn") == "shop_icon_damage"
+			and CardData.enchant_color("brawn").is_equal_approx(Color("f08a5a")),
+			"R842 附魔：brawn = 力量 +8 / 沿用「伤害 +8」的图标与环色")
+	check(CardData.ENCHANT_DEFS.size() == 8 and not CardData.random_enchant_ids().has("brawn"),
+			"R842 附魔：附魔表 7 → 8，且事件专属不进随机池（实际 %d 种：%s）"
+			% [CardData.ENCHANT_DEFS.size(), str(CardData.random_enchant_ids())])
+	check(RunState.enchant_ok("brawn", repo.get_card(8003), 9999)
+			and RunState.enchant_ok("brawn", repo.get_card(8001), 9999),
+			"R842 附魔：盟友（树人 8003）与工事（木栅栏 8001）都能附")
+	check(not RunState.enchant_ok("brawn", repo.get_card(9003), 9999)
+			and not RunState.enchant_ok("brawn", repo.get_card(9180), 9999),
+			"R842 附魔：技能卡 / 效果卡附不上（力量对它们没有消费点）")
+
+	# ── ② 附魔落地：只动选中那一张 + 同一张不能吃第二个 ──
+	RunState.deck_ids = [8003, 8003]
+	RunState.deck_mods = [{}, {}]
+	var r842_p0 := repo.get_card(8003).power
+	check(RunState.enchant_deck_card(0, RunState.enchant_mod("brawn")),
+			"R842 附魔：enchant_deck_card 接受 brawn")
+	var r842_c := RunState.card_with_mod(repo, 0)
+	check(r842_c != null and r842_c.power == r842_p0 + 8 and r842_c.enchant == "brawn"
+			and r842_c.has_enchant() and r842_c.effect_text.contains("【附魔】力量 +8"),
+			"R842 附魔：+8 烤进 power（%d → %d）、记下附魔 id、卡面补标注"
+			% [r842_p0, r842_c.power if r842_c != null else -1])
+	var r842_c2 := RunState.card_with_mod(repo, 1)
+	check(r842_c2 != null and r842_c2.power == r842_p0 and r842_c2.enchant == "",
+			"R842 附魔：没选中的那张一字不动（power 仍 %d）" % [r842_p0])
+	check(not RunState.enchant_ok("brawn", r842_c, 0),
+			"R842 附魔：同一张卡不能吃第二个附魔")
+	check(RunState.strip_enchant(r842_c) and r842_c.power == r842_p0 and r842_c.enchant == "",
+			"R842 附魔：strip_enchant 能原样撤回（复制术不继承附魔那条路还能走）")
+
+	# ── ③ 稀有价值：只数「因此效果删掉」的卡，且随机顺序是派生的 ──
+	RunState.deck_ids = [8003, 8003, 8003, 8003, 8003, 9003, 9003, 9003, 9003]
+	RunState.deck_mods = [{}, {}, {}, {}, {}, {}, {}, {}, {}]
+	RunState.hp = 30
+	RunState.max_hp = 40
+	check(RunState.rare_value_damage(repo) == 15,
+			"R842 稀有价值：5 张同名 + 4 张同名 → 撕 3 张 = 15 点（实际 %d）"
+			% RunState.rare_value_damage(repo))
+	var r842_plan_a := RunState.rare_value_targets(repo)
+	var r842_plan_b := RunState.rare_value_targets(repo)
+	check(r842_plan_a == r842_plan_b and r842_plan_a.size() == 3,
+			"R842 稀有价值：同一局同一间房删哪几张是派生的（重进换不了，%s）" % str(r842_plan_a))
+	# R842b：洗牌**必须真的跟着种子走**。原来的写法是 4 个 %d 配 3 个参数 ——
+	# 格式化报错后 hash 全退化成同值，`sort_custom` 落到 `a < b` 兜底，
+	# 结果等于「按 deck 顺序截前 N 张」：看着确定、其实一次都没洗。
+	var r842_orders: Dictionary = {}
+	for r842_s in [11, 22, 33, 44, 55, 66, 77, 88]:
+		RunState.run_seed = r842_s
+		r842_orders[str(RunState.rare_value_targets(repo))] = true
+	RunState.run_seed = r842_sv_seed
+	check(r842_orders.size() >= 2,
+			"R842 稀有价值：删哪几张跟着种子走（8 个种子共 %d 种结果）" % r842_orders.size())
+	check(not RunState.rare_value_lethal(repo),
+			"R842 稀有价值：30 血挨 15 点还剩 15 → 可以选")
+	RunState.hp = 15
+	check(RunState.rare_value_lethal(repo),
+			"R842 稀有价值：15 血撞 15 点伤害 → 会当场倒下，这个选项不能选")
+	RunState.hp = 16
+	check(not RunState.rare_value_lethal(repo),
+			"R842 稀有价值：16 血刚好活下来（判据是 <= 0 才算死）")
+
+	RunState.hp = 30
+	var r842_res := RunState.rare_value_prune(repo)
+	check(bool(r842_res.get("ok", false)) and (r842_res["deleted"] as Array).size() == 3
+			and int(r842_res["damage"]) == 15 and RunState.hp == 15,
+			"R842 稀有价值：撕 3 张 → 失去 15 点（现 %d / %d）" % [RunState.hp, RunState.max_hp])
+	check(RunState.deck_ids.size() == 6,
+			"R842 稀有价值：卡组 9 → 6 张（实际 %d）" % RunState.deck_ids.size())
+	var r842_names := {}
+	for cid: int in RunState.deck_ids:
+		var nm := repo.get_card(cid).card_name
+		r842_names[nm] = int(r842_names.get(nm, 0)) + 1
+	check(int(r842_names.get("树人", 0)) == 3 and int(r842_names.get("火焰箭", 0)) == 3,
+			"R842 稀有价值：每个名字正好剩 3 张（%s）" % str(r842_names))
+
+	# 会致死时**结算口**也要拒绝（不能只靠按钮置灰）
+	RunState.deck_ids = [8003, 8003, 8003, 8003]
+	RunState.deck_mods = [{}, {}, {}, {}]
+	RunState.hp = 5
+	var r842_block := RunState.rare_value_prune(repo)
+	check(not bool(r842_block.get("ok", true)) and RunState.deck_ids.size() == 4
+			and RunState.hp == 5,
+			"R842 稀有价值：会致死的结算被拒 —— 一张不删、血不动")
+
+	# 带锁的卡（月亮 9180）不参与撕卡
+	RunState.deck_ids = [9180, 9180, 9180, 9180]
+	RunState.deck_mods = [{}, {}, {}, {}]
+	RunState.hp = 30
+	check(RunState.rare_value_targets(repo).is_empty() and RunState.rare_value_damage(repo) == 0,
+			"R842 稀有价值：带 no_remove 的卡不进候选（与 delete_deck_card 同一道闸）")
+
+	# ── ④ 道具与事件登记 ──
+	var r842_rel := rrepo.get_relic(6090)
+	check(r842_rel != null and r842_rel.relic_name == "稀有价值"
+			and r842_rel.kind == "即时" and r842_rel.source == "事件"
+			and r842_rel.tier == "一般",
+			"R842 数据：6090 稀有价值（即时 · 事件 · 一般）")
+	check(r842_rel != null and r842_rel.desc.contains("3") and r842_rel.desc.contains("5"),
+			"R842 文案：道具描述写着 3 张 / 5 点（%s）" % (r842_rel.desc if r842_rel else ""))
+	check(RunState.RARE_VALUE_ID == 6090 and RunState.RARE_VALUE_MAX_COPIES == 3
+			and RunState.RARE_VALUE_LOSS == 5,
+			"R842 常量：6090 / 上限 3 张 / 每张 5 点")
+	check(not rrepo.reward_ids().has(6090) and not rrepo.initial_ids().has(6090)
+			and not rrepo.layer2_ids().has(6090),
+			"R842 池：事件专属 —— 奖励 / 初始 / 二层起始都不进")
+	check(DemoScope.allows_relic(6090), "R842 试玩版：6090 在 demo_scope 基线里（道具全登陆）")
+
+	var r842_w1 := GameLayers.event_weights(GameLayers.LAYER_DEFAULT)
+	var r842_w2 := GameLayers.event_weights(GameLayers.LAYER_TWO)
+	check(r842_w1.has("dragon_slab") and int(r842_w1["dragon_slab"]) > 0,
+			"R842 事件：第一层事件池含龙石板（权重 %d）" % int(r842_w1.get("dragon_slab", 0)))
+	check(not r842_w2.has("dragon_slab"),
+			"R842 事件：第二层不登记（第一层专属，别顺手抄过去）")
+	check(str(GameLayers.EVENT_NAMES.get("dragon_slab", "")) == "龙石板",
+			"R842 事件：EVENT_NAMES 有中文名（日志 / 界面读它）")
+	check(DemoScope.allows_event("dragon_slab"), "R842 试玩版：事件在 demo_scope 白名单里")
+
+	# ── ⑤ 源码口径（导出包里 .gd 是 binary tokens → 必须走 check_src）──
+	var r842_es := FileAccess.get_file_as_string("res://scripts/event_scene.gd")
+	check_src(r842_es.contains("const DRAGON_SLAB_RELIC_ID := 6090")
+			and r842_es.contains('const DRAGON_ENCHANT_ID := "brawn"'),
+			"R842 事件：道具 6090 / 附魔 brawn 的常量对")
+	check_src(r842_es.contains('if _is_dragon_slab():\n\t\treturn "dragon_slab"'),
+			"R842 事件：_kind() 认 dragon_slab（漏了会点亮休息处的篝火背景）")
+	check_src(r842_es.contains("and not _is_dragon_slab()"),
+			"R842 事件：_is_treasure() 兜底排除 dragon_slab")
+	check_src(r842_es.contains("or _is_dragon_slab() \\"),
+			"R842 事件：_refresh() 白名单含 dragon_slab")
+	check_src(r842_es.contains("RunState.rare_value_lethal(CardRepo.load_json())")
+			and r842_es.contains("RunState.rare_value_prune(repo)"),
+			"R842 事件：置灰与结算读同一套判据（lethal 先拦，prune 再拦）")
+
+	# ── ⑥ 四语文案齐 ──
+	for r842_code in ["zh_canonical", "en", "ja", "es"]:
+		var r842_nc := FileAccess.get_file_as_string("res://i18n/noncard_%s.json" % r842_code)
+		check_src(r842_nc.contains('"6090"'), "R842 文案：noncard_%s 有 6090" % r842_code)
+		var r842_nar := FileAccess.get_file_as_string("res://i18n/narrative_%s.json" % r842_code)
+		check_src(r842_nar.contains('"dragon_slab"') and r842_nar.contains("DRAGON_SLAB_DESC"),
+				"R842 文案：narrative_%s 有龙石板长文" % r842_code)
+		var r842_ui := FileAccess.get_file_as_string("res://i18n/event_ui_%s.json" % r842_code)
+		check_src(r842_ui.contains("NOBLE_GAINED") and r842_ui.contains("LETHAL_DISABLED"),
+				"R842 文案：event_ui_%s 有选项 / 结果 key" % r842_code)
+	var r842_ui_en := FileAccess.get_file_as_string("res://i18n/event_ui_en.json")
+	check_src(r842_ui_en.contains("Power +8") and r842_ui_en.contains("Rare Value"),
+			"R842 文案：英文复用属术语「Power +8」与道具名「Rare Value」")
+
+	# ── 还原 ──
+	RunState.deck_ids = r842_sv_deck
+	RunState.deck_mods = r842_sv_mods
+	RunState.hp = r842_sv_hp
+	RunState.max_hp = r842_sv_max
+	RunState.relics = r842_sv_relics
+	RunState.run_seed = r842_sv_seed
+	RunState.current_layer = r842_sv_layer
+	RunState.current_node_id = r842_sv_node
+
+
+func _test_r835() -> void:
+	## R835（店长口径）：新增一层初始道具「空故事书」6089 ——
+	## 战斗开始时对全体敌人造成「页数」点伤害；每经过一个事件房 / 打赢一个首领 +1 页。
+	var repo := CardRepo.load_json()
+	var rrepo := RelicRepo.load_json()
+
+	# ── ① 数据层 ──
+	var r835_sb := rrepo.get_relic(6089)
+	check(r835_sb != null and r835_sb.relic_name == "空故事书"
+			and r835_sb.kind == "战斗" and r835_sb.source == "初始" and r835_sb.tier == "一般",
+			"R835 数据：6089 空故事书（战斗 · 初始 · 一般）")
+	check(r835_sb.desc.contains("0 伤害") and r835_sb.desc.contains("+1")
+			and r835_sb.desc.contains("首领战") and r835_sb.desc.contains("事件"),
+			"R835 文案：写着 0 伤害 / 事件 / 首领战 / +1（%s）" % r835_sb.desc)
+	check(GameEngine.STORY_BOOK_RELIC_ID == 6089 and RunState.STORY_BOOK_RELIC_ID == 6089,
+			"R835 常量：引擎与局状态两个常量都认 6089")
+
+	# ── ② 池子 ──
+	check(rrepo.initial_ids().has(6089), "R835 池：空故事书在一层初始池")
+	check(not rrepo.reward_ids().has(6089) and not rrepo.event_ids().has(6089)
+			and not rrepo.layer2_ids().has(6089), "R835 池：不进奖励 / 事件 / 二层起始池")
+	check(DemoScope.allows_relic(6089), "R835 试玩版：6089 在 demo_scope 基线里")
+	GameBuild.set_test_demo(1)
+	var r835_demo_init: Array[int] = rrepo.initial_ids()
+	var r835_demo_start1: Array[int] = rrepo.start_ids_for_layer(1)
+	var r835_demo_all: int = rrepo.all_relics().size()
+	GameBuild.set_test_demo(-1)
+	check(r835_demo_init.has(6089) and r835_demo_start1.has(6089) and r835_demo_all == 85,
+			"R835 试玩版：demo 下初始池（%d 件）与第一层起点池都含 6089，all_relics 仍 85"
+			% r835_demo_init.size())
+
+	# ── ③ 计数：没这道具时走过的事件不补记 ──
+	var r835_saved_relics := RunState.relics
+	var r835_saved_pages := RunState.story_book_pages
+	var r835_saved_nodes := RunState.story_book_nodes
+	var r835_saved_cells := RunState.map_cells
+	var r835_saved_cn := RunState.current_node_id
+	var r835_saved_boss := RunState.boss_beaten
+	RunState.relics = []
+	RunState.story_book_pages = 0
+	RunState.story_book_nodes = []
+	RunState.map_cells = [{"id": 0, "type": "event", "layer": 1}]
+	RunState.current_node_id = 0
+	RunState._note_story_book_event(0)
+	check(RunState.story_book_pages == 0,
+			"R835 计数：没这道具时经过事件不累计（捡到之前的经历不算）")
+
+	# ── ④ 计数：事件 +1 · 同节点幂等 · 非事件房不计 ──
+	RunState.relics = [6089]
+	RunState._note_story_book_event(0)
+	check(RunState.story_book_pages == 1, "R835 计数：经过一个事件房 → 1 页")
+	RunState._note_story_book_event(0)
+	check(RunState.story_book_pages == 1, "R835 计数：同一事件重复结算只记 1 页")
+	RunState.map_cells = [{"id": 1, "type": "chest", "layer": 1}]
+	RunState._note_story_book_event(1)
+	check(RunState.story_book_pages == 1, "R835 计数：宝箱不算事件（只有 event 房记页）")
+
+	# ── ⑤ 计数：首领 —— 每层一次，换层再记 ──
+	RunState.boss_beaten = false
+	RunState.mark_boss_beaten()
+	check(RunState.story_book_pages == 2, "R835 计数：打赢一个首领 → 再 +1 页")
+	RunState.mark_boss_beaten()
+	check(RunState.story_book_pages == 2, "R835 计数：同一层的首领重复结算不翻倍")
+	RunState.boss_beaten = false
+	RunState.mark_boss_beaten()
+	check(RunState.story_book_pages == 3, "R835 计数：换层之后新首领再 +1 页")
+
+	# ── ⑥ 接线：complete_current 是「事件记页」的收口 ──
+	var r835_src := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r835_src.contains("_note_story_book_event(current_node_id)"),
+			"R835 接线：complete_current 里调 _note_story_book_event（事件场景十余处都汇到它）")
+
+	# ── ⑦ 机制：0 页不掉血；N 页对全体敌人各 N 伤 ──
+	var r835_e := _new_engine([], 40, 40, -1, false)
+	r835_e.self_relics = [GameEngine.STORY_BOOK_RELIC_ID]
+	# 靶子用灰烬龙副本**清空 traits**：嘲讽 / 死亡（亡语）/ 减伤都不参与，
+	# 只留下「一个会掉血的敌方单位」这一件事。
+	var r835_pa := repo.get_card(1013).to_dict()
+	r835_pa["traits"] = []
+	var r835_pb := repo.get_card(1051).to_dict()
+	r835_pb["traits"] = []
+	var r835_a := r835_e.state.place(CardData.from_dict(r835_pa),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var r835_b := r835_e.state.place(CardData.from_dict(r835_pb),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	check(r835_a != null and r835_b != null, "R835 机制：两个敌方单位上场")
+	var r835_a0 := r835_a.health
+	var r835_b0 := r835_b.health
+	RunState.story_book_pages = 0
+	r835_e._story_book_tick()
+	check(r835_a.health == r835_a0 and r835_b.health == r835_b0,
+			"R835 机制：0 页时一个都不掉血（空书）")
+	RunState.story_book_pages = 3
+	r835_e._story_book_tick()
+	check(r835_a.health == r835_a0 - 3 and r835_b.health == r835_b0 - 3,
+			"R835 机制：3 页 → 全体敌人各 -3（%d→%d / %d→%d）"
+			% [r835_a0, r835_a.health, r835_b0, r835_b.health])
+
+	# ── ⑧ 换层：记页账本必须随层作废（节点 id 每层重号）──
+	# 实测口径（12 个种子各走满三层、真实地图）：不清的话 9 个种子少算 1~4 页，
+	# 且少算量正好等于「两层事件 id 的交集大小」——节点 id 是每层 0..34 重号的。
+	RunState.relics = [6089]
+	RunState.story_book_pages = 0
+	RunState.story_book_nodes = []
+	RunState.map_cells = [{"id": 0, "type": "event", "layer": 1}]
+	RunState.current_node_id = 0
+	RunState.complete_current()
+	check(RunState.story_book_pages == 1, "R835 换层：第一层事件 0 → 1 页")
+	RunState.story_book_new_layer()
+	check(RunState.story_book_nodes.is_empty() and RunState.story_book_pages == 1,
+			"R835 换层：清的是账本、页数不动（仍 1 页）")
+	RunState.map_cells = [{"id": 0, "type": "event", "layer": 2}]
+	RunState.current_node_id = 0
+	RunState.complete_current()
+	check(RunState.story_book_pages == 2,
+			"R835 换层：第二层同号事件 0 照样 +1 页（实际 %d 页）"
+			% RunState.story_book_pages)
+	check_src(r835_src.contains("story_book_new_layer()"),
+			"R835 接线：advance_layer 里调 story_book_new_layer（换层即清账本）")
+
+	# ── ⑨ 实战接线：开场道具必须排在「敌人上场之后」──
+	# 顺序反了的话 `_story_book_tick()` 遍历不到任何敌方单位 → 每场都 0 伤害，
+	# 而单测里敌人是手动先摆好的，看不出来（这就是单测与实战的差别）。
+	var r835_bs := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	var r835_i_place := r835_bs.find("engine.state.place(card, e[6], GameEngine.SIDE_OPPONENT)")
+	var r835_i_hook := r835_bs.rfind("engine.apply_battle_start_relics(repo)")
+	check_src(r835_i_place > 0 and r835_i_hook > r835_i_place,
+			"R835 接线：battle_scene 先摆敌人（%d）再跑开场道具（%d）"
+			% [r835_i_place, r835_i_hook])
+
+	# ── 还原全局状态（后面的用例不该看到这本测试用的书）──
+	RunState.relics = r835_saved_relics
+	RunState.story_book_pages = r835_saved_pages
+	RunState.story_book_nodes = r835_saved_nodes
+	RunState.map_cells = r835_saved_cells
+	RunState.current_node_id = r835_saved_cn
+	RunState.boss_beaten = r835_saved_boss
+
+
+func _test_r844() -> void:
+	## R844（店长口径）：鸭子闹钟 6085 原效果全部删除，改为每场战斗第 5 回合
+	## 对所有敌人造成 33 点伤害。这里锁：第 2 回合不再加费抽牌、第 5 回合只发一次、
+	## 第 6 回合不续发、技能不再 +1、多目标与己方不误伤、无道具对照不触发、致死清场。
+	var repo := CardRepo.load_json()
+	var eng := _new_engine(_ordered_deck(), 100, 100, -1, false)
+	eng.self_relics = [GameEngine.DUCK_ALARM_RELIC_ID]
+	eng.start_game()
+
+	# 两个敌方靶子 + 一个己方靶子； traits 清空，排除嘲讽 / 亡语 / 减伤干扰。
+	var pa := repo.get_card(1013).to_dict()
+	pa["traits"] = []
+	var pb := repo.get_card(1051).to_dict()
+	pb["traits"] = []
+	var pc := repo.get_card(8003).to_dict()
+	pc["traits"] = []
+	var foe_a: Placement = eng.state.place(CardData.from_dict(pa),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	var foe_b: Placement = eng.state.place(CardData.from_dict(pb),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var friend: Placement = eng.state.place(CardData.from_dict(pc),
+			Vector2i(5, 0), GameEngine.SIDE_SELF)
+	check(foe_a != null and foe_b != null and friend != null,
+			"R844 布场：两个敌人与一个己方单位都上场")
+	foe_a.health = 100
+	foe_b.health = 100
+	friend.health = 100
+
+	# 第 2 回合：旧的 +1 费 / 多抽 1 张必须彻底消失，也不能提前造成伤害。
+	eng.end_turn()
+	eng.end_turn()
+	check(eng.turn_number == 2 and eng.state.energy == RunState.energy_per_turn(),
+			"R844 旧效果：第 2 回合不再加费（实际 %d）" % eng.state.energy)
+	check(eng.state.hand.size() == RunState.hand_draw_per_turn(),
+			"R844 旧效果：第 2 回合不再多抽（实际 %d 张）" % eng.state.hand.size())
+	check(foe_a.health == 100 and foe_b.health == 100 and friend.health == 100,
+			"R844 时序：第 2 回合没有提前敲响")
+
+	# 第 4 回合仍无伤害、无技能加成。
+	for _r844_i in 2:
+		eng.end_turn()
+		eng.end_turn()
+	check(eng.turn_number == 4 and foe_a.health == 100 and foe_b.health == 100,
+			"R844 时序：第 4 回合敌人仍未掉血")
+	check(eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R844 旧效果：第 4 回合技能仍为 10")
+
+	# 第 5 回合：两个敌人各 -33，己方不动，技能也不再加 1。
+	eng.end_turn()
+	eng.end_turn()
+	check(eng.turn_number == 5 and foe_a.health == 67 and foe_b.health == 67,
+			"R844 主效果：第 5 回合全体敌人各 33 伤（%d / %d）"
+			% [foe_a.health, foe_b.health])
+	check(friend.health == 100, "R844 主效果：己方单位不误伤")
+	check(eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R844 旧效果：第 5 回合技能不再 +1（实际 %d）"
+			% eng._spell_dmg(GameEngine.SIDE_SELF, 10))
+	check(eng.state.energy == RunState.energy_per_turn()
+			and eng.state.hand.size() == RunState.hand_draw_per_turn(),
+			"R844 主效果：第 5 回合只造成伤害，不附带费用或抽牌")
+
+	# 第 6 回合不续发，更不是「第 5 回合起每回合」。
+	eng.end_turn()
+	eng.end_turn()
+	check(eng.turn_number == 6 and foe_a.health == 67 and foe_b.health == 67,
+			"R844 次数：第 6 回合不再造成 33 伤（%d / %d）"
+			% [foe_a.health, foe_b.health])
+	check(eng._spell_dmg(GameEngine.SIDE_SELF, 10) == 10,
+			"R844 旧效果：第 6 回合也没有技能 +1")
+
+	# 无道具对照：同样推进到第 5 回合，靶子必须满血。
+	var ctrl := _new_engine([], 100, 100, -1, false)
+	ctrl.start_game()
+	var cp := repo.get_card(1013).to_dict()
+	cp["traits"] = []
+	var ctrl_foe: Placement = ctrl.state.place(CardData.from_dict(cp),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	ctrl_foe.health = 100
+	for _r844_j in 4:
+		ctrl.end_turn()
+		ctrl.end_turn()
+	check(ctrl.turn_number == 5 and ctrl_foe.health == 100,
+			"R844 对照：没有闹钟时第 5 回合不掉血")
+
+	# 33 血靶子会被打到 0，并由统一死亡收口移除；不会留一具 0 血单位在场上。
+	var lethal := _new_engine([], 100, 100, -1, false)
+	lethal.self_relics = [GameEngine.DUCK_ALARM_RELIC_ID]
+	lethal.start_game()
+	var lp := repo.get_card(1013).to_dict()
+	lp["traits"] = []
+	var lethal_foe: Placement = lethal.state.place(CardData.from_dict(lp),
+			Vector2i(1, 0), GameEngine.SIDE_OPPONENT)
+	lethal_foe.health = 33
+	for _r844_k in 4:
+		lethal.end_turn()
+		lethal.end_turn()
+	check(lethal.turn_number == 5 and lethal_foe.health <= 0
+			and lethal.state.unit_at(Vector2i(1, 0)) == null,
+			"R844 死亡：33 伤致死会走统一清场")
+
+	# 源码锁：旧常量与旧日志不能留在引擎里，避免只改卡面而机制仍暗跑。
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(not src.contains("DUCK_ALARM_ENERGY") and not src.contains("DUCK_ALARM_DRAW")
+			and not src.contains("DUCK_ALARM_SPELL") and not src.contains("DUCK_ALARM_SPELL_FROM"),
+			"R844 源码锁：加费 / 抽牌 / 技能加伤的旧常量全部删除")
+
+func _test_r845() -> void:
+	## R845（店长口径）：暗影刺客 11 张卡的调整 —— 9 张改数值、2 张改结构
+	## （本能 技能 → 效果卡、夜蚀 回血 → 群体伤害）。数值本身由各卡既有的常量断言守，
+	## 这里守结构那两条 + 卡面数据 + 四语文案：
+	##   * 负重减轻降稀有、本能改效果卡、夜蚀的组合素材换类型；
+	##   * 本能：只挡 >1、挡完抽 2 并离场、1 点小伤不消耗、两张各挡一次；
+	##   * 中 / 英 / 日 / 西 四份卡面文本都写进了新数值（防止只改中文）。
+	var repo := CardRepo.load_json()
+
+	# ---- ① 卡面数据 ----
+
+	var lighten: CardData = repo.get_card(GameEngine.LIGHTEN_ID)
+	check(lighten.rarity == 1,
+			"R845 负重减轻 8066：rarity 2 → 1（稀有，实际 %d）" % lighten.rarity)
+
+	var instinct: CardData = repo.get_card(GameEngine.INSTINCT_ID)
+	check(instinct.kind == "效果" and instinct.cost == 2 and instinct.rarity == 1,
+			"R845 本能 9176：2 费稀有**效果卡**（实际 %s / %d 费 / rarity %d）"
+			% [instinct.kind, instinct.cost, instinct.rarity])
+
+	var night: CardData = repo.get_card(GameEngine.NIGHT_EROSION_ID)
+	var night_fx: Array = (night.lower_effect as Dictionary).get("effects", []) as Array
+	check(night.kind == "盟友" and night_fx.size() == 1
+			and str((night_fx[0] as Dictionary).get("type", "")) == "damage_per_energy",
+			"R845 夜蚀 8062：仍是盟友，组合素材从 heal_per_energy 换成 damage_per_energy")
+
+	var gale: CardData = repo.get_card(GameEngine.GALE_ID)
+	check(gale.kind == "效果" and gale.cost == 3
+			and gale.effect_text.contains("%d 点伤害" % GameEngine.GALE_DMG)
+			and gale.effect_text.contains("力量 -%d" % GameEngine.GALE_DEBUFF),
+			"R845 疾风 9091：文案写 %d 伤 + 力量 -%d"
+			% [GameEngine.GALE_DMG, GameEngine.GALE_DEBUFF])
+
+	var reaper: CardData = repo.get_card(GameEngine.SOUL_REAPER_ID)
+	check(reaper.effect_text.contains("回复 %d 点费用" % GameEngine.SOUL_REAPER_ENERGY)
+			and reaper.effect_text.contains("抽 %d 张牌" % GameEngine.SOUL_REAPER_DRAW)
+			and not reaper.effect_text.contains("回满生命"),
+			"R845 灵魂收割者 9233：击杀奖励改成 +%d 费 / 抽 %d 张，回满生命的旧文案已删"
+			% [GameEngine.SOUL_REAPER_ENERGY, GameEngine.SOUL_REAPER_DRAW])
+
+	# ---- ② 本能：挡下一次 >1 伤害 → 变 1、抽 2 张、效果离场 ----
+
+	var e1 := _new_engine([], 40, 40, -1, false)
+	e1.start_game()
+	e1.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	e1.state.deck.append(_card(9095, "怒涛", "技能", 2, 0, 0, 0, 0))
+	e1.state.deck.append(_card(9096, "回旋斩", "技能", 0, 0, 0, 0, 0))
+	var e1_hp := e1.state.hp_self
+	var e1_hand := e1.state.hand.size()
+	e1._damage_player(GameEngine.SIDE_SELF, 12, "测试")
+	check(e1.state.hp_self == e1_hp - GameEngine.INSTINCT_CAP,
+			"R845 本能：12 点伤害 → 只掉 %d 点（%d → %d）"
+			% [GameEngine.INSTINCT_CAP, e1_hp, e1.state.hp_self])
+	check(e1.state.hand.size() == e1_hand + GameEngine.INSTINCT_DRAW,
+			"R845 本能：挡下之后抽 %d 张（手牌 %d → %d）"
+			% [GameEngine.INSTINCT_DRAW, e1_hand, e1.state.hand.size()])
+	check(not e1.state.effects.any(func(c2: CardData): return c2.id == GameEngine.INSTINCT_ID),
+			"R845 本能：一次性 —— 触发后离开效果区")
+	check(e1.state.discard.any(func(c3: CardData): return c3.id == GameEngine.INSTINCT_ID),
+			"R845 本能：用过的那张进弃牌区（不是「消失」）")
+
+	# ---- ③ 1 点小伤不消耗 ----
+
+	var e2 := _new_engine([], 40, 40, -1, false)
+	e2.start_game()
+	e2.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	var e2_hp := e2.state.hp_self
+	e2._damage_player(GameEngine.SIDE_SELF, 1, "测试")
+	check(e2.state.hp_self == e2_hp - 1
+			and e2.state.effects.any(func(c4: CardData): return c4.id == GameEngine.INSTINCT_ID),
+			"R845 本能：1 点伤害原样掉血、**不消耗**这张卡")
+
+	# ---- ④ 两张各挡一次 ----
+
+	var e3 := _new_engine([], 40, 40, -1, false)
+	e3.start_game()
+	e3.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	e3.state.effects.append(CardData.from_dict(instinct.to_dict()))
+	var e3_hp := e3.state.hp_self
+	e3._damage_player(GameEngine.SIDE_SELF, 12, "测试")
+	e3._damage_player(GameEngine.SIDE_SELF, 12, "测试")
+	check(e3.state.hp_self == e3_hp - GameEngine.INSTINCT_CAP * 2
+			and not e3.state.effects.any(func(c5: CardData): return c5.id == GameEngine.INSTINCT_ID),
+			"R845 本能：两张各挡一次（%d → %d）" % [e3_hp, e3.state.hp_self])
+
+	# ---- ⑤ 四语文案：新数值必须真的写进译文，不许回落中文 ----
+
+	var want := {
+		"en": {"9087": "Deal %d damage" % GameEngine.GOUGE_DMG,
+				"9119": "Deal %d damage" % GameEngine.OPENING_MOVE_DMG,
+				"9121": "Deal %d damage" % GameEngine.SHADOW_STEP_DMG,
+				"9090": "Deal %d damage" % GameEngine.SNEAK_DMG,
+				"9173": "Draw %d cards" % GameEngine.REFLEX_DRAW,
+				"9091": "%d damage" % GameEngine.GALE_DMG,
+				"9233": "gain %d Cost" % GameEngine.SOUL_REAPER_ENERGY,
+				"8062": "deal X damage to all enemies"},
+		"ja": {"9087": "%dダメージ" % GameEngine.GOUGE_DMG,
+				"9119": "%dダメージ" % GameEngine.OPENING_MOVE_DMG,
+				"9121": "%dダメージ" % GameEngine.SHADOW_STEP_DMG,
+				"9090": "%dダメージ" % GameEngine.SNEAK_DMG,
+				"9173": "%d枚ドロー" % GameEngine.REFLEX_DRAW,
+				"9091": "%dダメージ" % GameEngine.GALE_DMG,
+				"9233": "コストを%d回復" % GameEngine.SOUL_REAPER_ENERGY,
+				"8062": "すべての敵にXダメージ"},
+		"es": {"9087": "%d de daño" % GameEngine.GOUGE_DMG,
+				"9119": "%d de daño" % GameEngine.OPENING_MOVE_DMG,
+				"9121": "%d de daño" % GameEngine.SHADOW_STEP_DMG,
+				"9090": "Inflige %d de daño" % GameEngine.SNEAK_DMG,
+				"9173": "Roba %d cartas" % GameEngine.REFLEX_DRAW,
+				"9091": "%d de daño" % GameEngine.GALE_DMG,
+				"9233": "gana %d de Coste" % GameEngine.SOUL_REAPER_ENERGY,
+				"8062": "inflige X de daño a todos los enemigos"},
+	}
+	for lang_key: Variant in want.keys():
+		var lang := str(lang_key)
+		var raw_txt: Variant = JSON.parse_string(
+				FileAccess.get_file_as_string("res://i18n/cards_%s.json" % lang))
+		var rows: Dictionary = {}
+		if raw_txt is Dictionary:
+			rows = (raw_txt as Dictionary).get("cards", {}) as Dictionary
+		var miss: Array[String] = []
+		for cid: String in (want[lang] as Dictionary).keys():
+			var row: Variant = rows.get(cid, {})
+			var txt := "" if not row is Dictionary else str((row as Dictionary).get("effect_text", ""))
+			if txt.find(str((want[lang] as Dictionary)[cid])) < 0:
+				miss.append(cid)
+		check(miss.is_empty(),
+				"R845 译文（%s）：%d 张卡的卡面写进新数值（缺 %s）"
+				% [lang, (want[lang] as Dictionary).size(), "、".join(miss)])
+
+	# ---- ⑥ 源码锁：旧实现不许留 ----
+
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(src.find("func _night_erosion_heal") < 0 and src.find("func _instinct_cast") < 0
+			and not src.contains("const INSTINCT_COUNT") and not src.contains("const INSTINCT_MAX_COST"),
+			"R845 源码锁：夜蚀回血 / 本能随机打出这两条旧实现已整条删除")
+	check_src(src.contains("\"damage_per_energy\":"),
+			"R845 源码锁：组合素材 `damage_per_energy` 有对应实现口")
+
+
+func _test_r846() -> void:
+	## R846：暗影刺客七张卡（影子猫 / 地狱猫 / 噩兆 / 回转 / 闪躲 / 猫鼠游戏 / 暗影之刃）。
+	## 行为细节分散在 R45 / R48 / R55 / R56 各自的块里；这里钉**数据口径 + 素材类型 + 源码锁**。
+	var repo := CardRepo.load_json()
+
+	# ① 影子猫 8006：移速 2 + 下半句改成 draw_if_third(2)
+	var cat := repo.get_card(8006)
+	check(cat != null and cat.kind == "盟友" and cat.cost == 1 and cat.move_speed == 2
+			and cat.power == 1 and cat.health == 1,
+			"R846 影子猫：1 费盟友 1/1，移速 5 → 2")
+	check(cat.effect_text.contains("3 张其他卡") and cat.effect_text.contains("抽 2 张牌"),
+			"R846 影子猫文案：本回合已用过 3 张其他卡 → 抽 2 张（%s）" % cat.effect_text)
+	var cat_fx: Dictionary = cat.lower_effect.effects[0]
+	check(str(cat_fx.get("type", "")) == "draw_if_third" and int(cat_fx.get("value", 0)) == 2,
+			"R846 影子猫素材：draw_if_third(2)（不再是 fetch_skill + if_third）")
+	check(CardData.ASSEMBLE_EFFECT_TYPES.has("draw_if_third"),
+			"R846 影子猫素材类型已进组合动作白名单")
+
+	# ② 地狱猫 8019：初始力量 0
+	var hell := repo.get_card(8019)
+	check(hell != null and hell.power == 0 and hell.health == 1 and hell.cost == 0,
+			"R846 地狱猫：0 费 0/1（初始力量 1 → 0，成长规则不变）")
+	check(hell.effect_text.contains("剩余费用每有 1 点"),
+			"R846 地狱猫文案不变（仍按剩余费用 +1 力 +2 血）")
+
+	# ③ 噩兆 9231：使用时若无标记 → 随机标一个格子（已有标记则不动）
+	var omen := repo.get_card(9231)
+	check(omen != null and omen.effect_text.begins_with("使用时，若场上没有标记"),
+			"R846 噩兆文案：新增「使用时若场上没有标记 → 随机标记一个格子」")
+	var oe := _new_engine([], 30, 30, -1, false)
+	oe.start_game(1)
+	check(not oe.state.has_mark(), "R846 噩兆：开局场上本来没有标记")
+	oe.state.energy = 9
+	oe.state.hand.append(CardData.from_dict(omen.to_dict()))
+	oe.use_effect(0)
+	check(oe.state.has_mark(), "R846 噩兆：使用时场上没有标记 → 随机标出一个")
+	var oe_cell := oe.state.mark_cell()
+	check(oe_cell.x >= 0 and oe_cell.x < FieldState.BOARD_ROWS and oe_cell.y >= 0
+			and oe_cell.y < FieldState.BOARD_COLS
+			and oe_cell.x != oe.back_row(GameEngine.SIDE_SELF),
+			"R846 噩兆：标记落在棋盘内且不占己方 HP 行（%s）" % str(oe_cell))
+	oe.state.energy = 9
+	oe.state.hand.append(CardData.from_dict(omen.to_dict()))
+	oe.use_effect(0)
+	check(oe.state.mark_cell() == oe_cell, "R846 噩兆：已有标记时不再随机标记（不挪走原格）")
+
+	# ④ 回转 9089：要选目标；没给目标就只回提示
+	var rot := repo.get_card(9089)
+	check(rot != null and rot.target_mode == "unit" and rot.cost == 2,
+			"R846 回转：2 费技能，改成一个目标")
+	var re := _new_engine([], 30, 30)
+	re.state.self_card_plays = 2
+	re.state.hand.append(CardData.from_dict(rot.to_dict()))
+	var re_msg := str(re.use_spell(0, null))
+	check(re_msg.contains("指定"),
+			"R846 回转：没给目标 → 只回一句提示，不结算（%s）" % re_msg)
+
+	# ⑤ 闪躲 9103：稀有 + 敌方降力
+	var dod := repo.get_card(9103)
+	check(dod != null and dod.rarity == 1 and dod.cost == 0 and dod.target_mode == "unit",
+			"R846 闪躲：0 费**稀有**技能，要选一个敌方单位")
+	check(not dod.effect_text.contains("嘲讽"), "R846 闪躲：卡面不再提嘲讽")
+
+	# ⑥ 猫鼠游戏 9190：4 费
+	var cm := repo.get_card(9190)
+	check(cm != null and cm.cost == 4 and cm.locked, "R846 猫鼠游戏：5 费 → 4 费（仍 locked）")
+
+	# ⑦ 暗影之刃 9111：X = 已使用卡牌张数
+	var blade := repo.get_card(9111)
+	check(blade != null and blade.effect_text.contains("已使用的卡牌张数"),
+			"R846 暗影之刃：X = 本回合已使用的卡牌张数（%s）" % blade.effect_text)
+
+	# ⑧ 源码锁：新常量 / 素材分支在、旧机制不在
+	var src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(src.contains("const SHADOW_CAT_NEED:= 3")
+			and src.contains("const SHADOW_CAT_DRAW:= 2"),
+			"R846 源码：影子猫走 SHADOW_CAT_NEED / SHADOW_CAT_DRAW 两个常量")
+	check_src(src.contains("\"draw_if_third\":") and src.contains("_auto_mark_if_none(\"噩兆\", true)"),
+			"R846 源码：组合分支 draw_if_third + 噩兆自动标记都落在实现口")
+	check_src(src.contains("var blade_n: int = state.self_card_plays if side == SIDE_SELF")
+			and not src.contains("state.energy_spent_of(side)\n\t\tif spent"),
+			"R846 源码：暗影之刃改读卡牌张数，旧的「已花费用」取值已删")
+	check_src(src.find("var _taunt_all_active") < 0 and src.find("func taunt_all_active") < 0,
+			"R846 源码：闪躲的全员嘲讽机制整条删除")
+
+	# ⑨ 三语文本：五张改了文案的卡都要有对应译文
+	var i18n_want := {
+		"8006": "3 other cards",
+		"9231": "randomly Mark a tile",
+		"9089": "Deal X damage to a target",
+		"9103": "Reduce an enemy unit",
+		"9111": "number of cards you have used this turn",
+	}
+	var raw_en: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://i18n/cards_en.json"))
+	var en_cards: Dictionary = (raw_en as Dictionary).get("cards", {}) if raw_en is Dictionary else {}
+	for cid: String in i18n_want.keys():
+		var row: Variant = en_cards.get(cid, {})
+		var txt := "" if not row is Dictionary else str((row as Dictionary).get("effect_text", ""))
+		check(txt.find(str(i18n_want[cid])) >= 0,
+				"R846 英文文案（%s）已同步：%s" % [cid, txt])
+	var i18n_ok := true
+	for lang: String in ["ja", "es", "zh_canonical"]:
+		var raw_l: Variant = JSON.parse_string(
+				FileAccess.get_file_as_string("res://i18n/%s.json" % (
+						"cards_" + lang if lang != "zh_canonical" else lang)))
+		if not raw_l is Dictionary:
+			i18n_ok = false
+			continue
+		var rows: Dictionary = (raw_l as Dictionary).get("cards", {})
+		for cid: String in i18n_want.keys():
+			if not rows.has(cid):
+				i18n_ok = false
+	check(i18n_ok, "R846 文本：ja / es / zh_canonical 七张卡都还在（缺 key 会立刻红）")
+
+	# ⑩ 图鉴口径没被顺手改动：344 张、暗影刺客 67 张
+	var rogue := 0
+	for c: CardData in repo.all_cards():
+		if c.card_class == PlayerClass.ROGUE:
+			rogue += 1
+	check(repo.all_cards().size() == 346 and rogue == 67,
+			"R846：卡总数 346（R856 +鸭蛋投手 / 金鸭蛋）/ 暗影刺客 67 不变（只改数值与文案，没增删卡）")
+
+
+func _test_r847() -> void:
+	## R847：六张场地卡的**边框素材** —— 有图、尺寸对、而且**中间真的透**。
+	## 为什么要单测透明度：单位卡画在边框**下面**，中心若留着白底，站上去的单位会被
+	## 一块白膜糊住（抠图脚本 `art_src/2026-11-21_场地边框_R847/_cut_frames.py` 跑的是
+	## 「四边泛洪 + 中心泛洪」两道掩膜，这条断言就是那份自检的复制）。
+	## 顺带钉住「缺图必须回退」——`draw_frame()` 返回 false 调用方才去画斜纹，
+	## 若哪天有人改成「没图就什么都不画」，空格子会变成完全看不出挂着场地。
+	var fs_ids: Array[int] = [8028, 8036, 8037, 9186, 8082, 9224]
+	for fid: int in fs_ids:
+		var ftex := FieldArt.frame_of(fid)
+		check(ftex != null, "R847 场地 %d 应有边框素材 field_frame_%d.png" % [fid, fid])
+		if ftex == null:
+			continue
+		check(ftex.get_width() == 248 and ftex.get_height() == 220,
+				"R847 场地 %d 边框应 248×220（格子 124×110 的 2×），实际 %d×%d"
+				% [fid, ftex.get_width(), ftex.get_height()])
+		var fimg := ftex.get_image()
+		check(fimg != null, "R847 场地 %d 边框能取出 Image（核透明度用）" % fid)
+		if fimg == null:
+			continue
+		check(fimg.get_pixel(fimg.get_width() / 2, fimg.get_height() / 2).a == 0.0,
+				"R847 场地 %d 边框中心必须全透（否则糊住站上去的单位）" % fid)
+		# R847b（店长反馈「卡片超出了框」）：开口必须**装得下卡面**。
+		#   格子 110 高、场上单位卡 BOARD_CARD_H = 76 × 124/102 ≈ 92.4 高；
+		#   所以开口高度换算到格子尺度必须 ≥ 92.4px（宽度同理 ≥ 76.6px）。
+		#   第一版素材只做到 60%（66px）、第二版最薄的清泉 79%（87px）→ 卡上下直接顶出边框。
+		#   这条钉死它：素材不达标就重出，**不要在绘制侧放大去凑**（会把框推出格子压邻格）。
+		var fw: int = fimg.get_width()
+		var fh: int = fimg.get_height()
+		var open_h: int = 0
+		var open_w: int = 0
+		var run_h: int = 0
+		var run_w: int = 0
+		for fy in fh:
+			if fimg.get_pixel(fw / 2, fy).a <= 0.16:
+				run_h += 1
+				open_h = maxi(open_h, run_h)
+			else:
+				run_h = 0
+		for fx in fw:
+			if fimg.get_pixel(fx, fh / 2).a <= 0.16:
+				run_w += 1
+				open_w = maxi(open_w, run_w)
+			else:
+				run_w = 0
+		var open_h_px: float = float(open_h) * 110.0 / float(fh)
+		var open_w_px: float = float(open_w) * 124.0 / float(fw)
+		check(open_h_px >= 92.4,
+				"R847b 场地 %d 边框开口高 %.1fpx，装得下卡面 92.4px" % [fid, open_h_px])
+		check(open_w_px >= 76.6,
+				"R847b 场地 %d 边框开口宽 %.1fpx，装得下卡面 76.6px" % [fid, open_w_px])
+	check(not FieldArt.has_frame(999999),
+			"R847 未知 id 不该有边框素材（缺图要回退程序化画法，不能静默不画）")
+
+
+func _test_r851() -> void:
+	## R851：禁卡表在安卓上拖不动 + 手指一滑就误禁卡。三件事各钉一条：
+	##   ① 触屏能滚（手势唯一口）② 滑动不算点击（抬起才执行）③ 有可见拖动条（画与拖同源）。
+	var bs851 := FileAccess.get_file_as_string("res://scripts/ban_scene.gd")
+	check_src(bs851.find("const UiDrag") >= 0
+			and bs851.find("UiDrag.scroll_delta") >= 0,
+			"R851 源码：禁卡表接入手势唯一口（触屏按住能拖，不再只认滚轮）")
+	var bs851_gui := bs851.find("func _gui_input")
+	var bs851_gate := bs851.find("UiDrag.drag_moved(press, mb.position)")
+	var bs851_toggle := bs851.find("_toggle(_cards[hit])")
+	check_src(bs851_gui >= 0 and bs851_gate > bs851_gui and bs851_toggle > bs851_gate,
+			"R851 源码：点行切换在「抬起且没拖过」判定之后（触屏一滑不误禁卡）")
+	check_src(bs851.find("var _press_pos := Vector2.INF") >= 0,
+			"R851 源码：按下点先记意图，等抬起再执行")
+	var bs851_refresh := bs851.find("func _refresh")
+	var bs851_next := bs851.find("func _max_scroll")
+	var bs851_reset := bs851.find("_press_pos = Vector2.INF", bs851_refresh)
+	check_src(bs851_refresh >= 0 and bs851_next > bs851_refresh
+			and bs851_reset > bs851_refresh and bs851_reset < bs851_next,
+			"R851 源码：换职业页签清掉按下意图（旧 press 不误点新页的卡）")
+	check_src(bs851.find("func _bar_thumb_rect") >= 0
+			and bs851.find("func _draw_bar") >= 0
+			and bs851.find("func _list_bar_hit") >= 0,
+			"R851 源码：细滚动条几何 + 绘制 + 加宽命中区")
+	check_src(bs851.find("_bar_thumb_rect(track, ratio, t)") >= 0
+			and bs851.find("_bar_grab_offset(_list_track()") >= 0,
+			"R851 源码：滑块画与抓共用同一矩形（不会看得见摸不到）")
+	check_src(bs851.find("ScrollHint.draw") >= 0,
+			"R851 源码：溢出时画上下双箭头（玩家知道下面还有卡）")
+	check_src(bs851.find("_drag_accum / ROW_H") >= 0,
+			"R851 源码：内容拖动按列表行高 40 折行（不是正文行距 26，安卓不会一碰就飞）")
+
+
+func _test_r857() -> void :
+	## R857 建壳 / R859 改口径（店长：开局 10 护甲、不重置、醒来失去所有护甲）：
+	## 沉睡单位**一上场就带 GameEngine.SLEEP_ARMOR 点甲壳**，甲还在时挨打**不算「挨打」**
+	## （自动伤害道具因此打不醒它），醒来那一刻**失去全部护甲**。
+	## 钉九件事：常量 / 上场即带甲 / 回合开始不重置 / 无 trait 不误伤 / 玩家侧对称 /
+	## 甲挡伤害不计挨打 / 破甲那一下才算 / 两个醒来口都清空 / 真关卡装配路径。
+	var r857_repo := CardRepo.load_json()
+	var r857_duck: CardData = r857_repo.get_card(9116)
+	check(r857_duck != null and r857_duck.traits.has(FieldState.SLEEP_TRAIT),
+			"R859 恶魔鸭 9116 带「沉睡」trait（甲壳的唯一判据）")
+	if r857_duck == null:
+		return
+	check(GameEngine.SLEEP_ARMOR == 10,
+			"R859 沉睡甲壳常量 = 10（实际 %d）" % GameEngine.SLEEP_ARMOR)
+
+	# ── ① 一上场就有甲（place 是唯一初始化口） ──
+	var r857_e := _new_engine([], 30, 30)
+	var r857_p := r857_e.state.place(CardData.from_dict(r857_duck.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	check(r857_p.sleep_left == FieldState.SLEEP_TURNS and r857_p.armor == GameEngine.SLEEP_ARMOR,
+			"R859 刚上场：睡眠 %d 点 + 直接带 %d 护甲（实际 sleep %d / armor %d）" % [
+				FieldState.SLEEP_TURNS, GameEngine.SLEEP_ARMOR,
+				r857_p.sleep_left, r857_p.armor])
+
+	# ── ② 回合开始**不重置**（这是 R859 与 R857 的分界） ──
+	r857_e._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r857_p.armor == GameEngine.SLEEP_ARMOR,
+			"R859 自己回合开始：护甲保持 %d（不是重置/叠加）" % r857_p.armor)
+	r857_p.armor = 4
+	r857_e._begin_turn(GameEngine.SIDE_OPPONENT)
+	check(r857_p.armor == 4,
+			"R859 被磨到 4 之后过一回合仍是 4（**不重置**，实际 %d）" % r857_p.armor)
+
+	# ── ③ 没有「沉睡」trait 的单位不会被误伤 ──
+	var r857_fodder := r857_e.state.place(
+			CardData.from_dict(r857_repo.get_card(9001).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
+	check(r857_fodder.armor == 0,
+			"R859 普通单位上场不带甲（实际 %d）" % r857_fodder.armor)
+
+	# ── ④ 甲还在时挨打**不算「挨打」**（自动伤害道具打不醒它） ──
+	var r857_e2 := _new_engine([], 30, 30)
+	var r857_p2 := r857_e2.state.place(CardData.from_dict(r857_duck.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r857_hp0: int = r857_p2.health
+	var r857_sleep0: int = r857_p2.sleep_left
+	r857_e2._hit_unit(r857_p2, 3, "测试")
+	check(r857_p2.health == r857_hp0
+			and r857_p2.armor == GameEngine.SLEEP_ARMOR - 3
+			and r857_p2.sleep_left == r857_sleep0,
+			"R859 甲还在时挨 3 点：血不动、甲 10→%d、**沉睡计数不变**（仍 %d）" % [
+				r857_p2.armor, r857_p2.sleep_left])
+
+	# ── ⑤ 把甲打穿的那一下才算挨打 ──
+	r857_e2._hit_unit(r857_p2, GameEngine.SLEEP_ARMOR, "测试")
+	check(r857_p2.armor == 0 and r857_p2.health == r857_hp0 - 3
+			and r857_p2.sleep_left == r857_sleep0 - 1,
+			"R859 打穿甲壳：甲归零、溢出扣血 %d、沉睡 -1（剩 %d）" % [
+				r857_hp0 - r857_p2.health, r857_p2.sleep_left])
+
+	# ── ⑥ 回合口睡满 → 醒来同时**失去所有护甲** ──
+	r857_p2.sleep_left = 1
+	r857_p2.armor = GameEngine.SLEEP_ARMOR
+	r857_e2._sleep_tick(GameEngine.SIDE_OPPONENT)
+	check(r857_p2.sleep_left == 0 and r857_p2.armor == 0,
+			"R859 回合口醒来：甲壳整个脱落（sleep %d / armor %d）" % [
+				r857_p2.sleep_left, r857_p2.armor])
+
+	# ── ⑦ 受伤口被打醒 → 同样失去所有护甲（两个醒来口一致） ──
+	var r857_e3 := _new_engine([], 30, 30)
+	var r857_p3 := r857_e3.state.place(CardData.from_dict(r857_duck.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	r857_p3.sleep_left = 1
+	r857_p3.armor = GameEngine.SLEEP_ARMOR + GameEngine.HECATE_ARMOR_GAIN
+	r857_e3._demon_duck_hurt(r857_p3, Vector2i(0, 1), 5)
+	check(r857_p3.sleep_left == 0 and r857_p3.armor == 0,
+			"R859 受伤口醒来：连赫卡那 +%d 一起清空（15 → %d）" % [
+				GameEngine.HECATE_ARMOR_GAIN, r857_p3.armor])
+
+	# ── ⑧ 玩家侧对称（判据只看 trait / sleep_left，不认阵营） ──
+	var r857_e4 := _new_engine([], 30, 30)
+	var r857_mine := r857_e4.state.place(CardData.from_dict(r857_duck.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_SELF)
+	check(r857_mine.armor == GameEngine.SLEEP_ARMOR,
+			"R859 我方沉睡单位同样带 %d 护甲（实际 %d）" % [
+				GameEngine.SLEEP_ARMOR, r857_mine.armor])
+
+	# ── ⑨ 真关卡装配路径（R856 教训：别只在自建 place 上签字） ──
+	## 走 battle_scene 同款的「卡库命中 → with_unit_override → 难度缩放 → place」。
+	RunState.set_difficulty(0)
+	var r857_lvl: Dictionary = GameLevels.level_by_key("boss_demon_duck")
+	check(not r857_lvl.is_empty(), "R859 恶魔鸭 Boss 关能按 key 取到（boss_demon_duck）")
+	if not r857_lvl.is_empty():
+		var r857_e5 := _new_engine([], 20, 30)
+		for e: Array in r857_lvl["enemy_units"]:
+			var r857_rc: CardData = r857_repo.get_card(int(e[0]))
+			check(r857_rc != null, "R859 关卡编成里的单位都在卡库（id %d）" % int(e[0]))
+			if r857_rc == null:
+				continue
+			r857_rc = GameLevels.with_unit_override(r857_rc, e)
+			r857_rc = RunState.scaled_enemy_card(r857_rc)
+			r857_e5.state.place(r857_rc, e[6], GameEngine.SIDE_OPPONENT)
+		var r857_boss: Placement = r857_e5.state.unit_at(Vector2i(0, 1))
+		check(r857_boss != null and r857_boss.card.id == 9116
+				and r857_boss.armor == GameEngine.SLEEP_ARMOR,
+				"R859 真关卡：恶魔鸭开局就带 %d 护甲（实际 %d）" % [
+					GameEngine.SLEEP_ARMOR, r857_boss.armor if r857_boss else -1])
+
+
+func _test_r856() -> void:
+	## R856：第一层·普通困难「鸭蛋投手」（9284 投手 / 9285 金鸭蛋）。
+	## 钉九件事：两张卡面 / 关卡档位与站位 / 一层普难池扩容 / 持蛋判据 /
+	## 扔蛋的伤害与落点 / 整列无人直击 HP / 践踏溢出 / 无蛋形态（速 3、力 +3）/
+	## 蛋的非攻击伤害封顶 / 蛋死亡的三条补偿 / 难度血量豁免。
+	var r856_repo := CardRepo.load_json()
+	var r856_pit: CardData = r856_repo.get_card(9284)
+	var r856_egg: CardData = r856_repo.get_card(9285)
+	check(r856_pit != null and r856_egg != null,
+			"R856 两张新卡都在卡库里（9284 鸭蛋投手 / 9285 金鸭蛋）")
+	if r856_pit == null or r856_egg == null:
+		return
+	check(r856_pit.kind == "盟友" and r856_pit.power == 6 and r856_pit.health == 55
+			and r856_pit.attack_range == 1 and r856_pit.move_speed == 1
+			and r856_pit.group == "enemy",
+			"R856 鸭蛋投手：盟友 6 力 / 55 血 / 程 1 / 速 1（实际 %d/%d 程%d 速%d）" % [
+				r856_pit.power, r856_pit.health, r856_pit.attack_range, r856_pit.move_speed])
+	check(r856_egg.kind == "工事" and r856_egg.power == 0 and r856_egg.health == 3
+			and r856_egg.attack_range == 0 and r856_egg.move_speed == 0
+			and r856_egg.traits.has("金鸭蛋") and r856_egg.group == "enemy",
+			"R856 金鸭蛋：工事 0 力 / 3 血 / 程 0 / 速 0，带「金鸭蛋」trait")
+
+	# ── 关卡：一层普通困难第 5 关 ──
+	var r856_lv: Dictionary = _level_named("鸭蛋投手")
+	check(not r856_lv.is_empty()
+			and int(r856_lv["tier"]) == GameLevels.TIER_NORMAL_HARD
+			and GameLevels.layer_of(r856_lv) == GameLayers.LAYER_DEFAULT
+			and GameLevels.bg_key(r856_lv) == "egg_pitcher",
+			"R856 鸭蛋投手：第一层·普通敌人-困难，key=egg_pitcher")
+	if r856_lv.is_empty():
+		return
+	check(GameLevels.normal_pool(GameLayers.LAYER_DEFAULT).has(r856_lv),
+			"R856 鸭蛋投手进第一层普通战斗池（地图会抽到）")
+	# ⚠️ `normal_pool()` 是「普通简单 + 普通困难」的**合池**（一层 = 4 + 5 = 9）——
+	#    要数「普通困难几关」必须按 tier 过滤再数层，别拿合池的 size 当档位关数。
+	var r856_hard_n := 0
+	for r856_lv2: Dictionary in GameLevels.levels_of_tier([GameLevels.TIER_NORMAL_HARD]):
+		if GameLevels.layer_of(r856_lv2) == GameLayers.LAYER_DEFAULT:
+			r856_hard_n += 1
+	check(r856_hard_n == 5,
+			"R856 一层普通困难 4 → 5 关（实际 %d）" % r856_hard_n)
+	var r856_units: Array = r856_lv["enemy_units"]
+	check(r856_units.size() == 2
+			and int(r856_units[0][0]) == 9284 and r856_units[0][6] == Vector2i(0, 1)
+			and int(r856_units[1][0]) == 9285 and r856_units[1][6] == Vector2i(1, 1),
+			"R856 站位：投手后排中央 (0,1)；金鸭蛋在它正前方一格 (1,1)")
+	check(int(r856_units[0][2]) == r856_pit.power and int(r856_units[0][3]) == r856_pit.health and int(r856_units[0][4]) == r856_pit.attack_range and int(r856_units[0][5]) == r856_pit.move_speed,
+			"R856 关卡元组与卡面同源（力 / 生 / 程 / 速 逐项一致）")
+
+	# ── ① 持蛋判据 + 扔蛋撞到第一个单位 ──
+	var r856_e := _new_engine([], 30, 30)
+	var r856_p := r856_e.state.place(CardData.from_dict(r856_pit.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r856_g := r856_e.state.place(CardData.from_dict(r856_egg.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r856_g.egg_held = true
+	var r856_foe := r856_e.state.place(CardData.from_dict(r856_repo.get_card(9001).to_dict()),
+			Vector2i(3, 1), GameEngine.SIDE_SELF)
+	check(r856_e._golden_egg_of(r856_p) == r856_g,
+			"R856 持蛋判据：`egg_held` 为真的蛋才算「持有」")
+	var r856_hp0: int = r856_foe.health
+	var r856_pow: int = r856_p.effective_power()
+	r856_e._throw_golden_egg(Vector2i(0, 1), r856_p, r856_g)
+	check(r856_g.egg_held == false,
+			"R856 扔出去之后不再算「持有」（蛋挪了格子但还在场上）")
+	check(r856_e.state.unit_at(Vector2i(2, 1)) == r856_g,
+			"R856 蛋停在撞到的单位**前一格** (2,1)（不叠在目标身上）")
+	check(r856_foe.health == r856_hp0 - r856_pow,
+			"R856 撞上第一个单位：造成**投手**力量 %d 点伤害（%d → %d）" % [
+				r856_pow, r856_hp0, r856_foe.health])
+	check(r856_p.egg_less,
+			"R856 扔出的那一刻投手进入无蛋形态")
+	check(r856_p.effective_speed() == GameEngine.EGG_PITCHER_EGGLESS_SPEED,
+			"R856 无蛋形态移速 3（实际 %d）" % r856_p.effective_speed())
+	check(r856_e._golden_egg_of(r856_p) == null,
+			"R856 扔出后判据转成「无蛋」（蛋在场上但账已经交出去了）")
+
+	# ── ② 整列没有单位 → 直击 HP，蛋停在 HP 行前一格 ──
+	var r856_e2 := _new_engine([], 30, 30)
+	var r856_p2 := r856_e2.state.place(CardData.from_dict(r856_pit.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r856_g2 := r856_e2.state.place(CardData.from_dict(r856_egg.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r856_g2.egg_held = true
+	var r856_hp1: int = r856_e2.state.hp_self
+	var r856_pow2: int = r856_p2.effective_power()
+	r856_e2._throw_golden_egg(Vector2i(0, 1), r856_p2, r856_g2)
+	check(r856_e2.state.hp_self == r856_hp1 - r856_pow2,
+			"R856 整列无人：直击我方 HP %d 点（%d → %d）" % [
+				r856_pow2, r856_hp1, r856_e2.state.hp_self])
+	check(r856_e2.state.unit_at(Vector2i(4, 1)) == r856_g2,
+			"R856 蛋停在 HP 行前一格 (4,1)，不会站到 HP 行上")
+
+	# ── ③ 践踏：击杀后的溢出沿同列继续穿 ──
+	var r856_e3 := _new_engine([], 30, 30)
+	var r856_p3 := r856_e3.state.place(CardData.from_dict(r856_pit.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r856_g3 := r856_e3.state.place(CardData.from_dict(r856_egg.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r856_g3.egg_held = true
+	var r856_a := r856_e3.state.place(CardData.from_dict(r856_repo.get_card(9001).to_dict()),
+			Vector2i(2, 1), GameEngine.SIDE_SELF)
+	r856_a.health = 1
+	var r856_b := r856_e3.state.place(CardData.from_dict(r856_repo.get_card(9001).to_dict()),
+			Vector2i(4, 1), GameEngine.SIDE_SELF)
+	var r856_b0: int = r856_b.health
+	var r856_pow3: int = r856_p3.effective_power()
+	r856_e3._throw_golden_egg(Vector2i(0, 1), r856_p3, r856_g3)
+	check(r856_b.health == r856_b0 - maxi(0, r856_pow3 - 1),
+			"R856 践踏：打死 1 血目标后溢出 %d 点沿同列继续（%d → %d）" % [
+				maxi(0, r856_pow3 - 1), r856_b0, r856_b.health])
+
+	# ── ④ 无蛋形态：每个自己回合开始力量 +3（无上限、可累计） ──
+	var r856_e4 := _new_engine([], 30, 30)
+	var r856_p4 := r856_e4.state.place(CardData.from_dict(r856_pit.to_dict()),
+			Vector2i(0, 0), GameEngine.SIDE_OPPONENT)
+	var r856_base: int = r856_p4.effective_power()
+	r856_e4._egg_pitcher_tick(GameEngine.SIDE_OPPONENT)
+	check(r856_p4.effective_power() == r856_base + GameEngine.EGG_PITCHER_FURY,
+			"R856 无蛋形态：回合开始力量 +%d（%d → %d）" % [
+				GameEngine.EGG_PITCHER_FURY, r856_base, r856_p4.effective_power()])
+	r856_e4._egg_pitcher_tick(GameEngine.SIDE_OPPONENT)
+	check(r856_p4.effective_power() == r856_base + GameEngine.EGG_PITCHER_FURY * 2,
+			"R856 无蛋形态成长**可累计、无上限**（两回合后 %d）" % r856_p4.effective_power())
+	# 有蛋的投手不该成长（判据自动成立，不需要「跳过第一回合」特判）
+	var r856_p4b := r856_e4.state.place(CardData.from_dict(r856_pit.to_dict()),
+			Vector2i(0, 2), GameEngine.SIDE_OPPONENT)
+	var r856_g4b := r856_e4.state.place(CardData.from_dict(r856_egg.to_dict()),
+			Vector2i(1, 2), GameEngine.SIDE_OPPONENT)
+	r856_g4b.egg_held = true
+	var r856_hold_pow: int = r856_p4b.effective_power()
+	r856_e4._egg_pitcher_tick(GameEngine.SIDE_OPPONENT)
+	check(r856_p4b.effective_power() == r856_hold_pow,
+			"R856 持蛋的投手回合开始**不成长**（仍 %d）" % r856_p4b.effective_power())
+
+	# ── ⑤ 金鸭蛋：受到非攻击伤害时每次最多 1 点（普攻不受限） ──
+	check(r856_e4._unit_damage_taken(r856_g4b, 10, "spell") == GameEngine.GOLDEN_EGG_HIT_CAP,
+			"R856 金鸭蛋：技能 10 伤只吃 %d 点"
+			% r856_e4._unit_damage_taken(r856_g4b, 10, "spell"))
+	check(r856_e4._unit_damage_taken(r856_g4b, 10, "attack") == 10,
+			"R856 金鸭蛋：**普攻**照常吃满 10 点（3 血一刀碎 = 它唯一的弱点）")
+
+	# ── ⑤b 预览镜像：`preview_hit_damage()` 必须与真实扣血报同一个数 ──
+	# ⚠️ R856 初版漏了这条 —— 那个函数自己写着「改 `_unit_damage_taken()` 的减伤链，
+	#    必须同步改这里」，六条同类（母舰 / 太阳熔炉 / 枭熊 / 标记 / 执法者 / 护盾构装体）
+	#    都对了，只有蛋的封顶漏了 → 悬停显示 10、实打只掉 1。
+	var r856_pv_sp: Dictionary = r856_e4.preview_hit_damage(r856_g4b, 10, false)
+	check(int(r856_pv_sp["dmg"]) == GameEngine.GOLDEN_EGG_HIT_CAP,
+			"R856 预览镜像：技能 10 伤的预览值是 %d（期望 %d）"
+			% [int(r856_pv_sp["dmg"]), GameEngine.GOLDEN_EGG_HIT_CAP])
+	var r856_pv_atk: Dictionary = r856_e4.preview_hit_damage(r856_g4b, 10, true)
+	check(int(r856_pv_atk["dmg"]) == 10,
+			"R856 预览镜像：普攻 10 伤的预览值照常 10（实际 %d）"
+			% int(r856_pv_atk["dmg"]))
+	# 主断言：预览值必须**等于**真打一下扣的血（两边各自漂就抓得到）
+	var r856_pv7: int = int(r856_e4.preview_hit_damage(r856_g4b, 7, false)["dmg"])
+	var r856_hp_b4: int = r856_g4b.health
+	var r856_real7: int = r856_e4._hit_unit(r856_g4b, 7, "毒", false)
+	check(r856_pv7 == r856_real7 and r856_g4b.health == r856_hp_b4 - r856_pv7,
+			"R856 预览 == 实打：7 伤预览 %d、实扣 %d（血 %d → %d）" % [
+				r856_pv7, r856_real7, r856_hp_b4, r856_g4b.health])
+
+	# ── ⑥ 蛋死亡：玩家随机史诗卡 + 投手重获蛋并回后排 ──
+	var r856_e5 := _new_engine([], 30, 30)
+	var r856_p5 := r856_e5.state.place(CardData.from_dict(r856_pit.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r856_g5 := r856_e5.state.place(CardData.from_dict(r856_egg.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	r856_g5.egg_held = true
+	var r856_hand0: int = r856_e5.state.hand.size()
+	r856_e5._destroy(Vector2i(1, 1))
+	check(r856_e5.state.hand.size() == r856_hand0 + 1,
+			"R856 金鸭蛋破碎：对手（玩家）手卡 +1（%d → %d）" % [
+				r856_hand0, r856_e5.state.hand.size()])
+	if r856_e5.state.hand.size() > r856_hand0:
+		var r856_gift: CardData = r856_e5.state.hand.back()
+		check(r856_gift.rarity == 2,
+				"R856 补偿卡是**史诗**（rarity=2，实际 %d：%s）" % [
+					r856_gift.rarity, r856_gift.card_name])
+	check(r856_e5._golden_egg_of(r856_p5) != null,
+			"R856 投手**重新获得金鸭蛋**（场上又出现一枚 egg_held 的蛋）")
+	check(r856_e5._cell_of(r856_p5).x == GameEngine.back_row(GameEngine.SIDE_OPPONENT),
+			"R856 投手被挪回**后排**（实际行 %d）" % r856_e5._cell_of(r856_p5).x)
+
+	# ── ⑦ 蛋血量不吃难度加成（卡面「任何难度恒定为 3」）──
+	var r856_rs := FileAccess.get_file_as_string("res://scripts/run_state.gd")
+	check_src(r856_rs.find("if card.id == GameEngine.GOLDEN_EGG_ID:") >= 0,
+			"R856 源码：`scaled_enemy_card` 对金鸭蛋整卡放行（难度不加血）")
+	var r856_ge := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
+	check_src(r856_ge.find("and kind != \"attack\" and dmg > GOLDEN_EGG_HIT_CAP") >= 0,
+			"R856 源码：封顶只对非攻击伤害生效（`kind != attack`）")
+
+	# ── ⑧ 落地即「在手上」+ 三个新字段进存档白名单 ──
+	# ⚠️ 这两条是**实机截图**抓出来的真缺陷（当时前面七条断言全绿也没抓到）：
+	#    关卡布阵走 `FieldState.place()` → `Placement.new()`，`egg_held` 默认 false
+	#    → 一开局投手就是无蛋形态（速 3、每回合 +3 力），卡面「持有金鸭蛋」等于没写；
+	#    `_SAVE_FIELDS` 漏了三个新字段 → 扔完蛋存档再进，蛋又变回「在手上」。
+	var r856_e6 := _new_engine([], 60, 60)
+	var r856_p6 := r856_e6.state.place(CardData.from_dict(r856_pit.to_dict()),
+			Vector2i(0, 1), GameEngine.SIDE_OPPONENT)
+	var r856_g6 := r856_e6.state.place(CardData.from_dict(r856_egg.to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	check(r856_g6.egg_held,
+			"R856 新落地的金鸭蛋默认「在投手手上」（关卡布阵不必另置）")
+	check(r856_e6._golden_egg_of(r856_p6) == r856_g6,
+			"R856 开局即持蛋：判据成立，投手不是无蛋形态")
+	check(r856_p6.effective_speed() == r856_pit.move_speed,
+			"R856 持蛋时移速仍是卡面 %d（实际 %d）" % [
+				r856_pit.move_speed, r856_p6.effective_speed()])
+	r856_p6.egg_fury = 9
+	var r856_g6b := Placement.new()
+	r856_g6b.apply_save(r856_g6.to_save())
+	check(r856_g6b.egg_held,
+			"R856 续档：持蛋状态（true）跟着存档走")
+	var r856_p6b := Placement.new()
+	r856_p6b.apply_save(r856_p6.to_save())
+	check(r856_p6b.egg_fury == 9,
+			"R856 续档：`egg_fury` 不归零（期望 9，实际 %d）" % r856_p6b.egg_fury)
+	r856_e6._throw_golden_egg(Vector2i(0, 1), r856_p6, r856_g6)
+	var r856_g6c := Placement.new()
+	r856_g6c.apply_save(r856_g6.to_save())
+	check(not r856_g6c.egg_held,
+			"R856 续档：扔出去之后存的是 false（续档不会变回「在手上」）")
+	var r856_p6c := Placement.new()
+	r856_p6c.apply_save(r856_p6.to_save())
+	check(r856_p6c.egg_less,
+			"R856 续档：无蛋形态（egg_less）也保住了")
+	check(Placement._SAVE_FIELDS.has("egg_held")
+			and Placement._SAVE_FIELDS.has("egg_less")
+			and Placement._SAVE_FIELDS.has("egg_fury"),
+			"R856 三个新字段都在 `_SAVE_FIELDS` 里（漏一个续档就归零）")

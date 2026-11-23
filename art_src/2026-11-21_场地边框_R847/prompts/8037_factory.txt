@@ -1,0 +1,17 @@
+A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on. The canvas is slightly WIDER than tall, about 113 to 100, NOT square — a wide landscape rectangle.
+
+The frame is a closed decorative ring of bolted iron and brass plating, with sharply angled corners.
+Four exposed gear wheels are mounted at the four corners, their teeth pointing inward along the edges.
+A small conveyor-belt plate with three flat slats runs along the middle of the bottom edge, and two short vents sit on the left and right edges.
+Three tiny orange sparks flick out from the top edge.
+The frame is tinted warm amber, copper and sooty iron brown, with oily dark shading in the recesses.
+The inside of the frame is completely EMPTY pure white, nothing at all drawn inside the ring.
+The border band is SLIM and even: the left and right bands are at most one twelfth of the canvas width, the top and bottom bands are at most one sixteenth of the canvas height. The empty window inside the ring is very large, at least 90% of the canvas height and at least 74% of the canvas width. Ornaments sit at the four corners and along the left and right edges; the top and bottom edges carry only a thin rail with a small corner flourish. It must still read clearly when shrunk to 124 by 110 pixels.
+
+Thick dark brown outline, flat cel shading with two or three tone steps,
+soft hand-drawn cartoon style, centered and symmetrical, whole frame inside the canvas with a small margin,
+single object isolated on a plain pure white background,
+no text, no letters, no numbers, no symbols, no watermark, no drop shadow, no ground shadow.
+
+NOT a card, NOT a panel with a picture inside, NOT a whole factory building, NOT a chimney, NOT smoke clouds,
+no tools or gears floating inside the empty middle, no lettering anywhere.

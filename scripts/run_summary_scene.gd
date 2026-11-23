@@ -233,10 +233,13 @@ func _draw_head(pr: Rect2) -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_TITLE,
 			Color(TITLE_COL.r, TITLE_COL.g, TITLE_COL.b, a))
 
-	# 副标题：第三层 · 噩梦
+	# 副标题：层名 · 难度 `数字 名称`（例 `第三层 · 难度 12 昂贵`）
 	var lay := int(_data.get("layer", GameLayers.LAYER_THREE))
 	var diff := clampi(int(_data.get("difficulty", 0)), 0, RunState.DIFFICULTY_COUNT - 1)
-	var sub := "%s · %s" % [GameLayers.layer_name(lay), RunState.DIFFICULTY_NAMES[diff]]
+	# R795（用户口径）：副标题要带**档位数字** —— 原来只拼名字（「噩梦」），玩家对不上
+	# 自己在角色选择界面挑的是第几档。数字 + 名称统一走 `RunState.difficulty_label()`。
+	var sub := "%s · %s" % [GameLayers.layer_name(lay),
+			GameI18n.ui("shell", "RUN_SUMMARY_DIFFICULTY", "难度 %s") % RunState.difficulty_label(diff)]
 	draw_string(_font, Vector2(pr.position.x, pr.position.y + 110.0),
 			sub, HORIZONTAL_ALIGNMENT_CENTER, pr.size.x, UiTheme.FS_LABEL,
 			Color(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b, a * 0.95))

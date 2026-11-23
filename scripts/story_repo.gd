@@ -45,12 +45,10 @@ var _ep_ach := {}  # episode id -> achievement 定义（一段剧情只由一个
 
 static func load_json(path: String = PATH) -> StoryRepo:
 	var repo := StoryRepo.new()
-	if not FileAccess.file_exists(path):
-		push_warning("stories.json 不存在：" + path)
-		return repo
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	## R789：`content/` 覆盖优先（热更），缺失或损坏时回落 pck 基线。
+	var data: Variant = DataPaths.read_json(path, "episodes")
 	if not (data is Dictionary):
-		push_error("stories.json 解析失败")
+		push_error("stories.json 缺失或解析失败：" + path)
 		return repo
 	var d: Dictionary = data
 	var eps: Variant = d.get("episodes", [])

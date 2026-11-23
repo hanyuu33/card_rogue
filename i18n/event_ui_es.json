@@ -42,7 +42,7 @@
       "LEAVE_WITHOUT_INVESTING": "Salir (sin ofrecer nada)"
     },
     "core_contract": {
-      "SIGN_CONTRACT": "Firmar el contrato (obtener la Reliquia «Atadura maldita»)",
+      "SIGN_CONTRACT": "Firmar el contrato («Atadura maldita» + 1 «Compensación»)",
       "CONTRACT_SIGNED_DISABLED": "Contrato ya firmado",
       "TAKE_CORE": "Reclamar el Núcleo (tomar la Reliquia «Núcleo»)",
       "CORE_FORMED_DISABLED": "Núcleo ya formado (canjear en la pantalla de recompensas después del combate)",
@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "Salir (sin tomar ninguna)"
     },
     "divination": {
-      "START_DIVINATION": "Realizar una adivinación (pierdes 5 de Vida máxima)",
+      "START_DIVINATION": "Realizar una adivinación (pierdes %d de Vida máxima)",
       "LEAVE_WITHOUT_DIVINATION": "Salir (sin adivinación)",
       "LEAVE_WITHOUT_INTERPRETING": "Salir (sin interpretarla)",
       "WHALE_FIGHT": "Lucharé por ella (obtener «Ira de la Ballena»)",
@@ -135,6 +135,27 @@
       "OPEN_CARD_CHEST": "Abrir el cofre (obtener una recompensa de cartas)",
       "LEAVE_WITHOUT_OPENING": "No abrirlo (darte la vuelta y marcharte)"
     },
+    "sword": {
+      "TAKE_SWORD": "Desenvainar (pierdes %d de Vida máxima y obtienes «Espada Sagrada»)",
+      "MAX_HP_LOW_DISABLED": "Vida máxima insuficiente (desenvainar cuesta %d)",
+      "ALREADY_OWNED_DISABLED": "Ya llevas la «Espada Sagrada» (no hace falta desenvainar otra vez)",
+      "LEAVE_THE_SWORD": "Darte la vuelta y marcharte (no toques la espada)"
+    },
+    "dragon_slab": {
+      "MIGHT": "«El dragón poderoso»: otorga +8 de Poder a un Aliado o Estructura",
+      "NOBLE": "«El dragón noble»: obtienes «Valor escaso»",
+      "NO_ALLY_DISABLED": "No hay Aliados ni Estructuras en tu mazo que puedan recibir el encantamiento",
+      "LETHAL_DISABLED": "Vida insuficiente (esta elección te mataría)",
+      "LEAVE": "Marcharse (no tocar la losa)"
+    },
+    "factory": {
+      "FACTORY_STAGE_1": "Probar una (obtienes 1 Chocolate)",
+      "FACTORY_STAGE_2": "Otra más (pierdes %d de Vida máxima, obtienes 1 Chocolate)",
+      "FACTORY_STAGE_3": "No puedes parar (pierdes %d de Vida máxima, obtienes 1 Chocolate)",
+      "FACTORY_STAGE_4": "Comprar la fábrica entera (pierdes %d de Vida máxima, obtienes la carta «Fábrica de Chocolate»)",
+      "FACTORY_DISABLED": "Vida máxima insuficiente (esta pieza cuesta %d de Vida máxima)",
+      "FACTORY_LEAVE": "Irte (huele demasiado dulce)"
+    },
     "struggle": {
       "ACCEPT_STRUGGLE": "Aceptar la lucha (perder %d Vida y obtener «Dragón Metálico»)",
       "LEAVE_UNCHANGED": "Darte la vuelta y marcharte (dejar todo como está)"
@@ -143,6 +164,10 @@
       "PRAY": "Rendir culto (las próximas 3 batallas garantizan una herramienta)",
       "SMASH": "Destruirla (llena la barra de herramientas con Piedras)",
       "LEAVE": "Pasar de largo (no hacer nada)"
+    },
+    "haunted_house": {
+      "EXPLORE": "Empujar la puerta (un Relic Legendario + una recompensa de carta Épica; el precio es una «Muñeca maldita»)",
+      "LEAVE": "Dar media vuelta e irse (nadie debería vivir aquí)"
     }
   },
   "pickers": {
@@ -152,6 +177,13 @@
       "confirm_label": "Aceptar la Carga",
       "cancel_label": "Rechazar (plegar)",
       "short": "Encargo de entrega"
+    },
+    "dragon_slab": {
+      "title": "Losa del dragón · Elige un Aliado o Estructura",
+      "note": "Solo Aliados o Estructuras sin encantamiento (uno por carta)",
+      "confirm_label": "Encantar con «Poder +8»",
+      "cancel_label": "Pensarlo mejor (cerrar)",
+      "short": "Losa del dragón"
     }
   },
   "results": {
@@ -252,6 +284,19 @@
     "treasure": {
       "TREASURE_CARD_REWARD_PENDING": "Has encontrado una recompensa de cartas; elige 1 para añadirla a tu mazo (pendiente: consulta la ventana emergente de recompensas)"
     },
+    "sword": {
+      "SWORD_GAINED": "Has perdido %d de Vida máxima (actual: %d/%d); la «Espada Sagrada» es tuya"
+    },
+    "dragon_slab": {
+      "MIGHT_GAINED": "El encantamiento «Poder +8» ya está grabado en la carta que elegiste (Poder %d → %d)",
+      "NOBLE_GAINED": "«Valor escaso» entra en tus objetos: %d cartas duplicadas arrancadas, %d de vida perdida (ahora %d / %d)",
+      "NOBLE_NONE": "«Valor escaso» entra en tus objetos: ninguna carta superaba las 3 copias, no se arrancó nada"
+    },
+    "factory": {
+      "FACTORY_FREE": "Dulce. Chocolate +1 (ya tienes %d)",
+      "FACTORY_PAID": "Cambiaste %d de Vida máxima por una pieza de chocolate (Vida máxima %d / %d, ya tienes %d)",
+      "FACTORY_CARD": "Has perdido %d de Vida máxima (actual: %d / %d); «Fábrica de Chocolate» se ha añadido a tu mazo"
+    },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "Has perdido %d Vida (actual: %d/%d); «%s» se ha añadido a tu mazo"
     },
@@ -262,10 +307,11 @@
       "FURNACE_REWARDS_PENDING": "Has arrojado «%s» al horno y este ha escupido %d Reliquias: %s. Recógelas en la ventana emergente de recompensas."
     },
     "core_contract": {
-      "CORE_CONTRACT_CURSE_GAINED": "«Atadura maldita» se ha añadido a tu inventario de Reliquias: %s",
+      "CORE_CONTRACT_CURSE_GAINED": "Has obtenido la Reliquia «Atadura maldita» y 1 «%s» se ha añadido a tu mazo. (Atadura maldita: %s)",
       "CORE_CONTRACT_CORE_GAINED": "«Núcleo» se ha añadido a tu inventario de Reliquias: tras perder un total acumulado de %d Vida en combate, tomará forma; al terminar este combate, aparecerá un intercambio adicional en la página de recompensas: sacrifica 1 Habilidad de daño, eliminándola permanentemente del mazo, y añade su primera instancia de daño como Encantamiento a otra Habilidad de daño que no tenga Encantamiento. Se vuelve inactivo después de usarlo."
     },
     "divination": {
+      "DIVINATION_COST_PAID": "(Coste de la adivinación: -%d de Vida máxima -> %d / %d)",
       "DIVINATION_CARD_GAINED": "«%s» se ha añadido a tu mazo.",
       "DIVINATION_RELIC_GAINED": "«%s» se ha añadido a tu inventario de Reliquias."
     },
@@ -273,6 +319,10 @@
       "STATUE_PRAY": "Culto rendido: las próximas %d batallas garantizan una herramienta cada una.",
       "STATUE_SMASH": "La estatua se derrumba: %d Piedras llenan la barra (arrastra una a un enemigo para 15 de daño).",
       "STATUE_SMASH_FULL": "La estatua se derrumba, pero la barra ya está llena: los escombros se quedan donde cayeron."
+    },
+    "haunted_house": {
+      "EXPLORED": "La «Muñeca maldita» se ha unido a tu mazo; no se irá. Arriba te esperan un Relic Legendario y una recompensa de carta Épica.",
+      "EXPLORED_NO_RELIC": "La «Muñeca maldita» se ha unido a tu mazo; no se irá. Ya has cogido todos los Relics Legendarios, así que arriba solo queda una recompensa de carta Épica."
     }
   },
   "rest_dynamic": {

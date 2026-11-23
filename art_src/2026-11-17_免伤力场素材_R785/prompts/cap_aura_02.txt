@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+A single isolated 2D game UI sprite: a CIRCULAR FRAME OF AMBER RUNE-SCRIPT WARDING LIGHT, seen straight on, floating on a PURE BLACK (#000000) FLAT background. This will be converted into a transparent sprite by turning brightness into alpha, so a clean uniform pure black background is CRITICAL and the runes must GLOW brightly against it.
+
+STYLE: 2D hand-painted anime-fantasy card-game visual effect, the kind of ward overlay used in a high-end Japanese trading card game. Clean crisp linework, fine engraved detail, soft outer bloom, drifting amber motes just outside the band. Absolutely NO 3D render, NO photorealism, NO photo texture, NO noise grain, NO volumetric fog, NO lens flare.
+
+SHAPE: ONE thin CIRCULAR RING BAND, a perfect circle, drawn as a narrow inscribed ring of abstract runes and angular glyph strokes between two bright gold edge lines. The band is roughly 7% of the frame width thick. Runes are decorative abstract marks only — angular, geometric, deliberately unreadable, no letterforms, no alphabet. Four small four-pointed stars sit on the ring at the top, bottom, left and right as compass markers. Colours: deep bronze #6B3F08 in the shadow between glyphs, amber #F5A623 in the body, pale cream #FFF3CE only on the edge lines and star points. The hole in the middle is EMPTY PURE BLACK — nothing inside it, no core, no orb, no rune circle inside, no object, no fill of any kind. The ring's outer diameter is about 85% of the frame, fully inside the frame, nothing cut off.
+
+COMPOSITION: one ring only, dead center, perfectly round, straight-on view, no perspective tilt, no ellipse, no rotation, no cone, no disc. 20 to 30 tiny amber motes drift loosely around the outside of the band. The light fades into pure black at the outer edges so the sprite blends seamlessly. NO ground, NO floor, NO scenery, NO background objects, NO cast shadow, NO border, NO panel, NO card shape, NO second ring. The ENTIRE background MUST be uniform pure black #000000: NO gradient, NO texture, NO pattern, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any readable text, letters, words, numbers, digits, labels, watermark, logo or signature anywhere; any human figure, face, hands, eye, creature, animal, skull; any weapon; any solid sphere or ball inside the ring; any second object; any UI element, button, icon or card frame.
+
+NO readable text. NO numbers. NO watermark. Pure black background only.

@@ -113,6 +113,20 @@
         "SMITH_DONE_DESC": "The fire has died down, and the forged piece is out of the furnace.\nThe card in your hand has become an Iron Fence."
       }
     },
+    "factory": {
+      "name": "Chocolate Factory",
+      "texts": {
+        "FACTORY_DESC": "A sweet smell drifts from deep in the woods. The copper door stands ajar; inside, a conveyor carries a row of duck-shaped chocolate molds past,\nand a warm river of chocolate flows by your feet.\nA little blackboard on the counter reads: \"Free tasting—the first piece is on the house. Every piece after that costs something.\"\nAnd in the corner, one smaller line: the guest willing to pay the most may take the whole factory home.",
+        "FACTORY_DONE_DESC": "The conveyor grinds to a halt. The final contract is tucked into your coat—\n\"Chocolate Factory\" has been added to your deck: a 2-Cost Structure, 0 Power / 30 Health, Dimensional;\nat the start of each of your turns, gain 1 Cost and draw a card.\nThe sweet smell stays behind, and the woods fall quiet again."
+      }
+    },
+    "sword": {
+      "name": "Sword in the Woods",
+      "texts": {
+        "SWORD_DESC": "A grey-white standing stone rises in the clearing, a sword wedged into its crack, most of the blade buried.\nMoss has crept down over the crossguard, winding there for untold years—it has waited here far too long.\nDraw the sword: lose 13 Max Health (you must retain at least 1; you cannot draw it if your Max Health is too low),\nand gain the relic \"Holy Sword\": the first Ally you play each combat gains +10 Power;\nor touch nothing and walk out of the woods.",
+        "SWORD_TAKEN_DESC": "The stone splits down the middle. The sword comes free impossibly light,\nas if it had been waiting for you to take it.\nThe grip settles into your palm and the woods go silent for a moment—the \"Holy Sword\" is yours."
+      }
+    },
     "struggle": {
       "name": "Struggle",
       "texts": {
@@ -194,7 +208,8 @@
         "REST_SACRAMENT_DESC": "A serving of Sacrament, still warm, sits beside the Campfire.\nYou shared it before sitting down—reaching the Campfire restored 50% of your Max Health (already resolved);\nyou may still roast a piece of meat to carry with you and eat it in battle with a tap (it takes one tool slot);\nor add a log to the fire to Remove 1 card from your Deck.\n(Choose only 1 of the remaining 2—once chosen, your visit here ends.)",
         "REST_SACRAMENT_RESULT_DESC": "[Sacrament] Restored %d Health (now %d / %d).",
         "REST_BANDAGE_RESULT_DESC": "[Styptic Bandage] Restored %d Health (now %d / %d).",
-        "REST_PIPE_RESULT_DESC": "[Smoking Pipe] The fire flickers—the Smoking Pipe is lit again. On your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1)."
+        "REST_PIPE_RESULT_DESC": "[Smoking Pipe] The fire flickers—the Smoking Pipe is lit again. On your first turn of the next battle: gain 1 Cost, draw 1 additional card, and lose up to 1 Health (retain at least 1).",
+        "REST_WARM_NOTE": "(Pick two of the three — today's fire burns warmer.)"
       }
     },
     "statue": {
@@ -203,6 +218,21 @@
         "STATUE_DESC": "A colossal white stone statue stands in the clearing, washed grey by the rain.\nA lion's body, a goat's head rising from its back, a serpent coiled at the tip of its tail —\nyou have seen that pose in an old volume on chimeras, though it has no business being in this forest.\nMoss fills every crack; the words on the pedestal were worn away long ago.",
         "STATUE_PRAY_DESC": "You lay your hand on its cold paw and say nothing.\nSomething answers from inside the stone — a faint, patient tremor.\nFor the next three battles, every victory will give up a tool from the wreckage.",
         "STATUE_SMASH_DESC": "You pick up a stone and bring it down on the foreleg.\nA crack runs from the paw up to the goat's head, and the whole statue collapses into white rubble —\nthe pieces that still fit your hand are exactly enough to fill your tool bar."
+      }
+    },
+    "dragon_slab": {
+      "name": "Dragon Slab",
+      "texts": {
+        "DRAGON_SLAB_DESC": "A slab of ochre stone leans in the moss by the stream, half a head taller than you.\nA dragon with folded wings is carved across its face; moss and rain have worn scales and claws into shallow ridges,\nand only the small hollow of its eye still holds gold paint — in the sun it looks awake.\nYou press your palm to it, and something very light breathes under the stone.\nIt says nothing, as if waiting for you to say what kind of dragon it is.\n\"The mighty dragon\": enchant one Ally or Structure with +8 Power;\n\"the noble dragon\": gain the relic \"Rare Value\" — your deck keeps at most 3 copies of each name,\nthe extras are torn out at random, and you lose 5 Health for each card removed this way.\nOr you can take your hand back and leave the slab standing here.",
+        "DRAGON_SLAB_MIGHT_DESC": "The dragon relief flares once, as if a breath had left the stone.\nWhen you look up again your fingertips are dusted with gold, and a thin crack runs across the slab —\nthat dragon has lent a little of its strength to what you carry.",
+        "DRAGON_SLAB_NOBLE_DESC": "The slab splits down the middle and ochre crumbs spill across the ground.\nThere is no dragon inside, only a single scale polished to a hard shine, cold as well water.\nIt counted every surplus thing you carried — the first 3 stayed, the rest were torn out and dropped into the crack."
+      }
+    },
+    "haunted_house": {
+      "name": "The Haunted House",
+      "texts": {
+        "HAUNTED_DESC": "At the end of the path stands an old two-storey house. Most of the paint has\npeeled off the window frames, yet not a pane is broken, and a dim yellow light glows inside.\nThe door is ajar. There is no wind and no footsteps, yet the light is on.\nA faded wooden sign is nailed above the door: NO ONE LIVES HERE.\nOne window upstairs is curtained, but the light leaks out through the gap.\nIt sways slowly, very steadily.",
+        "HAUNTED_TAKEN_DESC": "The door closes behind you by itself.\nThe fireplace is cold. Several cloth bags and a handful of written cards lie\nscattered on the tea table, as if someone left halfway through packing.\nAs you gather them up, a very light sound comes from upstairs—\nlike someone setting a foot down onto the floor.\nWhen you step back outside and turn around, a cloth doll sits on the windowsill.\nIt faces your way."
       }
     }
   },

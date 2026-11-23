@@ -232,6 +232,7 @@ if len(translations) == 2:
             check(ja[path] == expected["ja"], path + " 日文复用 " + ref)
 
     # 已审计的规则与术语修正防回退。
+    check(ja["battle.TIER_BOSS"] == "ボス", "日文 Boss 分级固定为ボス")
     check("5" in en["map.DECK_EDIT_VENDOR_FAILED"]
           and "X" in en["map.DECK_EDIT_VENDOR_FAILED"]
           and ("except" in en["map.DECK_EDIT_VENDOR_FAILED"].lower()

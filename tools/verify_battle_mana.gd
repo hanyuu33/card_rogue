@@ -20,14 +20,15 @@ func _run() -> void:
 		assert(layout["width"] <= rect.size.x - 14, "Energy value must fit within the instrument")
 		scene.engine.state.energy = value
 		scene.engine._charge[GameEngine.SIDE_SELF] = 3 if value == 125 else 0
-		scene.engine._taunt_all_active = value == 125
 		scene.queue_redraw()
 		await process_frame
 		if DisplayServer.get_name() == "headless":
 			continue
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://art_src/2026-11-03_battle_mana/battle_energy_%d.png" % value))
-	print("MANA HUD PASS: zero / normal / three digits + charge + dodge; real battle scene")
+	# R846：闪躲不再有「全员嘲讽」窗口 → HUD 的 dodge 行与 `_taunt_all_active` 一起删；
+	# 这里再写那个字段会直接 SCRIPT ERROR → SceneTree 不退出 = 回归卡死。
+	print("MANA HUD PASS: zero / normal / three digits + charge; real battle scene")
 	current_scene.queue_free()
 	await process_frame
 	quit()

@@ -1,0 +1,25 @@
+Generate one single image: a flat vector PICTOGRAM of a human figure, drawn in the visual language used for the little black figures on road signs — and NOTHING ELSE.
+
+Think of the small solid-black human figure printed on a pedestrian-crossing sign, and imagine that figure alone, cut out of the sign, sitting on a plain background. That is exactly what is wanted. The sign itself must NOT be drawn.
+
+THE FIGURE:
+- One single solid black human silhouette, entirely solid filled black, no interior lines, no grey, no shading.
+- Built from simple thick geometric shapes: a plain filled black circle for the head, thick rounded bars for torso / arms / legs. Limbs are roughly uniform in thickness.
+- NO facial features at all: no eyes, no mouth, no nose. The head is a blank black disc.
+- NO clothing, NO hair, NO fingers, NO toes, NO muscle, NO detail of any kind.
+- Pose: kneeling on both knees, torso upright but the head bowed forward and down. Both arms are bent up and inwards so the hands rest on top of the head — the plain "hands on head, in despair" posture. The pose must be readable as a silhouette with no ambiguity.
+- The figure is centred and occupies about 60% of the frame height.
+
+ABSOLUTELY FORBIDDEN — this is the most important part:
+- NO red circle, NO red ring, NO white disc, NO white background circle.
+- NO diagonal slash or bar across anything.
+- NO triangle, NO square, NO rounded rectangle, NO sign plate, NO plaque, NO badge, NO emblem, NO shield.
+- NO border, NO frame, NO outline around the image.
+- NO text, letters, numbers, punctuation or any symbols.
+- NO props, NO ground line, NO shadow, NO objects around the figure.
+
+STYLE: completely flat 2D vector. Solid flat colour fills. Sharp crisp edges. NO gradients, NO textures, NO 3D, NO perspective, NO glow, NO bevel.
+
+BACKGROUND: one flat very dark desaturated purple (#1B1420) filling the whole frame. Uniform, empty, no vignette, no pattern.
+
+The result must still be instantly readable as "a person kneeling with hands on their head" when shrunk to 150 pixels wide.

@@ -144,9 +144,9 @@ def flatten_interface(data, translated=False):
     return rows, entries
 
 
-# 卡牌：325 个稳定 ID（R761 加杜鹃 9263 / 招募 9264、R758 加计量工坊三张、R756 加代偿 9252）；名称与效果字段完整，空效果只允许仍为空。
+# 卡牌：346 个稳定 ID（R807 +诅咒娃娃 9276；R800 加余音 9274 / 音符 9275；R799 加连斩 9272 / 炮火就位 9273；R794 加巧克力工厂 9271；R777b 加疾风乐章 9270）；名称与效果字段完整，空效果只允许仍为空。
 check(set(CARDS_ES["cards"]) == set(CARDS_ZH["cards"]), "cards ID 覆盖与 canonical 一致")
-check(len(CARDS_ES["cards"]) == 325, "cards 共 325 张")
+check(len(CARDS_ES["cards"]) == 346, "cards 共 346 张（R826 +7 张音符 9277~9283；R856 +鸭蛋投手 9284 / 金鸭蛋 9285）")
 raw_cards = {str(row["id"]): row for row in RAW_CARDS}
 for cid, zh_row in CARDS_ZH["cards"].items():
     es_row = CARDS_ES["cards"].get(cid, {})
@@ -190,12 +190,12 @@ check(set(GLOSSARY_ES) == required_trait_terms,
 for trait in sorted(required_trait_terms):
     check_text("glossary_es." + trait, trait, GLOSSARY_ES.get(trait))
 
-# 道具与角色：63 件道具（R743 烤肉改成工具 7007、R745 加回工具箱 6068、R761 加「诗」6069）、3 个角色；
+# 道具与角色：64 件道具（含 R766 猴爪 6066）、3 个角色；
 # 即时效果只标获得时机，不译成消耗。
 check(set(NONCARD_ES["relics"]) == set(NONCARD_ZH["relics"]), "noncard 道具 ID 覆盖一致")
 check(set(NONCARD_ES["classes"]) == set(NONCARD_ZH["classes"]), "noncard 角色 ID 覆盖一致")
-check(len(NONCARD_ES["relics"]) == 63 and len(NONCARD_ES["classes"]) == 3,
-      "noncard 为 63 件道具 + 3 个角色")
+check(len(NONCARD_ES["relics"]) == 85 and len(NONCARD_ES["classes"]) == 3,
+      "noncard 为 85 件道具 + 3 个角色（R792 +3 / R793 +刺墙 6073 / 应急装甲 6074 / R794 +圣剑 6075 / R796 +兔脚 6076 / 钻头 6077 / R797 +龟壳 6078 / R806 +法术卷轴 6080 / R805 +蜂蜜 6079 / R810 +新月耳饰 6081 / 太阳指环 6082 / 海妖鱼叉 6083 / 缺陷时钟 6084 / R824 +鸭子闹钟 6085 / R826 +音乐盒 6086 / R829 +这是礼帽 6087 / R830 +首饰盒 6088 / R835 +空故事书 6089 / R842 +稀有价值 6090）")
 raw_relics = {str(row["id"]): row for row in RAW_RELICS}
 for rid, zh_row in NONCARD_ZH["relics"].items():
     es_row = NONCARD_ES["relics"].get(rid, {})
@@ -260,7 +260,7 @@ for achievement_id, zh_row in NARRATIVE_ZH["achievements"].items():
 event_zh_rows = flatten_event(EVENT_ZH)
 event_es_rows = flatten_event(EVENT_ES)
 check(set(event_es_rows) == set(event_zh_rows), "event_ui 全部 key 覆盖一致")
-check(len(event_zh_rows) == 156, "event_ui 为 84 选项 + 64 结果 + 5 选货 + 3 动态")
+check(len(event_zh_rows) == 194, "event_ui 为 104 选项 + 77 结果 + 10 选货 + 3 动态（R793 +5；R794 +6；R807 +2 +2；R819 +1 占卜代价行；R842 +5 +3 +5）")
 for path, zh_text in event_zh_rows.items():
     check_text("event_ui." + path, zh_text, event_es_rows.get(path))
 dynamic_map = {
@@ -277,7 +277,8 @@ for dynamic_key, narrative_key in dynamic_map.items():
 interface_zh_rows, interface_entries = flatten_interface(INTERFACE_ZH)
 interface_es_rows, _ = flatten_interface(INTERFACE_ES, translated=True)
 check(set(interface_es_rows) == set(interface_zh_rows), "interface 全部 scope.key 覆盖一致")
-check(len(interface_zh_rows) == 825, "interface 共 825 条")
+check(len(interface_zh_rows) == 835,
+      "interface 共 835 条（R846 −1：闪躲不再给全员嘲讽 → battle.BATTLE_ENERGY_DODGE 成了死键，四处一起删；R822 +鸭绅士 7 条；R825 +返回同一间商店）")
 reuse_locked = set(INTERFACE_ZH.get("l10n_reuse", {})) | set(INTERFACE_ZH.get("glossary_reuse", {}))
 for path, zh_text in interface_zh_rows.items():
     entry = interface_entries[path]
@@ -294,7 +295,7 @@ pattern = re.compile(
 for match in pattern.finditer(l10n_source):
     l10n_zh_rows[match.group("key")] = json.loads(match.group("zh"))
 check(set(L10N_ES) == set(l10n_zh_rows), "l10n 骨架 key 覆盖一致")
-check(len(L10N_ES) == 67, "l10n 骨架共 67 条")
+check(len(L10N_ES) == 73, "l10n 骨架共 73 条")
 for key, zh_text in l10n_zh_rows.items():
     check_text("l10n." + key, zh_text, L10N_ES.get(key))
 
@@ -370,5 +371,9 @@ if errors:
         print("  -", error)
     sys.exit(1)
 print("SPANISH I18N OK: %d checks" % checks)
-print("  cards=319 | relics=62 | classes=3 | traps=%d" % len(raw_traps))
-print("  events=26/64 | stories=11/54 | achievements=11 | event_ui=156 | interface=794 | l10n=67")
+print("  cards=%d | relics=%d | classes=%d | traps=%d" % (
+    len(CARDS_ES["cards"]), len(NONCARD_ES["relics"]), len(NONCARD_ES["classes"]), len(raw_traps)))
+print("  events=%d/%d | stories=%d/%d | achievements=%d | event_ui=%d | interface=%d | l10n=%d" % (
+    len(NARRATIVE_ZH["events"]), sum(len(row["texts"]) for row in NARRATIVE_ZH["events"].values()),
+    len(NARRATIVE_ZH["stories"]), sum(len(row["text"]) for row in NARRATIVE_ZH["stories"].values()),
+    len(NARRATIVE_ZH["achievements"]), len(event_zh_rows), len(interface_zh_rows), len(L10N_ES)))

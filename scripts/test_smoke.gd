@@ -74,6 +74,30 @@ func _initialize() -> void:
 				RunState.start_run(_map())
 				RunState.relic_choice = [],
 			_check_map_scene],
+		# R825：待领奖励 + 当前商店同时可返回；两个按钮共用 codex 羊皮纸素材。
+		["res://scenes/map.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.relic_choice = []
+				RunState.queue_relic_reward(6005)
+				for _r825_c: Dictionary in RunState.map_cells:
+					if int(_r825_c["id"]) == RunState.current_node_id:
+						_r825_c["type"] = "shop"
+						_r825_c["hidden"] = false
+						_r825_c["revealed"] = true
+						break
+				RunState.store_shop_state(RunState.current_node_id,
+						{"row1": [[8001, 0, 0]], "row2": [], "row3": []})
+				RunState.shop_mark_revisit(RunState.current_node_id),
+			_check_r825_map_context],
+		# R836（用户口径）：缺陷时钟触发时战斗区正中要播「时针转动」，且触发之后
+		#   本场不再显示计数。纯绘制 + 一个 fx 字典，只有真场景能验位置与入口。
+		["res://scenes/battle.tscn", func():
+				_reset()
+				RunState.start_run(_map())
+				RunState.pending_node = {"type": "battle"}
+				RunState.pending_level = RunState.next_level({"type": "battle"}),
+			_check_r836_clock_fx],
 		["res://scenes/battle.tscn", func():
 				_reset()
 				RunState.start_run(_map())
@@ -509,7 +533,7 @@ func _initialize() -> void:
 				_reset()
 				RunState.start_run(_map(), GameLayers.LAYER_TWO)
 				RunState.pending_node = {"type": "battle"}
-				RunState.pending_level = GameLevels.builtin_levels()[13],
+				RunState.pending_level = GameLevels.level_by_key("hecaton"),
 			_check_r366_hecaton],
 		# R367（用户口径）：消耗型道具用尽后**灰在道具栏里**（不移出 —— 记录统计要看得出
 		#   这局用过它），但引擎侧不能再算持有。这里走真场景读道具栏与面板行。
@@ -1090,17 +1114,17 @@ func _check_duck_blood_instant(scene: Variant) -> void:
 
 
 func _check_settings(scene: Variant) -> void:
-	## R660c：设置页按类分页 —— 四个页签各摊自己的项；语言列表 / 种子输入框
+	## R660c/R818：设置页按类分页 —— 五个页签各摊自己的项；语言列表 / 种子输入框
 	## 只在对应页可见（别的页留着会浮在行卡上面）。
-	if scene.TABS.size() != 4:
-		_smoke_fail("R660c 设置页：页签应有 4 个，实际 %d" % scene.TABS.size())
+	if scene.TABS.size() != 5:
+		_smoke_fail("R660c/R818 设置页：页签应有 5 个，实际 %d" % scene.TABS.size())
 		return
 	# R660d：页签是**一条整栏**（等分贴紧、总宽 = ROW_W），不是一排带间隙的按钮。
 	var tabs: Array = scene._tab_rects()
 	var bar_ok := false
 	var seam_ok := true
-	if tabs.size() == 4:
-		bar_ok = absf((tabs[3].end.x - tabs[0].position.x) - scene.ROW_W) < 0.5
+	if tabs.size() == 5:
+		bar_ok = absf((tabs[4].end.x - tabs[0].position.x) - scene.ROW_W) < 0.5
 		for i in range(1, tabs.size()):
 			if absf(tabs[i].position.x - tabs[i - 1].end.x) > 0.01:
 				seam_ok = false
@@ -1110,6 +1134,8 @@ func _check_settings(scene: Variant) -> void:
 	scene._set_tab(scene.TAB_LANGUAGE)
 	var lang_rows: Array = scene._rows()
 	var lang_vis: bool = scene._lang_list != null and scene._lang_list.visible
+	scene._set_tab(scene.TAB_MOD)
+	var mod_rows: Array = scene._rows()
 	scene._set_tab(scene.TAB_RUN)
 	var seed_vis: bool = scene._seed_edit != null and scene._seed_edit.visible
 	var diag_rect: Rect2 = scene._diag_rect()
@@ -1126,7 +1152,9 @@ func _check_settings(scene: Variant) -> void:
 		_smoke_fail("R660c 设置页：语言页没把语言列表显示出来")
 	elif not seed_vis:
 		_smoke_fail("R660c 设置页：对局页没把种子输入框显示出来")
-	elif tabs.size() != 4 or tabs[0].size.x < 60.0:
+	elif not mod_rows.is_empty():
+		_smoke_fail("R818 设置页：模组页不该有设置行")
+	elif tabs.size() != 5 or tabs[0].size.x < 52.0:
 		_smoke_fail("R660c 设置页：页签几何无效")
 	elif not bar_ok:
 		_smoke_fail("R660d 设置页：页签整栏宽度应等于下方框体宽（%.1f）" % scene.ROW_W)
@@ -1135,7 +1163,7 @@ func _check_settings(scene: Variant) -> void:
 	elif not diag_ok:
 		_smoke_fail("R763 设置页：诊断按钮应在种子面板下方且不越出 720 高（%s）" % str(diag_rect))
 	else:
-		print("SMOKE OK R660c 设置页：4 页签各摊自己的项 · 列表/输入框按页显隐")
+		print("SMOKE OK R660c 设置页：5 页签各摊自己的项 · 列表/输入框按页显隐")
 		print("SMOKE OK R660d 设置页：页签等分贴紧，整栏宽 = 框体宽 %.0f" % scene.ROW_W)
 		print("SMOKE OK R763 设置页：诊断按钮在种子面板下方，整行 %.0f×%.0f" % [diag_rect.size.x, diag_rect.size.y])
 
@@ -1168,52 +1196,76 @@ func _check_record_list(scene: Variant) -> void:
 
 
 func _check_gallery_text_bounds(scene: Variant) -> void:
-	## R717（用户报「复制术等许多卡描述换行溢出、压住边框」）：两条根因都钉在真场景。
-	##   ① 固定框会被前一张卡 / 前一种语言撑宽，换卡必须重新收回到 236×230；
-	##   ② Font 多行度量不含 Label 的 line_spacing，缩字必须把它算进去，否则正文向下长出去。
-	## 不只验复制术：玩家卡全量 × 四语言都走真实 `_refresh_detail()`，再量同一份正文。
+	## R717 / R848：图鉴右栏正文「全卡 × 四语言」都走真实 `_refresh_detail()`，再按**自绘口径**丈量。
+	## R848 把正文从 Label 换成自绘 —— Label 的行高随字号 / 平台跳变（实测 16→25、12→36、
+	## 10→30、9→27），偏大时 230px 只画得下四五行、余下被 `clip_text` 无声削掉，
+	## 正是用户报的「图鉴看不全」。现在判据直接读排版结果：每行宽 ≤ BODY_W、整块高 ≤ BODY_H。
+	## ⚠️ 这里**不再只测玩家卡**：用户截图那张 9260 常数测量员是敌人卡，
+	##    原来那句 `if c.group != "player": continue` 恰好把它漏掉了。
+	var gs = preload("res://scripts/gallery_scene.gd")
+	var box_w := float(gs.BODY_W)
+	var box_h := float(gs.BODY_H)
+	var lh_scale := float(gs.BODY_LINE_SCALE)
+	var fs_min := int(gs.BODY_FS_MIN)
+	var fs_max := int(gs.BODY_FS_MAX)
 	var copy: CardData = null
 	var checked := 0
 	for lang in ["zh", "en", "ja", "es"]:
 		GameSettings.language = lang
 		for c in scene._all:
-			if c.group != "player":
-				continue
 			ProfileData.mark_card_seen(c.id)
 			if c.id == 9165:
 				copy = c
 			scene._selected = c
 			scene._refresh_detail()
-			var lb: Label = scene.detail_text
-			var box := Vector2(236.0, 230.0)
-			if lb.size != box:
+			var lines: Array = scene._body_lines
+			var fs := int(scene._body_fs)
+			if fs < fs_min or fs > fs_max:
 				GameSettings.language = "zh"
-				_smoke_fail("R717 图鉴正文框被撑开：lang=%s id=%d size=%s，应为 %s"
-						% [lang, c.id, str(lb.size), str(box)])
+				_smoke_fail("R848 图鉴正文字号越界：lang=%s id=%d fs=%d" % [lang, c.id, fs])
 				return
-			var fs := lb.get_theme_font_size("font_size")
-			var spacing := float(lb.get_theme_constant("line_spacing"))
-			var need := UiTheme.text_need(lb.get_theme_font("font"), lb.text,
-					box.x, fs, true, spacing)
-			if need.x > box.x + 0.5 or need.y > box.y + 0.5:
+			var need_h := float(lines.size()) * float(fs) * lh_scale
+			if need_h > box_h + 0.5:
 				GameSettings.language = "zh"
-				_smoke_fail("R717 图鉴正文仍越界：lang=%s id=%d need=%s > %s（fs=%d）"
-						% [lang, c.id, str(need), str(box), fs])
+				_smoke_fail("R848 图鉴正文仍然放不下：lang=%s id=%d 需 %.1fpx > %.1fpx（fs=%d，%d 行）"
+						% [lang, c.id, need_h, box_h, fs, lines.size()])
 				return
+			for ln in lines:
+				var lw: float = scene._font.get_string_size(str(ln),
+						HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				if lw > box_w + 0.5:
+					GameSettings.language = "zh"
+					_smoke_fail("R848 图鉴正文行宽越界：lang=%s id=%d「%s」= %.1fpx > %.1fpx"
+							% [lang, c.id, str(ln), lw, box_w])
+					return
 			checked += 1
 	GameSettings.language = "zh"
 	if copy == null:
 		_smoke_fail("R717：卡库里找不到复制术 9165")
 		return
-	# 人工制造截图同形的「上一张卡把 Label 撑到 520px」状态，再切回复制术。
-	# 旧实现会沿用 520px 折成两行并穿出右框；现在必须当次收回 236px。
+	# 换卡必须**整份替换**排版（不许沿用上一张卡的行数 / 字号）：
+	# 切到全库最长的那张，再切回复制术，排版要回到复制术自己的值。
 	scene._selected = copy
-	scene.detail_text.size = Vector2(520.0, 230.0)
 	scene._refresh_detail()
-	if scene.detail_text.size != Vector2(236.0, 230.0):
-		_smoke_fail("R717 复制术沿用了残留宽度：%s" % str(scene.detail_text.size))
-		return
-	print("SMOKE OK R717 图鉴详情：%d 个卡牌×语言正文均在安全框内；复制术残留宽度收回" % checked)
+	var copy_fs := int(scene._body_fs)
+	var copy_n: int = scene._body_lines.size()
+	var longest: CardData = null
+	var longest_n := 0
+	for c in scene._all:
+		scene._selected = c
+		scene._refresh_detail()
+		if scene._body_lines.size() > longest_n:
+			longest_n = scene._body_lines.size()
+			longest = c
+	if longest != null:
+		scene._selected = copy
+		scene._refresh_detail()
+		if int(scene._body_fs) != copy_fs or scene._body_lines.size() != copy_n:
+			_smoke_fail("R848 图鉴正文沿用上一张卡的排版（复制术 fs=%d / %d 行，最长那张 %s 是 %d 行）"
+					% [copy_fs, copy_n, str(longest.id), longest_n])
+			return
+	print("SMOKE OK R848 图鉴详情：%d 个卡牌×语言正文按自绘口径全落在 %.0fx%.0f 框内；换卡整份替换"
+			% [checked, box_w, box_h])
 
 
 func _check_language_pick(scene: Variant) -> void:
@@ -1874,8 +1926,15 @@ func _check_r677_story_detail(scene: Variant) -> void:
 		_smoke_fail("R682 故事页没读到任何剧情段")
 		return
 	# 测试档案每次都是空的 → 开发版 `is_story_unlocked()` 恒真 → 有正文的段天然是 ready。
+	# R791：发布版（cardrogue_release）的剧情按进度解锁，空档案下首段天然 locked ——
+	# 那是发布版的正常初始态，不是缺陷。要测正文面板，就先按真实接口把它解锁，
+	# 否则这条断言在发布包里永远跑不到真正要测的三件事。
+	# 测试档案走 profile_test.json（set_test_mode），不会碰玩家进度。
 	var eid := str((repo.entries[0] as Dictionary).get("id", ""))
 	scene._refresh()
+	if repo.episode_state(eid) != StoryRepo.STATE_READY and GameBuild.is_release():
+		ProfileData.unlock_story(eid)
+		scene._refresh()
 	if repo.episode_state(eid) != StoryRepo.STATE_READY:
 		_smoke_fail("R682 造不出 ready 态（%s）" % repo.episode_state(eid))
 		return
@@ -1963,7 +2022,7 @@ func _check_shop_enchant(scene: Variant) -> void:
 		_smoke_fail("商店附魔：deck_mods 应与 deck_ids 等长（%d vs %d）"
 				% [RunState.deck_mods.size(), RunState.deck_ids.size()])
 		return
-	# ②b R210：附魔表的条件与价格（次元 50 → 80；伤害 +10 只认技能卡）
+	# ②b R210：附魔表的条件与价格（次元 50 → 80；伤害 +8 只认技能卡）
 	var cmap: Dictionary = (scene.get_script() as GDScript).get_script_constant_map()
 	var enchs: Array = cmap.get("ENCHANTS", [])
 	var price := {}
@@ -1973,7 +2032,7 @@ func _check_shop_enchant(scene: Variant) -> void:
 		_smoke_fail("商店附魔：次元应 80 金（实际 %s）" % str(price.get("dimension", -1)))
 		return
 	if int(price.get("damage", -1)) != 60:
-		_smoke_fail("商店附魔：伤害 +10 应 60 金（实际 %s）" % str(price.get("damage", -1)))
+		_smoke_fail("商店附魔：伤害 +8 应 60 金（实际 %s）" % str(price.get("damage", -1)))
 		return
 	# R240：附魔显示名的**真源 = CardData.ENCHANT_DEFS** —— ENCHANTS 里的 name 必须与它逐条一致，
 	# 且附魔名**不许与「字段」同名**（原来附魔「次元」/ 字段「次元」撞了命名空间）。
@@ -1990,21 +2049,21 @@ func _check_shop_enchant(scene: Variant) -> void:
 	if int(price.get("opening", -1)) != 30:
 		_smoke_fail("R246 商店附魔：起手应 30 金（实际 %s）" % str(price.get("opening", -1)))
 		return
-	# 「伤害 +10」**只认技能卡**：有攻击力的盟友也必须被拒；技能卡必须能选。
+	# 「伤害 +8」**只认技能卡**：有攻击力的盟友也必须被拒；技能卡必须能选。
 	# deck_idx 传 9999 → `_mod_at` 越界返回 {} → 「未附魔」这一关不会挡路。
 	var repo2 := CardRepo.load_json()
 	if scene._enchant_ok("damage", repo2.get_card(8003), 9999):
-		_smoke_fail("商店附魔：伤害 +10 不能再附给盟友（树人被放行）")
+		_smoke_fail("商店附魔：伤害 +8 不能再附给盟友（树人被放行）")
 		return
 	if not scene._enchant_ok("damage", repo2.get_card(9003), 9999):
-		_smoke_fail("商店附魔：伤害 +10 应能附给技能卡（火焰箭被拒）")
+		_smoke_fail("商店附魔：伤害 +8 应能附给技能卡（火焰箭被拒）")
 		return
 	# R226：只认「能直接造成伤害」的技能卡 —— 治疗 / 抽牌 / 防御类技能必须被拒
 	if scene._enchant_ok("damage", repo2.get_card(9051), 9999):
-		_smoke_fail("R226 商店附魔：伤害 +10 不应再附给「自然之力」（不能直接造成伤害）")
+		_smoke_fail("R226 商店附魔：伤害 +8 不应再附给「自然之力」（不能直接造成伤害）")
 		return
 	if scene._enchant_ok("damage", repo2.get_card(9103), 9999):
-		_smoke_fail("R226 商店附魔：伤害 +10 不应再附给「闪躲」（只提承受伤害）")
+		_smoke_fail("R226 商店附魔：伤害 +8 不应再附给「闪躲」（只提承受伤害）")
 		return
 	# 换成「保存」附魔 —— 任何卡都能吃，保证一定有候选。
 	scene._row2.clear()
@@ -2073,7 +2132,7 @@ func _check_shop_enchant(scene: Variant) -> void:
 			break
 	scene._deleting = false
 	scene._start_enchant(0)
-	scene._row2[0]["ench"] = {"id": "damage", "name": "伤害 +10", "desc": "", "price": 60, "icon": ""}
+	scene._row2[0]["ench"] = {"id": "damage", "name": "伤害 +8", "desc": "", "price": 60, "icon": ""}
 	scene._build_deck_cards()
 	grey_pos = Vector2(-9999, -9999)
 	for i in (scene._deck_cards as Array).size():
@@ -3352,6 +3411,50 @@ func _hand_card_extent(scene: Variant, i: int) -> Vector2:
 	return Vector2(lo, hi)
 
 
+func _check_hand_alignment(scene: Variant) -> void:
+	## R786（店长要求）：手牌整体**纵向对齐站场**（棋盘中轴 590，不是窗口中线 640），
+	## 手牌数徽标按同一个位移左移；暗影刺客再多一个「本回合用卡数」徽标，摆它左边。
+	var n: int = scene.engine.state.hand.size()
+	if n < 1:
+		_smoke_fail("手牌对齐：手里一张牌都没有，量不出扇形中线")
+		return
+	var want: float = scene.GRID_X + scene.GRID_W / 2.0
+	var mid: float = (scene._hand_rect(0).position.x
+			+ scene._hand_rect(n - 1).position.x + scene.HAND_CARD_W) / 2.0
+	if absf(mid - want) > 0.6:
+		_smoke_fail("手牌对齐：扇形中线 %.1f，棋盘中线 %.1f（差 %.1f，应为 0）"
+				% [mid, want, mid - want])
+	var base_cx: float = scene.HAND_BASE_X + scene.HAND_BASE_W / 2.0
+	if absf(base_cx - want) > 0.6:
+		_smoke_fail("手牌对齐：手牌底板中线 %.1f 没跟着棋盘中线 %.1f（以前按窗口居中）"
+				% [base_cx, want])
+	var hb: Rect2 = scene._hand_badge_rect()
+	if absf((hb.end.x + scene.HAND_BADGE_GAP) - scene.HAND_BASE_X) > 0.6:
+		_smoke_fail("手牌数徽标：右沿 %.1f 与底板左沿 %.1f 之间不是 HAND_BADGE_GAP 的缝"
+				% [hb.end.x, scene.HAND_BASE_X])
+	var pb: Rect2 = scene._plays_badge_rect()
+	if pb.position.x < scene.INFO_X + 4.0:
+		_smoke_fail("本回合用卡徽标：左沿 %.1f 顶出屏幕左侧（信息栏 x=%.0f）"
+				% [pb.position.x, scene.INFO_X])
+	if absf((pb.end.x + scene.PLAYS_BADGE_GAP) - hb.position.x) > 0.6:
+		_smoke_fail("本回合用卡徽标：右沿 %.1f 与手牌数徽标左沿 %.1f 之间不是 PLAYS_BADGE_GAP"
+				% [pb.end.x, hb.position.x])
+	# 只给暗影刺客：换两次职业验「该出现的出现、不该出现的不出现」
+	var keep_cls: String = RunState.player_class
+	RunState.player_class = PlayerClass.ROGUE
+	var rogue_on: bool = scene._shows_plays_badge()
+	RunState.player_class = PlayerClass.DRUID
+	var druid_on: bool = scene._shows_plays_badge()
+	RunState.player_class = keep_cls
+	if not rogue_on:
+		_smoke_fail("本回合用卡徽标：暗影刺客应当显示，实际没显示")
+	elif druid_on:
+		_smoke_fail("本回合用卡徽标：非暗影刺客也显示了（应只给读 self_card_plays 的那个职业）")
+	else:
+		print(("SMOKE OK 手牌对齐：扇形中线 %.1f = 棋盘中线 / 手牌数徽标 %.1f 起 / "
+				+ "暗影刺客用卡徽标 %.1f 起") % [mid, hb.position.x, pb.position.x])
+
+
 func _check_hand_fan(scene: Variant) -> void:
 	## 扇形手牌：绘制时卡是**转着画的**，命中判定必须用同一个角度反向旋转。
 	## 这里先把牌抽到满手（覆盖重叠 + hand_full），再用「旋转后的卡牌中心」回测。
@@ -3396,19 +3499,21 @@ func _check_hand_fan(scene: Variant) -> void:
 	if scene.HAND_CARD_H <= scene.CARD_H * 1.4:
 		_smoke_fail("手牌尺寸：应比战场卡大 1.4 倍以上，实际 %.1f / %.1f（×%.2f）"
 				% [scene.HAND_CARD_H, scene.CARD_H, scene.HAND_CARD_H / scene.CARD_H])
-	# 卡底**沉出**窗口下沿：底部那截被裁掉。卡面仍是整张排版（不重锚、不补偿），
-	# 所以这里只管「沉出量符合预期」和「别沉过头把卡片淹了」，不再断言内容必须可见。
+	# R843：属性栏是常驻决策信息，卡底不再沉出窗口；扇形两端下沉也不许裁到属性栏。
 	var bottom: float = scene.OWN_HAND_Y + scene.HAND_CARD_H
-	if scene.HAND_CROP_BOTTOM <= 0.0:
-		_smoke_fail("手牌位置：卡底没有沉出窗口下沿（HAND_CROP_BOTTOM=%.1f）"
+	if scene.HAND_CROP_BOTTOM != 0.0:
+		_smoke_fail("手牌位置：R843 起卡底不再沉出窗口（HAND_CROP_BOTTOM=%.1f）"
 				% scene.HAND_CROP_BOTTOM)
-	if absf((bottom - scene.WINDOW_H) - scene.HAND_CROP_BOTTOM) > 0.5:
-		_smoke_fail("手牌位置：沉出量应为 %.1f，实际 %.1f"
-				% [scene.HAND_CROP_BOTTOM, bottom - scene.WINDOW_H])
+	if absf(bottom - scene.WINDOW_H) > 0.5:
+		_smoke_fail("手牌位置：卡底应落在窗口下沿，实际 %.1f / 期望 %.1f"
+				% [bottom, scene.WINDOW_H])
 	# 沉出量不能吃掉半张卡（否则手牌看着只剩一条边）
 	var vis_min := 99999.0
 	for i in n:
 		vis_min = minf(vis_min, scene._hand_vis_h(i))
+	if vis_min + 0.01 < scene.HAND_CARD_H * UiTheme.CARD_STATS_BOTTOM:
+		_smoke_fail("手牌位置：扇形端点裁到了属性栏（露出 %.1f，需要 %.1f）"
+				% [vis_min, scene.HAND_CARD_H * UiTheme.CARD_STATS_BOTTOM])
 	if vis_min < scene.HAND_CARD_H * 0.5:
 		_smoke_fail("手牌位置：露出高度只有 %.1f（卡高 %.1f 的一半以下），沉得太狠"
 				% [vis_min, scene.HAND_CARD_H])
@@ -3442,8 +3547,8 @@ func _check_hand_fan(scene: Variant) -> void:
 		var msg := "SMOKE OK 扇形手牌：满手 %d 张，%.0f×%.0f（战场卡 %.0f×%.0f 的 %.2f 倍，" % [
 				n, scene.HAND_CARD_W, scene.HAND_CARD_H, scene.CARD_W, scene.CARD_H,
 				scene.HAND_CARD_H / scene.CARD_H]
-		msg += "卡底沉出下沿 %.0f，露出 %.0f）" % [
-				bottom - scene.WINDOW_H, vis_min]
+		msg += "卡底留边 %.0f，端点露出 %.0f）" % [
+				scene.WINDOW_H - bottom, vis_min]
 		msg += " / 倾角 左 %.1f° 右 %.1f° / 横向 %.0f~%.0f（不越界）" % [
 				left_deg, right_deg, el.x, er.y]
 		print(msg)
@@ -3670,6 +3775,7 @@ func _check_battle(scene: Variant) -> void:
 	## 战斗场景的所有行为断言：扇形手牌 + 多格移动动画走真实路径 + 效果/道具溢出兜底
 	## + 战斗内地图总览（R64）。
 	_check_hand_fan(scene)
+	_check_hand_alignment(scene)
 	_check_move_path(scene)
 	_check_overflow(scene)
 	_check_map_panel(scene)
@@ -4083,15 +4189,15 @@ func _check_enchant_mark(scene: Variant) -> void:
 		var rr := Rect2(Vector2(40, 60), sz)
 		var cost_c := CardFace.cost_badge_center(rr)
 		var ench_c := CardFace.enchant_badge_center(rr)
-		var r: float = UiTheme.CARD_BADGE_R \
-				* minf(sz.y / CardFace.CARD_H_DESIGN, UiTheme.CARD_BADGE_SCALE_CAP)
+		# R843i：半径必须走 badge_radius() 唯一口（含 78% 缩放），别再自己复算旧公式。
+		var r: float = CardFace.badge_radius(rr)
 		if absf(ench_c.x - cost_c.x) > 0.01 or absf(ench_c.y - cost_c.y - 2.0 * r) > 0.01:
 			geo_bad = "%s → 费用 %s / 附魔 %s" % [sz, cost_c, ench_c]
 	if geo_bad != "":
 		_smoke_fail("R214 附魔标记：应在费用徽章**正下方**（同 x、间距 2R）—— %s" % geo_bad)
 		return
 	# ② 种类表：显示名 / 种类色 / 图标名都在 CardData.ENCHANT_DEFS 里（绘制与左栏的唯一口）
-	if CardData.enchant_name("damage") != "伤害 +10" \
+	if CardData.enchant_name("damage") != "伤害 +8" \
 			or not CardData.enchant_color("costdown").is_equal_approx(Color("6db2f0")) \
 			or CardData.enchant_icon_name("dimension") != "shop_icon_dimension" \
 			or CardData.enchant_name("opening") != "起手" \
@@ -4329,8 +4435,10 @@ func _check_run_deck_panel(scene: Variant) -> void:
 	if atk_groups != 2:
 		_smoke_fail("完整卡组：带附魔的攻击必须与原卡分开列（攻击组数 %d，期望 2）" % atk_groups)
 		return
-	# R214：那张附魔是**没有 id 的老形态** mod（`{"power": 10}`）→ 按内容反推成 damage，
-	# 卡面才能画出「伤害 +10」的附魔标记（老存档不能因为没有 id 就变成没标记）。
+	# R214：那张附魔是**没有 id 的老形态** mod（`{"power": 10}`，R787 之前的数值）
+	# → 按内容反推成 damage，卡面才能画出附魔标记（老存档不能因为没有 id 就变成没标记）。
+	# ⚠️ 标记上的**名字**永远读当前附魔表（现在是「伤害 +8」），老存档烤着的 +10 是数值、
+	#    不是标签 —— 这两件事本来就该分开。
 	var got_ench := ""
 	for c: CardData in run_cards:
 		if c.id == 8002 and c.enchant != "":
@@ -4672,8 +4780,8 @@ func _check_lighten(scene: Variant) -> void:
 		return
 	var repo := CardRepo.load_json()
 	var lt: CardData = repo.get_card(GameEngine.LIGHTEN_ID)
-	if lt == null or lt.cost != 0 or lt.rarity != 2:
-		_smoke_fail("负重减轻：卡面应是 0 费史诗技能")
+	if lt == null or lt.cost != 0 or lt.rarity != 1:
+		_smoke_fail("负重减轻：卡面应是 0 费稀有技能")
 		return
 	var ov: PickOverlay = scene._pick
 	if ov == null:
@@ -5743,6 +5851,9 @@ func _check_sleep_aura(scene: Variant) -> void:
 	# 这里是**受伤递减口**：`_hit_unit` → `_demon_duck_hurt`，挨够次数 sleep_left 归零。
 	# （R122 起**回合递减口** `_sleep_tick` 也回来了，两个口并存 —— 见本用例末尾。）
 	sp.sleep_left = 1
+	# R859：沉睡单位自带甲壳，甲没破时挨打**不算「挨打」**（不 -1）——
+	# 本用例只验证 wake 事件与挣脱环，先把甲清掉。甲壳本身在 engine 套 `_test_r857` 覆盖。
+	sp.armor = 0
 	var woke := [0]
 	eng.action.connect(func(what: String, _d: Variant) -> void:
 			if what == "wake":
@@ -6149,7 +6260,7 @@ func _check_r365_merchant(s: Node) -> void:
 			% [gold0, RunState.gold, n0, RunState.deck_ids.size()])
 
 func _check_r366_hecaton(s: Node) -> void:
-	## R366：百臂工场（builtin 下标 13）开局盘面 = 大哥 (0,1) + 两座塔 (2,0)/(2,2)，
+	## R366：百臂工场（`level_by_key("hecaton")`，R856 起不再写下标）开局盘面 = 大哥 (0,1) + 两座塔 (2,0)/(2,2)，
 	## 塔的实际程必须是 **2**（元组第 8 项 range_bonus 只在 load_level 里生效）。
 	## 顺带钉住「加成走副本」：卡库里的 9137 必须还是程 1。
 	var eng: Variant = s.get("engine")
@@ -6412,3 +6523,99 @@ func _ribbon_opaque_ratio(tex: Texture2D) -> float:
 				opaque += 1
 	return float(opaque) / float(w * h)
 
+func _check_r825_map_context(scene: Variant) -> void:
+	## R825：玩家要的「直接按按钮回去」必须落在真实地图上，不是只有 RunState 判据。
+	var rp: RewardPanel = scene._reward_panel
+	var sb: Button = scene._shop_return_btn
+	if rp == null or rp._btn == null or sb == null:
+		_smoke_fail("R825 地图：奖励 / 商店返回按钮没有实例化")
+		return
+	if not rp._btn.visible or not sb.visible:
+		_smoke_fail("R825 地图：有待领奖励和可重进商店时两个按钮都应显示")
+		return
+	if rp._btn.text != "返回待领奖励 1" or sb.text != "返回同一间商店":
+		_smoke_fail("R825 地图按钮文案漂移：%s / %s" % [rp._btn.text, sb.text])
+		return
+	if rp._btn.text.contains("←") or sb.text.contains("←"):
+		_smoke_fail("R825 地图按钮：素材已有箭头，文案不能再叠一个")
+		return
+	var rr := Rect2(rp._btn.position, rp._btn.size)
+	var sr := Rect2(sb.position, sb.size)
+	var title_left: float = scene.MAP_X0 + scene.MAP_W / 2.0 - 150.0
+	var title_right: float = scene.MAP_X0 + scene.MAP_W / 2.0 + 150.0
+	if rr.intersects(sr) or rr.size.x < 154.0 or sr.size.x < 154.0 			or rr.end.y > 62.0 or sr.end.y > 62.0 or rr.end.x > title_left 			or sr.position.x < title_right or sr.end.x > scene._choco_panel_rect().position.x:
+		_smoke_fail("R825 地图按钮：重叠 / 越出顶栏空档 / 压到首领条（%s / %s）" % [str(rr), str(sr)])
+		return
+	for b: Button in [rp._btn, sb]:
+		var style := b.get_theme_stylebox("normal")
+		if not (style is StyleBoxTexture) or (style as StyleBoxTexture).texture == null:
+			_smoke_fail("R825 地图按钮：没有使用已导入的 codex 纹理")
+			return
+	if not sb.pressed.is_connected(Callable(scene, "_return_to_shop")):
+		_smoke_fail("R825 商店按钮：pressed 没有接到同店返回函数")
+		return
+	rp._btn.pressed.emit()
+	if not rp.is_open():
+		_smoke_fail("R825 奖励按钮：点击后没有打开当前待领奖励")
+		return
+	rp.close()
+	if rp.is_open():
+		_smoke_fail("R825 奖励按钮：关闭后仍盖住地图")
+		return
+	var src := FileAccess.get_file_as_string("res://scripts/map_scene.gd")
+	if not src.is_empty():
+		var a := src.find("func _return_to_shop()")
+		var b := src.find("func _on_map_reward_closed()", a)
+		var body := src.substr(a, b - a) if a >= 0 and b > a else ""
+		if body.is_empty() or body.contains("RunState.advance(") or body.contains("forfeit_pending_rewards"):
+			_smoke_fail("R825 同店返回：不许推进地图或作废待领奖励")
+			return
+	print("SMOKE OK R825 地图：奖励 / 同店双返回按钮、codex 纹理、奖励开关与同店无推进守卫")
+
+
+func _check_r836_clock_fx(scene) -> void:
+	## R836（用户口径）：缺陷时钟触发 → 战斗区正中播「时针转动」的小动画；
+	## 角标在**触发之后本场不再显示**（下一场重新数）。
+	## 断言四件事：① 素材真的在（缺图会静默退化成程序化表盘，出货不能靠兜底）
+	## ② fx 起在棋盘正中、时长对 ③ 起始入口只在触发分支里被调 ④ 角标口径。
+	if UiAssets.clock_face() == null:
+		_smoke_fail("R836 钟面：assets/fx/clock_face.png 没被导入（会退化成程序化表盘）")
+		return
+	var clk_ids: Array[int] = [6084]      # ⚠️ 必须是 Array[int]：self_relics 有类型
+	RunState.relics = clk_ids
+	RunState.spent_relics = []
+	scene.engine.self_relics = clk_ids
+	scene._clock_fx = {}
+	scene._start_clock_fx()
+	if scene._clock_fx.is_empty():
+		_smoke_fail("R836 时针动画：触发后没有起 fx")
+		return
+	var cp: Vector2 = scene._clock_fx["pos"]
+	var want := Vector2(scene.GRID_X + scene.GRID_W * 0.5, scene.GRID_Y + scene.GRID_H * 0.5)
+	if cp.distance_to(want) > 0.5:
+		_smoke_fail("R836 时针动画：没画在战斗区正中（%s vs %s）" % [str(cp), str(want)])
+		return
+	if int(scene._clock_fx["dur"]) != 1150:
+		_smoke_fail("R836 时针动画：时长漂移（%d）" % int(scene._clock_fx["dur"]))
+		return
+	# 角标口径：>0 才画；0（本场已触发）/ -1（没有战斗上下文）都不画
+	if RunState.relic_badge_text(6084, 0) != "":
+		_smoke_fail("R836 角标：触发后本场不该再显示计数")
+		return
+	if RunState.relic_badge_text(6084) != "":
+		_smoke_fail("R836 角标：无战斗上下文时不该画")
+		return
+	if RunState.relic_badge_text(6084, 7) != "7":
+		_smoke_fail("R836 角标：未触发时应画「7」（实际「%s」）"
+				% RunState.relic_badge_text(6084, 7))
+		return
+	# 入口守卫：绘制与起始都必须接在这个文件里（别被后来的改动悄悄摘掉）
+	var src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	if not src.is_empty():
+		if not src.contains("\t_draw_clock_fx()"):
+			_smoke_fail("R836 守卫：`_draw()` 里没有接 `_draw_clock_fx()`")
+			return
+		if not src.contains("\t\t\t_start_clock_fx()"):
+			_smoke_fail("R836 守卫：defect_clock 分支没有起动画")
+			return
+	print("SMOKE OK R836 缺陷时钟：时针动画起在棋盘正中 / 素材在位 / 角标触发后不画")

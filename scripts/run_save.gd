@@ -287,6 +287,10 @@ static func snapshot() -> Dictionary:
 		"player_class": RunState.player_class,
 		"daily_date": RunState.daily_date,       # R762：续档恢复原每日局，不算第二次
 		"daily_rules": RunState.daily_rules,
+		## R767：每日修饰的数值汇总也必须进档。**漏了它，续档之后换层就会跳变** ——
+		## `start_gold()` / `chocolate_per_layer()` / `energy_per_turn()` 都在换层或开战时重算，
+		## 汇总一丢，金币和费用当场回到标准值，玩家会以为「读个档怎么buff没了」。
+		"daily_fx": RunState.daily_fx.duplicate(true),
 		"battle_wins": RunState.battle_wins,
 		"elite_wins": RunState.elite_wins,
 		# R630：**整局累计**三项（结算页 / 记录页读的就是它们）。原先只存了「本层」两个数 →
@@ -326,7 +330,10 @@ static func snapshot() -> Dictionary:
 		"pending_deck_edit": RunState.pending_deck_edit,
 		"statue_charge": RunState.statue_charge,
 		"basin_charge": RunState.basin_charge,   # R311 不锈钢盆：剩余点数（跨战斗累计）
+		"story_book_pages": RunState.story_book_pages,   # R835 空故事书：累计页数（= 开场伤害）
+		"story_book_nodes": RunState.story_book_nodes,   # R835：已记过页的事件节点（幂等）
 		"lucky7_turns": RunState.lucky7_turns,   # R314 lucky 7：跨战斗回合计数
+		"crescent_battles": RunState.crescent_battles,   # R810 新月耳饰：距下一点费用的场数进度
 		"pipe_ready": RunState.pipe_ready,   # R446 烟斗：还亮着没有
 		"core_lost": RunState.core_lost,      # R458 核心：累计失去的生命值
 		"core_armed": RunState.core_armed,     # R458 核心：够 15 点没有
@@ -590,6 +597,10 @@ static func apply(d: Dictionary) -> bool:
 	RunState.player_class = str(d.get("player_class", PlayerClass.default_id()))
 	RunState.daily_date = str(d.get("daily_date", ""))       # R762：老档缺字段 = 标准局
 	RunState.daily_rules = int(d.get("daily_rules", 0)) if RunState.daily_date != "" else 0
+	# R767：修饰汇总跟着每日身份一起恢复；标准局与老存档（无此字段）一律空字典。
+	var fx: Variant = d.get("daily_fx", {})
+	RunState.daily_fx = ((fx as Dictionary).duplicate(true)
+			if RunState.daily_date != "" and fx is Dictionary else {})
 	RunState.battle_wins = int(d.get("battle_wins", 0))
 	RunState.elite_wins = int(d.get("elite_wins", 0))
 	# R630：整局累计跟着一起回填。**老档没有这三个键**（R630 之前的档）→ 用「本层」两个数
@@ -660,6 +671,11 @@ static func apply(d: Dictionary) -> bool:
 		RunState.basin_charge = RunState.BASIN_MAX
 	# R314 lucky 7：老存档没有这个字段 → 按 0（下次开始我方回合起重新累计）
 	RunState.lucky7_turns = int(d.get("lucky7_turns", 0))
+	# R835 空故事书：老存档没有这两个键 → 页数按 0（等于一本空书），节点表按空。
+	RunState.story_book_pages = int(d.get("story_book_pages", 0))
+	RunState.story_book_nodes = _int_array(d.get("story_book_nodes", []))
+	# R810 新月耳饰：老存档没有这个字段 → 按 0（等于「还差 3 场」）
+	RunState.crescent_battles = clampi(int(d.get("crescent_battles", 0)), 0, RunState.CRESCENT_EVERY - 1)
 	RunState.pipe_ready = bool(d.get("pipe_ready", false))   # R446
 	# R458 核心：老档没有这两个字段 → 默认 0 / false（等于「还没受过伤」）
 	RunState.core_lost = int(d.get("core_lost", 0))

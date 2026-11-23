@@ -21,6 +21,9 @@ static var run_active := false               # 是否在肉鸽 run 中（false =
 ## R762：空 = 标准局；非空 = 每日挑战的 UTC 日历日。rules 入榜名，改计分口径不混旧榜。
 static var daily_date := ""
 static var daily_rules := 0
+## R767：今日修饰的**效果汇总**（`DailyModifiers.fx_of()` 的产物）。空字典 = 标准局。
+## 只被下面那几个取数口读取 —— 想加一条修饰，先找到对应的取数口，别在别处直接改数值。
+static var daily_fx: Dictionary = {}
 static var deck_ids: Array[int] = []         # 当前卡组（卡 id，可重复）
 ## R181 商店附魔：与 deck_ids **等长**的修饰列表。每个元素是 {}（无附魔）或
 ## {"cost":-1} / {"power":+10} / {"affix":"次元","power":+2,"health":+10} / {"affix":"保存"}。
@@ -93,6 +96,11 @@ static var delayed_cards: Array = []
 ##    第二层的 12 号与第一层的 12 号是两间不同的篝火 —— 只比 id 会让第二层的篝火
 ##    因为「上一层同一编号已经结算过」而整层不回血（R661 修）。
 static var sacrament_node: int = -1
+## R781「温暖」：**本间火堆**已经用掉的选项份数（默认三选一 → 1 份；修饰下 → 2 份）。
+## 与圣餐共用同一个房间键（层号 × 10000 + 节点 id）—— 退出重进同一间不会白刷第二份。
+## `rest_pick_node == -1` 表示这一局还没在火堆上记过账。
+static var rest_pick_node: int = -1
+static var rest_pick_used := 0
 ## R234 止血绷带（6029）：本层累计的「下次休息额外回血」点数。换层 / 开新局 / 结束局清零。
 static var bandage_pending := 0
 static var pending_level: Dictionary = {}    # 即将进入的战斗关卡（地图 → 战斗）
@@ -148,6 +156,20 @@ const LUCKY7_EVERY := 7
 ## 满 7 的倍数那一回合生效。随存档走（run_save）。
 static var lucky7_turns := 0
 
+## R810 新月耳饰（6081，一般档）：每 `CRESCENT_EVERY` 场战斗，在**那场的第一回合** +1 费用。
+## 计数只记「拿着这件道具之后开打的战斗」，跨战斗保留、随存档走（run_save）。
+## ⚠️ 推进口唯一 = `GameEngine._begin_turn()` 的 `turn_number == 1` 分支里调 `crescent_tick()`
+##    —— 那里每场战斗只成立一次。别在战斗开始处再加一次，否则一场数两下。
+const CRESCENT_EARING_ID := 6081
+const CRESCENT_EVERY := 3
+static var crescent_battles := 0
+
+## R832 缺陷时钟（6084，传奇档）：每场战斗打出第 12 张牌 → 结束当前回合并跳过敌方回合。
+## ⚠️ 计数**只活在战斗引擎里**（`GameEngine._clock_plays`）—— 这里不另存一份，
+##    否则读档续战之后「角标」与「实际触发」会变成两套账。
+##    角标由战斗界面把 `engine.defect_clock_left()` 当参数递进来（见 `relic_badge_text`）。
+const DEFECT_CLOCK_BADGE_ID := 6084
+
 ## R314 传奇掉落概率：**5% × 当前层数**；大宝箱翻倍。
 ## 层数取 `current_layer`（第一层 1 / 第二层 2 …），所以第一层 5%、第二层 10%；
 ## 大宝箱第一层 10%、第二层 20%。上限 100%（层数继续加也不会溢出）。
@@ -169,7 +191,7 @@ static var map_strokes: Array = []
 static var map_flags: Array = []
 static var player_class: String = "森林精魄"   # 本局所选角色（PlayerClass.ids() 之一）
 static var battle_wins := 0                   # 本层已胜利的普通战斗数（前 2 场简单）
-static var elite_wins := 0                   # 本层已胜利的精英战斗数（第 1 场简单，第 2 场起困难）
+static var elite_wins := 0                   # 本层已胜利的精英战斗数（R778 起只作统计，不再切强弱档）
 # R530 通关结算：上面两个是**本层进度**（换层清零，用来切简单/困难档），
 # 结算界面要的是**整局总数** —— 另开三个只增不清的累计量。
 static var total_battle_wins := 0             # 本局累计普通战斗胜场（换层不清）
@@ -190,13 +212,14 @@ static var revenge_pending := false
 const REVENGE_TRIGGER_CHANCE := 0.5         # 50%
 const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中的 boss 名必须是它
 
-# ---- 难度档位（R47 三档 → R223 重做成 0~10 共 11 档）----
+# ---- 难度档位（R47 三档 → R223 重做成 0~10 → R862 插入「初始卡削弱」→ 共 14 档）----
 # R223 起：角色选择界面用**左右箭头**调档（0~10），**高难度继承低难度全部 debuff**。
 # 用户口径逐档新增内容（数值口径见下方各 const 与取值函数）：
 # R224 起新增全局规则：**除到达新的一层外不能回复 HP**（用户口径）——
 # 战斗胜利回血、休息处篝火回血两类「自动回复」全部作废（两表归零，见下）。
 #   0 = 初始金钱 +50（R224 前还带战斗胜利回 3 血、休息 40%，现已归零）
-#   1 = 篝火（休息）回复量降低（R224：休息处不再回血 → 本条暂无数值效果，文本保留待换新 debuff）
+#   1 = 工具掉落率下降（R853：文本由「篝火回复生命值降低」换过来；篝火数值表不动，
+#       1 档起仍是 25% —— 用户口径「全部难度篝火不动」）
 #   2 = 战斗胜利不再回复生命值（R224：全档位战斗胜利均不回血，文本保留待换新 debuff）
 #   3 = 开场时敌人生命值 +10%（向上取整）
 #   4 = 稀有卡牌获取概率降低（稀有权重 ×0.5）
@@ -206,20 +229,27 @@ const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中
 #   7 = 金钱减少（初始金钱 150 → 100，后续每层也都是 100）
 #   8 = 行动力降低（每层初始巧克力 12 → 11）
 #   9 = 虚弱（最大生命 ×80%，截断取整）
-#   10 = 精英出现增多（R380）：继承 0~9 全部 debuff，另外「?」房不再刷商店（每层商店
-#        固定 2 间 + 右上角 1 间）、明房与「?」房两条途径的精英出现概率统一 ×1.3（约 +30%）。
+#   10 = 精英出现增多（R380 / R852）：继承 0~9 全部 debuff，明房与「?」房两条途径的
+#        精英出现概率统一 ×1.3（约 +30%）。R852：「?」房**照旧刷商店**（原「10 档裁掉
+#        shop」已撤销），加权代价只从战斗 / 事件 / 宝箱里扣，商店占比与低难度一致。
+#   11 = 初始卡削弱（R862，用户口径）：初始卡组里的木栅栏 / 攻击退回旧数值
+#        （木栅栏 6 血、攻击 4 伤）；0~10 档是上调后的 8 血 / 5 伤。
+#        数值唯一口 = `starter_fence_hp()` / `starter_attack_dmg()`；卡面正文数字由
+#        `card_with_mod()` 写进实例 `body_number_swap`，**不改 effect_text**（i18n 会掉)。
+#   12 = 第三层上锁（R543）：要凑齐完美螺钉 / 生命之种 / 屠戮匕首三样信物才开门。
+#   13 = 昂贵（R794b）：商店商品售价 +40%，**信物除外**（信物 = 上面那三把钥匙）。
 # 档位只在角色选择界面改，不属于 run 状态（end_run / start_run 都不动它）。
 static var difficulty: int = 0
-const DIFFICULTY_COUNT := 12
+const DIFFICULTY_COUNT := 14
 const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强", "稀缺",
-		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "上锁"]
+		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "初始卡削弱", "上锁", "昂贵"]
 ## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」；第 10 档无新增（空串）。
 ## R224：`difficulty_note()` 只返回**当前档**这一条（用户口径「难度文本没有必要写所有，
 ## 只需要写当前难度新增就行了」）—— 高档继承低档的全部 debuff 由 `difficulty_summary()`
 ## 的数值摘要承载（那里列的都是「实际生效」的数值）。
 const DIFFICULTY_TEXTS: Array[String] = [
 	"无",
-	"篝火回复生命值降低",
+	"工具掉落率下降",
 	"战斗胜利不再回复生命值",
 	"敌人更加顽强",
 	"稀有卡牌获取概率降低",
@@ -229,15 +259,18 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"行动力降低",
 	"虚弱",
 	"精英出现增多",
+	"初始卡削弱：攻击伤害 4，木栅栏生命 6",
 	"第三层上锁，获取三个信物以解锁第三层",
+	"商店商品售价 +40%（信物除外）",
 ]
-## R224：全局规则「除到达新的一层外不能回复 HP」→ 战斗胜利回血全档位归零。
-## 表保留 12 长度（回归钉死口径；将来若再加「某档回血」类 debuff 改这张表即可）。
-const DIFFICULTY_BATTLE_HEAL: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
+## R224：全局规则（R853 重做）—— 战斗胜利**默认**回血只有 0/1 档 = 3，难度 2 起关掉；
+## 其他回血途径（篝火 / 圣餐 / 道具 / 换层）都不受难度 2 影响。
+## ⚠️ 苹果 6027 持有期间这一口也被锁（唯一口 `hp_recovery_locked()`）。
+const DIFFICULTY_BATTLE_HEAL: Array[int] = [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 战斗胜利回复量
 ## R237：恢复篝火回血 —— 难度 0 = 40%，1 档起 = 25%（即原始设计；R224 曾按用户要求归零，现加回）。
-## ⚠️ 战斗胜利回血（DIFFICULTY_BATTLE_HEAL）**仍为 0**：用户只要求篝火能回血，不恢复被动自动回血。
+## ⚠️ 战斗胜利回血（DIFFICULTY_BATTLE_HEAL）0/1 档 = 3、2+ 档 = 0（R853）；苹果持有时全锁。
 const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
-		0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                                   # 休息回复百分比
+		0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                      # 休息回复百分比
 
 ## 各 debuff 的数值口径（**唯一口** —— 界面 / 引擎 / 测试都读这里，别在各处写死数字）
 const DIFF_GOLD_LOW := 150         # 0~6 档初始金钱（原 100 + 难度 0 的 +50）
@@ -249,22 +282,46 @@ const DIFF_ENEMY_HP_PCT := 0.10    # 3 档起「敌人更加顽强」：敌人�
 const DIFF_ENEMY_POWER := 1        # 6 档起「敌人更加凶猛」：敌人攻击 +1
 const DIFF_CHOCO_HIGH := 11        # 8 档起「行动力降低」：每层初始巧克力 11（原 12）
 const DIFF_MAX_HP_MUL := 0.8       # 9 档起「虚弱」：最大生命 ×80%（截断取整）
-## R380（用户口径）：「当前难度 10 还没有新增效果，做成精英出现增多 —— 每层商店数量
-## 调整为固定 2 个（不算右上角），各种途径出现精英的概率上调约 30%」。
-##   * 「?」房不再刷出商店 → 每层商店恒为「右上角固定 1 间 + 随机 2 间」；
-##   * 明房与「?」房两条途径的精英出现概率统一 ×1.3（约 +30%）。
-## ⚠️ 唯一消费点 = `RogueMap._weighted_far()`（出现概率）/ `RogueMap._unknown_table()`
-##    （「?」房权重表）—— 别在地图生成之外再乘一次，否则会被重复加权。
+## R380（用户口径）：「当前难度 10 还没有新增效果，做成精英出现增多 —— 各种途径出现
+## 精英的概率上调约 30%」。
+## R852（用户口径）：「10 难度起，? 依旧需要刷新商店，概率从事件、普通战斗、宝箱里面扣」
+##   * 原「10 档「?」房裁掉 shop」的裁剪**撤销** —— 「?」房照旧能刷商店；
+##   * 精英 +30% 多出来的权重只从 **battle / event / chest** 里按比例扣，**shop 不扣**
+##     → 商店占比与低难度逐位相同（见 `RogueMap._weighted_far()` 的 `pool_w`）。
+## ⚠️ 唯一消费点 = `RogueMap._weighted_far()` —— 别在地图生成之外再乘一次。
 const DIFF_ELITE_FROM := 10        # 10 档起「精英出现增多」
 const DIFF_ELITE_MUL := 1.3        # 精英出现概率乘数（≈ +30%，扣除法见 _weighted_far）
-## R543（用户口径）：难度 11「上锁」—— 第三层需要凑齐三样信物才能进入。
-## ⚠️ 只有难度 ≥ 11 才需要信物；难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
-const DIFF_LOCK_FROM := 11         # 11 档起「第三层上锁」
+## R778：强弱精英判据 —— 当前巧克力 <= 5 一定进强精英，否则一定进弱精英。
+## 三层精英不参与（第三层固定抽第二层精英困难池，见 next_level）。
+const ELITE_STRONG_CHOCO_MAX := 5
+## R543（用户口径）：难度 12「上锁」—— 第三层需要凑齐三样信物才能进入。
+## ⚠️ 只有难度 ≥ 12 才需要信物；难度 ≤ 11 下第三层照常开放（用户明确「任何难度都开放第三层」）。
+## R862 插档前这一档是 11（「初始卡削弱」占了 11）。
+const DIFF_LOCK_FROM := 12         # 12 档起「第三层上锁」（R862 插档前是 11）
 ## 三样信物（解锁第三层所需的信物）：完美螺钉 / 生命之种 / 屠戮匕首。
 const SCREW_RELIC_ID := 6061       # 完美螺钉（第二层 Boss 掉落，替代一份普通卡牌奖励）
 const SEED_RELIC_ID := 6062        # 生命之种（大宝箱二选一）
 const DAGGER_RELIC_ID := 6063      # 屠戮匕首（商店第三排额外售卖）
 const KEY_RELIC_IDS: Array[int] = [SCREW_RELIC_ID, SEED_RELIC_ID, DAGGER_RELIC_ID]
+## R794b（用户口径）：难度 13「昂贵」—— 商店里卖的东西一律 +40%，**信物除外**。
+## R862 插档前这一档是 12。
+## ⚠️ 唯一消费点 = `shop_scene._shelf_price()`：价签 / 悬停详情 / 扣款 / 遥测
+##    四个口共用一个倍率，谁都不许自己乘 1.4。
+##    信物目前只有第三行那条「屠戮匕首」—— 由调用方传 `key_relic = true` 跳过加价。
+const DIFF_SHOP_PRICE_FROM := 13   # 13 档起「商店涨价」（R862 插档前是 12）
+## R862（用户口径）：初始卡的**基础数值**（0~10 档）与**削弱后数值**（11 档起）。
+##   * 木栅栏 8001：8 血 → 6 血；攻击 8002：5 伤 → 4 伤；
+##   * 图鉴 / 卡库原型永远是基础值，削弱只发生在**卡组实例**上（`card_with_mod()`）；
+##   * 唯一口 = `starter_fence_hp()` / `starter_attack_dmg()`，别在别处写字面量。
+const STARTER_FENCE_HP := 8
+const STARTER_ATTACK_DMG := 5
+const STARTER_WEAK_FENCE_HP := 6
+const STARTER_WEAK_ATTACK_DMG := 4
+## 11 档起「初始卡削弱」，同时也是角色选择界面**橙色档位**的起点（用户口径）。
+const DIFF_STARTER_WEAK_FROM := 11
+const STARTER_FENCE_ID := 8001
+const STARTER_ATTACK_ID := 8002
+const DIFF_SHOP_PRICE_MUL := 1.4   # +40%
 ## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
 const FATIGUE_CARD_ID := 9149
 ## R358：疲惫卡的**发放记账** —— 最近一次发放在哪一层（-1 = 本局还没发过）。
@@ -354,7 +411,15 @@ static var traps: Array[int] = [-1, -1, -1]   # -1 = 空槽；其余 = traps.jso
 ## R694（用户口径「任何战斗都有 10% 概率掉落工具」）：**任何**战斗胜利都摇一次这个概率。
 ## `tool_roll_seq` = 本局第几次战斗结算，只用来派生随机种子 —— 随存档一起走，
 ## 续档之后接着往下数，同一条种子不会被摇第二遍。
+## R853（用户口径）：难度 0 提到 33%，难度 1 起仍是 10% —— 唯一口 `tool_drop_chance()`。
+const TOOL_DROP_CHANCE_EASY := 0.33
 const TOOL_DROP_CHANCE := 0.10
+## R796 兔脚（6076，一般档）：战斗胜利金币 +RABBIT_FOOT_GOLD、战斗掉落工具的概率
+## **加算** RABBIT_FOOT_TOOL_DROP（用户口径「＋10%（加算）」→ 10% → 20%，不是 ×1.1）。
+## 判据走 `RunState.has_relic()`（静态读全局），别用引擎的 `self_relics` 快照。
+const RABBIT_FOOT_RELIC_ID := 6076
+const RABBIT_FOOT_GOLD := 10
+const RABBIT_FOOT_TOOL_DROP := 0.10
 static var tool_roll_seq := 0
 ## R745 工具箱发工具的独立序号 —— 与 `tool_roll_seq` 分开，否则「多拿一个工具」
 ## 会把战斗掉落的 10% 摇点整体推歪（同 R312 的分类种子口径）。随存档一起走。
@@ -456,9 +521,9 @@ const SOURCE_POWER_HP_COST := 5   # 源数之力的代价：失去 5 点最大�
 # R224 新道具：苹果（6027，奖励池）—— 获得时**立即 +7 最大生命，并回复 20% 最大生命值**。
 # R445（用户口径）：14 → 7；R756（店长口径）：「回复满」改成**回复 20% 最大生命值**——
 # 它不再是一条「免费满血」，而是一口实打实的补给。
-# 全局 HP 规则「除到达新的一层外不能回复 HP」下，它是主动道具口径的回血手段
-# （R743：烤肉已改成工具，剩下的主动回血手段是黄桃罐头 / 自愈这类道具与卡牌；
-#  被动自动回血已全部移除）。
+# R853（店长口径）：苹果的**代价**＝持有期间锁住全部「战外回血」（篝火 / 圣餐 /
+# 止血绷带 / 三层起点补给 / 道具附带回血 / 战斗胜利默认 +3），只有**到新的一层**
+# 回满例外；拿取瞬间这一口 20% 先到账，然后才上锁。战斗内自愈 / 黄桃罐头不锁。
 const APPLE_RELIC_ID := 6027
 const APPLE_MAX_HP := 7
 const APPLE_HEAL_PCT := 0.20   # R756：回复「最大生命」的 20%（原来是一次回满）
@@ -509,6 +574,55 @@ const BOX_CARD_ID := 9179
 # R341 洞窟绳（6048，第一层初始池）：Boss 以外的战斗可以逃跑，逃跑即失去道具。
 # 判据只留一处 `can_use_cave_rope()` —— 战斗界面的按钮显隐与真正的逃跑结算共用它。
 const CAVE_ROPE_RELIC_ID := 6048
+# R830 新道具：首饰盒（6088，初始池）—— 获得时随机一张**史诗卡**加入卡组。
+# 与湖中仙女·诚实共用同一条抽卡口（LAKE_EPIC_RARITY = 2 = 史诗）；随机源走 run_rng。
+const JEWELRY_BOX_RELIC_ID := 6088
+# R835 空故事书（6089，第一层初始池）：战斗开始时对**全体敌人**造成 story_book_pages 点伤害；
+# 每经过一个事件房 / 打赢一个首领 → +1 页（页数就是伤害值）。
+# ⚠️ 只累计「**持有期间**的经历」—— 没这道具时走过的事件 / 首领不补记，否则捡到就是一大叠页数。
+# ⚠️ 页数跨战斗、跨换层、跨读档都要接着算 → 进 RunSave。
+const STORY_BOOK_RELIC_ID := 6089
+static var story_book_pages := 0
+## 已记过页的事件节点 id —— `complete_current()` 会被事件场景多处重复调用，靠它做幂等
+## （不看 `cleared_ids`：战斗 / 地图场景会各自 append，顺序不可依赖）。
+static var story_book_nodes: Array = []
+
+
+static func story_book_add_page() -> bool:
+	## R835 空故事书：一条「经历」= 一个事件房 / 一个首领战 → 页数 +1。
+	## 幂等不在这一步做（事件按节点 id、首领按 `boss_beaten` 每层一次）。
+	## 没这道具 → 不累计、返回 false（捡到之前的经历不算）。
+	## 返回 bool 而不是页数：调用方要靠它决定「这一步算不算发生过」——
+	## 事件那边只有**真的加了页**才登记节点 id，否则没书时走过的事件会先占住 id，
+	## 之后拿到书再经过同一个节点就永远补不上了（R835 首版就是这个 bug）。
+	if not relics.has(STORY_BOOK_RELIC_ID):
+		return false
+	story_book_pages += 1
+	return true
+
+
+static func story_book_new_layer() -> void:
+	## R835 空故事书：换层时清掉「已记过页的事件节点」。
+	## ⚠️ 每层的节点 id 都是 0..34 **重号**（地图是每层重新生成的），
+	## 上一层记过页的 id 留在这里，就会把新一层同号的事件当成「已经记过」直接吞掉。
+	## 实测（12 个种子各走满三层）：9 个种子少算 1~4 页，且少算量正好等于两层事件 id 的交集大小。
+	## 页数本身**不清** —— 那是跨层的累计伤害。
+	story_book_nodes.clear()
+
+
+static func _note_story_book_event(node_id: int) -> void:
+	## R835：事件房结算完成 → 记一页。判据只有「这一格的 type 是 event」一条 ——
+	## 宝箱 / 商店 / 休息 / 战斗都不算（卡面写的是「事件」）。
+	if node_id < 0 or node_id >= map_cells.size():
+		return
+	if story_book_nodes.has(node_id):
+		return
+	var cell: Dictionary = map_cells[node_id]
+	if str(cell.get("type", "")) != "event":
+		return
+	if not story_book_add_page():
+		return            # 没这道具 → 连「记过」都不算
+	story_book_nodes.append(node_id)
 # R342 采集刀（6050，**传奇**奖励池）：「战斗后额外获得一份卡牌奖励」。
 # 唯一消费点 = `queue_battle_card_rewards()` —— 战斗胜利的卡牌奖励只从那里入队。
 const HARVEST_KNIFE_RELIC_ID := 6050
@@ -540,8 +654,19 @@ static func take_damage(amount: int) -> void:
 	hp = maxi(0, hp - amount)
 
 
+static func hp_recovery_locked() -> bool:
+	## R853（店长口径）：苹果 6027 的代价 —— 持有期间锁住全部**战外回血**。
+	## 唯一口：所有走 `heal()` 的途径 + 道具直接写 hp 的口都查这里。
+	## 例外：换层回满（`advance_layer` 直接写 hp）与拿苹果瞬间那口 20%
+	## （`gain_relic` 里直接写 hp，不走 `heal()`）都不受影响。
+	return has_relic(APPLE_RELIC_ID)
+
+
 static func heal(amount: int) -> int:
 	## 回复指定生命，上限为最大生命。返回实际回复量。
+	## R853：苹果代价锁血 —— 锁住时一律 0（换层回满直接写 hp，不经过这里）。
+	if hp_recovery_locked():
+		return 0
 	var gained: int = mini(max_hp - hp, maxi(0, amount))
 	hp += gained
 	return gained
@@ -554,13 +679,63 @@ static func _diff() -> int:
 	return clampi(difficulty, 0, DIFFICULTY_COUNT - 1)
 
 
+static func starter_card_weak() -> bool:
+	## R862：当前档位是否削弱**初始卡**（11 档起）。唯一判据。
+	return _diff() >= DIFF_STARTER_WEAK_FROM
+
+
+static func starter_fence_hp_at(d: int) -> int:
+	## 指定档位的木栅栏生命（图鉴 / 卡库原型不走这里，它们恒为零件的 `health`）。
+	return STARTER_WEAK_FENCE_HP if clampi(d, 0, DIFFICULTY_COUNT - 1) >= DIFF_STARTER_WEAK_FROM else STARTER_FENCE_HP
+
+
+static func starter_fence_hp() -> int:
+	## R862：初始卡「木栅栏」在当前档的生命值 —— 唯一口。
+	return starter_fence_hp_at(_diff())
+
+
+static func starter_attack_dmg_at(d: int) -> int:
+	## 指定档位的「攻击」伤害。
+	return STARTER_WEAK_ATTACK_DMG if clampi(d, 0, DIFFICULTY_COUNT - 1) >= DIFF_STARTER_WEAK_FROM else STARTER_ATTACK_DMG
+
+
+static func starter_attack_dmg() -> int:
+	## R862：初始卡「攻击」在当前档的伤害 —— 唯一口。
+	return starter_attack_dmg_at(_diff())
+
+
+static func tool_drop_chance_at(d: int) -> float:
+	## R853：指定档位的战斗工具掉落率；越界钳到合法区间。
+	return TOOL_DROP_CHANCE_EASY if clampi(d, 0, DIFFICULTY_COUNT - 1) == 0 else TOOL_DROP_CHANCE
+
+
+static func tool_drop_chance() -> float:
+	## R853（用户口径）：当前档战斗掉落工具的概率 —— 难度 0 = 33%，难度 1 起 = 10%。
+	## 唯一口：`roll_battle_tool_drop()` 读这里，别在别处写死 0.33 / 0.10。
+	return tool_drop_chance_at(_diff())
+
+
 static func set_difficulty(d: int) -> void:
-	## 角色选择界面用左右箭头调档（0~10）。越界钳制、**不循环**。
+	## 角色选择界面用左右箭头调档（0~13）。越界钳制、**不循环**。
 	difficulty = clampi(d, 0, DIFFICULTY_COUNT - 1)
 
 
 static func difficulty_name() -> String:
-	return DIFFICULTY_NAMES[_diff()]
+	return difficulty_name_at(_diff())
+
+
+static func difficulty_name_at(d: int) -> String:
+	## 指定档位的名称。`d` 越界（旧版本记录 / 脏数据）→ 钳到合法区间，绝不越界取数组。
+	return DIFFICULTY_NAMES[clampi(d, 0, DIFFICULTY_COUNT - 1)]
+
+
+static func difficulty_label(d: int = -1) -> String:
+	## R795：「数字 + 名称」（例 `12 昂贵`）—— 结算副标题 / 对战记录共用的**唯一口**。
+	## 数字就是角色选择界面档位框里的那个 0~13，名称紧跟其后，玩家不用再自己对照。
+	## `d < 0` = 当前档；越界 / 缺失由 `clampi` 兜住 —— **兼容旧版本记录文件**就靠这一句：
+	## 老记录只存了档位数字（`difficulty`），名称一律现推，不落盘也不怕以后改名。
+	var i := _diff() if d < 0 else clampi(d, 0, DIFFICULTY_COUNT - 1)
+	return "%d %s" % [i, DIFFICULTY_NAMES[i]]
 
 
 static func difficulty_note() -> String:
@@ -574,7 +749,7 @@ static func difficulty_note() -> String:
 static func difficulty_summary() -> String:
 	## 当前档**实际生效的数值**一览（角色选择界面第二行）—— 免得只看到「虚弱」不晓得是 80%。
 	## 金钱 / 巧克力恒定显示；其余只在「已生效」时列出（低难度下保持一行）。
-	## R224：回血类 debuff 两表归零 → 不再列「篝火」；继承关系由这里的数值替文本说话。
+	## R853：回血类只列战斗胜利默认 +3（0/1 档）；篝火不受难度 2 影响。
 	var d := _diff()
 	var bits: Array[String] = ["初始金钱 %d" % start_gold(), "巧克力 %d" % chocolate_per_layer()]
 	if d >= 3:
@@ -587,23 +762,90 @@ static func difficulty_summary() -> String:
 		bits.append("最大生命 %d%%" % int(round(max_hp_mul() * 100.0)))
 	if d >= DIFF_ELITE_FROM:
 		bits.append("精英 ×%.1f" % elite_weight_mul())
+	if d >= DIFF_SHOP_PRICE_FROM:
+		bits.append("商店 ×%.1f" % shop_price_mul())
+	if d >= DIFF_STARTER_WEAK_FROM:
+		bits.append("初始卡 攻%d/栅%d" % [starter_attack_dmg_at(d), starter_fence_hp_at(d)])
 	return " · ".join(bits)
 
 
+static func shop_price_mul(is_key_relic := false) -> float:
+	## R794b：商店成交价的难度倍率（**唯一判据**）。
+	## 信物（`KEY_RELIC_IDS`）恒不打折也不加价 → 跟「+40%」这条 debuff 无关；
+	## 其余商品在难度 ≥13 时 ×1.4，低难度恒 1.0。
+	## ⚠️ 别在 `shop_scene` 里另写一份 `if difficulty >= 12` —— 档位口径只许有这一处。
+	if is_key_relic:
+		return 1.0
+	return DIFF_SHOP_PRICE_MUL if _diff() >= DIFF_SHOP_PRICE_FROM else 1.0
+
+
 static func battle_win_heal() -> int:
-	## 战斗**胜利**后的自动回复量。R224 全局规则「除到达新的一层外不能回复 HP」
-	## → 所有档位均为 0（表留 11 长度供回归与将来调整）。
+	## 战斗胜利后的**默认**回血：0/1 档 = 3，难度 2 起 = 0（R853）。
+	## 苹果持有期间锁血 → 返回 0；战斗内自愈 / 黄桃罐头走 engine，不受此口影响。
+	if hp_recovery_locked():
+		return 0
 	return DIFFICULTY_BATTLE_HEAL[_diff()]
 
 
 static func rest_pct() -> float:
 	## 本档位的休息回复百分比。R224：休息处不再回血 → 全档位 0.0。
-	return DIFFICULTY_REST_PCT[_diff()]
+	## R767：每日修饰的 `rest`（温暖 +15% / 阴冷 −15%）加法叠加 —— 这是唯一能让
+	## 「休息回血」重新出现在游戏里的途径，别在事件里另写一套。
+	return maxf(0.0, DIFFICULTY_REST_PCT[_diff()] + float(daily_fx.get("rest", 0.0)))
+
+
+static func energy_per_turn() -> int:
+	## R767：我方每回合费用 = `FieldState.ENERGY_PER_TURN` + 每日修饰的 `energy`
+	## （灵光 +1 / 滞涩 −1），**下限 1** —— 费用被抹到 0 的话第一回合就什么都出不了。
+	## 敌方 `state.opp_energy` 不读它：修饰只针对玩家，敌人不该跟着变强或变弱。
+	return maxi(1, FieldState.ENERGY_PER_TURN + int(daily_fx.get("energy", 0)))
+
+
+static func hand_draw_per_turn() -> int:
+	## R781：我方每回合抽卡数 = `FieldState.HAND_DRAW_PER_TURN` + 每日修饰的 `draw`
+	## （滞涩 −1），**下限 1** —— 抽卡被抹到 0 的话回合开始一张新牌都摸不到，那不是难度是死局。
+	## 敌方回合的抽卡（`_draw_many` 的对侧调用）不读它：修饰只针对玩家。
+	return maxi(1, FieldState.HAND_DRAW_PER_TURN + int(daily_fx.get("draw", 0)))
+
+
+static func rest_extra_pick() -> int:
+	## R781「温暖」：火堆本来是「休息 / 烤肉 / 添加柴火」三选一，这里返回**额外**可选的份数
+	## （+1 → 总共能选两项）。唯一消费点是 `event_scene` 的火堆记账口。
+	return maxi(0, int(daily_fx.get("rest_pick", 0)))
+
+
+static func rest_pick_quota() -> int:
+	## R781：本次进入火堆**总共**能选几份 = 1 + 修饰额度。
+	return 1 + rest_extra_pick()
+
+
+static func rest_pick_used_here() -> int:
+	## R781：这一间火堆已经用掉几份（换一间 / 换一层自动视为 0）。
+	## 与圣餐同一套房间键，所以「退出重进同一间」不会把配额刷回去。
+	return rest_pick_used if rest_pick_node == sacrament_stay_key() else 0
+
+
+static func rest_pick_mark() -> int:
+	## R781：记一份，返回记账后这一间**已经用掉的总份数**。
+	## 唯一写入口 —— `event_scene` 用它判「还能不能再选一项」。
+	var key := sacrament_stay_key()
+	if rest_pick_node != key:
+		rest_pick_node = key
+		rest_pick_used = 0
+	rest_pick_used += 1
+	return rest_pick_used
+
+
+static func rest_to_battle() -> bool:
+	## R781「阴冷」：地图生成时把休息格整体换成战斗格。
+	## 唯一消费点是 `RogueMap.generate()` 里给 `type` 赋值那一处 —— 别在地图之外的
+	## 地方再判一次，否则会出现「图标是火堆、进去是战斗」的两套口径。
+	return bool(daily_fx.get("rest_to_battle", false))
 
 
 static func rest_heal_amount() -> int:
 	## 休息事件的回复量 = 最大生命 × 本档位百分比（向上取整），再受上限封顶。
-	## R224：rest_pct 全 0 → 恒为 0（保留函数是为了「将来要把休息回血加回来」只有一个口）。
+	## R853：篝火回复照常；苹果 6027 持有期间由 `heal()` 统一锁住。
 	return ceili(max_hp * rest_pct())
 
 
@@ -620,6 +862,36 @@ static func sacrament_stay_key() -> int:
 	##    第二层编号 12 的篝火会被当成第一层那间「已经结算过」，整层不回血。
 	## `× 10000` 是因为单层节点数远小于一万，不会串到下一层。
 	return current_layer * 10000 + current_node_id
+
+
+## R822：第二层起点的主持人 —— 0 = 卷卷 / 1 = 鸭绅士（与 `CurtainLines.HOST_*` 同值）。
+const LAYER2_HOST_BUNBUN := 0
+const LAYER2_HOST_DUCK := 1
+
+
+static func layer2_host(p_seed := -1) -> int:
+	## R822（店长口径）：第二层起点遇到谁 —— 卷卷 / 鸭绅士，**权重相等**（各 50%）。
+	## 由「本局种子」派生，不摇 `run_rng`、也不进存档：
+	##   · 不摇 rng → 不扰动地图 / 掉落那条顺序链，同一种子重跑必然一致；
+	##   · 不进存档 → 与 R819 占卜室同一口径：退出事件再进、回标题再继续，**换不了人**。
+	##     （存在场景变量或存档里能「重摇」的随机结果，都是玩家可以反复试到想要那一边的漏洞。）
+	## R824（店长口径「试玩版改为给鸭绅士」）：试玩版**不再短路成卷卷**，
+	## 与正式版走同一条派生 —— 玩家在试玩版也该看到两种开场。
+	var s: int = run_seed if p_seed < 0 else p_seed
+	return absi(hash("%d:layer2host" % s)) % 2
+
+
+static func divination_roll_for(p_seed: int, p_layer: int, p_node: int,
+		p_kinds := 4) -> int:
+	## R819 占卜室：**这一次占卜出第几种幻象**（1~p_kinds）—— 由「种子 + 层 + 节点」派生，
+	## 不走 `run_rng`、也不进存档。
+	## ⚠️ 原来摇在「点下进行占卜」那一刻、且只存在场景变量里：`_div_stage` 一归零
+	##    （回标题 → 继续 → 重进本房）就能重摇，玩家可以反复试到想要的那一种
+	##    （鲸鱼之怒 / 烈火之剑）再付 5 点。改成派生后，同一局同一层同一间**必然是同一结果**，
+	##    退出重进换不了，也不需要往存档里塞字段（不落盘就没有「读档站死在占卜室」的副作用）。
+	## 同种子重跑同一种子自然一致，与 run 层其它随机的口径相同。
+	var h := absi(hash("%d:%d:%d" % [p_seed, p_layer, p_node]))
+	return (h % maxi(1, p_kinds)) + 1
 
 
 static func sacrament_arrive() -> int:
@@ -658,6 +930,64 @@ static func relic_display_name(id: int, plays := -1) -> String:
 	if id == RELIC_WIND_FAIRY_ID and plays >= 0:
 		return "%s（%d/%d）" % [rel.relic_name, mini(plays, WIND_FAIRY_NEED), WIND_FAIRY_NEED]
 	return rel.relic_name
+
+
+static func relic_badge_text(id: int, clock_left := -1) -> String:
+	## 道具图标**右下角角标**的唯一取数口（R809）。返回 "" = 不画角标。
+	## 为什么要有这一层：图标模式下 `_draw_relic_bar` 只画图、不画名字，
+	## 「还剩几次 / 还差几回合」原本只有悬停能看到 —— 触摸端等于看不见。
+	## 口径：
+	##   * 已耗尽（盆碎 / 绳用掉）→ 不画（图标画灰已经说明，再挂个「1」会骗人）。
+	##   * lucky 7（6045）→ 距下次生效还剩几回合；**生效回合不画**
+	##     （转动弧已经在说「就是现在」，再写 7 会被读成「还差 7 回合」）。
+	##   * 火柴（6051）→ 剩余刷新次数，0 也照画（得让玩家看见已经用光）。
+	##   * 洞窟绳（6048）→ 一次性，还在就是 1 次。
+	##   * 雕像（6039）/ 不锈钢盆（6041）→ 剩余次数
+	##     （`relic_display_name` 那对括号只在「缺图、退回文字」时才看得见）。
+	##   * 缺陷时钟（6084，R832）→ 本场**还差几张牌**触发。它的计数在引擎里，
+	##     由战斗界面当第二参 `clock_left` 递进来；没有战斗上下文（图鉴 / 商店 / 奖励页）
+	##     时是默认的 -1 → 不画。
+	##     ⚠️ R836（用户口径）：**触发之后本场就不再画角标**，直到下一场重新数 ——
+	##        画「0」会被读成「还差 0 张、马上再来一次」，反而骗人。
+	##   * 其余道具 → 没有可数的东西。
+	if not relics.has(id) or is_relic_spent(id):
+		return ""
+	match id:
+		LUCKY7_RELIC_ID:
+			return "" if lucky7_is_due() else str(lucky7_left())
+		MATCH_RELIC_ID:
+			return str(maxi(0, match_charge))
+		CAVE_ROPE_RELIC_ID:
+			return "1"
+		CRESCENT_EARING_ID:
+			# R810 新月耳饰：还差几场战斗 → 下一点费用（3 / 2 / 1）。
+			# 与 lucky 7 不同，这里**没有「正在生效」的回合**要避让，所以永远画。
+			return str(crescent_left())
+		RELIC_STATUE_ID:
+			return str(statue_charge) if statue_charge > 0 else ""
+		BASIN_RELIC_ID:
+			return str(basin_charge) if basin_charge > 0 else ""
+		DEFECT_CLOCK_BADGE_ID:
+			# R836：0 也**不画**（本场已经触发过，这一场不会再来了）。
+			return str(clock_left) if clock_left > 0 else ""
+	return ""
+
+
+static func crescent_tick() -> bool:
+	## R810 新月耳饰（6081）：**每场战斗开始时**（引擎侧 = `turn_number == 1`）调一次。
+	## 返回「这一场是否该发 1 点费用」—— 场数满 `CRESCENT_EVERY` 的倍数时为 true，
+	## 计到倍数就**归零重数**（而不是一直对模），于是角标「还差几场」永远算得清。
+	## ⚠️ 无条件累加（只要持有道具）；发不发钱由返回值决定，调用方负责加 `state.energy`。
+	crescent_battles += 1
+	if crescent_battles >= CRESCENT_EVERY:
+		crescent_battles = 0
+		return true
+	return false
+
+
+static func crescent_left() -> int:
+	## 还差几场战斗才发下一点费用（角标 / 状态注共用）—— 刚发完时是 `CRESCENT_EVERY`。
+	return maxi(1, CRESCENT_EVERY - crescent_battles)
 
 
 static func lucky7_tick() -> bool:
@@ -899,7 +1229,9 @@ static func consume_bandage_heal() -> int:
 
 static func start_gold() -> int:
 	## 新开一局（与换层）的初始金钱：0~6 档 = 150（含难度 0 的 +50），7 档起 = 100。
-	return DIFF_GOLD_HIGH if _diff() >= 7 else DIFF_GOLD_LOW
+	## R767：每日修饰的 `gold` 叠在这上面（「贫瘠」−50 也该能开盘，所以夹 0 下限）。
+	var base := DIFF_GOLD_HIGH if _diff() >= 7 else DIFF_GOLD_LOW
+	return maxi(0, base + int(daily_fx.get("gold", 0)))
 
 
 static func chocolate_per_layer() -> int:
@@ -907,9 +1239,11 @@ static func chocolate_per_layer() -> int:
 	## R399（用户口径「第三层应该不再提供巧克力」）：第三层是 5 格直道，每格 `cost` 恒为 0，
 	## 巧克力在那儿一块也用不掉 —— 直接给 0，不再显示一个永远花不掉的数字。
 	## ⚠️ 读的是**当前层**（`advance_layer` 里先赋 `current_layer` 再调本函数）。
+	## R767：每日修饰的 `choco`（旅粮 +3 / 饥饿 −3）叠在这里；第三层仍然恒 0。
 	if current_layer == GameLayers.LAYER_THREE:
 		return 0
-	return DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
+	var base := DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
+	return maxi(0, base + int(daily_fx.get("choco", 0)))
 
 
 static func add_chocolate(n: int) -> void:
@@ -926,27 +1260,31 @@ static func add_chocolate(n: int) -> void:
 
 static func max_hp_mul() -> float:
 	## 初始最大生命系数：9 档起「虚弱」= 0.8，其余 = 1.0。
-	return DIFF_MAX_HP_MUL if _diff() >= 9 else 1.0
+	## R767：每日修饰的 `hp_mul`（强健 ×1.15 / 贫血 ×0.88）**相乘**叠在难度系数上。
+	return (DIFF_MAX_HP_MUL if _diff() >= 9 else 1.0) * float(daily_fx.get("hp_mul", 1.0))
 
 
 static func enemy_hp_bonus_pct() -> float:
 	## 3 档起「敌人更加顽强」：敌方开场生命 +10%（向上取整）。
-	return DIFF_ENEMY_HP_PCT if _diff() >= 3 else 0.0
+	## R767：每日修饰的 `enemy_hp`（敌之孱弱 −15% / 敌之顽强 +20%）加法叠加。
+	return (DIFF_ENEMY_HP_PCT if _diff() >= 3 else 0.0) + float(daily_fx.get("enemy_hp", 0.0))
 
 
 static func enemy_power_bonus() -> int:
 	## 6 档起「敌人更加凶猛」：敌方开场攻击 +1（原本 0 攻工事除外，见 scaled_enemy_card）。
-	return DIFF_ENEMY_POWER if _diff() >= 6 else 0
+	## R767：每日修饰的 `enemy_power` 加法叠加，但**不叠成负数**（敌人攻击不能被抹到 0 以下）。
+	return maxi(0, (DIFF_ENEMY_POWER if _diff() >= 6 else 0) + int(daily_fx.get("enemy_power", 0)))
 
 
 static func rare_weight_mul() -> float:
 	## 4 档起「稀有卡牌获取概率降低」：卡牌奖励里稀有权重的乘数（×0.5）。
-	return DIFF_RARE_WEIGHT_MUL if _diff() >= 4 else 1.0
+	## R767：每日修饰的 `rare_mul`（幸运 ×1.6 / 倒霉 ×0.5）相乘。
+	return (DIFF_RARE_WEIGHT_MUL if _diff() >= 4 else 1.0) * float(daily_fx.get("rare_mul", 1.0))
 
 
 static func fatigue_active() -> bool:
-	## 5 档起「行动力低时疲惫」是否生效。
-	return _diff() >= DIFF_FATIGUE_FROM
+	## 5 档起「行动力低时疲惫」是否生效。R767：每日减益也会强制开启它。
+	return _diff() >= DIFF_FATIGUE_FROM or bool(daily_fx.get("fatigue", false))
 
 
 static func elite_weight_mul() -> float:
@@ -955,15 +1293,9 @@ static func elite_weight_mul() -> float:
 	## 其他类型里扣掉，所以精英占比恰好涨 ×1.3，而不是权重 ×1.3 后只涨两成。
 	## 明房（`RogueMap.WEIGHTS`）与「?」房（`RogueMap.WEIGHTS_UNKNOWN`）两条途径都乘它，
 	## 而唯一消费点是 `RogueMap._weighted_far()` —— 所以「各种途径」天然只有一个口。
-	return DIFF_ELITE_MUL if _diff() >= DIFF_ELITE_FROM else 1.0
-
-
-static func unknown_shop_allowed() -> bool:
-	## 10 档起「精英出现增多」的配套：**「?」房不再刷出商店**。
-	## 于是每层商店 = 右上角那间固定商店 + `RogueMap.SHOP_MIN/MAX` 那 2 间，数量恒定
-	## （用户口径「每层商店数量调整为固定 2 个，不算右上角」）。
-	## 低档位维持原样（「?」房仍可能刷出商店）。
-	return _diff() < DIFF_ELITE_FROM
+	## R767：每日修饰的 `elite_mul`（冷清 ×0.75 / 拥挤 ×1.5）相乘。
+	return ((DIFF_ELITE_MUL if _diff() >= DIFF_ELITE_FROM else 1.0)
+			* float(daily_fx.get("elite_mul", 1.0)))
 
 
 static func scaled_enemy_card(card: CardData) -> CardData:
@@ -974,6 +1306,12 @@ static func scaled_enemy_card(card: CardData) -> CardData:
 	## 与 `configure_growth`（atk_growth 独立叠加、与 card.power 解耦）顺序无关。
 	if card == null:
 		return null
+	# R856 金鸭蛋（9285）：卡面写明**任何难度血量恒定为 3** → 整卡原样放行，
+	# 连副本都不做（蛋只有血 3 这一个数值，加成就没有意义；攻击 +1 也轮不到 0 攻工事）。
+	# ⚠️ 判据只认 id：别改成 `card.traits.has("鸭蛋")` —— 生蛋鸭的鸭蛋 9022 也带那个 trait，
+	#    它是玩家侧单位、按普通规则走。
+	if card.id == GameEngine.GOLDEN_EGG_ID:
+		return card
 	var pct := enemy_hp_bonus_pct()
 	var add := enemy_power_bonus()
 	var skip_power: bool = card.is_fort() and card.power == 0
@@ -1023,10 +1361,14 @@ static func sync_fatigue() -> void:
 static func gain_max_hp(amount: int) -> int:
 	## R181：商店「+5 最大生命（并回血）」—— 最大生命 +amount，当前生命同 +amount
 	## （即「上限提升的同时也补上这几点血」）。返回实际增加的最大生命。
+	## R853：苹果锁血时**上限照涨、附带回血不给**（换层回满才例外）。
 	if amount <= 0:
 		return 0
 	max_hp += amount
-	hp = mini(max_hp, hp + amount)
+	if not hp_recovery_locked():
+		hp = mini(max_hp, hp + amount)
+	else:
+		hp = mini(hp, max_hp)
 	return amount
 
 
@@ -1082,6 +1424,10 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R762：每日身份与固定难度必须在**生命计算 / 种子选择 / 解锁钳制**之前落定。
 	daily_date = str(daily.get("date", ""))
 	daily_rules = int(daily.get("rules", 0)) if daily_date != "" else 0
+	# R767：每日修饰的数值汇总。**必须在下面 `max_hp_mul()` 被调用之前就位** ——
+	# 「强健 / 贫血」改的就是初始最大生命，晚一行赋值就等于这条修饰不存在。
+	var dfx: Variant = daily.get("fx", {})
+	daily_fx = (dfx as Dictionary).duplicate(true) if daily_date != "" and dfx is Dictionary else {}
 	if daily_date != "":
 		set_difficulty(int(daily.get("difficulty", difficulty)))
 	# 初始生命按职业不同（R182）：基础 50 + 职业加成（森林精魄+20/暗影刺客+10/机械之心+16）。
@@ -1111,7 +1457,9 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	# R550（发布版解锁）：防御性钳制 —— 难度不得超过当前职业已解锁的上限。
 	# UI（class_pick_scene）里已经拦，这里是纵深防御：任何路径带着超限难度进来都会被压回。
 	# R762：每日挑战例外。固定配置对所有人相同，不能被各账号的解锁进度压成不同难度。
-	if GameBuild.is_release() and daily_date == "":
+	# R814：**试玩版也要钳**。试玩版 `is_release()` 恒 false，只判发布版的话，
+	# 一份来自完整版的档案（难度 13）能让试玩版直接 13 开局 —— 档位上限 1 就形同虚设。
+	if (GameBuild.is_release() or GameBuild.is_demo()) and daily_date == "":
 		difficulty = clampi(difficulty, 0, UnlockSystem.difficulty_cap(player_class))
 	# R352：统计「开局次数」—— 故事 1 的解锁条件就是「进行任意一局游戏」。
 	# 只记内存 + 置脏，落盘交给 `flush()`（`map_scene` 进地图时会调）。
@@ -1155,6 +1503,8 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	pending_deck_edit = ""
 	statue_charge = 0          # R307 雕像：新的一局从 0 开始数
 	basin_charge = 0           # R311 不锈钢盆：新的一局没有盆（重拿时再灌满）
+	story_book_pages = 0       # R835 空故事书：新的一局是一本空书
+	story_book_nodes = []
 	match_charge = 0           # R342 火柴：新的一局没有火柴（重拿时再灌满 3 次）
 	spent_relics.clear()       # R367：新的一局没有「已耗尽」的道具
 	pipe_ready = false          # R446：新的一局 → 烟斗从头（没拿到就是灭的）
@@ -1164,7 +1514,15 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	reward_kinds = []
 	# 开局卡组 = 公共部分 + 2 张角色基础盟友（森林精魄 → 树人；暗影刺客 → 幽影）
 	# + 角色专属卡（森林精魄 → 熊 8004；暗影刺客 → 突袭 9086）。见 PlayerClass.start_deck_ids。
-	deck_ids = PlayerClass.start_deck_ids(player_class)
+	# R767：每日挑战自带一套**随机卡组**（同一天所有人同一套）。这里**只读配置、不现摇** ——
+	# 开局那一刻再抽的话，同一个种子两局会不一样，Steam 榜就失去意义了。
+	var ddeck: Variant = daily.get("deck", [])
+	if daily_date != "" and ddeck is Array and not (ddeck as Array).is_empty():
+		deck_ids.clear()
+		for v: Variant in (ddeck as Array):
+			deck_ids.append(int(v))
+	else:
+		deck_ids = PlayerClass.start_deck_ids(player_class)
 	deck_mods = []                # R181：新开一局 → 附魔清空
 	lake_victim = -1              # R488：新开一局 → 湖中仙女没摇过「要失去的那张」
 	card_growth = {}             # R393：新开一局 → 击杀成长清零
@@ -1190,6 +1548,10 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	traps = [-1, -1, -1]   # R663：新的一局陷阱栏 3 空槽
 	tool_roll_seq = 0      # R694：新的一局 → 战斗掉落工具的重摇序号归零
 	toolbox_tool_seq = 0   # R745：工具箱发工具的序号同样归零
+	# R767：每日修饰 `tools`（工具箱）—— 开局多发 N 件工具。走 R745 的唯一发放口，
+	# 满栏时会自动排进「待领奖励」，不会静默吞掉。标准局 `daily_fx` 为空 → 循环 0 次。
+	for i: int in int(daily_fx.get("tools", 0)):
+		grant_random_tool("daily")
 	tool_deliver_seq = 0   # R752：快送鸭的序号同样归零
 	tool_drop_pledge = 0   # R754：新的一局没有「必掉」的祝福
 	bandage_pending = 0
@@ -1268,6 +1630,7 @@ static func end_run(clear_save: bool = true) -> void:
 	run_active = false
 	daily_date = ""               # R762：续档里另有副本；内存复位不删每日成绩
 	daily_rules = 0
+	daily_fx = {}                 # R767：修饰汇总必须一起清 —— 否则下一局标准模式还带着今日的减益
 	pipe_ready = false          # R446：一局结束 → 烟斗状态位复位
 	core_lost = 0               # R458：核心的累计与触发位同样复位
 	core_armed = false
@@ -1284,6 +1647,8 @@ static func end_run(clear_save: bool = true) -> void:
 	seen_ids = []                 # R207：本局结束 → 迷雾记忆清掉
 	chocolate = 0
 	gold = 0                      # R181：本局结束 → 金币清掉
+	story_book_pages = 0          # R835：本局结束 → 故事书合上
+	story_book_nodes = []
 	boss_pending = false
 	boss_beaten = false       # R339：一局结束 → 标记回到初值
 	# R339：本局已收尾（地图场景据此不再兜底开新局）。
@@ -1310,6 +1675,8 @@ static func end_run(clear_save: bool = true) -> void:
 	reset_run_stats()           # R530：整局统计不跨局
 	delayed_cards = []          # R473：延迟发卡的挂单不跨局（一局结束就作废）
 	sacrament_node = -1         # R473：圣餐的「已结算房间」跟着一局走
+	rest_pick_node = -1         # R781：火堆配额同样不跨局
+	rest_pick_used = 0
 	used_levels = []
 	map_strokes = []              # R177：本局结束 → 标记随之清掉
 	map_flags = []
@@ -1368,6 +1735,7 @@ static func advance_layer(layer: int) -> int:
 	reset_shop_session()          # R390：换层 = 新地图 → 上一层的店全部作废
 	cleared_ids = []
 	seen_ids = []                 # R207：换层 = 新地图 → 上一层记得的格子全部作废
+	story_book_new_layer()        # R835：节点 id 每层重号 → 记页账本也要换层作废
 	# R460（用户口径「地图上如果绘制了标记，进入下一层应该全部清除」）：
 	# 标记是按**旧地图**的格位存的（笔画记屏幕坐标点、小旗记格 id），新一层格子全换过 ——
 	# 留着不只对不上位置，还会让人误以为「这格我已经查过了」。
@@ -1457,7 +1825,10 @@ static func _pick_from_boss_pool(layer: int) -> Dictionary:
 static func _roll_relic_choice() -> Array[int]:
 	## 从「本层起始道具池」随机抽 3 个不重复的（池小于 3 时全给）：
 	## 第一层 = 初始道具池（6001~6004）；第二层 = 二层专属起始道具池（6014~6018）。
-	var pool := RelicRepo.load_json().start_ids_for_layer(current_layer)
+	## R822：第二层按「这一局遇到谁」分流 —— 鸭绅士在场时池子里是带鸭道具，
+	## 卷卷在场时是剩下的 5 件。R824 起试玩版也出鸭绅士，两边同一条分流。
+	var host: int = layer2_host() if current_layer == GameLayers.LAYER_TWO else LAYER2_HOST_BUNBUN
+	var pool := RelicRepo.load_json().start_ids_for_layer(current_layer, host)
 	var out: Array[int] = []
 	var bag: Array[int] = pool.duplicate()
 	while out.size() < 3 and not bag.is_empty():
@@ -1548,9 +1919,14 @@ static func roll_battle_tool_drop() -> int:
 	# R754 祭拜祝福（事件「奇异雕像」）：pledge > 0 时这一场**不看概率、必掉一件**，
 	# 然后 -1。⚠️ 必须在 `randf()` 之前分流：祝福不是「提高概率」而是「保证掉落」，
 	# 先摇一次概率再覆盖会让同一个种子在「祝福 / 不祝福」之间产生不同的随机流。
+	# R796 兔脚：概率**加算**（难度 0：0.33 → 0.43；1 档起：0.10 → 0.20）。放在 `randf()` 之前只算一个数，
+	# 不改变随机流的消费次数 —— 拿没拿兔脚，同一个种子摇出的那一颗 randf() 是同一颗。
+	var drop_chance := tool_drop_chance()
+	if has_relic(RABBIT_FOOT_RELIC_ID):
+		drop_chance += RABBIT_FOOT_TOOL_DROP
 	if tool_drop_pledge > 0:
 		tool_drop_pledge -= 1
-	elif rng.randf() >= TOOL_DROP_CHANCE:
+	elif rng.randf() >= drop_chance:
 		return -1
 	# R743：`random_traps()` —— 烤肉 7007 是 `rest_only`，只能从休息处烤出来，
 	# 不能靠打怪掉落刷出来（否则「篝火专属」的名头与实际不符）。
@@ -1676,7 +2052,10 @@ static func gain_relic(id: int) -> void:
 	match relic.id:
 		6001:   # 类固醇（R340：+6 → +10）：最大生命 +10（当前生命同 +10）
 			max_hp += 10
-			hp += 10
+			if not hp_recovery_locked():
+				hp = mini(max_hp, hp + 10)
+			else:
+				hp = mini(hp, max_hp)
 		6002:   # 源数之力（SOURCE_POWER_ID）：先失去 5 点最大生命，再进入卡组选择
 			lose_max_hp(SOURCE_POWER_HP_COST)
 			pending_relic = relic.id
@@ -1686,9 +2065,15 @@ static func gain_relic(id: int) -> void:
 			pending_relic = relic.id
 		6017:   # 重鸭（二层起始）：拾起时最大生命 +6（当前生命同 +6）
 			max_hp += 6
-			hp += 6
-		APPLE_RELIC_ID:   # 苹果（R224/244/445/756）：立即 +7 最大生命，并回复 20% 最大生命值
-			gain_max_hp(APPLE_MAX_HP)
+			if not hp_recovery_locked():
+				hp = mini(max_hp, hp + 6)
+			else:
+				hp = mini(hp, max_hp)
+		APPLE_RELIC_ID:   # 苹果（R224/244/445/756/852）：立即 +7 最大生命，并回复 20% 最大生命值
+			# R853：此刻 relics 已 append（代价已上锁），所以 +7 与 20% 两口
+			# 都直接写 hp 绕过 `heal()` / `gain_max_hp()`，拿取瞬间照常到账。
+			max_hp += APPLE_MAX_HP
+			hp = mini(max_hp, hp + APPLE_MAX_HP)
 			hp = mini(max_hp, hp + int(round(max_hp * APPLE_HEAL_PCT)))
 		PACK_RELIC_ID:   # 行囊（R244）：+100 金币 + 一张「木栅栏」进卡组
 			gold += PACK_GOLD
@@ -1714,6 +2099,8 @@ static func gain_relic(id: int) -> void:
 			note_reveal_bigchest()
 		FLINT_RELIC_ID:  # 燧石（R447）：要玩家在地图上点一格走过的房间 → 回地图后进选格模式
 			pending_relic = relic.id
+		JEWELRY_BOX_RELIC_ID:   # 首饰盒（R830）：随机一张史诗卡加入卡组
+			_grant_random_epic()
 
 
 static func _grant_linked_card(rel: RelicData, fallback := -1) -> void:
@@ -1730,6 +2117,16 @@ static func _grant_linked_card(rel: RelicData, fallback := -1) -> void:
 		cid = fallback
 	if cid > 0:
 		add_card(cid)
+
+
+static func _grant_random_epic() -> void:
+	## 首饰盒（6088，R830）：随机一张**史诗卡**（本职业奖励池里稀有度 2 的卡）加入卡组。
+	## 复用湖中仙女·诚实的同一条抽卡口（LAKE_EPIC_RARITY = 2）；随机源走 run_rng → 同种子一致。
+	var rolled := CardReward.roll_rarity(CardRepo.load_json(), LAKE_EPIC_RARITY, 1, run_rng)
+	if rolled.is_empty():
+		return
+	var c: CardData = rolled[0]
+	add_card(c.id)
 
 
 static func _apply_pot(rel: RelicData = null) -> void:
@@ -1821,13 +2218,13 @@ static func has_all_keys() -> bool:
 
 
 static func third_layer_locked() -> bool:
-	## 第三层是否被「上锁」约束：难度 ≥ 11 时，需要凑齐三样信物才能进入。
+	## 第三层是否被「上锁」约束：难度 ≥ 12 时，需要凑齐三样信物才能进入。
 	## ⚠️ 难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
 	return _diff() >= DIFF_LOCK_FROM
 
 
 static func can_enter_third_layer() -> bool:
-	## 能否进入第三层：难度 < 11 恒可进；难度 ≥ 11 需要凑齐三样信物。
+	## 能否进入第三层：难度 < 12 恒可进；难度 ≥ 12 需要凑齐三样信物。
 	if not third_layer_locked():
 		return true
 	return has_all_keys()
@@ -1910,6 +2307,16 @@ static func can_use_cave_rope(battle_kind: String) -> bool:
 	## 按钮显隐与真正的逃跑结算都走这里，免得两处各自写一遍再分叉。
 	# R367：走 `has_relic()` —— 绳子用掉后灰在栏里，不能再「逃跑」第二次。
 	return has_relic(CAVE_ROPE_RELIC_ID) and battle_kind != "boss"
+
+
+static func cave_rope_refund() -> void:
+	## R772 洞窟绳：逃跑时退还进房扣掉的 1 块巧克力。
+	##   * 这一格进房时已经标进 `cleared_ids`（「已探索」），回访不触发战斗，也就不会反复退还；
+	##   * 第三层不收步数（每格 cost 恒 0）→ 不返还；
+	##   * 走 add_chocolate：巧克力从 0 回到 1 时顺手撤销 boss_pending（最后一格逃了不算入夜）。
+	if current_layer == GameLayers.LAYER_THREE:
+		return
+	add_chocolate(1)
 
 
 static func lose_relic(id: int) -> bool:
@@ -2040,6 +2447,19 @@ static func roll_reward_relic(bigchest := false, exclude: Array = [],
 			return -1
 		return leg[run_rng.randi() % leg.size()]
 	return nor[run_rng.randi() % nor.size()]
+
+
+static func roll_legendary_relic(exclude: Array = []) -> int:
+	## R807：**必定传奇**的一件奖励道具（事件「诡异洋房 · 探索」的报酬之一）。
+	## 与 `roll_reward_relic()` 的分工：那个按「5% × 层数」摇档位，这个直接锁死传奇池。
+	## ⚠️ 传奇池空了返回 **-1**，**不回落一般池** —— 悄悄塞一件一般的进去，
+	##    卡面上承诺的「传奇」就成了假话；调用方要自己决定「池子空了怎么办」。
+	## ⚠️ 只消耗**一个** randi（不先摇 randf 判档）：档位已经固定，多摇一个随机数
+	##    只会让同一 seed 下的道具序列凭空错位。
+	var leg := _reward_pool(RelicData.TIER_LEGENDARY, exclude)
+	if leg.is_empty():
+		return -1
+	return leg[run_rng.randi() % leg.size()]
 
 
 static func _drop_settled_batch() -> void:
@@ -2625,6 +3045,9 @@ static func relic_state_note(id: int) -> String:
 	# R314 lucky 7：写清「还差几个回合生效」—— 它的效果是周期性脉冲，不是常亮
 	if id == MATCH_RELIC_ID and relics.has(MATCH_RELIC_ID):
 		return GameI18n.ui("reward", "REWARD_RELIC_STATE_REROLLS", "剩余刷新次数 %d 次。") % maxi(0, match_charge)
+	if id == CRESCENT_EARING_ID and relics.has(CRESCENT_EARING_ID):
+		return GameI18n.ui("reward", "REWARD_RELIC_STATE_CRESCENT_WAITING",
+				"距获得下一点费用还有 %d 场战斗。") % crescent_left()
 	if id == LUCKY7_RELIC_ID and relics.has(LUCKY7_RELIC_ID):
 		if lucky7_is_due():
 			return GameI18n.ui("reward", "REWARD_RELIC_STATE_LUCKY7_ACTIVE", "本回合生效：免疫所有 HP 伤害 + 技能额外 7 点伤害。")
@@ -2685,6 +3108,100 @@ static func delete_deck_card(index: int) -> bool:
 	Telemetry.note_deck_change("del", cid, 0)
 	pending_relic = -1
 	return true
+
+
+# ── R842「稀有价值」（6090，第一层事件「龙石板」选项 2）──────────────────────
+## 店长口径（原话）：「获得道具稀有价值。卡组同名卡最多 3 张，超出则随机删除直到只有
+## 3 张为止。**每因此效果删除一张卡**受到 5 点伤害。」＋「只管完整卡组」「如果选此选项会
+## 立即死亡则不能选」。
+##   · **只管获得那一刻**的完整卡组（`deck_ids`）—— 删完即结束，之后的卡组变化不再受它约束；
+##   · 只有**本效果删掉的**卡才算账：界面与结算读同一个 `rare_value_targets()`，不会两套数；
+##   · 会当场致死 → 按钮置灰 + `rare_value_prune()` 再拒一次
+##     （R793 拔剑的教训：只在界面拦 = 没拦）；
+##   · 删哪几张由「种子 + 层 + 节点 + 下标」派生，不摇 `run_rng`、不进存档（R819 同口径）。
+const RARE_VALUE_ID := 6090
+const RARE_VALUE_MAX_COPIES := 3
+const RARE_VALUE_LOSS := 5
+
+
+static func rare_value_targets(repo: CardRepo) -> Array[int]:
+	## 这一次**真的会被撕掉**的卡（deck 下标，**从大到小**排好 —— 逐个删不会串位）。
+	## 带锁的卡（`remove_block_reason() != ""`：月亮 / 硬币 / 罐子）不进候选 ——
+	## 与 `delete_deck_card()` 同一道闸，别在这里另开一条路。
+	var by_name: Dictionary = {}
+	for i in deck_ids.size():
+		var c := repo.get_card(int(deck_ids[i]))
+		var key: String = c.card_name if c != null else str(deck_ids[i])
+		if not by_name.has(key):
+			by_name[key] = []
+		(by_name[key] as Array).append(i)
+	var pool: Array[int] = []
+	for key: String in by_name:
+		var idxs: Array = by_name[key]
+		if idxs.size() <= RARE_VALUE_MAX_COPIES:
+			continue
+		var need: int = idxs.size() - RARE_VALUE_MAX_COPIES
+		var removable: Array[int] = []
+		for raw_i: int in idxs:
+			if remove_block_reason(raw_i) == "":
+				removable.append(raw_i)
+		if removable.is_empty():
+			continue
+		var picked: Array[int] = _rare_value_order(removable)
+		for k in mini(need, picked.size()):
+			pool.append(picked[k])
+	pool.sort()
+	pool.reverse()
+	return pool
+
+
+static func _rare_value_order(pool: Array[int]) -> Array[int]:
+	## 稳定洗牌：排序键 = `seed_of("rarevalue:<层>:<节点>", deck 下标)`。
+	## 同一局同一间房**必然同一结果** —— 退出重进换不了牌（R819 占卜室 / R822 主持人同一口径）。
+	## ⚠️ 不用 `run_rng`：那会扰动掉落顺序链，也让「回标题再继续」变成重摇按钮。
+	## ⚠️ 也别用 `hash("...:%d" % i)` 这种「下标拼在末尾再 hash」的写法（R842b 踩过）：
+	##    Godot 的字符串 hash 对**只有末位不同**的串只差 1（实测 `11:10000:0` → 4258037788、
+	##    `11:10000:1` → 4258037789），排序键于是退化成正序 —— 看着「洗过」，其实一张没动。
+	##    `seed_of()` 先把 index 乘 2654435761 再 xorshift 混洗，才是真的散开。
+	var cat := "rarevalue:%d:%d" % [current_layer, current_node_id]
+	var out: Array[int] = pool.duplicate()
+	out.sort_custom(func(a: int, b: int) -> bool:
+		var ha := seed_of(cat, a)
+		var hb := seed_of(cat, b)
+		if ha == hb:
+			return a < b
+		return ha < hb)
+	return out
+
+
+static func rare_value_damage(repo: CardRepo) -> int:
+	## 「每因此效果删除一张卡」= 5 点 —— 只有 `rare_value_targets()` 里的卡才计。
+	return rare_value_targets(repo).size() * RARE_VALUE_LOSS
+
+
+static func rare_value_lethal(repo: CardRepo) -> bool:
+	## 选了会当场倒下（伤害把当前生命打到 0 或以下）→ 这个选项不能选。
+	var dmg := rare_value_damage(repo)
+	return dmg > 0 and hp - dmg <= 0
+
+
+static func rare_value_prune(repo: CardRepo) -> Dictionary:
+	## 结算：撕掉超出上限的同名卡 → 每张失去 `RARE_VALUE_LOSS` 点生命。
+	## 返回 {ok, deleted: Array[String], damage, blocked}；`ok = false` = 会致死，**一张都没删**。
+	var targets := rare_value_targets(repo)
+	var dmg: int = targets.size() * RARE_VALUE_LOSS
+	if dmg > 0 and hp - dmg <= 0:
+		return {"ok": false, "deleted": [], "damage": 0, "blocked": true}
+	var names: Array[String] = []
+	for i: int in targets:
+		var c := repo.get_card(int(deck_ids[i]))
+		var nm: String = c.card_name if c != null else str(deck_ids[i])
+		if delete_deck_card(i):
+			names.append(nm)
+	var lost: int = names.size() * RARE_VALUE_LOSS
+	if lost > 0:
+		hp = maxi(0, hp - lost)
+	return {"ok": true, "deleted": names, "damage": lost, "blocked": false}
 
 
 static func transform_deck_card(repo: CardRepo, index: int, same_class := false) -> Dictionary:
@@ -2778,7 +3295,7 @@ static func grant_bigchest() -> Dictionary:
 	## 返回 {relic_id, gold, reward_idx}（relic_id = -1 表示奖励道具已全拿完）。
 	## R543（用户口径）：开启大宝箱时，若玩家**不持有生命之种**，则道具那格改成
 	## 「奖励道具 / 生命之种」二选一（新增的二选一领取方式）。
-	## ⚠️ 用户口径「所有信物改动只在难度 ≥ 11 生效」→ 低难度下仍走普通道具掉落。
+	## ⚠️ 用户口径「所有信物改动只在难度 ≥ 12 生效」→ 低难度下仍走普通道具掉落。
 	gain_gold(BIGCHEST_GOLD)
 	# R314：**大宝箱**的传奇概率翻倍（5% × 层数 → 10% × 层数），所以这里必须传 `true`。
 	var rid := roll_reward_relic(true)
@@ -2803,6 +3320,12 @@ static func queue_key_choice(relic_id: int) -> void:
 static func claim_key_choice(idx: int, take_key: bool) -> bool:
 	## R543：二选一领取 —— `take_key = true` 拿「生命之种」信物，否则拿「奖励道具」。
 	## 成功后该条置为 claimed。奖励道具走 gain_relic、信物走 gain_key。
+	## R798（用户口径「道具如果在大宝箱二选一没有拿，也算出现过，后续不会再重复出现」）：
+	## **摆上二选一就算出现过** —— 不论玩家最后拿了哪一边，候选道具都登记进
+	## `skipped_relics`（本局后续不再随机出来）。原来只有「放弃」那条路登记
+	## （`skip_key_choice`），选了种子时落选的那件会留在池子里、过几层又摇出来一次。
+	## ⚠️ 选道具那条分支同样登记：`gain_relic` 之后它已在 `relics` 里、池子本来就摇不到，
+	##    两边都记是为了「失去道具」类效果之后也不会复活（口径只有一句：出现过就不再出现）。
 	if idx < 0 or idx >= pending_rewards.size():
 		return false
 	var e: Dictionary = pending_rewards[idx]
@@ -2810,18 +3333,21 @@ static func claim_key_choice(idx: int, take_key: bool) -> bool:
 		return false
 	if str(e.get("state", REWARD_PENDING)) != REWARD_PENDING:
 		return false
+	var rid := int(e.get("relic_id", -1))
+	if rid > 0 and not skipped_relics.has(rid):
+		skipped_relics.append(rid)
 	if take_key:
 		gain_key(int(e.get("key_id", SEED_RELIC_ID)))
-	else:
-		var rid := int(e.get("relic_id", -1))
-		if rid > 0:
-			gain_relic(rid)
+	elif rid > 0:
+		gain_relic(rid)
 	e["state"] = REWARD_CLAIMED
 	return true
 
 
 static func skip_key_choice(idx: int) -> bool:
 	## R543：二选一放弃 —— 什么都不拿，奖励道具登记进 skipped（本局不再随机出来）。
+	## R798：登记口径与 `claim_key_choice` **完全一致** —— 三条出口（拿道具 / 拿种子 /
+	## 作废放弃）都会把那件候选道具记成「出现过」，本局不再摇到它。
 	if idx < 0 or idx >= pending_rewards.size():
 		return false
 	var e: Dictionary = pending_rewards[idx]
@@ -3412,6 +3938,10 @@ static func advance(node_id: int) -> Dictionary:
 static func complete_current() -> void:
 	## 当前房间内容结算完成（战斗胜利 / 休息 / 事件 / 大宝箱）。
 	## 进房时已经标过「已走过」，这里是幂等的兜底口。
+	## ⚠️ R835 空故事书的「事件 +1 页」挂在**这里**：事件完成的调用点散在 event_scene
+	##    十余处，唯一共同收口就是本函数。它自己按 `story_book_nodes` 去重，
+	##    因此不受 `cleared_ids` 是否已被别的场景 append 影响。
+	_note_story_book_event(current_node_id)
 	if current_node_id >= 0 and not cleared_ids.has(current_node_id):
 		cleared_ids.append(current_node_id)
 	reveal_known()                # R207：幂等刷新（房间结算完的视野也记进 seen）
@@ -3463,6 +3993,16 @@ static func gold_for_tier(tier: int) -> int:
 		GameLevels.TIER_ELITE_EASY: return 50
 		GameLevels.TIER_ELITE_HARD: return 65
 		GameLevels.TIER_BOSS: return 100
+	return 0
+
+
+static func rabbit_foot_gold() -> int:
+	## R796 兔脚（6076）：战斗胜利额外给的金币（没有这件道具 → 0）。
+	## ⚠️ 只加在**战斗胜利**这一条上（`battle_scene` 的结算口），不进 `gold_for_tier()` ——
+	##    那个函数是「按难度分级的基础掉落」的唯一口径，测试也按它断言，掺进道具会把它污染成
+	##    「看背包的函数」。宝箱 / 事件 / 商店都不吃兔脚（用户口径写的是「战斗掉落金币」）。
+	if has_relic(RABBIT_FOOT_RELIC_ID):
+		return RABBIT_FOOT_GOLD
 	return 0
 
 
@@ -3544,8 +4084,22 @@ static func mark_boss_beaten() -> void:
 	## R339：本层 Boss 已击破 —— 唯一置位口。
 	## 顺带清掉 `boss_pending`：Boss 战打完时这条「等房间结算完就入夜」的待触发必须失效，
 	## 否则回地图就可能再开一次（原先只靠 `map_scene._start_boss_battle` 提前清，是个单点依赖）。
+	## R835 空故事书：每个首领 +1 页。`boss_beaten` 是**按层**标志（换层复位），
+	## 天然做到「同一层的同一只首领只记一次、下一层的新首领再记一次」。
+	if boss_beaten:
+		boss_pending = false
+		return
 	boss_beaten = true
 	boss_pending = false
+	story_book_add_page()
+
+
+static func elite_tier_for_chocolate(choco: int) -> int:
+	## R778：强弱精英的**唯一判据**（纯函数，测试直接传数）——
+	## 当前巧克力 <= ELITE_STRONG_CHOCO_MAX（5）→ 强精英（精英敌人-困难）；
+	## 否则 → 弱精英（精英敌人-简单）。第三层不适用（next_level 里提前固定池）。
+	return GameLevels.TIER_ELITE_HARD if choco <= ELITE_STRONG_CHOCO_MAX \
+			else GameLevels.TIER_ELITE_EASY
 
 
 static func node_layer(node: Dictionary) -> int:
@@ -3557,7 +4111,7 @@ static func next_level(node: Dictionary) -> Dictionary:
 	## 进入战斗节点时决定具体关卡 —— 只从「该节点所属层」的关卡池里抽
 	## （第一层的关卡不会跑到别的层，别的层的关卡也不会出现在第一层）：
 	## 前 2 场普通战斗 = 普通敌人-简单，之后 = 普通敌人-困难；
-	## 第 1 场精英 = 精英敌人-简单，之后 = 精英敌人-困难（R506：从「前 2 场」提前到第 2 场起重）；
+	## 精英强弱只看**当前巧克力**：<= 5 强精英，> 5 弱精英（R778 替换原「按 elite_wins 场次」）；
 	## Boss 固定。
 	## 同一分级池内尽量不重复（本局用完一轮后允许循环复用）。
 	var layer := node_layer(node)
@@ -3570,12 +4124,11 @@ static func next_level(node: Dictionary) -> Dictionary:
 			return _pick_level(_layer_tier_pool([tier], layer))
 		"elite":
 			# R506b：第三层固定抽第二层「精英困难」池（3 关）—— 直道那一格是 Boss 前的
-			# 最后一战，不参与 elite_wins 的简单/困难切换。
+			# 最后一战，不参与强弱精英判定（R778 口径不变）。
 			if layer == GameLayers.LAYER_THREE:
 				return _pick_level(GameLevels.third_elite_pool())
-			# R506：第 1 场精英 = 简单，第 2 场起困难（原来是前 2 场简单）。
-			var tier2: int = GameLevels.TIER_ELITE_EASY if elite_wins < 1 \
-					else GameLevels.TIER_ELITE_HARD
+			# R778：强弱精英改由**当前巧克力**判定（原「按 elite_wins 场次切换」废弃）。
+			var tier2: int = elite_tier_for_chocolate(chocolate)
 			return _pick_level(_layer_tier_pool([tier2], layer))
 		"boss":
 			# Boss 可能同层有多个（如第一层：远古虚骨龙 / 恶魔鸭）。
@@ -3725,7 +4278,7 @@ static func delivery_override_kind() -> String:
 static func build_deck(repo: CardRepo) -> Array[CardData]:
 	## 按 deck_ids 构建实际牌库（缺定义的 id 跳过）。
 	## 一律用卡库**共享实例**，**除非**这一张带商店附魔（R181）—— 附魔要烤进卡
-	## （费用 -1 / 伤害 +10 / 次元 +2力+10血 / 保存），不能污染卡库共享实例，
+	## （费用 -1 / 伤害 +8 / 次元 +2力+10血 / 保存），不能污染卡库共享实例，
 	## 于是对带附魔的那张用 `from_dict(to_dict())` 生成**独立副本**再应用。
 	## R214：单卡口径统一收进 `card_with_mod()`（展示层也调它，别再各写一遍复制逻辑）。
 	var cards: Array[CardData] = []
@@ -3758,14 +4311,38 @@ static func card_with_mod(repo: CardRepo, index: int) -> CardData:
 		return null
 	var mod: Dictionary = _mod_at(index)
 	var growth := card_growth_of(deck_ids[index])
+	# R862：难度 ≥11 → 初始卡（木栅栏 / 攻击）退回旧数值。
+	# 判据只看 id + 当前档：卡片来源（初始 / 诅咒塞的 / 每日挑战）不区分 —— 这三张
+	# 本来就是 rarity=3 的初始卡，进不了奖励池，所以「卡组里的」就等于「玩家的基础卡」。
+	var weak := _starter_weak_applies(deck_ids[index])
 	# R393：没有附魔、但有本局永久成长时**也必须复制** —— 否则会把成长写进卡库共享实例。
-	if mod.is_empty() and growth.is_empty():
+	if mod.is_empty() and growth.is_empty() and not weak:
 		return c
 	var cc := CardData.from_dict(c.to_dict())   # 独立副本（affixes 等数组也独立）
 	if not mod.is_empty():
 		_apply_mod(cc, mod)
 	_apply_card_growth(cc, growth)
+	if weak:
+		_apply_starter_weak(cc)
 	return cc
+
+
+static func _starter_weak_applies(id: int) -> bool:
+	## R862：这张卡在当前档要不要按「初始卡削弱」处理（只认木栅栏 / 攻击两个 id）。
+	if id != STARTER_FENCE_ID and id != STARTER_ATTACK_ID:
+		return false
+	return starter_card_weak()
+
+
+static func _apply_starter_weak(cc: CardData) -> void:
+	## R862：把削弱后的数值烤进**副本**（调用方已复制，这里可以放心改）。
+	## ⚠️ 攻击**不改 `effect_text`**：i18n 译文按中文原串整句硬编码，改了原文就查不到译文
+	##    （R702 踩过）。卡面数字交给 `body_number_swap`，`CardText.parse_card()` 替换。
+	if cc.id == STARTER_FENCE_ID:
+		cc.health = STARTER_WEAK_FENCE_HP
+	elif cc.id == STARTER_ATTACK_ID:
+		cc.value = STARTER_WEAK_ATTACK_DMG
+		cc.body_number_swap = {"from": STARTER_ATTACK_DMG, "to": STARTER_WEAK_ATTACK_DMG}
 
 
 static func card_growth_of(card_id: int) -> Dictionary:
@@ -3874,12 +4451,12 @@ static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 		"costdown":
 			return c.cost > 1 and not c.x_cost
 		"damage":
-			# R210：**只给技能卡**（用户口径「伤害 +10 限制只能附魔给技能卡」）。
+			# R210：**只给技能卡**（用户口径「伤害附魔只能给技能卡」—— 引述原话，不写具体数值）。
 			# R226：再收紧 —— 只给**能直接造成伤害**的技能卡（用户口径「要限制能直接造成
 			# 伤害的技能卡」）：治疗 / 抽牌 / 加 buff / 防御类技能本来就不吃这个 +10，
 			# 附了也是白花 60 金。判据唯一口 = `CardData.is_damage_spell()`。
 			# 技能卡的 `power` 在卡面上**恒为 0**（伤害写死在引擎结算里），附魔把 +10 烤进
-			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +10。
+			# `power`，由 `GameEngine._spell_dmg()` 消费 → 这张技能卡造成的伤害 +8。
 			# 以前判 `power > 0`（= 只给盟友 / 工事），技能卡永远选不中、单位却能白拿 10 攻。
 			return c.is_damage_spell()
 		"core":
@@ -3887,6 +4464,11 @@ static func enchant_ok(ench_id: String, c: CardData, deck_idx: int) -> bool:
 			# 所以资格只看「自己是不是一张拿得出段伤的伤害技能卡」。
 			# ⚠️ 随机池（牛奶 / 附魔大师）不会摇到它，见 `CardData.random_enchant_ids()`。
 			return c.is_damage_spell() and GameEngine.spell_first_hit(c) > 0
+		"brawn":
+			# R842 事件「龙石板」选项 1：只给**盟友 / 工事**（与 `dimension` 同一类判据）。
+			# 技能卡的 `power` 不会被任何结算读（伤害写在 `effect_text` 里），给了也是白给。
+			# ⚠️ 不进商店、不进随机池 —— 见 `CardData.ENCHANT_RANDOM_EXCLUDE`。
+			return (c.kind == "盟友" or c.is_fort()) and not c.is_effect()
 		"dimension":
 			return (c.kind == "盟友" or c.is_fort()) and not c.has_affix("次元") \
 					and not c.is_effect()
@@ -3913,7 +4495,10 @@ static func enchant_mod(ench_id: String) -> Dictionary:
 	var m: Dictionary = {}
 	match ench_id:
 		"costdown": m = {"cost": -1}
-		"damage": m = {"power": 10, "note": "伤害 +10"}
+		"damage": m = {"power": 8, "note": "伤害 +8"}
+		# R842：事件独有附魔 —— 与「伤害 +8」同样烤进 `power`，只是限定盟友 / 工事。
+		# 标注写「力量 +8」而不是「伤害 +8」：卡面数值框加的是力量，文案得对得上。
+		"brawn": m = {"power": 8, "note": "力量 +8"}
 		"dimension": m = {"affix": "次元", "power": 2, "health": 10}
 		"save": m = {"affix": "保存"}
 		# R229「起手」：**不改任何数值**，只记 id —— 抽牌时引擎按 `card.enchant` 认它。
@@ -3930,7 +4515,9 @@ static func enchant_mod(ench_id: String) -> Dictionary:
 static func enchant_id_of(mod: Dictionary) -> String:
 	## 一份 mod 是哪种附魔（`enchant_mod()` 写的 `"id"` 优先）。
 	## R181~R213 的老存档 / 老 mod **没有 id** → 按内容反推（附魔效果互不重叠，能反推）：
-	## 费用 -1 / 次元(+2力+10血) / 保存 / 伤害 +10（带 note）。
+	## 费用 -1 / 次元(+2力+10血) / 保存 / 伤害 +N（带 note）。
+	## ⚠️ 数值本身**不**参与反推（R787 把 +10 下调成 +8 之后，老存档里那批
+	##    `{"power": 10, "note": "伤害 +10"}` 仍然要认成 damage）—— 只认「有没有增量」。
 	## 反推不出来（未知形态）→ ""（卡面不画标记，但数值照旧生效）。
 	if mod.is_empty():
 		return ""
@@ -3965,7 +4552,7 @@ static func _apply_mod(c: CardData, mod: Dictionary) -> void:
 	# R458：可变数值附魔（契约核心「伤害 +N」）的**逐卡显示名** —— 空串 = 用固定名。
 	c.enchant_label = str(mod.get("label", ""))
 	# R210：技能卡的具体伤害是写在 `effect_text` 里的死文字（「造成 17 点伤害」），
-	# 「伤害 +10」附魔改的是**结算值** → 卡面文字会跟实际伤害对不上。补一行标注，
+	# 「伤害 +8」附魔改的是**结算值** → 卡面文字会跟实际伤害对不上。补一行标注，
 	# 详情条 / 图鉴 / 牌库都读 `effect_text`，玩家一眼能看到这张卡被附魔过。
 	var note: String = str(mod.get("note", ""))
 	if note != "" and c.effect_text.find(note) < 0:
@@ -4029,7 +4616,7 @@ static func enchant_deck_card(index: int, mod: Dictionary) -> bool:
 
 # ── R458「契约的核心」（第二层事件）：可变的伤害附魔 ──────────────────
 ## 契约核心 = +N 伤害，N 取自被献祭那张技能卡的**第一段伤害**
-## （`GameEngine.spell_first_hit()` 唯一口）。消费点与商店的「伤害 +10」完全同源
+## （`GameEngine.spell_first_hit()` 唯一口）。消费点与商店的「伤害 +8」完全同源
 ## （`_spell_dmg()` 把 `card.power` 并进每一段），区别只在这个数不固定 ——
 ## 所以名字也逐卡携带（`CardData.enchant_title()`），不能用固定标签。
 const CORE_ENCHANT_ID := "core"

@@ -18,7 +18,10 @@ CARDS = json.loads((ROOT / "cards.json").read_text(encoding="utf-8-sig"))["cards
 CARDS_EN = json.loads((I18N / "cards_en.json").read_text(encoding="utf-8"))["cards"]
 CARDS_JA = json.loads((I18N / "cards_ja.json").read_text(encoding="utf-8"))["cards"]
 SECTIONS = ("options", "results", "pickers", "rest_dynamic")
-EXPECTED_COUNTS = {"options": 84, "results": 64, "pickers": 5, "rest_dynamic": 3}
+# R793：林中的剑 +4 选项（拔剑 / 上限不足 / 已持有 / 离开）、+1 结果。
+# R794：巧克力工厂 +6 选项（四档试吃 / 上限不足 / 离开）、+3 结果（免费 / 换血 / 得卡）。
+# R842：龙石板 +5 选项（强力 / 尊贵 / 无目标置灰 / 致死置灰 / 离开）、+3 结果、+5 选货页。
+EXPECTED_COUNTS = {"options": 104, "results": 77, "pickers": 10, "rest_dynamic": 3}
 errors = []
 
 
@@ -199,4 +202,6 @@ if errors:
     for error in errors:
         print("  -", error)
     sys.exit(1)
-print("\nEVENT UI I18N OK: 84 options / 64 results / 5 picker fields / 3 dynamic lines")
+print("\nEVENT UI I18N OK: %d options / %d results / %d picker fields / %d dynamic lines" % (
+    EXPECTED_COUNTS["options"], EXPECTED_COUNTS["results"],
+    EXPECTED_COUNTS["pickers"], EXPECTED_COUNTS["rest_dynamic"]))

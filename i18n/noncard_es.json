@@ -49,7 +49,7 @@
     },
     "6014": {
       "name": "Melocotones amarillos enlatados",
-      "desc": "Después de ganar cada combate, recupera 4 de Vida, sin superar tu Vida máxima."
+      "desc": "Después de ganar cada combate, recupera 6 de Vida y obtén +1 de Vida máxima."
     },
     "6015": {
       "name": "Pendientes de idioma pato",
@@ -77,7 +77,7 @@
     },
     "6021": {
       "name": "Reparación de vallas",
-      "desc": "Las cartas de Valla se pueden jugar en casillas que ya contengan una Valla aliada. Las Vallas se fusionan en una, suman su Vida y combinan sus rasgos sin duplicar los rasgos idénticos."
+      "desc": "Las cartas de Valla se pueden jugar en casillas que ya contengan una Valla aliada. Las Vallas se fusionan en una: sus máximos de Vida se suman y la Valla fusionada recupera toda su Vida, y sus rasgos se combinan sin duplicar los rasgos idénticos."
     },
     "6022": {
       "name": "Forma salvaje",
@@ -185,7 +185,7 @@
     },
     "6048": {
       "name": "Cuerda de caverna",
-      "desc": "Los combates que no sean contra un Jefe tienen un botón adicional de «Huir». Después de huir, pierdes esta Reliquia y no obtienes recompensas."
+      "desc": "Los combates que no sean contra un Jefe tienen un botón adicional de «Huir». Después de huir 1 vez, pierdes esta Reliquia y no obtienes recompensas, pero recuperas 1 Chocolate (la casilla sigue contando como explorada)."
     },
     "6049": {
       "name": "Trofeo de cabeza de ciervo",
@@ -209,7 +209,7 @@
     },
     "6054": {
       "name": "Impulso oscuro",
-      "desc": "Ya no puedes omitir las recompensas de cartas: debes tomar 1 carta de inmediato para cerrar la pantalla de recompensa y no puedes guardar las recompensas de cartas para más adelante. Tampoco puedes eliminar cartas de tu mazo en las tiendas. Al comienzo de cada turno, roba 1 carta adicional."
+      "desc": "Al comienzo de cada turno, robas 1 carta adicional. No puedes omitir las recompensas de cartas — debes tomar 1 carta en el acto para cerrar la pantalla de recompensa. Tampoco puedes eliminar cartas de tu mazo en las tiendas."
     },
     "6055": {
       "name": "Pipa de fumar",
@@ -241,7 +241,11 @@
     },
     "6065": {
       "name": "Brazo mecánico",
-      "desc": "Al comienzo de cada combate, añade a tu mano un Aliado aleatorio del grupo de recompensas de la clase actual; tiene Coste -1 durante tu primer turno."
+      "desc": "Al comienzo de cada combate, añade un Aliado aleatorio a tu mano; cuesta -1 este turno."
+    },
+    "6066": {
+      "name": "Pata de mono",
+      "desc": "Al inicio de cada uno de los tres primeros turnos de cada combate: añade una carta aleatoria de otra clase a tu mano (cuesta -2 este turno) y añade un Arrepentimiento a tu mazo."
     },
     "6067": {
       "name": "Poción de memoria",
@@ -254,7 +258,28 @@
     "6069": {
       "name": "Poema",
       "desc": "La primera vez cada turno que uses un Aliado de otra clase, ganas 1 de Coste. Los Aliados de otras clases tienen +2 de Poder (efecto persistente; no se acumula)."
-    }
+    },
+    "6070": {"name": "Armadura de Placas", "desc": "El primer Aliado que juegas en cada combate obtiene +3 de Vida por Nivel actual (no se acumula), pero su Velocidad de Movimiento pasa a ser 1."},
+    "6071": {"name": "Peón", "desc": "El primer Aliado que juegas en cada combate puede actuar dos veces (no se acumula)."},
+    "6072": {"name": "Ladrillo", "desc": "Tus Estructuras tienen +4 de Vida (efecto persistente; no se acumula)."},
+    "6073": {"name": "Muro de Púas", "desc": "Una vez por turno: cuando una de tus Estructuras o tu Vida es atacada, inflige 5 de daño al atacante."},
+    "6074": {"name": "Armadura de Emergencia", "desc": "No puedes recibir más de 20 de daño por turno."},
+    "6075": {"name": "Espada Sagrada", "desc": "El primer Aliado que juegas en cada combate obtiene +10 de Poder (no se acumula)."},
+    "6076": {"name": "Pata de conejo", "desc": "Ganas 10 de oro extra al vencer en combate y la probabilidad de que caiga una herramienta tras el combate aumenta un 10% (aditivo)."},
+    "6077": {"name": "Taladro", "desc": "Cuando usas una carta cuyo coste es X, si X es 6 o más, X se duplica."},
+    "6078": {"name": "Caparazón de tortuga", "desc": "Tus aliados que no atacaron en el turno anterior reciben 2 puntos menos de daño (como mínimo 1)."},
+    "6079": {"name": "Miel", "desc": "Todos tus aliados obtienen +1 de velocidad de movimiento."},
+    "6080": {"name": "Pergamino de conjuros", "desc": "La primera vez que uses una carta de habilidad en cada combate, añade a tu mano una copia con «Dimensional»."},
+    "6081": {"name": "Pendiente de luna creciente", "desc": "Cada 3 combates, obtienes 1 de Energía."},
+    "6082": {"name": "Anillo solar", "desc": "Una vez por batalla, infliges 3 de daño a todas las unidades enemigas."},
+    "6083": {"name": "Arpón de sirena", "desc": "Dentro del mismo turno, cada 3.ª vez que infliges daño a un enemigo, le infliges 4 de daño."},
+    "6084": {"name": "Reloj defectuoso", "desc": "La 12.ª carta que juegas en cada combate termina tu turno actual y comienza de inmediato un nuevo turno tuyo (el turno enemigo no ocurre)."},
+    "6085": {"name": "Despertador de pato", "desc": "En el 5.º turno de cada combate, inflige 33 de daño a todos los enemigos."},
+    "6086": {"name": "Caja de música", "desc": "Al inicio de cada combate, añade 3 Notas aleatorias a tu pila de robo."},
+    "6087": {"name": "Este es un Sombrero de Copa", "desc": "Tus Aliados y Estructuras obtienen «Muerte»: al ser destruidos, vuelven a tu pila de robo, cuestan 2 menos este combate y obtienen «dimensional»."},
+    "6088": {"name": "Caja de joyas", "desc": "Al recoger: añade 1 carta épica aleatoria a tu mazo."},
+    "6089": {"name": "Libro de cuentos vacío", "desc": "Al inicio de cada combate, inflige 0 de daño a todos los enemigos. Este daño aumenta en 1 por cada evento o combate contra un jefe que superes."},
+    "6090": {"name": "Valor escaso", "desc": "Al recoger: tu mazo conserva como máximo 3 copias de cada nombre; las sobrantes se retiran al azar hasta dejar solo 3, y pierdes 5 de vida por cada carta retirada por este efecto."}
   },
   "classes": {
     "森林精魄": {

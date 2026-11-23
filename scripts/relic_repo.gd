@@ -18,12 +18,10 @@ static func shared() -> RelicRepo:
 
 static func load_json(path: String = "res://relics.json") -> RelicRepo:
 	var repo := RelicRepo.new()
-	if not FileAccess.file_exists(path):
-		push_error("relics.json 不存在")
-		return repo
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	## R789：`content/` 覆盖优先（热更），缺失或损坏时回落 pck 基线。
+	var data: Variant = DataPaths.read_json(path, "relics")
 	if data == null:
-		push_error("relics.json 解析失败")
+		push_error("relics.json 缺失或解析失败")
 		return repo
 	var list: Array = data if data is Array else data.get("relics", [])
 	for d: Dictionary in list:
@@ -39,6 +37,9 @@ func get_relic(id: int) -> RelicData:
 func all_relics() -> Array[RelicData]:
 	var out: Array[RelicData] = []
 	for id: int in _relics.keys():
+		# R817：试玩版只列基线内的道具（图鉴 / 商店陈列 / 事件取货都读这里）
+		if GameBuild.is_demo() and not DemoScope.allows_relic(id):
+			continue
 		out.append(_relics[id])
 	out.sort_custom(func(a: RelicData, b: RelicData): return a.id < b.id)
 	return out
@@ -53,7 +54,11 @@ func initial_ids() -> Array[int]:
 	## R341：新增「惊奇盒子」6047（获得即塞一张同名工事卡）与「洞窟绳」6048
 	##       （Boss 以外的战斗可以逃跑，逃跑即失去）。两件都只在第一层起点三选一。
 	# R745：新增「工具箱」6068（立即给一个随机工具、每进新层再给一个）。
-	return [6001, 6002, 6004, 6021, 6030, 6031, 6032, 6047, 6048, 6068]
+	# R830：新增「首饰盒」6088（获得即随机一张史诗卡加入卡组）。
+	# R835：新增「空故事书」6089（战斗开始时对全体敌人造成「页数」点伤害；
+	#       每经过一个事件房 / 打赢一个首领 +1 页，页数进存档、跨战斗累计）→ 11 → 12 件。
+	var out: Array[int] = [6001, 6002, 6004, 6021, 6030, 6031, 6032, 6047, 6048, 6068, 6088, 6089]
+	return _demo_ids(out)
 
 
 func reward_ids(tier: String = "") -> Array[int]:
@@ -68,6 +73,10 @@ func reward_ids(tier: String = "") -> Array[int]:
 	##       （每出牌技能伤害 +10% 加算去尾、对不能行动的敌人加倍）。
 	## R314：**水晶骰子 6040 升为「传奇」档**；新增传奇「储物箱」6044（回合结束不弃手牌）
 	##       与「lucky 7」6045（每 7 个回合免伤 + 技能 +7）。传奇档不再空置。
+	## R813：**水晶骰子 6040 降回「一般」档**（店长口径）—— 它仍在奖励池内，
+	##       只是不再受 legendary_chance 那道闸限制，改为跟普通道具一起摇。
+	## R813：**水晶骰子 6040 降回「一般」档**（店长口径）—— 它仍在奖励池内，
+	##       只是不再受 legendary_chance 那道闸限制，改为跟普通道具一起摇。
 	## R315：新增「爆米花」6046（本回合没用技能指向敌人 → 下回合多抽 1 张），「一般」档。
 	## R342：新增传奇「采集刀」6050（战斗胜利后多给一组卡牌奖励）与「火柴」6051
 	##       （卡牌奖励界面 3 次刷新，一般档）。
@@ -82,10 +91,40 @@ func reward_ids(tier: String = "") -> Array[int]:
 	##       也不能在商店删卡；不锁剧情（谁都能摇到）。
 	## R586：加「正义背刺」6064（**一般档**，故事 5「新的委托」解锁；未解锁同样被挡）。
 	## R593：加「机械臂」6065（**一般档**，故事 6「轰鸣之后」解锁；未解锁同样被挡）。
+	# R792：**猴爪 6066 与板甲 6070 / 兵 6071 / 墙砖 6072** 补进奖励池 ——
+	#   猴爪原先在 relics.json 里标「奖励」、引擎也有机制，但不在本列表里，
+	#   于是 `roll_reward_relic()` 永远摇不到它（孤儿道具）。这里一并收进来。
+	#   三件新道具都是一般档、不锁剧情（进池即可摇到）。
+	# R793：加「刺墙」6073（己方工事被攻击 → 攻击者受 5 伤）与「应急装甲」6074
+	#   （玩家 HP 每回合最多受 20 伤）。同样一般档、不锁剧情。
+	# R796：加「兔脚」6076（战后金币 +10、工具掉率 +10% 加算）与「钻头」6077
+	#   （X 费卡 X ≥ 6 时翻倍）。都是「战后 / 出牌时」被动，一般档、不锁剧情。
+	# R797：加「龟壳」6078（上回合没攻击过的己方单位受伤 -2，至少 1）。同样一般档。
+	# R805：加「蜂蜜」6079（所有己方盟友移动速度 +1）。一般档、不锁剧情。
+	# R806：加「法术卷轴」6080（每场战斗第一次用技能卡 → 那张卡带「次元」的复制进手牌）。
+	#   与蜂蜜同为战斗类被动、一般档、不锁剧情。
+	# ⚠️ 这份 id 列表是**硬编码**的 —— 新增道具除了 relics.json 之外，
+	#    必须在这里补登，否则 `reward_ids()` 抽不到它（R805 就是在这挂了一次）。
 	var ids: Array[int] = [6005, 6006, 6007, 6008, 6009, 6013, 6020, 6024,
 			6026, 6028, 6029, 6040, 6041, 6042, 6043, 6044, 6045, 6046,
-			6050, 6051, 6052, 6053, 6054, 6060, 6064, 6065]
-	return _filter_by_tier(_drop_locked(ids), tier)
+			6050, 6051, 6052, 6053, 6054, 6060, 6064, 6065, 6066,
+			6070, 6071, 6072, 6073, 6074, 6076, 6077, 6078, 6079, 6080,
+		6081, 6082, 6083, 6084]
+	return _demo_ids(_filter_by_tier(_drop_locked(ids), tier))
+
+
+func _demo_ids(ids: Array[int]) -> Array[int]:
+	## R817：试玩版的内容基线过滤（道具侧的**唯一口**，与卡池的
+	## `CardRepo.demo_allows()` 同一张表）。口径 =「修复跟着走、新增不跟着走」：
+	## 老道具改效果 / 修 bug 用的是同一个 id，自动同步到试玩；新道具 id 不在
+	## `demo_scope.json` 里，默认不进试玩。非试玩版原样返回（零行为变化）。
+	if not GameBuild.is_demo():
+		return ids
+	var out: Array[int] = []
+	for id: int in ids:
+		if DemoScope.allows_relic(id):
+			out.append(id)
+	return out
 
 
 func _drop_locked(ids: Array[int]) -> Array[int]:
@@ -109,6 +148,8 @@ func legendary_reward_ids() -> Array[int]:
 	## 奖励池里的「传奇道具」（R342 起 4 件：6040 水晶骰子 / 6044 储物箱 / 6045 lucky 7 /
 	## 6050 采集刀；R391 起 5 件：**鸭嘴 6006 由一般升为传奇**。
 	## R440 起 6 件：**暗动力 6054**（多抽一张的代价型道具）。
+	## R810 起 7 件：**缺陷时钟 6084**（第 12 张牌结束回合、跳过敌方回合）。
+	## R813 起 6 件：**水晶骰子 6040 降为一般档**（移出本池）。
 	## R352 的竖琴 6052 是**一般档**，不在这里）。
 	## ⚠️ 调用方仍须能忍住空池（拿满 / 全跳过时的正常边界）。
 	return reward_ids(RelicData.TIER_LEGENDARY)
@@ -135,7 +176,8 @@ func event_ids() -> Array[int]:
 	## R743：烤肉 6011 已从道具改成**工具**（7007，见 traps.json / RunState.BARBECUE_TOOL_ID）——
 	## 它不再属于道具池的任何一类，这里必须拿掉，否则火焰熔炉 / 投入道具这类
 	## 「按道具池取货」的地方会拿一个 relics.json 里根本不存在的 id。
-	return [6010, 6012, 6019, 6027]
+	var out: Array[int] = [6010, 6012, 6019, 6027]
+	return _demo_ids(out)
 
 
 func layer2_ids() -> Array[int]:
@@ -154,21 +196,65 @@ func layer2_ids() -> Array[int]:
 	##       所以它每局约 3/9 的概率出现在选项里，而不是必出。
 	## R509（用户口径）：**「记忆药水」6067 进二层起始池** —— 第二层起点的「卷卷三选一」给出，
 	##       每次战斗开始自动打出一张效果卡。池子 8→9 件。
-	return [6014, 6015, 6016, 6017, 6018, 6033, 6049, 6010, 6067]
+	## R822（店长口径）：这 9 件里 **4 件带鸭的（6010 / 6015 / 6017 / 6018）归属移到鸭绅士**。
+	##       本函数仍返回**全量**（它是二层的权威名单）；实际发放走进
+	##       `layer2_ids_for(host)` —— 遇到卷卷只出剩下的，遇到鸭绅士只出带鸭的。
+	## R824（店长口径）：新增「鸭子闹钟」6085，归鸭绅士 → 全量 9→10 件，鸭绅士 4→5 件。
+	## R844：6085 旧双效果全部删除，改为每场战斗第 5 回合对全体敌人各造成 33 点伤害；池子不变。
+	## R826（店长口径）：新增「音乐盒」6086（每场战斗开始把 2 张随机音符加入卡组），
+	##       归**卷卷**（不带鸭）→ 全量 10→11 件，卷卷 5→6 件，鸭绅士仍 5 件。
+	## R829（店长口径）：音乐盒 6086 改为 3 种音符；新增「这是礼帽」6087（己方盟友/工事死亡
+	##       → 洗回抽牌库 + 本局 -2 费 + 次元），归**鸭绅士** → 全量 11→12 件，鸭绅士 5→6 件。
+	var out: Array[int] = [6014, 6015, 6016, 6017, 6018, 6033, 6049, 6010, 6067, 6085, 6086, 6087]
+	return _demo_ids(out)
 
 
-func start_ids_for_layer(layer: int) -> Array[int]:
-	## 该层「起始节点三选一」的道具池：第一层 = 初始池，第二层 = 二层起始池。
+func duck_host_ids() -> Array[int]:
+	## R822（店长口径）：**鸭绅士**的起始道具池 —— 「带鸭」的道具
+	## （6010 鸭之低语 / 6015 鸭语耳环 / 6017 重鸭 / 6018 生蛋鸭 / 6085 鸭子闹钟）。
+	## 归属整体移到鸭绅士这边：卷卷在场时这几件不再出现；
+	## 鸭绅士的三选一从这份名单里抽 3 件（不重复）。
+	## R824：加「鸭子闹钟」6085 → 4 件变 5 件（仍是抽 3，不是必出）。
+	## R829：加「这是礼帽」6087 → 5 件变 6 件（仍是抽 3，不是必出）。
+	## 判据只有「在不在这份名单里」一条 —— 场景 / 存档 / 测试都不许另写一遍。
+	var out: Array[int] = [6010, 6015, 6017, 6018, 6085, 6087]
+	return _demo_ids(out)
+
+
+func layer2_ids_for(host: int) -> Array[int]:
+	## R822：按「这一局第二层起点遇到谁」取起始池。
+	##   host = 1（鸭绅士）→ 带鸭的那几件（R829 起 6 件：多一件礼帽 6087）；
+	##   host = 0（卷卷）  → 全量减去带鸭的（R826 起 6 件：多一件音乐盒 6086）。
+	## R824（店长口径：「试玩版改为给鸭绅士」）：**删掉 R822 的试玩版例外** ——
+	##   鸭绅士进试玩之后，那 4 件有人发放了，卷卷池不该再兜全量（否则同两件道具
+	##   在两位主持人那里都能抽到，归属就白分了）。试玩版与正式版走同一条分流。
+	##   ⚠️ 试玩版池子由 `_demo_ids()` 按 demo_scope.json 裁：6085 / 6086 都已进基线
+	##      （道具档口径是「全部登陆」），所以试玩版两位主持人各 6 / 6 件，与正式版一致。
+	if host != 0:
+		return duck_host_ids()
+	var all_ids := layer2_ids()
+	var duck := duck_host_ids()
+	var out: Array[int] = []
+	for id: int in all_ids:
+		if not duck.has(id):
+			out.append(id)
+	return out
+
+
+func start_ids_for_layer(layer: int, host := 0) -> Array[int]:
+	## 该层「起始节点三选一」的道具池：第一层 = 初始池；第二层 = 二层起始池（按 host 分流）。
+	## `host` 省略时按卷卷算 —— 老调用点（出图 / 测试）行为不变。
 	match layer:
 		2:
-			return layer2_ids()
+			return layer2_ids_for(host)
 	return initial_ids()
 
 
 func class_ids() -> Array[int]:
 	## 角色赠品道具（选定角色时由 RunState.start_run 发放，如森林精魄的「荒野形态」6022）。
 	## 这一池**不参与任何随机抽取**：起点三选一 / 奖励掉落 / 事件 / 二层起始都不含它。
-	return [6022, 6023, 6025]
+	var out: Array[int] = [6022, 6023, 6025]
+	return _demo_ids(out)
 
 
 func roll_reward(rng: RandomNumberGenerator, tier: String = "") -> int:

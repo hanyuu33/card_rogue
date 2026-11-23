@@ -99,7 +99,7 @@ static func builtin_levels() -> Array:
 	## 地图节点从「本层内容池」的对应分级池随机抽关（见 normal_pool / elite_pool / boss_level）。
 	return [_encounter(), _familiars(), _archer_knight(), _blaze_pack(),
 			_frost_line(), _assembly_line(), _mass_anvil(), _argos_mobilize(),
-		_knight_charge(), _wizard(), _white_mage_guard(), _night_ducks(),
+		_knight_charge(), _egg_pitcher(), _wizard(), _white_mage_guard(), _night_ducks(),
 			_sun_forge(), _hecaton(), _undead_legion(), _twin_cannon(),
 			_metrology_works(),
 			_laser_line(),
@@ -161,6 +161,18 @@ static func bg_key(level: Dictionary) -> String:
 	return str(level.get("key", ""))
 
 
+static func level_by_key(key: String) -> Dictionary:
+	## 按**稳定标识**取内置关卡（R856）。
+	## 给「我明确知道要哪一关」的调用方用 —— 别写 `builtin_levels()[13]` 这种下标：
+	## R856 往第一层普通困难插了一关「鸭蛋投手」，百臂工场就从 13 漂到 14，
+	## 冒烟测试当场变红（读到的是太阳熔炉的编成）。
+	## 找不到返回空字典（调用方自己判 `is_empty()`）。
+	for lvl in builtin_levels():
+		if str(lvl.get("key", "")) == key:
+			return lvl
+	return {}
+
+
 static func all_keys() -> Array[String]:
 	## 所有关卡的 key（测试用：查空、查重、查字符集）。
 	var out: Array[String] = []
@@ -205,8 +217,9 @@ static func third_elite_pool() -> Array[Dictionary]:
 	## 三层没有自己的精英关（本层唯一的关卡是 Boss 启示者），直道第 2 格就是
 	## 「进 Boss 前的最后一场硬仗」—— 只该是最硬那档，不该摇到二层的精英简单。
 	## 与 `elite_pool(LAYER_THREE)` 的区别：后者按 `content_layers [2, 3]` 摊开第二层
-	## **全部** 9 关（简单 5 + 困难 4）；这里收窄到困难 4 关
-	## （机甲巨兵 / 钢铁要塞 / 母舰空袭 / **R722 巨炮防线**），且不随 `elite_wins` 变化。
+	## **全部** 9 关（简单 4 + 困难 5）；这里收窄到困难 5 关
+	## （机甲巨兵 / 钢铁要塞 / 母舰空袭 / R722 巨炮防线 / **R778 计量工坊**），
+	## 且不随巧克力强弱判定变化（R778 起精英强弱看当前巧克力）。
 	return levels_of_tier([TIER_ELITE_HARD], GameLayers.LAYER_TWO)
 
 
@@ -395,26 +408,29 @@ static func _undead_legion() -> Dictionary:
 
 
 static func _dragon_nest() -> Dictionary:
-	## 第二层·精英敌人-简单「龙族巢穴」：后排中央灰烬龙（6/45 速2，战吼对我方全场 4 伤，一回合行动两次），
-	## 中排两翼幼龙（5/25 程2，死亡召唤龙裔 4/12），前排中央铁壁卫兵（嘲讽）挡路。
+	## 第一层·精英敌人-简单「龙族巢穴」（R778：从第二层**整关移到第一层**）：
+	## 后排中央灰烬龙（5/45 速 2，一回合行动两次）+ 中排两翼幼龙（5/25 程 2，
+	## 死亡召唤龙裔 4/12）。
+	## R778 三处改动：① 灰烬龙的「战吼」效果删除（卡面已清空，引擎 `_battlecry()`
+	## 里的 ash 分支同步下线）；② 前排中央的铁壁卫兵（1011，嘲讽）移除 ——
+	## 这一关现在只有三只龙；③ 不再带 `LAYER2_GROWTH`，按第一层的默认成长走
+	## （原来是二层关，成长轴跟着二层）。
 	return {
 		"name": "龙族巢穴",
 		"key": "dragon_nest",
 		"tier": TIER_ELITE_EASY,
-		"layer": GameLayers.LAYER_TWO,
+		"layer": GameLayers.LAYER_DEFAULT,
 		"deck_key": "starter",
 		"player_hp": 20,
 		"enemy_hp": 30,
 		"turn_limit": -1,
 		"shuffle": true,
 		"enemy_ai": true,
-		"enemy_growth": LAYER2_GROWTH,
 		"starting_hand": 0,
 		"enemy_units": [
 			[1013, "灰烬龙", 5, 45, 1, 2, Vector2i(0, 1)],
 			[1014, "幼龙", 5, 25, 2, 1, Vector2i(1, 0)],
 			[1014, "幼龙", 5, 25, 2, 1, Vector2i(1, 2)],
-			[1011, "铁壁卫兵", 3, 40, 1, 1, Vector2i(2, 1)],
 		],
 		"tutorial": [],
 	}
@@ -793,6 +809,49 @@ static func _familiars() -> Dictionary:
 	}
 
 
+static func _egg_pitcher() -> Dictionary:
+	## 第一层·普通敌人-困难（R856 新增，补一层普难池 4 → 5）：
+	## 后排中央一只鸭蛋投手（9284，6 力 / 55 血 / 程 1 / 速 1），**开场持有金鸭蛋** ——
+	## 蛋（9285，0 力 / 3 血 / 程 0 / 速 0）就摆在它正前方一格，`egg_held = true`。
+	##
+	## ── 两条形态（判据只有一个：场上有没有「属于它、且还挂着的」金鸭蛋）──
+	##   ① **持蛋**：整个行动被「扔蛋」替换（`GameEngine._egg_pitcher_act`），不普攻不推进。
+	##      蛋沿同一列朝我方推：撞到第一个单位 → 停住并对其造成**投手当前力量**的伤害，
+	##      带践踏（溢出沿同列继续穿）；整列没有单位 → 直击我方 HP。
+	##   ② **无蛋**：移动速度变 **3**、每个自己回合开始力量 **+3**（无上限成长）。
+	##      这一形态才是压力来源 —— 它不再是后排炮台，而是一头冲脸的成长怪。
+	##
+	## ── 循环（蛋被打死时，见 `GameEngine._golden_egg_death`）──
+	##   蛋死 → ① 玩家手卡得一张**随机史诗卡**（补偿 / 诱惑）；
+	##          ② 投手**重新获得金鸭蛋**（新蛋生成在它正前方一格）；
+	##          ③ 投手**随机移动到后排的一列**（重新摆炮位）。
+	##   于是「打蛋」不是纯赚：你拿到史诗卡，但投手回到了后排、重新拿到弹药。
+	##   不打蛋则要一直面对速 3 / 力 +3 的冲锋形态 —— 这关的取舍就在这一下。
+	##
+	## ⚠️ 蛋血量**恒为 3**：难度 ≥3 的「敌人生命 +10%」对它不生效
+	##    （`RunState.scaled_enemy_card` 里有豁免，卡面也写了「任何难度恒定为 3」）。
+	## ⚠️ 蛋摆 row1 而不是 row2：row1 才是「投手正前方一格」= 持有的物理位置；
+	##    扔出去之后它才会飞到玩家面前，那时才是玩家能打到的位置。
+	return {
+		"name": "鸭蛋投手",
+		"key": "egg_pitcher",
+		"tier": TIER_NORMAL_HARD,
+		"layer": GameLayers.LAYER_DEFAULT,
+		"deck_key": "starter",
+		"player_hp": 20,
+		"enemy_hp": 30,
+		"turn_limit": -1,
+		"shuffle": true,
+		"enemy_ai": true,
+		"starting_hand": 0,
+		"enemy_units": [
+			[9284, "鸭蛋投手", 6, 55, 1, 1, Vector2i(0, 1)],
+			[9285, "金鸭蛋", 0, 3, 0, 0, Vector2i(1, 1)],
+		],
+		"tutorial": [],
+	}
+
+
 static func _knight_charge() -> Dictionary:
 	## 普通敌人-困难：中排三只鸭子骑士一字排开正面冲锋（3/30，速 2，击杀成长）。
 	return {
@@ -818,7 +877,8 @@ static func _knight_charge() -> Dictionary:
 
 static func _captain_wizard() -> Dictionary:
 	## 精英敌人-困难：后排中间队长坐镇，中排巫师源源召唤使魔，前排使魔护卫。
-	## 敌方效果卡「使魔之力 9115」：使魔鸭子每回合开始力量 +1（永久）。
+	## R778：敌方效果卡由「使魔之力 9115」换成「鸭子之力 9013」
+	## （每回合开始所有友方单位力量 +1，每个单位最多累计 +4）。
 	return {
 		"name": "队长与巫师",
 		"key": "captain_wizard",
@@ -832,11 +892,11 @@ static func _captain_wizard() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9012, "鸭子队长", 6, 55, 1, 1, Vector2i(0, 1)],
+			[9012, "鸭子队长", 6, 50, 1, 1, Vector2i(0, 1)],
 			[9008, "鸭子巫师", 8, 50, 2, 1, Vector2i(1, 1)],
 			[9009, "使魔鸭子", 4, 15, 1, 1, Vector2i(2, 1)],
 		],
-		"enemy_effects": [9115],
+		"enemy_effects": [9013],
 		"tutorial": [],
 	}
 
@@ -856,9 +916,9 @@ static func _archer_knight() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9017, "鸭子弓手", 3, 18, 2, 1, Vector2i(0, 0)],
+			[9017, "鸭子弓手", 3, 15, 2, 1, Vector2i(0, 0)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(0, 1)],
-			[9017, "鸭子弓手", 3, 18, 2, 1, Vector2i(0, 2)],
+			[9017, "鸭子弓手", 3, 15, 2, 1, Vector2i(0, 2)],
 		],
 		"tutorial": [],
 	}
@@ -995,8 +1055,8 @@ static func _breath_charge() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9017, "鸭子弓手", 3, 18, 2, 1, Vector2i(0, 0)],
-			[9017, "鸭子弓手", 3, 18, 2, 1, Vector2i(0, 2)],
+			[9017, "鸭子弓手", 3, 15, 2, 1, Vector2i(0, 0)],
+			[9017, "鸭子弓手", 3, 15, 2, 1, Vector2i(0, 2)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(2, 0)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(2, 1)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(2, 2)],
@@ -1119,7 +1179,7 @@ static func _enforcer_judgement() -> Dictionary:
 
 
 static func _asclepius() -> Dictionary:
-	## 第二层·精英敌人-简单（R162 进池；**R506 与母舰空袭互换档位，下调到精英简单**）：
+	## 第二层·普通敌人-困难（R162 进池；R506 下调到精英简单；**R778 再下调为普通困难**）：
 	## 后排中央一只阿斯克勒庇厄斯（9141，12/80 **程2 速2**，带「护甲积攒」）。
 	## 每回合开始时获得 **20** 护甲；若获得前已有护甲，则清零护甲并对随机敌方单位
 	## 造成等量伤害，之后力量 +1。越拖攻击力越高，且护甲会不断「存爆」。
@@ -1130,7 +1190,7 @@ static func _asclepius() -> Dictionary:
 	return {
 		"name": "阿斯克勒庇厄斯的试炼",
 		"key": "asclepius",
-		"tier": TIER_ELITE_EASY,
+		"tier": TIER_NORMAL_HARD,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
 		"player_hp": 20,
@@ -1148,13 +1208,13 @@ static func _asclepius() -> Dictionary:
 
 static func _pronoia_shadow() -> Dictionary:
 	## 第二层·精英敌人-简单（R541）：后排中央一只**普罗诺亚之影**（9242，8 攻 / 150 血 / 程 1 / 速 1）。
-	## 题面是「**根据敌人（玩家）的行动改变策略**」—— 它自己不变，变的是它召出来的构状体：
-	##   * 每回合开始时统计玩家**上一个回合**打出的卡：盟友 + 工事最多 → 炮击构状体；
-	##     技能 + 场地最多 → 护盾构状体；其余（效果 / 诅咒…）最多 → 迅捷构状体；
+	## 题面是「**根据敌人（玩家）的行动改变策略**」—— 它自己不变，变的是它召出来的构装体：
+	##   * 每回合开始时统计玩家**上一个回合**打出的卡：盟友 + 工事最多 → 炮击构装体；
+	##     技能 + 场地最多 → 护盾构装体；其余（效果 / 诅咒…）最多 → 迅捷构装体；
 	##     平手按这个顺序取前面的，**一张都没出 → 保持当前形态**。
-	##   * 场上只有它自己 → **损失 10 点生命召唤**一个构状体；已经有构状体 →
+	##   * 场上只有它自己 → **损失 10 点生命召唤**一个构装体；已经有构装体 →
 	##     把那一只**原地变形**（保留已受的伤害）。
-	## 三种构状体都是 50 血，所以「保留受伤」不会因为换血上限而被打死：
+	## 三种构装体都是 50 血，所以「保留受伤」不会因为换血上限而被打死：
 	##   * 炮击 9243：15 攻 / 程 3 / 速 1，每回合给一个其他友方单位力量 +1 —— 越拖越疼的远程消耗；
 	##   * 护盾 9244：10 攻 / 程 1 / 速 1，其他己方单位受到的伤害减半 —— 把整场变硬；
 	##   * 迅捷 9245：10 攻 / 程 1 / 速 2，一回合行动两次 —— 贴脸的两轮压力。
@@ -1209,20 +1269,28 @@ static func _duck_kiln() -> Dictionary:
 
 
 static func _sun_forge() -> Dictionary:
-	## 第二层·普通敌人-困难（R135）：后排中央一座太阳装置「赫利俄斯」
-	## （9130，**工事** 0 力 50 血 / 程 0 / 速 0 —— 不会打人也不会移动）。
-	## 它在场时，本方的「量产型俄倪厄」（9131，5/45 程1 速1）获得两条光环：
-	##   ① 一回合行动两次；② 每回合结束回复 2 点生命。
-	## ⚠️ 两条都**以「赫利俄斯还在场」为前提** —— 先拆掉太阳装置，两只俄倪厄
-	##    立刻回到「每回合 1 次行动、不回血」。这是这关的核心取舍：
-	##    打兵（45×2 血）还是拆塔（50 血，但它自己回不了血）。
+	## 第二层·精英敌人-简单（R135 建；R856 从「普通敌人-困难」上调）：
+	## 后排中央一座太阳装置「赫利俄斯」（9130，**工事** 0 力 **70** 血 / 程 0 / 速 0
+	## —— 不会打人也不会移动）。
+	## 它在场时，**场上所有「量产型」卡**获得两条光环：
+	##   ① 每回合可以行动两次；② 受到的**技能**伤害 -2（最少仍受 1 点）。
+	## ⚠️ 两条都**以「赫利俄斯还在场」为前提** —— 先拆掉太阳装置，场上的量产型立刻
+	##    回到「每回合 1 次行动、不减伤」。这是这关的核心取舍：
+	##    打兵（45×2 血）还是拆塔（**70** 血）。
+	## ⚠️ R856 用户口径：血量 50 → 70（拆塔不再白送 —— 原来是「先清兵后拆塔」的最优解，
+	##    现在两条路都要付代价），档位上调精英简单（敌方血条随之 60 → 80）。
+	## ⚠️ R856 同时**取消**了原来的「每回合结束回复 2 点生命」，换成本条技能减伤：
+	##    回血在双动压力下等于逼玩家先拆塔，减伤则让「先清小兵」也成了一条能走的路。
+	## ⚠️ 「量产型」判据走 `GameEngine.is_mass_produced()` 唯一口（trait + 名字前缀
+	##    双来源）—— 只判 trait 会漏掉 9131 / 9137 那 8 张（它们 trait 里没有「量产型」，
+	##    只有名字带前缀）；只判名字则会漏掉将来「挂了 trait 但名字不带前缀」的卡。
 	## ⚠️ 摆放顺序：赫利俄斯写**在数组最前**。`place()` 是算完 `acts_left` 才落子，
 	##    光环源先上场 → 后面两只俄倪厄上场时就吃到了双动；battle_scene 摆完还会
 	##    统一 `apply_extra_actions` 补一次，两条保险都留着（顺序反过来也不会漏）。
 	return {
 		"name": "太阳熔炉",
 		"key": "sun_forge",
-		"tier": TIER_NORMAL_HARD,
+		"tier": TIER_ELITE_EASY,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
 		"player_hp": 20,
@@ -1232,7 +1300,7 @@ static func _sun_forge() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9130, "赫利俄斯", 0, 50, 0, 0, Vector2i(0, 1)],
+			[9130, "赫利俄斯", 0, 70, 0, 0, Vector2i(0, 1)],
 			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 0)],
 			[9131, "量产型俄倪厄", 5, 45, 1, 1, Vector2i(2, 2)],
 		],
@@ -1422,7 +1490,8 @@ static func _twin_cannon() -> Dictionary:
 
 
 static func _metrology_works() -> Dictionary:
-	## 第二层·普通敌人-困难「计量工坊」（R758）：三个「文职」单位排成一列。
+	## 第二层·精英敌人-困难「计量工坊」（R758；**R778 由普通困难升到精英困难**）：
+	## 三个「文职」单位排成一列。
 	##   后排 常数测量员 9260（0/60 程1 速1）—— **作为行动的代替**分配 16 点伤害
 	##     （`GameEngine._surveyor_act`）：由近及远、打倒一个把剩下的给下一个，
 	##     分不完的打到玩家 HP；**这一次没打到 HP 就自己眩晕一回合**。
@@ -1432,11 +1501,12 @@ static func _metrology_works() -> Dictionary:
 	##     15（`_compute_cap_tick`，在所有入场增益之后）。高血单位铺场不再是无脑解。
 	##   前排 负载增量员 9262（4/60 程1 速1）—— 每回合往我方抽牌库塞一张「攻击」+ 一张
 	##     「木栅栏」（`_loader_tick`）：牌库被稀释，木栅栏还会占场。
-	## 三只都是 60 血：这关不拼「一口气拆掉后排」，而是拼「谁去堵、堵多久」。
+	## 三只都是 80 血（R778：60 → 80，随档位一起上调）：这关不拼「一口气拆掉后排」，
+	## 而是拼「谁去堵、堵多久」。
 	return {
 		"name": "计量工坊",
 		"key": "metrology_works",
-		"tier": TIER_NORMAL_HARD,
+		"tier": TIER_ELITE_HARD,
 		"layer": GameLayers.LAYER_TWO,
 		"deck_key": "starter",
 		"player_hp": 20,
@@ -1447,9 +1517,9 @@ static func _metrology_works() -> Dictionary:
 		"enemy_growth": LAYER2_GROWTH,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9260, "常数测量员", 0, 60, 1, 1, Vector2i(0, 1)],
-			[9261, "精密计算者", 6, 60, 1, 2, Vector2i(1, 1)],
-			[9262, "负载增量员", 4, 60, 1, 1, Vector2i(2, 1)],
+			[9260, "常数测量员", 0, 80, 1, 1, Vector2i(0, 1)],
+			[9261, "精密计算者", 6, 80, 1, 2, Vector2i(1, 1)],
+			[9262, "负载增量员", 4, 80, 1, 1, Vector2i(2, 1)],
 		],
 		"tutorial": [],
 	}
@@ -1472,7 +1542,7 @@ static func _laser_line() -> Dictionary:
 	## 第二层·**精英敌人-困难**「巨炮防线」（R539 三炮版 → R540 三合一 → **R722 抬档 + 改两列**）：
 	## 中排正中**一门激光巨炮**
 	## （9241，工事 5 力 / 400 血 / 程 0 / 速 0），开局**沉睡 2 回合**（沿用 `沉睡` trait：
-	## 回合结束 -1、挨打也 -1，与恶魔鸭 9116 同一套）。
+	## 回合结束 -1、受到伤害也 -1，与恶魔鸭 9116 同一套）。
 	##
 	## 题面：它**不能进行常规攻击**（程 0），全部威胁是每回合那一次「齐射」——
 	## **随机两列各打一次**（R722）：每列对**该列第一个**敌方单位造成等同于力量的伤害；
@@ -1540,8 +1610,8 @@ static func _steel_fortress() -> Dictionary:
 		"starting_hand": 0,
 		"enemy_units": [
 			[9137, "量产型赫利俄斯", 6, 30, 1, 0, Vector2i(0, 1)],
-			[9133, "量产型赫卡同克瑞斯", 3, 35, 1, 1, Vector2i(0, 0)],
-			[9132, "俄倪厄", 10, 80, 1, 1, Vector2i(2, 1)],
+			[9133, "量产型赫卡同克瑞斯", 3, 60, 1, 1, Vector2i(0, 0)],
+			[9132, "俄倪厄", 10, 100, 1, 3, Vector2i(2, 1)],
 		],
 		"tutorial": [],
 	}
@@ -1564,7 +1634,7 @@ static func _captain() -> Dictionary:
 		"enemy_ai": true,
 		"starting_hand": 0,
 		"enemy_units": [
-			[9012, "鸭子队长", 6, 55, 1, 1, Vector2i(0, 1)],
+			[9012, "鸭子队长", 6, 50, 1, 1, Vector2i(0, 1)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(0, 0)],
 			[9001, "鸭子骑士", 3, 30, 1, 2, Vector2i(0, 2)],
 		],

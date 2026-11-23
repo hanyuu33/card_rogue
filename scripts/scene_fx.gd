@@ -11,6 +11,15 @@ extends CanvasLayer
 ##     否则烟测时序与 --shotframe 钉帧全被打乱；
 ##   * `instant = true` → 立即切换（给「本不该被看见」的中转场景用，如 map → relic_pick 重定向）。
 ##
+## R767（安卓「选标准模式进去卡一段时间」）：换场景不再一律同步 `change_scene_to_file`。
+##   * 那条路会主线程阻塞几百毫秒；更要命的是原来的擦入计时起点记在**卡之前**，
+##     回来时 `IN_MS + SETTLE_MS` 早已走完 → 擦入动画整个被吞，画面「啪」地蹦出来。
+##   * 现在：`_begin()` 当场把下一站交给 `SceneWarm` 后台读；擦出满 220ms 时若没读完，
+##     就在**已经全黑**的画面上再等最多 `WARM_WAIT_MS`；换场景走 `_swap_now()`，
+##     优先取预加载成品 `change_scene_to_packed`。
+##   * 擦入一律从「新场景真的出现那一帧」起表（`_t0 = -1` 哨兵），动画不再因加载被吃。
+##   * 换场景实测超过 `SLOW_MS` 打一条 `[SceneFx] 慢切换 …` 日志，方便下次直接看数字。
+##
 ## 实现要点：class_name + 懒实例（不是 autoload —— `--headless --script` 跑烟测时
 ## autoload 不加载，懒实例靠 `Engine.get_main_loop().root` 自建，两条路都活）。
 ## layer = 100：压所有场景内覆盖层（奖励悬浮窗 18 之上）；鼠标 IGNORE：不锁输入（纪律⑤）。
@@ -19,12 +28,18 @@ const OUT_MS := 220        # 擦出（盖住旧场景）
 const IN_MS := 220         # 擦入（揭开新场景）
 const SETTLE_MS := 80      # 切完多压一拍纯黑，等新场景首帧 ready
 const STUCK_MS := 1500     # R167 防卡死：转场卡住超过它就强制接上，不再吞掉后续 goto
+## R767：擦出已经全黑，但下一站还在后台读 —— 最多为它多黑这么久再回退同步加载。
+## 宁可多黑一会儿，也别让主线程卡到把擦入动画整个吞掉（安卓「黑屏后画面突变」的病因）。
+const WARM_WAIT_MS := 900
+const SLOW_MS := 400       # 换场景实际耗时超过它就打一条观测日志
 const WIPE_COL := Color("1a1c22")   # INK_900（不 preload ui_theme：越早越轻，少依赖）
 
 static var _inst: SceneFx = null
 
 var _phase := 0            # 0 闲 / 1 擦出 / 2 擦入
-var _t0 := 0
+var _t0 := 0               # 当前段起点；R767：phase 2 用 -1 表示「新场景还没出现，别起表」
+var _begin_ms := 0         # 本次转场发起时刻（STUCK_MS 判定用，不能拿 _t0）
+var _last_path := ""       # 只给慢切换日志看
 var _target := ""
 ## R392（用户报「安卓上菜单返回标题后无法继续游戏」的根因）：
 ## 转场途中再来的 `goto()` 以前是**直接 return 丢掉** —— 玩家手快一点（返回标题的擦除还没
@@ -44,7 +59,7 @@ static func goto(path: String, instant := false, fx := "wipe") -> void:
 	if tree == null or tree.root == null:
 		return   # 没有场景树（纯逻辑测试）：放弃切换，别崩
 	if instant or _skip_fx():
-		tree.change_scene_to_file.call_deferred(path)
+		_swap_now(tree, path)
 		return
 	# R167：实例被释放 / 被移出树（转场途中出意外）→ 直接重建，别拿着死引用继续吞 goto。
 	if _inst == null or not is_instance_valid(_inst) or not _inst.is_inside_tree():
@@ -52,7 +67,7 @@ static func goto(path: String, instant := false, fx := "wipe") -> void:
 		tree.root.add_child(_inst)
 	if _inst._phase != 0:
 		# 上一次转场还在走。**不许丢**（R392）：丢了就是「点了没反应」。
-		if Time.get_ticks_msec() - _inst._t0 < STUCK_MS:
+		if Time.get_ticks_msec() - _inst._begin_ms < STUCK_MS:
 			_inst.absorb_goto(path)       # R392：收下，**绝不丢**
 			return
 		# 卡太久（被暂停 / 掉帧 / 出意外）→ 接手，别拿死相位继续吞
@@ -63,6 +78,16 @@ static func goto(path: String, instant := false, fx := "wipe") -> void:
 	_inst._begin(path)
 
 
+static func _swap_now(tree: SceneTree, path: String) -> void:
+	## R767：换场景的唯一收口。预热到的 PackedScene 直接实例化 —— 省掉主线程里那次
+	## 「读盘 + 解析」（安卓上是几百毫秒）；没预热到才回退同步加载。
+	var ps := SceneWarm.take(path) as PackedScene
+	if ps != null:
+		tree.change_scene_to_packed.call_deferred(ps)
+	else:
+		tree.change_scene_to_file.call_deferred(path)
+
+
 func absorb_goto(path: String) -> bool:
 	## R392（用户报「安卓上菜单返回标题后无法继续游戏」的根因，可单测的那一半）：
 	## 转场途中又来了一个切换请求 —— **不许丢**。丢了就是「按钮点了没反应，再点也进不去」。
@@ -71,6 +96,7 @@ func absorb_goto(path: String) -> bool:
 	## 返回 true = 已收下，调用方不要再 `_begin()`。
 	if _phase == 1:
 		_target = path
+		SceneWarm.warm(path)      # R767：改目的地就把新目的地也送去后台读
 		return true
 	if _phase == 2:
 		_pending = path
@@ -96,23 +122,45 @@ func _ready() -> void:
 
 func _begin(path: String) -> void:
 	_target = path
+	_last_path = path
 	_phase = 1
-	_t0 = Time.get_ticks_msec()
+	_begin_ms = Time.get_ticks_msec()
+	_t0 = _begin_ms
+	SceneWarm.warm(path)   # R767：擦出的这 220ms 就够后台把它读完，别等主线程去卡
 
 
 func _process(_delta: float) -> void:
 	if _phase == 0:
 		return
 	var n := Time.get_ticks_msec()
-	if _phase == 1 and n - _t0 >= OUT_MS:
+	if _phase == 1:
+		if n - _t0 < OUT_MS:
+			_cv.queue_redraw()
+			return
+		# 擦出已满 —— 屏幕此刻是全黑，正是换场景的唯一窗口。
+		# R767：如果下一站还在后台读，就在这里多等一会儿（最多 WARM_WAIT_MS）。
+		# 等的是「已经黑掉的画面」，卡不到玩家眼睛；反过来若让主线程在这里同步加载，
+		# 那一下会把下面的擦入计时整个推过期，动画就没了。
+		if SceneWarm.is_pending(_target) and not SceneWarm.is_ready(_target) \
+				and n - _t0 < OUT_MS + WARM_WAIT_MS:
+			_cv.queue_redraw()
+			return
 		var p := _target
 		_target = ""
 		var tree := Engine.get_main_loop() as SceneTree
 		if tree != null:
-			tree.change_scene_to_file.call_deferred(p)
+			_swap_now(tree, p)
 		_phase = 2
-		_t0 = n
-	elif _phase == 2 and n - _t0 >= IN_MS + SETTLE_MS:
+		_t0 = -1        # R767：擦入从**新场景真的出现那一帧**起表，不在卡之前起表
+		_cv.queue_redraw()
+		return
+	# phase 2
+	if _t0 < 0:
+		_t0 = n         # 新场景已经就位（call_deferred 在本帧尾部执行完毕），现在才开始算
+		var cost := _t0 - _begin_ms
+		if cost >= SLOW_MS:
+			print("[SceneFx] 慢切换 %dms → %s" % [cost, _last_path])
+	if n - _t0 >= IN_MS + SETTLE_MS:
 		_phase = 0
 		if _pending != "":
 			# R392：转场途中被收下的那次切换 —— 揭开完立刻补上
@@ -130,6 +178,10 @@ func _on_cv_draw() -> void:
 	if _phase == 1:
 		p = clampf(float(n - _t0) / OUT_MS, 0.0, 1.0)
 		p = p * p * (3.0 - 2.0 * p)              # smoothstep：起步缓、合拢快
+	elif _t0 < 0:
+		# R767：擦出已满、下一站还没换上来 —— 这一帧必须**保持全黑**。
+		# 拿 -1 当起点去算 p 会得到 ≈0，等于把旧场景又露出来闪一下。
+		p = 1.0
 	else:
 		var q := clampf(float(n - _t0 - SETTLE_MS) / IN_MS, 0.0, 1.0)
 		q = q * q * (3.0 - 2.0 * q)

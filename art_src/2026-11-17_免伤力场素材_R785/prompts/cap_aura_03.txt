@@ -1,0 +1,13 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE image. Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+A single isolated 2D game UI sprite: a CIRCULAR FRAME OF WHITE-PLATINUM PRISMATIC CRYSTAL FACETS, seen straight on, floating on a PURE BLACK (#000000) FLAT background. This will be converted into a transparent sprite by turning brightness into alpha, so a clean uniform pure black background is CRITICAL and the prism edges must GLOW brightly against it.
+
+STYLE: 2D hand-painted anime-fantasy card-game visual effect, the kind of barrier overlay used in a high-end Japanese trading card game. Sharp faceted planes, thin bright prism edges, tiny light spikes flaring out of the outer edge, faint ice-blue refraction inside the facets. Absolutely NO 3D render, NO photorealism, NO photo texture, NO noise grain, NO volumetric fog, NO lens flare.
+
+SHAPE: ONE thick CIRCULAR RING BAND, a perfect circle, built from a continuous chain of hexagonal crystal facets, like a ring of polished gem windows welded edge to edge. The band is roughly 12% of the frame width thick. Each facet is a flat hexagonal plate: cool white #EAF2FF on the lit side, pale platinum #A9B8CC in the body, thin ice-blue #7FC8F0 refraction streaks inside, and a bright white rim highlight on every shared edge. Short needle-sharp light spikes radiate outward from some facet corners. The hole in the middle is EMPTY PURE BLACK — nothing inside it, no core, no orb, no facets inside, no object, no fill of any kind. The ring's outer diameter is about 85% of the frame, fully inside the frame, nothing cut off.
+
+COMPOSITION: one ring only, dead center, perfectly round, straight-on view, no perspective tilt, no ellipse, no rotation, no cone, no disc. The light fades into pure black at the outer edges so the sprite blends seamlessly. NO ground, NO floor, NO scenery, NO background objects, NO cast shadow, NO border, NO panel, NO card shape, NO second ring. The ENTIRE background MUST be uniform pure black #000000: NO gradient, NO texture, NO pattern, NO coloured backdrop.
+
+STRICTLY FORBIDDEN: any text, letters, words, runes, numbers, digits, labels, watermark, logo or signature anywhere; any human figure, face, hands, eye, creature, animal, skull; any weapon; any solid sphere or ball inside the ring; any second object; any UI element, button, icon or card frame.
+
+NO readable text. NO numbers. NO watermark. Pure black background only.

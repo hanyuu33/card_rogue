@@ -57,26 +57,31 @@ func _init() -> void:
 	# R745：新增野性图腾 7008（使用型）→ 8 件（4 放置型 + 4 使用型）
 	# R752：新增万能牌 7009 / 快送鸭 7010 / 神秘牌 7011（都是使用型、都没有售价）→ 11 件
 	# R754：新增石头 7012（**直接伤害型**：拖到敌方单位身上砸 15；no_drop）→ 12 件
-	check(repo.size() == 12, "traps.json 恰好 12 件工具（4 放置 + 1 直接伤害 + 7 使用型）")
+	# R797：新增河豚 7015（**放置型**：踩到回弹一格 + 3 伤）→ 15 件
+	# R801：新增爆炸蘑菇 7016（**放置型**：踩到炸一圈 15 伤，不分敌我）→ 16 件
+	# R839：新增大蒜 7017（**放置型**：把一格封住 3 个我方回合）→ 17 件
+	# R841：新增锤子 7018（**直击型**：砸一个敌方单位眩晕 1 回合）/ 润滑油 7019（使用型，选手卡 -3 费）→ 19 件
+	check(repo.size() == 19, "traps.json 恰好 19 件工具（7 放置 + 2 直击 + 10 使用型）")
 	var bomb: TrapData = repo.get_trap(7001)
 	var frost: TrapData = repo.get_trap(7002)
 	var poison: TrapData = repo.get_trap(7003)
 	var spike: TrapData = repo.get_trap(7004)
-	check(bomb != null and bomb.trap_name == "炼金炸弹" and bomb.price == 30
-			and bomb.damage == 18, "炼金炸弹：18 伤 / 30 金")
+	# R797：全部带售价的工具各 -5（炼金炸弹 30 → 25 起），往下逐条同改。
+	check(bomb != null and bomb.trap_name == "炼金炸弹" and bomb.price == 25
+			and bomb.damage == 18, "炼金炸弹：18 伤 / 25 金")
 	check(frost != null and frost.damage == 2 and frost.freeze == 1
-			and frost.price == 40, "冰冻陷阱：2 伤 + 冻结 1 回合 / 40 金")
+			and frost.price == 35, "冰冻陷阱：2 伤 + 冻结 1 回合 / 35 金")
 	check(poison != null and poison.damage == 8 and poison.poison_turns == 3
-			and poison.price == 30, "毒瓶：8 伤 / 持续 3 回合 / 30 金")
+			and poison.price == 25, "毒瓶：8 伤 / 持续 3 回合 / 25 金")
 	check(spike != null and spike.damage == 10 and spike.root == 1
-			and spike.price == 40, "穿刺陷阱：10 伤 + 禁足 1 回合 / 40 金")
+			and spike.price == 35, "穿刺陷阱：10 伤 + 禁足 1 回合 / 35 金")
 	# R690：两个使用型工具（轻点即用，不放置）
 	var hp_pot: TrapData = repo.get_trap(7005)
 	var mana_pot: TrapData = repo.get_trap(7006)
-	check(hp_pot != null and hp_pot.trap_name == "小血瓶" and hp_pot.price == 50
+	check(hp_pot != null and hp_pot.trap_name == "小血瓶" and hp_pot.price == 45
 			and hp_pot.heal_pct == 20 and hp_pot.is_usable(),
 			"小血瓶：回复 20% 生命 / 50 金 / 使用型")
-	check(mana_pot != null and mana_pot.trap_name == "法力药剂" and mana_pot.price == 35
+	check(mana_pot != null and mana_pot.trap_name == "法力药剂" and mana_pot.price == 30
 			and mana_pot.energy == 2 and mana_pot.is_usable(),
 			"法力药剂：回复 2 点费用 / 35 金 / 使用型")
 	check(not bomb.is_usable() and not frost.is_usable() and not poison.is_usable()
@@ -86,10 +91,10 @@ func _init() -> void:
 	check(bbq != null and bbq.trap_name == "烤肉" and bbq.heal_pct == 25
 			and bbq.is_usable() and bbq.rest_only and bbq.price == 0,
 			"烤肉：回复 25% 最大生命 / 使用型 / rest_only（非卖品）")
-	check(repo.random_traps().size() == 10 and repo.get_trap(7007) != null,
-			"烤肉：`random_traps()` 把它排除（10 件可随机），全量仍是 12 件")
-	# R752：野性图腾售价按店长口径 45 → 30
-	check(repo.get_trap(7008).price == 30, "野性图腾：商店售价 30")
+	check(repo.random_traps().size() == 17 and repo.get_trap(7007) != null,
+			"烤肉：`random_traps()` 把它排除（17 件可随机），全量仍是 19 件")
+	# R752：野性图腾售价按店长口径 45 → 30；R797 全体 -5 → 25
+	check(repo.get_trap(7008).price == 25, "野性图腾：商店售价 25")
 	# R752：三件新工具 —— 都是使用型、都没有售价（= 不进商店）
 	var wild: TrapData = repo.get_trap(7009)
 	var duck_tool: TrapData = repo.get_trap(7010)
@@ -108,10 +113,10 @@ func _init() -> void:
 	var shop_ids: Array[int] = []
 	for sp: TrapData in shop_pool:
 		shop_ids.append(int(sp.id))
-	check(shop_pool.size() == 7 and not shop_ids.has(7007)
+	check(shop_pool.size() == 14 and not shop_ids.has(7007)
 			and not shop_ids.has(7009) and not shop_ids.has(7010) and not shop_ids.has(7011),
-			"`shop_traps()` = 7 件有售价的（烤肉与三件非卖品都被排除）")
-	check(shop_ids.has(7008), "野性图腾售价 30 → 仍在商店货架上")
+			"`shop_traps()` = 14 件有售价的（烤肉与三件非卖品都被排除；R796/R797/R801/R839/R841 新工具都有售价）")
+	check(shop_ids.has(7008), "野性图腾售价 25 → 仍在商店货架上")
 	# R754 石头 7012：事件「奇异雕像」的摧毁选项给的，**直接伤害型**
 	var stone: TrapData = repo.get_trap(7012)
 	check(stone != null and stone.trap_name == "石头" and stone.direct_damage == 15
@@ -122,6 +127,35 @@ func _init() -> void:
 	for dt: TrapData in repo.random_traps():
 		drop_ids.append(int(dt.id))
 	check(not drop_ids.has(7012), "石头不进随机掉落 / 工具箱池（no_drop）")
+	# R796：卡牌包 7013（随机卡填满手牌）/ 智慧药剂 7014（抽 3 张）——
+	# 都是使用型、都有售价（能掉落也能买），进商店也进随机池。
+	var cardpack: TrapData = repo.get_trap(7013)
+	var wisdom: TrapData = repo.get_trap(7014)
+	check(cardpack != null and cardpack.trap_name == "卡牌包" and cardpack.fill_hand
+			and cardpack.price == 50 and cardpack.is_usable(),
+			"卡牌包 7013：fill_hand / 使用型 / 50 金")
+	check(wisdom != null and wisdom.trap_name == "智慧药剂" and wisdom.draw_cards == 3
+			and wisdom.price == 35 and wisdom.is_usable(),
+			"智慧药剂 7014：抽 3 张 / 使用型 / 35 金")
+	check(shop_ids.has(7013) and shop_ids.has(7014)
+			and drop_ids.has(7013) and drop_ids.has(7014),
+			"R796 两件新工具：既进商店货架、也进随机掉落池")
+	# R797：河豚 7015 —— **放置型**（bounce，不是使用型），踩到回弹一格 + 3 伤，25 金
+	var puffer: TrapData = repo.get_trap(7015)
+	check(puffer != null and puffer.trap_name == "河豚" and puffer.bounce == 1
+			and puffer.damage == 3 and puffer.price == 25
+			and not puffer.is_usable() and not puffer.no_drop,
+			"河豚 7015：回弹 1 格 + 3 伤 / 放置型 / 25 金")
+	check(shop_ids.has(7015) and drop_ids.has(7015),
+			"河豚 7015：既进商店货架、也进随机掉落池")
+	# R801：爆炸蘑菇 7016 —— **放置型**（blast 范围伤害，不走使用型），炸一圈 15 伤，30 金
+	var shroom: TrapData = repo.get_trap(7016)
+	check(shroom != null and shroom.trap_name == "爆炸蘑菇" and shroom.blast == 1
+			and shroom.damage == 15 and shroom.price == 30
+			and not shroom.is_usable() and not shroom.no_drop,
+			"爆炸蘑菇 7016：半径 1 / 15 伤 / 放置型 / 30 金")
+	check(shop_ids.has(7016) and drop_ids.has(7016),
+			"爆炸蘑菇 7016：既进商店货架、也进随机掉落池")
 
 	# ---- ①b R690：描述必须写清「怎么发动」—— 放置型拖到格子、使用型轻点 ----
 	# 玩家唯一能读到操作方式的地方就是这条 desc（商店悬浮、战斗里轻点工具栏）。
@@ -134,12 +168,19 @@ func _init() -> void:
 		var raw_rows: Dictionary = {}
 		for row in raw_doc.get("traps", []):
 			raw_rows[str(int(row.get("id", 0)))] = str(row.get("desc", ""))
-		for tid in ["7001", "7002", "7003", "7004"]:
+		for tid in ["7001", "7002", "7003", "7004", "7015", "7016", "7017"]:
 			if not str(raw_rows.get(tid, "")).contains("拖到战场空格上放置"):
 				op_bad += "%s 缺拖放说明 " % tid
+		# R841：**直击型**（石头 7012 / 锤子 7018）也走拖放，但落点是敌方单位、不是空格 ——
+		# 措辞必须与放置型分开判：塞进上面那一组会逼文案写成「拖到战场空格上放置」，
+		# 而那是错的引导（玩家拖到空格砸不出东西）。
+		for tid in ["7012", "7018"]:
+			if not str(raw_rows.get(tid, "")).contains("拖到敌方单位身上"):
+				op_bad += "%s 缺直击拖放说明 " % tid
 		# R752：交互改成「点两下」（第一下弹出「使用」，第二下才结算），
 		# 所以使用型工具的说明也统一写成「轻点两下即可使用」。
-		for tid in ["7005", "7006", "7007", "7008", "7009", "7010", "7011"]:
+		for tid in ["7005", "7006", "7007", "7008", "7009", "7010", "7011",
+				"7013", "7014", "7019"]:
 			var d := str(raw_rows.get(tid, ""))
 			if not d.contains("轻点两下即可使用") or not d.contains("无需拖到战场格子上"):
 				op_bad += "%s 缺轻点说明 " % tid
@@ -281,6 +322,220 @@ func _init() -> void:
 	check(foe6b.poison_dmg == 4 and foe6b.poison_left == 5,
 			"毒瓶 / 毒沼共用施加口 _apply_poison")
 
+	# ---- ⑥d R797：河豚 7015 —— 踩到回弹一格 + 3 伤 ----
+	# 回弹方向 = 来路（`_trap_path_check` 把 path[i-1] 传进 `_trigger_trap`）。
+	var e8 := _engine()
+	e8.state.trap_fields[c31] = 7015
+	var foe8: Placement = _unit(9008, 60, GameEngine.SIDE_OPPONENT)
+	e8.state.board[c31] = foe8
+	e8._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_OPPONENT)
+	check(foe8.health == 57, "河豚：踩到受 3 点伤害")
+	check(e8.state.unit_at(Vector2i(2, 1)) == foe8 and not e8.state.board.has(c31),
+			"河豚：被弹回来时的格子（3,1 → 2,1）")
+	check(not e8.state.trap_fields.has(c31), "河豚：触发后从场上摘掉（一次性的）")
+
+	# 来路不可用（这里直接给 `_bounce_unit` 一个哨兵值 = 效果直达 / 没有路径）→ 朝我方弹一格
+	var e9 := _engine()
+	var foe9: Placement = _unit(9009, 60, GameEngine.SIDE_OPPONENT)
+	e9.state.board[c31] = foe9
+	e9._bounce_unit(foe9, Vector2i(-1, -1), TrapRepo.load_json().get_trap(7015))
+	check(e9.state.unit_at(Vector2i(4, 1)) == foe9 and not e9.state.board.has(c31),
+			"河豚：没有来路 → 朝我方（行号 +1）弹一格")
+
+	# 落点已经在棋盘外 / 被占 → 原地不动，但仍然吃伤害
+	var e10 := _engine()
+	var far := Vector2i(5, 2)
+	e10.state.trap_fields[far] = 7015
+	var foe10: Placement = _unit(9010, 60, GameEngine.SIDE_OPPONENT)
+	e10.state.board[far] = foe10
+	# 来路给一个越界格：既不能回去、朝我方那一格（6,2）也越界 → 留在原地
+	e10._trigger_trap(far, foe10, Vector2i(6, 2))
+	check(foe10.health == 57 and e10.state.unit_at(far) == foe10,
+			"河豚：无处可弹 → 留在原地（伤害照算）")
+
+	# 我方踩自己的河豚：不触发（与其它陷阱同口径）
+	var e11 := _engine()
+	e11.state.trap_fields[c31] = 7015
+	var mine11: Placement = _unit(9011, 60, GameEngine.SIDE_SELF)
+	e11.state.board[c31] = mine11
+	e11._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_SELF)
+	check(mine11.health == 60 and e11.state.trap_fields.has(c31),
+			"河豚：我方踩到不触发、不消耗")
+
+	# 河豚被弹回之后，`move()` 里「移动后有没有攻击目标」必须按**实际落点**判 ——
+	# 否则单位站在 2 排还能打到 3 排旁边的盟友（幽灵攻击），AI 白转一圈还留着行动权。
+	var e12 := _engine()
+	e12.state.trap_fields[Vector2i(3, 1)] = 7015
+	var foe12: Placement = _unit(9012, 60, GameEngine.SIDE_OPPONENT)
+	e12.state.board[Vector2i(2, 1)] = foe12
+	var ally12: Placement = _unit(9013, 30, GameEngine.SIDE_SELF)
+	e12.state.board[Vector2i(4, 1)] = ally12
+	e12.move(Vector2i(2, 1), Vector2i(3, 1), GameEngine.SIDE_OPPONENT)
+	check(e12.state.unit_at(Vector2i(2, 1)) == foe12,
+			"河豚：move() 走完被弹回 (2,1)")
+	check(foe12.tapped,
+			"河豚：弹回后身边没有目标 → 按新位置判「放弃攻击」（不出现幽灵攻击）")
+	check(ally12.health == 30, "河豚：盟友没被隔空打到")
+
+	# ---- ⑥e R801：爆炸蘑菇 7016 —— 踩到炸一圈（15 伤，不分敌我）----
+	# 半径 1 = 曼哈顿距离 ≤ 1（含中心格自身）：中心 + 上下左右四格。
+	var e13 := _engine()
+	e13.state.trap_fields[c31] = 7016
+	var foe13: Placement = _unit(9014, 60, GameEngine.SIDE_OPPONENT)     # 踩上去的那位
+	e13.state.board[c31] = foe13
+	var mate13: Placement = _unit(9015, 60, GameEngine.SIDE_OPPONENT)    # 相邻同伴
+	e13.state.board[Vector2i(2, 1)] = mate13
+	var ally13: Placement = _unit(9016, 60, GameEngine.SIDE_SELF)        # 相邻己方
+	e13.state.board[Vector2i(4, 1)] = ally13
+	var far13: Placement = _unit(9017, 60, GameEngine.SIDE_OPPONENT)     # 距离 2，安全
+	e13.state.board[Vector2i(1, 1)] = far13
+	e13._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_OPPONENT)
+	check(foe13.health == 45, "爆炸蘑菇：踩上去那句只吃一次 15（不是单体 + 范围 30）")
+	check(mate13.health == 45, "爆炸蘑菇：相邻的**敌方**同伴也被炸（15）")
+	check(ally13.health == 45, "爆炸蘑菇：**不分敌我** —— 相邻的己方单位同样吃 15")
+	check(far13.health == 60, "爆炸蘑菇：距离 2 的单位不在范围内")
+	check(not e13.state.trap_fields.has(c31), "爆炸蘑菇：触发后从场上摘掉（一次性的）")
+
+	# 波及致死 → 由 `_trap_path_check` 循环外的 `_destroy_dead()` 统一清场
+	var e14 := _engine()
+	e14.state.trap_fields[c31] = 7016
+	var foe14: Placement = _unit(9018, 60, GameEngine.SIDE_OPPONENT)
+	e14.state.board[c31] = foe14
+	var weak14: Placement = _unit(9019, 10, GameEngine.SIDE_SELF)
+	e14.state.board[Vector2i(2, 1)] = weak14
+	e14._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_OPPONENT)
+	check(not e14.state.board.has(Vector2i(2, 1)),
+			"爆炸蘑菇：被波及致死的单位立刻清场（不顶着负血留在棋盘上）")
+
+	# 我方踩自己的爆炸蘑菇：不触发（与其它陷阱同口径）
+	var e15 := _engine()
+	e15.state.trap_fields[c31] = 7016
+	var mine15: Placement = _unit(9020, 60, GameEngine.SIDE_SELF)
+	e15.state.board[c31] = mine15
+	e15._trap_path_check([Vector2i(2, 1), c31], GameEngine.SIDE_SELF)
+	check(mine15.health == 60 and e15.state.trap_fields.has(c31),
+			"爆炸蘑菇：我方踩到不触发、不消耗")
+
+	# ---- ⑥f R839：大蒜 7017 —— 指定空格 3 个我方回合不可使用 ----
+	var gal: TrapData = repo.get_trap(7017)
+	check(gal != null and gal.trap_name == "大蒜" and gal.block_turns == 3
+			and gal.price == 20 and not gal.is_usable() and not gal.no_drop,
+			"大蒜 7017：封锁 3 个我方回合 / 放置型 / 20 金")
+	check(shop_ids.has(7017) and drop_ids.has(7017),
+			"大蒜 7017：既进商店货架、也进随机掉落池")
+	var e16 := _engine()
+	var seal_cell := Vector2i(2, 1)
+	check(e16.place_trap(7017, seal_cell), "大蒜：place_trap 放置成功")
+	check(not e16.state.trap_fields.has(seal_cell),
+			"大蒜**不写** trap_fields（它是「进不去」而不是「踩到触发」）")
+	check(e16.state.is_cell_sealed(seal_cell), "大蒜：该格进入「不可使用」表")
+	check(not e16.trap_legal_cells().has(seal_cell), "封锁格不能再放工具 / 陷阱")
+	# 移动：不能停在封锁格，也**不能穿过**它（移速 2 的单位从 (1,1) 走不到 (3,1)）
+	var foe16: Placement = _unit(9030, 60, GameEngine.SIDE_OPPONENT)
+	foe16.card.move_speed = 2
+	e16.state.board[Vector2i(1, 1)] = foe16
+	check(not e16._reachable(Vector2i(1, 1), GameEngine.SIDE_OPPONENT).has(seal_cell),
+			"大蒜：移动可达格不含封锁格")
+	check(e16.move_path(Vector2i(1, 1), Vector2i(3, 1),
+			GameEngine.SIDE_OPPONENT).is_empty(),
+			"大蒜：穿过封锁格的路径不存在（移速 2 也绕不过去）")
+	# 跳跃 / 闪现同样进不去
+	check(not e16.leap_cells(Vector2i(3, 1), GameEngine.SIDE_SELF).has(seal_cell),
+			"大蒜：跳跃落点排除封锁格")
+	# 河豚也不能把人弹进封锁格（回弹落点判据同一口径）
+	check(not e16._bounce_cell_ok(seal_cell, Vector2i(3, 1), foe16),
+			"大蒜：河豚回弹落点排除封锁格")
+	# 我方踩自己的也不是「触发」——它是**进不去**，所以表里根本没有触发器
+	check(not e16.state.trap_fields.has(seal_cell)
+			and e16.state.is_cell_sealed(seal_cell),
+			"大蒜：我方单位回合开始时不会被自己封住（封锁只挡进入，不伤害）")
+	# 倒计时：3 → 2 → 1 → 到期解开
+	e16._seal_tick()
+	check(int(e16.state.sealed_cells.get(seal_cell, 0)) == 2, "大蒜：第 1 个我方回合后剩 2")
+	e16._seal_tick()
+	check(int(e16.state.sealed_cells.get(seal_cell, 0)) == 1, "大蒜：第 2 个我方回合后剩 1")
+	e16._seal_tick()
+	check(not e16.state.is_cell_sealed(seal_cell)
+			and e16.trap_legal_cells().has(seal_cell),
+			"大蒜：第 3 个我方回合后解开，该格恢复可用")
+	# 存档：封锁格进战斗检查点，读档后剩余回合不丢
+	var e17 := _engine()
+	e17.place_trap(7017, Vector2i(4, 2))
+	e17._seal_tick()
+	var ck17 := e17.state.save_dict()
+	check(ck17.has("sealed_cells") and (ck17["sealed_cells"] as Array).size() == 1,
+			"大蒜：战斗检查点存 sealed_cells")
+	var e18 := _engine()
+	e18.state.apply_dict(ck17)
+	check(int(e18.state.sealed_cells.get(Vector2i(4, 2), 0)) == 2,
+			"大蒜：读档后剩余回合原样恢复（3 → 2）")
+	check(e18.state.is_cell_sealed(Vector2i(4, 2)), "大蒜：读档后该格仍然不可使用")
+
+	# ---- ⑥g R841：锤子 7018（直击眩晕）/ 润滑油 7019（选手卡减费）----
+	var ham: TrapData = repo.get_trap(7018)
+	check(ham != null and ham.trap_name == "锤子" and ham.direct_stun == 1
+			and ham.price == 40 and not ham.is_usable() and not ham.no_drop,
+			"锤子 7018：直击眩晕 1 回合 / 40 金 / 不是使用型（要选目标，走拖放）")
+	check(shop_ids.has(7018) and drop_ids.has(7018),
+			"锤子 7018：既进商店货架、也进随机掉落池")
+	var e19 := _engine()
+	var foe19: Placement = _unit(1011, 40, GameEngine.SIDE_OPPONENT)
+	e19.state.board[Vector2i(3, 1)] = foe19
+	var hp19 := foe19.health
+	check(e19.trap_drop_cells(7018).has(Vector2i(3, 1)),
+			"锤子：落点 = 敌方单位格（与石头 7012 同一个口）")
+	check(not e19.trap_drop_cells(7018).has(Vector2i(0, 0)),
+			"锤子：空格不是落点（照抄放置型的话会高亮一片空格）")
+	check(e19.use_tool_on_unit(7018, Vector2i(3, 1)), "锤子：砸中目标返回 true")
+	check(foe19.health == hp19, "锤子：只眩晕、不掉血（仍是 %d）" % foe19.health)
+	check(foe19.stun_left == 1 and foe19.cannot_act_next_turn(),
+			"锤子：目标眩晕（stun_left=1 → 下回合不能行动）")
+	check(not e19.use_tool_on_unit(7018, Vector2i(0, 0)),
+			"锤子：砸空格无效（不该消耗一个消耗品）")
+	check(e19.state.unit_at(Vector2i(3, 1)) == foe19,
+			"锤子：把敌方单位眩晕后它仍在场上（不像石头那样扣血致死）")
+
+	var oil: TrapData = repo.get_trap(7019)
+	check(oil != null and oil.trap_name == "润滑油" and oil.pick_kind == "hand_down"
+			and oil.cost_down == 3 and oil.price == 30 and oil.is_usable(),
+			"润滑油 7019：pick_kind=hand_down / 本场 -3 费 / 30 金 / 使用型")
+	check(shop_ids.has(7019) and drop_ids.has(7019),
+			"润滑油 7019：既进商店货架、也进随机掉落池")
+	var e20 := _engine()
+	var oil_card := CardData.new()
+	oil_card.id = 9006
+	oil_card.card_name = "上油测试卡"
+	oil_card.cost = 5
+	e20.state.hand = [oil_card]
+	var cost20 := e20.cost_of(oil_card)
+	check(cost20 == 5, "润滑油：起手 5 费（%d）" % cost20)
+	check(e20.begin_tool_pick(7019), "润滑油：begin_tool_pick 进入选卡")
+	check(e20.tool_pick_cards().size() == 1 and e20.tool_pick_cards()[0] == oil_card,
+			"润滑油：候选就是手牌里的那一张（不是抽牌库）")
+	check(e20.tool_pick_confirm(0), "润滑油：确认返回 true")
+	check(e20.cost_of(oil_card) == 2, "润滑油：费用 -3（5 → 2，实际 %d）" % e20.cost_of(oil_card))
+	check(int(e20.state.hand_cost_delta.get(oil_card, 0)) == 3,
+			"润滑油：落地走 hand_cost_delta（手卡内减费唯一口径）")
+	e20.state.hand = []
+	check(e20.cost_of(oil_card) == 5, "润滑油：卡离手后恢复原价（5）")
+	e20.state.hand = [oil_card]
+	check(e20.cost_of(oil_card) == 2, "润滑油：卡回到手里减费继续生效（2）")
+
+	# 手牌满时的闸门：润滑油不改手牌张数 → 照样能用；万能牌要往手里加卡 → 不让用
+	var e21 := _engine()
+	var full_hand: Array[CardData] = []   # ⚠️ 必须带元素类型：FieldState.hand 是 Array[CardData]
+	for fi in FieldState.HAND_LIMIT:
+		var fc := CardData.new()
+		fc.id = 9006
+		fc.card_name = "填手卡%d" % fi
+		fc.cost = 4
+		full_hand.append(fc)
+	e21.state.hand = full_hand
+	check(e21.state.hand_full(), "润滑油：测例前提 —— 手牌确实是满的")
+	check(e21.begin_tool_pick(7019), "润滑油：手牌满也能用（不改张数）")
+	e21.tool_pick_cancel()
+	check(not e21.begin_tool_pick(7009), "万能牌：手牌满时不让用（要往手里加卡）")
+
 	# ---- ⑥b R690：使用型工具的结算（小血瓶回 20% 上限、法力药剂回 2 费）----
 	var e7 := _engine()
 	e7.state.max_hp_self = 50
@@ -299,10 +554,28 @@ func _init() -> void:
 	# 概率 / 满栏 / 入队 / 领取 / 放弃 五件事都钉在这里；「哪一类战斗」由
 	# `battle_scene` 的调用点决定（它不收 node_type，所以普通、精英、Boss、事件遭遇战
 	# 走的是同一条路）。
-	check(is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10), "掉落概率常量就是 10%")
+	check(is_equal_approx(RunState.TOOL_DROP_CHANCE_EASY, 0.33)
+			and is_equal_approx(RunState.TOOL_DROP_CHANCE, 0.10),
+			"R853 概率常量：难度 0 = 33% / 1 档起 = 10%")
+	var r852_sv_diff := RunState.difficulty
+	RunState.set_difficulty(0)
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.33),
+			"R853 难度 0：工具掉落率 33%")
 	var saved_seed := RunState.run_seed
 	RunState.run_seed = 20261114
 	RunState.tool_roll_seq = 0
+	# R853 难度 0：二项分布 n=1000 p=0.33 的 ±3σ ≈ ±45 → 285~375。
+	var easy_hits := 0
+	for i in 1000:
+		RunState.traps = [-1, -1, -1]
+		if RunState.roll_battle_tool_drop() > 0:
+			easy_hits += 1
+	check(easy_hits >= 285 and easy_hits <= 375,
+			"R853 难度 0：1000 场掉率落在 285~375 次（实测 %d）" % easy_hits)
+	# R694（用户口径「任何战斗都有 10% 概率掉落工具」）：1 档起仍是 10%。
+	RunState.set_difficulty(1)
+	check(is_equal_approx(RunState.tool_drop_chance(), 0.10),
+			"R853 难度 1：工具掉落率 10%")
 	# 1000 场：每场先清空栏位，只测「摇不摇得中」。二项分布 n=1000 p=0.1 的 ±3σ ≈ ±9.5，
 	# 所以放宽到 70~130 —— 掉率真漂成 5% 或 15% 一定被抓到，又不会因为个别取样变随机红。
 	var hits := 0
@@ -321,6 +594,7 @@ func _init() -> void:
 			full_hits += 1
 	check(full_hits >= 8 and full_hits <= 32,
 			"工具栏满（3/3）时照样按 10%% 掉（200 场实测 %d）" % full_hits)
+	RunState.set_difficulty(r852_sv_diff)
 	# 满栏掉出来的工具也能一路走到「领进来」：丢弃一个旧槽就行（数据层口）。
 	var full_id := 7004
 	RunState.traps = [7001, 7002, 7003]
@@ -454,6 +728,13 @@ func _init() -> void:
 	check(not eng_src.contains("trap_poison_left")
 			and not place_src.contains("trap_poison_left"),
 			"统一口径：毒瓶不再单开中毒账本")
+	check(eng_src.contains("_seal_tick()") and eng_src.contains("func _seal_tick")
+			and eng_src.contains("state.tick_seals()"),
+			"R839 大蒜：回合推进只走 `_seal_tick()` → `state.tick_seals()` 一条链")
+	check(eng_src.contains("state.seal_cell(cell, t.block_turns)")
+			and battle_src.contains("_draw_seal_markers")
+			and trap_src.contains("_garlic"),
+			"R839 大蒜：数据判据 / 战场绘制 / 图标兜底三处接线")
 	check(eng_src.contains("action.emit(\"trap_hit\"")
 			and eng_src.contains("func _trigger_trap"),
 			"R669：引擎触发口发出 trap_hit 视觉事件")

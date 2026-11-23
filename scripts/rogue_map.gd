@@ -26,23 +26,36 @@ extends RefCounted
 ## 「?」房的实际类型在**生成时**就定好（而非进入时抽）—— 这样休息点的
 ## 「不与起点相邻 / 不与另一个休息相邻」两条约束对隐藏房同样成立。
 ##
-## 生成算法（R128 实验选定；R136 把「边缘非角」的下限提到 2 后重测 300 张：
-##   平均 1.997 次重试、51% 一次成功、最差 9 次、0 失败）：
+## 生成算法（R128 实验选定；R136 把「边缘非角」的下限提到 2；R858 重做稀疏度）：
 ##   1) 骨架：每行横向全连（端点得 1 度、中间列得 2 度）；
 ##      **最左 / 最右两列的非角格再纵向串成链**（R136：边缘非角至少 2 个方向，
 ##      而这两列横向只有 1 条门，不补纵向就永远不达标）；
-##      相邻两行之间在「非角列」随机连 1~3 条垂直边（保证行间连通）；
-##   2) 随机加边：两端都还没到度数上限的边，按概率加（制造分支感）；
-##   3) 随机删边：删后仍连通、且两端度数都不低于下界才真删（制造死路与岔路）；
-##   4) 校验（结构层，`_validate`）：度数区间 / 全连通 /
-##      起点到两个大宝箱都不超过 MAX_STEPS 步；
-##   5) 校验（内容层，`exits_reach_chest`，R142）：**起点的每一个邻居都必须
+##   2) 骨架（R858）：相邻两行之间**左区（col 1/2）一条 + 右区（col 4/5）一条**
+##      **强制连通**，再随机补 0~2 条（中列 3 优先参与）。两行的通道因此天然
+##      分居画面两侧 → 纵向上升必然分岔，而不是一根「电梯」；
+##   3) 随机加边：两端都还没到度数上限的边，按概率加（制造分支感）；
+##   4) 随机删边（R858 拆账）：**垂直边**额度 4~9；**横向边**额度 0~2，
+##      且**同一行最多删 1 条**。删后仍要连通、且两端度数都不低于下界才真删。
+##      ⚠️ 旧版是一锅端打乱后删 6~16 条，而横边占全部边的 ~71% → 每张图平均
+##      被砍掉 8 条横廊，七格一行被切成近两段（实测 rowseg 1.96，视觉上就是
+##      一条条细走廊）。旧版口径下 22.5% 的图从起点到宝箱只有**唯一一条路**，
+##      店长截图里那种「极端单行路线」就出自这里；
+##   5) 校验（结构层，`_validate`）：度数区间 / 全连通 /
+##      起点到两个大宝箱都不超过 MAX_STEPS 步 /
+##      **【R858】起点到每个大宝箱至少 2 条不同简单路径**（限深 MAX_STEPS：
+##      巧克力走不完的绕路不算「选择」）。口径不能取「边不相交」——
+##      大宝箱在角上、角格上限 1 度，通往它的最后一条边必然必经，2-边连通永远过不了；
+##   R858 重测 200 张：平均门数 2.33 → **2.53**、行内横向段数 1.96 → **1.19**、
+##   单行图 22.5% → **0%**、到宝箱走法均值 6.87 → **16.78** 条；
+##   平均重摇 **1.830** 次、最差 6 次、0 失败（比 R136 的 1.997 还略低）。
+##   类型分布未漂：一层「?」23.30%（R852 基线 23.5%）、精英 ×1.28 ≈ 1.3。
+##   6) 校验（内容层，`exits_reach_chest`，R142）：**起点的每一个邻居都必须
 ##      「不经过起点也能走到某个宝箱房」** —— 否则玩家第一步拐进那条路，
 ##      之后就只能原路折返才能到宝箱（用户口径：无论第一步走哪格，
 ##      都应该能一路向前走到宝箱）。宝箱房 = chest / bigchest，
 ##      「?」房按它生成时定好的真实类型算。
 ##      任一项不过 → 整张重摇（最多 MAX_ATTEMPTS 次）。
-##   内容层的校验必须**等类型摇完**才判得出来（宝箱是一种「类型」）→ 第 5 步只能
+##   内容层的校验必须**等类型摇完**才判得出来（宝箱是一种「类型」）→ 它只能
 ##   放在 `_make_cells` 之后，重摇的单位因此是「结构 + 类型」一整轮。
 ##
 ## 「12 步内不可能同时进两个大宝箱」是**几何必然**，不用额外控制：
@@ -128,9 +141,11 @@ const WEIGHTS := {"battle": 7, "event": 2, "elite": 2}
 ##     正好降 **30.4%** ≈ 用户要的「大约 30%」。
 ## 其余四项权重一个字没动 → 其它房间类型之间的相对比例不变。
 const WEIGHTS_UNKNOWN := {"battle": 7, "event": 12, "elite": 2, "chest": 3, "shop": 2}
-## R380（难度 10「精英出现增多」）：10 档起「?」房**不再刷商店**（shop 键被裁掉 →
-## 每层商店固定 2 间 + 右上角 1 间），精英出现概率统一 ×1.3。裁剪后的表见 `_unknown_table()`
-## —— **别再直接读 `WEIGHTS_UNKNOWN`**（那会绕过难度 10 的口径）。
+## R380（难度 10「精英出现增多」）：精英出现概率统一 ×1.3（明房 / 「?」房两条途径同一个口）。
+## R852（用户口径）：「10 难度起，? 依旧需要刷新商店，概率从事件、普通战斗、宝箱里面扣」
+## —— 原先「10 档裁掉 shop」的裁剪**已撤销**，「?」房照旧刷商店；精英 +30% 多出来的权重
+## 只从 **battle / event / chest** 里按比例扣，**shop 一分不扣** → 商店占比与低难度逐位相同。
+## 见 `_weighted_far()` 里的 `pool_w` / `scale`。
 
 ## R304（用户口径）：**精英越远离起点越容易遇到** —— 距离系数线性 0.8（起点旁）→ 1.5（最远）。
 ## 距离用曼哈顿步数（与战斗里的距离口径一致）。
@@ -332,19 +347,6 @@ static func is_fixed_open(cell: Dictionary) -> bool:
 	return str(cell.get("type", "")) == "rest"
 
 
-static func _unknown_table() -> Dictionary:
-	## 当前难度下「?」房该用的权重表。
-	## R380：难度 10 起去掉 `shop` —— 商店只剩「开局标记 1 间 + `shop_set` 恒定 2 间」，
-	## 不再由「?」房额外贡献（用户口径「每层商店数量调整为固定 2 个，不算右上角」）。
-	## ⚠️ 生成期（`_make_cells`）与水晶骰子的重摇（`_unknown_weights`）都必须走这里，
-	##    否则两条路会给出不同的商店 / 精英分布。
-	if not RunState.unknown_shop_allowed():
-		var w: Dictionary = WEIGHTS_UNKNOWN.duplicate()
-		w.erase("shop")
-		return w
-	return WEIGHTS_UNKNOWN
-
-
 static func _unknown_weights(cell: Dictionary, layer: int, start_nbs: Dictionary) -> Dictionary:
 	## R312：这一格「按「?」房的权重」该用哪张表 —— 与 `_make_cells` 里的分支**同一口径**。
 	##   * 起点后第一格（第一层）：只可能是战斗 / 事件（R192 的约束，重摇也要守）；
@@ -354,10 +356,10 @@ static func _unknown_weights(cell: Dictionary, layer: int, start_nbs: Dictionary
 	if start_nbs.has(i):
 		if layer == GameLayers.LAYER_DEFAULT:
 			return {"battle": 7, "event": 2}
-		var nb_w: Dictionary = _unknown_table().duplicate()
+		var nb_w: Dictionary = WEIGHTS_UNKNOWN.duplicate()
 		nb_w.erase("elite")
 		return nb_w
-	return _unknown_table()
+	return WEIGHTS_UNKNOWN
 
 
 static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: int,
@@ -414,12 +416,17 @@ static func reroll_as_unknown(cells: Array, rng: RandomNumberGenerator, layer: i
 		var i3 := int(cell3.get("id", -1))
 		if i3 < 0 or is_fixed_open(cell3) or bool(cell3.get("hidden", false)):
 			continue
-		var w := _unknown_weights(cell3, layer, start_nbs)
-		var t := ""
+		# R815：第一层起点邻居**整格不参与重摇**（内容与显示都不动）。
+		# R192 要求它「只可能是事件 / 一般战斗、不得是 ? 房」，`_make_cells` 为此写死
+		# `hidden = false`；本函数早先把它一并翻成 ?，规则就在显示层被掀掉了。
+		# 而「重摇成另一个 battle/event」本身没有意义 —— 它本来就只在这两类里。
+		# ⚠️ 必须整格跳过而不是「重摇后强制 hidden=false」：后者让本函数的幂等判据
+		#    （跳过 hidden 的格子）永远对它不成立，第二次调用会再算一遍重摇格数。
+		# ⚠️ 只豁免**第一层**：第二层起点邻居本来就允许是 ?（R192 只禁精英/篝火）。
 		if start_nbs.has(i3) and layer == GameLayers.LAYER_DEFAULT:
-			t = _weighted(w, rng)
-		else:
-			t = _weighted_far(w, rng, col_of(i3), row_of(i3), far_norm)
+			continue
+		var w := _unknown_weights(cell3, layer, start_nbs)
+		var t := _weighted_far(w, rng, col_of(i3), row_of(i3), far_norm)
 		cell3["type"] = t
 		cell3["hidden"] = true
 		cell3["revealed"] = false
@@ -473,19 +480,26 @@ static func _build_adjacency(rng: RandomNumberGenerator) -> Array:
 		for row in range(1, ROWS - 2):
 			_link(adj, idx(c, row), idx(c, row + 1))
 
-	# --- 骨架 2：相邻两行之间随机连 1~3 条垂直边（行间连通）
+	# --- 骨架 2：相邻两行之间**左区一条 + 右区一条**，再随机补 0~2 条（行间连通）
 	#     ⚠️ 角的垂直边**永不加**：角的上限就是 1，那条额度必须留给水平边，
-	#     否则角会变成 2 度。
+	#     否则角会变成 2 度。候选列因此只可能是 1..5。
+	#     R858（用户口径「避免极端单行路线」）：原来这里是 `randi_range(1, 3)` 条、
+	#     且列完全是 shuffle 出来的 —— 实测每对行常常只有 1 条通道、还和上一行的
+	#     通道挤在相邻列，纵向走起来就是一根「电梯」，玩家没有第二条上升路。
+	#     现在把左右两个区各钉一条，两行的通道天然分居画面两侧 → 上升必然分岔；
+	#     中间再补 0~2 条制造不规则（中列 3 优先参与，视觉上像第三条主廊）。
 	for row in ROWS - 1:
-		var cols: Array = []
-		for col in COLS:
-			if is_corner(col, row) or is_corner(col, row + 1):
-				continue
-			cols.append(col)
-		_shuffle(cols, rng)
-		var k: int = mini(rng.randi_range(1, 3), cols.size())
-		for j in k:
-			_link(adj, idx(int(cols[j]), row), idx(int(cols[j]), row + 1))
+		var lzone: Array = [1, 2]
+		var rzone: Array = [4, 5]
+		_shuffle(lzone, rng)
+		_shuffle(rzone, rng)
+		_link(adj, idx(int(lzone[0]), row), idx(int(lzone[0]), row + 1))
+		_link(adj, idx(int(rzone[0]), row), idx(int(rzone[0]), row + 1))
+		var mzone: Array = [3, int(lzone[1]), int(rzone[1])]
+		_shuffle(mzone, rng)
+		var extra_k: int = rng.randi_range(0, 2)
+		for j in extra_k:
+			_link(adj, idx(int(mzone[j]), row), idx(int(mzone[j]), row + 1))
 
 	# --- 随机加边（两端都还没到上限才加）
 	var extra: Array = []
@@ -505,17 +519,31 @@ static func _build_adjacency(rng: RandomNumberGenerator) -> Array:
 				_link(adj, a, b)
 
 	# --- 随机删边：制造死路与不规则岔口（删后必须仍连通且不破度数下界）
-	var cur: Array = []
+	#     R858：**横向边与垂直边分开算额度**。
+	#     原来是一锅端打乱后删 6~16 条，而横向边占全部边的 ~71% —— 等于每张图都
+	#     平均砍掉 8 条横廊，七格一行被切成近两段（实测 rowseg 1.96）。玩家看到的
+	#     「一条窄带」就是这些断口串起来的。
+	#     现在：垂直边额度 4~9（不规则感主要来自这里）；横向边额度 0~2，
+	#     且**同一行最多删 1 条** —— 这样任意一行的横向最多被切一刀，
+	#     「这一行还能横着走」几乎永远成立。
+	var vcur: Array = []
+	var hcur: Array = []
 	for a in CELLS:
 		for b: int in adj[a]:
-			if b > a:
-				cur.append([a, b])
-	_shuffle(cur, rng)
-	var quota: int = rng.randi_range(6, 16)
-	var done := 0
+			if b <= a:
+				continue
+			if row_of(a) == row_of(b):
+				hcur.append([a, b])
+			else:
+				vcur.append([a, b])
+	_shuffle(vcur, rng)
+	_shuffle(hcur, rng)
 	var start_i := idx(START_COL, START_ROW)
-	for e: Array in cur:
-		if done >= quota:
+	var vquota: int = rng.randi_range(4, 9)
+	var hquota: int = rng.randi_range(0, 2)
+	var vdone := 0
+	for e: Array in vcur:
+		if vdone >= vquota:
 			break
 		var a: int = e[0]
 		var b: int = e[1]
@@ -524,9 +552,28 @@ static func _build_adjacency(rng: RandomNumberGenerator) -> Array:
 		_unlink(adj, a, b)
 		if (adj[a] as Array).size() >= lo_of(a) and (adj[b] as Array).size() >= lo_of(b) \
 				and _reach_count(adj, start_i) == CELLS:
-			done += 1
+			vdone += 1
 		else:
 			_link(adj, a, b)
+	var hdone := 0
+	var hrow_used := {}
+	for e2: Array in hcur:
+		if hdone >= hquota:
+			break
+		var a2: int = e2[0]
+		var b2: int = e2[1]
+		if not (adj[a2] as Array).has(b2):
+			continue
+		var r2 := row_of(a2)
+		if hrow_used.has(r2):
+			continue          # 同一行只许切一刀
+		_unlink(adj, a2, b2)
+		if (adj[a2] as Array).size() >= lo_of(a2) and (adj[b2] as Array).size() >= lo_of(b2) \
+				and _reach_count(adj, start_i) == CELLS:
+			hdone += 1
+			hrow_used[r2] = true
+		else:
+			_link(adj, a2, b2)
 
 	return _validate(adj, start_i)
 
@@ -544,9 +591,48 @@ static func _validate(adj: Array, start_i: int) -> Array:
 	# 标记商店的可达距离不在这里判 —— 它的位置是 `_make_cells` 里按「起点 BFS 距离
 	# ≤ MAX_STEPS」挑出来的，生成那一刻就已经保证了（候选过滤时就用了同一个上限）。
 	for p in BIGCHEST_POS:
-		if int(dist.get(idx(p.x, p.y), 9999)) > MAX_STEPS:
+		var bi := idx(p.x, p.y)
+		if int(dist.get(bi, 9999)) > MAX_STEPS:
+			return []
+		# R858（用户口径「避免极端单行路线」）：**宝箱至少要有两条走法**。
+		# 只判「可达」是不够的 —— 实测有 4.5% 的图连一条岔路都没有，玩家从起点
+		# 到宝箱只有唯一一条线，中途没有第二次选择，整张图就成了店长截图里那种窄带。
+		# ⚠️ 口径是「不同简单路径条数 ≥2」而不是「边不相交」：大宝箱在角上、
+		#    角格上限 1 度，通往它的最后一条边必然必经，2-边连通永远过不了。
+		# ⚠️ 深度上限取 MAX_STEPS：巧克力走不完的绕路，对玩家不构成「选择」。
+		if _route_count(adj, start_i, bi, 2) < 2:
 			return []
 	return adj
+
+
+static func _route_count(adj: Array, src: int, dst: int, cap: int = 2) -> int:
+	## R858：从 src 到 dst 的**不同简单路径**条数（限深 MAX_STEPS，数到 cap 即停）。
+	## 只用于生成期校验，`cap` 一律给小值（2）—— 我们只关心「有没有第二条」。
+	var visited := {src: true}
+	var counter := [0, 0]        # [命中数, 已展开节点数]
+	_route_dfs(adj, src, dst, visited, counter, 0, cap)
+	return int(counter[0])
+
+
+static func _route_dfs(adj: Array, u: int, dst: int, visited: Dictionary, counter: Array,
+		depth: int, cap: int) -> void:
+	if int(counter[0]) >= cap or int(counter[1]) >= 20000:
+		return
+	counter[1] = int(counter[1]) + 1
+	if u == dst:
+		counter[0] = int(counter[0]) + 1
+		return
+	if depth >= MAX_STEPS:
+		return
+	for nb in adj[u]:
+		var v := int(nb)
+		if visited.has(v):
+			continue
+		visited[v] = true
+		_route_dfs(adj, v, dst, visited, counter, depth + 1, cap)
+		visited.erase(v)
+		if int(counter[0]) >= cap:
+			return
 
 
 static func exits_reach_chest(cells: Array) -> bool:
@@ -736,7 +822,10 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 		elif i == mark_shop_i:
 			type = "shop"          # R693：开局随机标记的那一间（每层保底、可见）
 		elif rest_set.has(i):
-			type = "rest"
+			# R781「阴冷」：休息格整体换成战斗格。判据只走 `RunState.rest_to_battle()`
+			# 这一个取数口 —— 于是图标、进房结算、战绩统计天然是同一个「战斗」，
+			# 不会出现「图标是火堆、进去是战斗」的两套口径。
+			type = "battle" if RunState.rest_to_battle() else "rest"
 		elif shop_set.has(i):
 			type = "shop"
 		else:
@@ -750,12 +839,12 @@ static func _make_cells(adj: Array, rng: RandomNumberGenerator, layer: int,
 					type = _weighted({"battle": 7, "event": 2}, rng)
 				else:
 					hidden = rng.randf() < P_UNKNOWN
-					var nb_w: Dictionary = (_unknown_table() if hidden else WEIGHTS).duplicate()
+					var nb_w: Dictionary = (WEIGHTS_UNKNOWN if hidden else WEIGHTS).duplicate()
 					nb_w.erase("elite")
 					type = _weighted(nb_w, rng)
 			else:
 				hidden = rng.randf() < P_UNKNOWN
-				type = _weighted_far(_unknown_table() if hidden else WEIGHTS, rng,
+				type = _weighted_far(WEIGHTS_UNKNOWN if hidden else WEIGHTS, rng,
 						col_of(i), row_of(i), far_norm)
 		var cell := {
 			"id": i,
@@ -791,29 +880,36 @@ static func _weighted_far(w: Dictionary, rng: RandomNumberGenerator, col: int, r
 	## R380（难度 10「精英出现增多」）：精英权重乘 `RunState.elite_weight_mul()`，并且把
 	## **多出来的那部分按比例从其他类型里扣掉**（总权重不变）—— 于是涨的是**出现概率**
 	## （恰好 ×1.3），而不是「权重 ×1.3、占比只涨两成」。明房 / 「?」房共用这一个口。
+	## R852（用户口径）：「10 难度起，? 依旧需要刷新商店，概率从事件、普通战斗、宝箱里面扣」
+	##   * 扣减池 `pool_w` = 除 **elite / shop** 之外的类型 → 明房是 battle + event，
+	##     「?」房是 battle + event + chest，**商店一分不扣**；
+	##   * 于是商店占比与低难度**逐位相同**，精英占比仍精确 ×1.3（总权重守恒）。
 	## ⚠️ 低难度 `mul = 1.0` → `drop = 0` → `f = 1`，这条分支是**恒等**的：
 	##    同一个种子出图与改动前逐格一致（R380 回归里钉住这一点）。
 	var ww := {}
 	var total := 0
 	var base_w := int(w.get("elite", 0))
 	var mul := RunState.elite_weight_mul()
-	var others := 0
+	var pool_w := 0
 	for k in w:
-		if str(k) == "elite":
+		if str(k) == "elite" or str(k) == "shop":
 			continue
-		others += int(w[k]) * 100
+		pool_w += int(w[k]) * 100
 	var f := 1.0
 	if base_w > 0:
 		var e := 100.0 * elite_weight_scaled(base_w, col, row, norm)
 		var e_new := e * mul
 		var drop := e_new - e
-		if others > 0 and drop > 0.0:
-			f = maxf(0.0, (float(others) - drop) / float(others))
+		if pool_w > 0 and drop > 0.0:
+			f = maxf(0.0, (float(pool_w) - drop) / float(pool_w))
 		ww["elite"] = maxi(1, roundi(e_new))
 	for k in w:
 		if str(k) == "elite":
 			continue
-		ww[k] = maxi(1, roundi(float(int(w[k]) * 100) * f))
+		var scale := f
+		if str(k) == "shop":
+			scale = 1.0              # R852：商店不承担精英加权的代价
+		ww[k] = maxi(1, roundi(float(int(w[k]) * 100) * scale))
 		total += int(ww[k])
 	total += int(ww.get("elite", 0))
 	if total <= 0:

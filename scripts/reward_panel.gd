@@ -185,14 +185,15 @@ func _ready() -> void:
 
 	_btn = Button.new()
 	_btn.position = _btn_pos
-	_btn.size = Vector2(152, 32)
-	_btn.custom_minimum_size = Vector2(152, 32)
+	_btn.size = Vector2(154, 46)
+	_btn.custom_minimum_size = Vector2(154, 46)
 	_btn.add_theme_font_override("font", _font)
 	_btn.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 	_btn.add_theme_color_override("font_disabled_color", UiTheme.SAND)
 	_btn.visible = false
 	_btn.pressed.connect(open)
 	UiTheme.apply_chip(_btn, false, true)
+	UiTheme.apply_return_button(_btn)   # R825：与「返回同一间商店」共用 codex 按钮底
 	add_child(_btn)
 	_refresh_btn()
 
@@ -247,6 +248,7 @@ func close() -> void:
 	_dup_sel.clear()
 	_reset_core()
 	_refresh_btn()
+	_save_reward_checkpoint()
 	if not _closing_to_route and on_closed.is_valid():
 		on_closed.call()
 
@@ -260,6 +262,7 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if _cached_n != RunState.pending_reward_count():
 		_refresh_btn()
+		_save_reward_checkpoint()
 	# R467：传说卡揭示动画是时间基的 —— 播完之前逐帧重绘，播完就收（不再空转）。
 	if _legend_t >= 0 and _root != null and _root.visible:
 		if Time.get_ticks_msec() - _legend_t < LEGEND_FX_MS:
@@ -273,10 +276,18 @@ func _process(_delta: float) -> void:
 	# → 不逐帧重绘（移动端耗电；PC 端闲置占用同步下降）。
 
 
+func _save_reward_checkpoint() -> void:
+	## R825：领取 / 放弃 / 选卡之后立刻把结果落盘，别等下一张地图检查点。
+	## 出图与 headless 回归不写玩家存档；正常地图 / 战斗奖励页都走这一口。
+	if RunState.run_active and DisplayServer.get_name() != "headless" \
+			and "--screenshot" not in OS.get_cmdline_user_args():
+		RunSave.save_run()
+
+
 func _refresh_btn() -> void:
 	_cached_n = RunState.pending_reward_count()
 	_btn.visible = _cached_n > 0 and not _open
-	_btn.text = GameI18n.ui("reward", "REWARD_PENDING_ENTRY", "✦ 待领奖励 %d") % _cached_n
+	_btn.text = GameI18n.ui("reward", "REWARD_PENDING_ENTRY", "返回待领奖励 %d") % _cached_n
 	_btn.tooltip_text = ""
 
 
@@ -477,7 +488,9 @@ func _claim_entry(i: int) -> void:
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
 	var was_milk := _is_milk_entry(i)
-	RunState.claim_pending_reward(i)
+	if not RunState.claim_pending_reward(i):
+		return
+	_save_reward_checkpoint()   # R825：成交当刻写盘；后续牛奶 / 鸭血分支 return 也不会漏
 	_view = VIEW_LIST
 	_scroll = 0.0
 	# R323（用户口径）：牛奶附完魔，**把两张卡摆出来、用动画把标志贴上去** ——
@@ -598,7 +611,9 @@ func _resolve_unusable(i: int) -> void:
 	## ⚠️ 与 `_leave_entry()` 的区别就在这一层：那个是玩家想看别的，这个是没有内容可做。
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
-	RunState.skip_pending_reward(i)
+	if not RunState.skip_pending_reward(i):
+		return
+	_save_reward_checkpoint()
 	_view = VIEW_LIST
 	_scroll = 0.0
 	_root.queue_redraw()
@@ -606,7 +621,9 @@ func _resolve_unusable(i: int) -> void:
 
 func _claim_key_choice(take_key: bool) -> void:
 	## R543：二选一领取（点选项卡片）。
-	RunState.claim_key_choice(_sel, take_key)
+	if not RunState.claim_key_choice(_sel, take_key):
+		return
+	_save_reward_checkpoint()
 	_view = VIEW_LIST
 	_scroll = 0.0
 	_root.queue_redraw()
@@ -617,7 +634,9 @@ func _pick_card(i: int, card_id: int) -> void:
 	## 卡牌三选一：选中即入卡组 + 该条置灰。
 	if i < 0 or i >= RunState.pending_rewards.size():
 		return
-	RunState.pick_pending_card(i, card_id)
+	if not RunState.pick_pending_card(i, card_id):
+		return
+	_save_reward_checkpoint()
 	_view = VIEW_LIST
 	_scroll = 0.0
 	_pick_sel = -1
@@ -746,6 +765,7 @@ func _dup_confirm() -> void:
 	## 落账唯一口：`RunState.duplicate_deck_cards()` —— 与 `deck_edit_scene` 同一个，
 	## 所以「完整复制附魔」的规则只有一份，界面不许自己拼卡组。
 	var res := RunState.duplicate_deck_cards(_repo_cards, _dup_sel)
+	_save_reward_checkpoint()   # 复制结果与 pending_relic 的清理一起落盘
 	var nms: Array[String] = []
 	for it: Dictionary in res.get("copied", []):
 		nms.append(str(it["name"]))
@@ -1469,6 +1489,7 @@ func _swap_tool(slot: int) -> void:
 	if old <= 0:
 		return
 	if RunState.claim_pending_reward(_sel):
+		_save_reward_checkpoint()
 		_back_to_list()
 		return
 	RunState.traps[slot] = old
@@ -1906,6 +1927,7 @@ func core_pick_deck(di: int) -> Dictionary:
 	if not bool(res.get("ok", false)):
 		return {"ok": false, "msg": "核心没有成形（%s）" % str(res.get("reason", ""))}
 	_core_grid = []
+	_save_reward_checkpoint()
 	_back_to_list()
 	return {"ok": true, "msg": "「%s」被献祭：第一段 %d 点伤害 → 「%s」得到「伤害 +%d」" % [
 			str(res.get("src_name", "")), int(res.get("dmg", 0)),
@@ -1978,33 +2000,12 @@ func _draw_reward_heading(pr: Rect2) -> void:
 	_root.draw_string(_font_bold, rr.position + Vector2(112, 47), GameI18n.ui("reward", "REWARD_CARD_HEADING", "卡牌奖励"), HORIZONTAL_ALIGNMENT_LEFT, 180, 30, Color("f1ddb1"))
 
 
-func _layer_badge(center: Vector2, value: String, gold := false) -> void:
-	_layer_image("12" if gold else "11", Rect2(center - Vector2(23, 23), Vector2(46, 46)))
-	_root.draw_string(_font_bold, center + Vector2(-23, 9), value, HORIZONTAL_ALIGNMENT_CENTER, 46, 26, Color("fff6e4"))
-
-
 func _draw_layer_card(card: CardData, rr: Rect2, selected: bool) -> void:
-	var ar := Rect2(rr.position + rr.size * Vector2(0.055, 0.035), rr.size * Vector2(0.89, 0.74))
-	_root.draw_rect(ar, Color("e9dfca"))
-	var art := CardFace.art_for(card.pic_id())   # R637：产物 id 归 0，取图认 pic_id
-	if art != null:
-		_root.draw_texture_rect_region(art, ar, CardFace.cover_region(art.get_size(), ar))
-	else:
-		_root.draw_string(_font_bold, ar.position + Vector2(0, ar.size.y * 0.62), card.card_name.left(1), HORIZONTAL_ALIGNMENT_CENTER, ar.size.x, 82, Color("c7bda7"))
+	## R843：奖励主卡面也走 CardFace 唯一口，不再维护另一套卡图 / 卡名 / 四属性布局。
+	## 旧分层框仅作为外侧舞台装饰；费用、稀有度、附魔与属性全部由共享卡面绘制。
 	_layer_image("06" if selected else "05", rr.grow(6.0))
-	_root.draw_string(_font_bold, rr.position + Vector2(16, rr.size.y * 0.846), card.card_name, HORIZONTAL_ALIGNMENT_CENTER, rr.size.x - 32, 22, Color("40392e"))
-	# R643：缎带**只由稀有度决定** —— 走 CardFace 的唯一口，不再在这里挑素材。
-	# 原先按 `rarity == 2` 手挑「金 / 紫」两档素材，于是稀有 / 初始 /
-	# 怪物 / 事件全挂金缎带，跟卡下方那块写着稀有度名的铭牌直接打架。
-	CardFace._draw_rarity_ribbon(_root, card, rr, rr.size.y / CardFace.CARD_H_DESIGN,
-			UiTheme.CARD_PAD * rr.size.y / CardFace.CARD_H_DESIGN, rr.size.y * 0.327)
-	_layer_badge(rr.position + Vector2(12, 10), "X" if card.x_cost else str(card.cost))
-	if card.health > 0:
-		_layer_badge(Vector2(rr.position.x + 8, rr.end.y - 7), str(card.power))
-		_layer_badge(Vector2(rr.position.x + 46, rr.end.y - 7), str(card.attack_range), true)
-		_layer_badge(rr.end - Vector2(45, 7), str(card.move_speed))
-		_layer_badge(rr.end - Vector2(7, 7), str(card.health))
-	CardFace._draw_enchant_mark(_root, card, rr, _font_bold)
+	CardFace.draw(_root, card, rr, card.health, selected, false, _font, _font_bold,
+			-1, false, false, false, 0, -1, -1, false, true)
 	CardFace._draw_growth_mark(_root, card, rr, _font_bold)
 
 
@@ -2449,6 +2450,7 @@ func _on_click(pos: Vector2) -> void:
 			if not RunState.deck_deletable(di):
 				return
 			if RunState.claim_deck_delete_reward(_sel, di):
+				_save_reward_checkpoint()
 				_deck_hover = -1
 				_back_to_list()
 			return
@@ -2498,6 +2500,7 @@ func _on_click(pos: Vector2) -> void:
 			if RunState.has_relic(RunState.MATCH_RELIC_ID) \
 					and _btn_cards_reroll_rect().has_point(pos):
 				if RunState.reroll_pending_cards(_sel):
+					_save_reward_checkpoint()   # 火柴次数与新候选必须同档恢复
 					_pick_sel = -1
 					_hover_card = -1
 					_root.queue_redraw()
@@ -2534,7 +2537,8 @@ func _on_click(pos: Vector2) -> void:
 					any_relic = true
 					break
 			if any_relic and _btn_claim_all_rect().has_point(pos):
-				RunState.claim_all_relic_rewards()
+				if RunState.claim_all_relic_rewards() > 0:
+					_save_reward_checkpoint()
 				_root.queue_redraw()
 				# R636：一键领取里包含鸭血 → 当刻就地摊开卡组（与单条领取同一个口）。
 				if (RunState.pending_relic == RunState.DUCK_BLOOD_RELIC_ID

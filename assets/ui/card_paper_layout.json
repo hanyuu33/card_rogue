@@ -1,26 +1,40 @@
 {
- "note": "card_paper.png v4 分区坐标（归一化，R193 PIL 从 AI 生成底图实测）",
- "art_ratio": 0.662,
- "gold_centers": [
-  0.6619,
-  0.6703,
-  0.6971,
-  0.7218,
-  0.9251,
-  0.9398,
-  0.9653,
-  0.9951
- ],
- "art_window": {
-  "x0": 0.06,
-  "x1": 0.94,
-  "y0": 0.03,
-  "y1": 0.647
- },
- "nameplate": {
-  "x0": 0.06,
-  "y0": 0.745,
-  "x1": 0.94,
-  "y1": 0.94
- }
+  "note": "R843h 分区坐标（归一化）；详情与缩略图都只写卡名，旧姓名牌背景内框已清除",
+  "art_ratio": 0.540,
+  "art_window": {
+    "x0": 0.035,
+    "x1": 0.965,
+    "y0": 0.024,
+    "y1": 0.540,
+    "crop_anchor_y": 0.0
+  },
+  "rarity": {
+    "x0": 0.06,
+    "y0": 0.550,
+    "x1": 0.94,
+    "y1": 0.660,
+    "height_mode": "fixed_ratio_matches_96px_asset_band",
+    "width_mode": "localized_text_adaptive_center_tag",
+    "row_width_mode": "class_integrated_art_window_width_asset",
+    "asset": "art_rarity_frame_<kind>.png / art_rarity_frame_<kind>_compact.png"
+  },
+  "nameplate": {
+    "x0": 0.06,
+    "y0": 0.670,
+    "x1": 0.94,
+    "y1": 0.845,
+    "background_frame": "removed_from_card_paper_png",
+    "preferred_font_mode": "largest_fitting_single_line",
+    "vertical_anchor": "center_using_real_font_metrics"
+  },
+  "detail_kind_row": "removed; non-unit kinds remain in the localized bottom black bar",
+  "detail_effect_row": "removed; full effects remain in detail overlays and reward detail strips",
+  "body_bottom": 0.845,
+  "stats_bottom": 0.972,
+  "stats_font_mode": "shared_per_card_row",
+  "compact_art_ratio": 0.600,
+  "compact_rarity_top": 0.610,
+  "compact_rarity_bottom": 0.715,
+  "compact_name_top": 0.725,
+  "compact_name_bottom": 0.835
 }

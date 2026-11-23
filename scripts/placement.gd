@@ -38,6 +38,22 @@ var guarding: bool = false    # 森林守护：我方 HP 受伤时由它代为�
 ## 单独一个字段而不是复用 AFFIX_DEATH —— 后者只是「它有个死亡效果」的通用标记，
 ## 具体内容各卡不同（生命循环 / 辅助刃 / 隐藏能源各认自己的 Placement 标记）。
 var guard_last_word: bool = false
+# ---- R856 鸭蛋投手 / 金鸭蛋（第一层普通困难「鸭蛋投手」）----
+## 仅金鸭蛋 9285：**是否还挂在投手手上**（true = 还没扔出去，躺在投手正前方一格）。
+## 扔蛋时置 false；蛋被破坏后由 `_golden_egg_death()` 在新蛋上重新置 true。
+## 「投手持不持蛋」一律由它推出来（`GameEngine._golden_egg_of`），不另设布尔。
+## ⚠️ **默认 true**：所有落地路径（关卡布阵 / 死亡重生 / 召唤）都走 `FieldState.place()`
+##    → `Placement.new()`，默认值就是「刚到手」的语义。R856 实机抓过：默认 false 时
+##    关卡一开局投手就进无蛋形态（速 3、每回合 +3 力），卡面那句「持有金鸭蛋」等于没写。
+var egg_held: bool = true
+## 仅鸭蛋投手 9284：**当前是不是无蛋形态**。引擎在蛋扔出 / 蛋死亡 / 自己回合开始
+## 三处刷新（判据同 `_golden_egg_of`）。effective_speed 读它 → 移动 / AI 队列自然吃到 3 速。
+var egg_less: bool = false
+## 仅鸭蛋投手 9284：无蛋形态累计的力量成长（每个自己回合开始 +3，无上限）。
+## 单开字段而不是复用 `end_atk` / `atk_growth`：那两个各有明确的回合钩子与卡面语义，
+## 混用会让「到底谁在加攻」在日志里查不出来。effective_power 里加这一项。
+var egg_fury: int = 0
+
 var last_hit_by: Vector2i = Vector2i(-1, -1)  # 击杀记功：最后一下是谁打的（鸭子骑士靠它 +2 攻击力）
 var atk_buff_turn: int = 0    # 本回合攻击力加成（撕咬 9042：回合结束时由 end_turn 清除）
 var ramp_atk: int = 0         # 潜影者 8009：每用一张牌 +1 的力量累计值（攻击或离场后清零）
@@ -128,10 +144,39 @@ var harp_atk: int = 0
 ## 与竖琴唯一的差别是生效判据：竖琴看「现在是否持有道具」，图腾看「本场是否已经用过」
 ## —— 工具用掉就从工具栏移除，按「持有」判会当场失效。赋值而不是累加，用两次还是 +2。
 var totem_atk: int = 0
+## R792 道具给的**额外生命**（板甲 6070 +6 / 墙砖 6072 +4）—— 与 `fence_bonus_hp` 同构：
+## 已经并进 `p.card.health` 与 `p.health`（血条 / 上限 / 重组都能直接读到），
+## 只在这里记「有多少是道具给的」，离场由 `_card_leaving_field()` 减回去。
+## ⚠️ 单独开字段而不是复用 `fence_bonus_hp`：那条徽标写的是「栅栏加固」，
+##    共用会让玩家看到一件道具加成被标成另一件。
+var relic_bonus_hp: int = 0
+## R792 板甲（6070）：移动速度**上限**（0 = 不设限）。「变为 1」走 `effective_speed()`
+## 出口 —— 移动、AI 队列、界面全部自动读到，不必在 `_move_bfs` 里另写分支。
+## 取 `mini` 而不是硬赋值：本来就不动（0 速）的工事不该被板甲**加**成 1 速。
+var speed_cap: int = 0
+## R805 蜂蜜（6079）：友方盟友的移速加成 —— 与竖琴 6052 同构，只写这个字段，
+## 由 `effective_speed()` 唯一出口读；单位离场字段随之消失（不烤进共享 CardData）。
+## ⚠️ 判据在 `_relic_on_enter_buffs()` 里：`owner == SIDE_SELF and kind == "盟友"` ——
+##    工事是 0 速建筑，被 +1 的话栅栏会自己走起来。
+var honey_spd: int = 0
+## R792 兵（6071）：本场第一个盟友可以行动两次。读在 `FieldState.unit_actions()` ——
+## 与疾行 / 哈气 / 赫利俄斯同一条「取最大」通道，落地与回合重置自动一致。
+var first_ally_twice: bool = false
 ## R761 诗（6069，吟游诗人初始道具）：「**其他职业**的盟友 +2 力量」——
 ## 与竖琴 / 野性图腾**逐字同构**的持续 buff（赋值不累加、绝不写回 `card.power`）。
 ## 与竖琴唯一的差别是判据：只看「这张盟友不是吟游诗人自己的」（杜鹃不算）。
 var poem_atk: int = 0
+## R793 圣剑（6075）：**每场战斗第一个盟友** +10 力量 —— 与竖琴 / 诗 / 骑士剑
+## 逐字同构的持续 buff（字段 + `effective_power()` 出口，绝不写回 `card.power`）。
+## 「第一个」由引擎判断（`_master_sword_first_ally_done`），这里只负责「在场上就生效」。
+## ⚠️ 与 `sword_atk`（骑士剑 6053）分开：两件道具可同时持有，共用字段会互相覆盖。
+var master_sword_atk: int = 0
+## R797 龟壳（6078）：「**上一个自己的回合**有没有攻击过」。
+## 置位只在 `attack()` / `attack_hp()`（普攻的两个结算口），复位只在
+## `FieldState.reset_units()`（自己的回合开始）—— 于是**敌方回合**里读到的就是这个单位
+## 「上回合打没打过」，正是龟壳的判据窗口。别用 `tapped` 代替：横置会被眩晕 / 冰冻 /
+## 沉睡复用，那是「不能行动」不是「没攻击」。
+var attacked_prev_turn: bool = false
 ## R383 骑士剑（6053）：「己方所有盟友 +1 力量」（R634 起）与竖琴是**同一套持续 buff 写法** ——
 ## 只记这个字段、由 `effective_power()` 并进攻击力，**绝不写回 `card.power`**。
 ## 触发条件由引擎记（本场第一次击杀），这里只管「在场上就生效」：
@@ -180,6 +225,14 @@ var hecaton_atk: int = 0       # 孤军成立时 = HECATON_ATK_BUFF(2)，否则 
 	## 该单位本回合行动次数 +1（只记 Placement，不写回 CardData）。
 var action_growth_extra: int = 0   # 已累计的额外行动轮数
 var action_growth_turns: int = 0   # 距离下次成长还剩几个回合
+## R780 赫尔墨斯（9140）：「每回合最多受到 20 点伤害」。
+## `turn_dmg_taken` = 本回合**已实际扣掉的血**（护甲吸收 / 被免掉的不计）；
+## `turn_dmg_key` = 记账时的 `GameEngine.turn_number`（整轮口径：只有我方回合开始才 +1）。
+## 换回合后 key 失配 → `GameEngine._cap_turn_damage()` 自动从 0 重算，
+## 所以**不需要在回合开始扫全场清零**（漏扫一只就是静默错账）。
+## 只记 Placement、**绝不烤进 CardData**：敌方关卡单位用的是卡库共享实例。
+var turn_dmg_taken: int = 0
+var turn_dmg_key: int = -1
 ## 「百眼动员」（量产型阿尔戈斯 9142，R174）：被它召唤出来的量产型俄倪厄移速 +1。
 ## ⚠️ 同暗影领主：只记在 Placement、**绝不烤进 CardData** —— 敌方关卡单位用的是卡库
 ## 共享实例，直接改 card.move_speed 会把加成写进卡库、跨局泄漏。单位一离场字段随之消失，
@@ -231,6 +284,13 @@ var boss_phase: int = 0
 ##    写 `card.actions` 会跨局泄漏）。于是「原本就能行动两次的单位不会被选中」这条
 ##    只能靠 `FieldState.unit_actions` 读本字段来判断。
 var haste_double: bool = false
+## R810 海妖鱼叉（6083）：**本回合**这个敌人已经挨了几次伤害（道具的 3 次 → 4 点就看它）。
+## `harpoon_turn` = 记账那次的 `GameEngine.turn_number`（整轮口径：只有我方回合开始才 +1）。
+## 换回合后钥匙失配 → `GameEngine._harpoon_tick()` 自动从 0 重算，所以**不需要**在回合开始
+## 扫全场清零（漏扫一只就是静默错账，与赫尔墨斯 `turn_dmg_key` 同一范式）。
+## 只记 Placement、**绝不烤进 CardData**：敌方关卡单位用的是卡库共享实例。
+var harpoon_hits: int = 0
+var harpoon_turn: int = -1
 
 func effective_power() -> int:
 	## 实际攻击力：卡面力量 + 生效中的增益 + 关卡成长修正 - 生效中的削弱，最低 0。
@@ -242,7 +302,7 @@ func effective_power() -> int:
 	var debuff := atk_debuff if debuff_stage == 1 else 0
 	var total := maxi(0, card.power + atk_buff + atk_buff_turn + atk_growth + ramp_atk
 			+ end_atk + upgrade_atk + dark_lord_atk + hecaton_atk + harp_atk + sword_atk
-			+ totem_atk + poem_atk
+			+ totem_atk + poem_atk + master_sword_atk + egg_fury
 			- debuff - mnemo_down)
 	# R324「惧光」：夜鸭奇数回合**力量临时减半**，只作用在这个出口 ——
 	# 上面每一项（atk_buff / atk_growth / ramp_atk / upgrade_atk / dark_lord_atk …）
@@ -264,11 +324,20 @@ func effective_speed() -> int:
 	# 自然读到 0，不必在 `_move_bfs` 里另写一条分支。
 	if boss_phase >= 3:
 		return 0
-	var sp := card.move_speed + dark_lord_speed + summon_haste + defector_speed - night_owl_weak
+	var sp := card.move_speed + dark_lord_speed + summon_haste + defector_speed + honey_spd - night_owl_weak
 	# R371：启示者阶段 2 起「移动速度 -1」（阶段 3 上面那行已经直接归零）。
 	# 走这个出口 = 移动 / AI 队列全部自然读到，不必在 `_move_bfs` 里另写分支。
 	if boss_phase >= 2:
 		sp -= GameEngine.REVELATOR_SPEED_DOWN
+	# R792 板甲（6070）：移速上限取 `mini` —— 「变为 1」只对本来更快的单位生效，
+	# 原本 0 速（工事 / 不动单位）保持 0，不会反而被加成 1 速。
+	if speed_cap > 0:
+		sp = mini(sp, speed_cap)
+	# R856 鸭蛋投手（9284）：**无蛋形态「移动速度变为 3」** —— 直接赋值，不叠加卡面那 1 速。
+	# 走这个出口 = 移动路径 / AI 队列 / 界面绿格全部自动一致，不必在 `_move_bfs` 另开分支。
+	# 放在 speed_cap 之后：板甲那种「变为 1」的封顶仍该盖住它（上限优先）。
+	if egg_less and speed_cap <= 0:
+		sp = GameEngine.EGG_PITCHER_EGGLESS_SPEED
 	return maxi(0, sp)
 
 
@@ -354,6 +423,23 @@ func status_entries() -> Array[Dictionary]:
 	if poem_atk > 0:
 		out.append({"label": "诗：力量 +%d（本场，不叠加）" % poem_atk,
 				"col": COL_B, "kind": "buff"})
+	if master_sword_atk > 0:
+		out.append({"label": "圣剑：力量 +%d（本场第一个盟友）" % master_sword_atk,
+				"col": COL_B, "kind": "buff"})
+	# R792 三件道具的可见来源（数值早已并进 health / effective_speed / unit_actions，
+	# 这里只补「是谁给的」，判据只看字段本身有没有值）。
+	if relic_bonus_hp > 0:
+		out.append({"label": "道具：额外生命 +%d（本场）" % relic_bonus_hp,
+				"col": COL_B, "kind": "buff"})
+	if speed_cap > 0:
+		out.append({"label": "板甲：移动速度降为 %d" % speed_cap,
+				"col": COL_B, "kind": "debuff"})
+	if honey_spd > 0:
+		out.append({"label": "蜂蜜：移动速度 +%d（本场）" % honey_spd,
+				"col": COL_B, "kind": "buff"})
+	if first_ally_twice:
+		out.append({"label": "兵：本场可行动两次",
+				"col": COL_B, "kind": "buff"})
 	if sword_atk > 0:
 		out.append({"label": "骑士剑：力量 +%d（本场首次击杀后）" % sword_atk,
 				"col": COL_B, "kind": "buff"})
@@ -391,6 +477,12 @@ func status_entries() -> Array[Dictionary]:
 		out.append({"label": guard_txt, "col": COL_B, "kind": "buff"})
 	if acts_left > 1:
 		out.append({"label": "额外行动 ×%d" % acts_left, "col": COL_B, "kind": "buff"})
+	# R810 海妖鱼叉（6083）：这个单位本回合挨了几次 —— 「还差一次」得看得见，
+	# 否则玩家没法判断下一张牌该不该打它。
+	if harpoon_hits > 0 and harpoon_hits % GameEngine.HARPOON_HITS != 0:
+		out.append({"label": "海妖鱼叉：本回合已命中 %d/%d"
+				% [harpoon_hits % GameEngine.HARPOON_HITS, GameEngine.HARPOON_HITS],
+				"col": COL_I, "kind": "info"})
 	if fence_bonus_hp > 0:
 		out.append({"label": "栅栏加固：额外生命 +%d" % fence_bonus_hp, "col": COL_B, "kind": "buff"})
 	if upgrade_feed_turn >= 0:
@@ -498,10 +590,14 @@ const _SAVE_FIELDS: Array[String] = [
 	"upgrade_stacks", "stack_hp_applied", "upgrade_range", "upgrade_speed",
 	"dmg_reduce", "first_hit_shield", "armor", "regen", "upgrade_feed_turn",
 	"mass_mnemo_turn", "sleep_left", "stun_left", "harp_atk", "sword_atk", "poem_atk",
+	"master_sword_atk",
+	"egg_held", "egg_less", "egg_fury",
 	"fuse_left", "forge_period", "forge_idle", "forge_range", "dark_lord_atk",
 	"mnemo_down", "dark_lord_speed", "hecaton_atk", "action_growth_extra",
 	"action_growth_turns", "summon_haste", "night_owl_weak", "boss_phase",
+	"turn_dmg_taken", "turn_dmg_key",
 	"haste_double", "defector_range", "defector_speed", "defector_hunt",
+	"harpoon_hits", "harpoon_turn",
 	"wanted_dimension",
 ]
 

@@ -20,12 +20,15 @@ const L10n = preload("res://scripts/l10n.gd")
 const LanguageMenu = preload("res://scripts/language_menu.gd")
 # R763：不走 class_name —— 新脚本的全局类缓存要编辑器重扫，headless 门禁直接 preload 更稳。
 const DiagnosticBundle = preload("res://scripts/diagnostic_bundle.gd")
+# R818：模组列表（自绘可滚动列表 + 行内启停开关）。
+const ModList = preload("res://scripts/mod_list.gd")
 
-const TABS := ["audio", "display", "language", "run"]
+const TABS := ["audio", "display", "language", "run", "mod"]
 const TAB_AUDIO := 0
 const TAB_DISPLAY := 1
 const TAB_LANGUAGE := 2
 const TAB_RUN := 3
+const TAB_MOD := 4
 
 const TAB_Y := 126.0
 const TAB_H := 40.0
@@ -41,6 +44,8 @@ const VOL_STEP := 0.1     # R246：音量一档 10%
 const VOL_NUM := 20
 const LANG_ROW_H := 48.0
 const LANG_MAX_ROWS := 5
+const MOD_ROW_H := 54.0     # R818：模组行高（名字 + 版本/作者两行）
+const MOD_MAX_ROWS := 5     # 可视行数；多了出现右侧滚动条
 
 var _font: Font
 var _font_bold: Font
@@ -62,6 +67,7 @@ var _overlay_host: Node = null
 var _overlay_layer: CanvasLayer = null
 var _overlay_paused := false      # 暂停是浮层开的 → 由它还（不去解别人的暂停）
 var _lang_list: Control = null    # R660c：语言页里的可滚动列表（内嵌，不再做下拉）
+var _mod_list: Control = null     # R818：模组页的可滚动列表
 
 
 static func open_overlay(host: Node, back_text := "返回战斗") -> Control:
@@ -117,6 +123,7 @@ func _ready() -> void:
 		t.start()
 	_build_seed_edit()
 	_build_language_list()
+	_build_mod_list()
 	# R655：浮层不挂自己的 ESC 菜单（Esc 直接关浮层）—— 两层菜单叠着只会互相抢 Esc；
 	# 浮层里也不需要「返回标题」（宿主菜单里本来就有那一条）。
 	if not _overlay:
@@ -148,6 +155,8 @@ func _tab_key(i: int) -> String:
 			return "settings.tab_display"
 		TAB_LANGUAGE:
 			return "settings.tab_language"
+		TAB_MOD:
+			return "settings.tab_mod"
 	return "settings.tab_run"
 
 
@@ -181,6 +190,7 @@ func _set_tab(i: int) -> void:
 	_seed_hover = false
 	_sync_seed_edit()
 	_sync_language_list()
+	_sync_mod_list()
 	queue_redraw()
 
 
@@ -374,6 +384,92 @@ func _on_language_picked(code: String) -> void:
 	queue_redraw()
 
 
+# ------------------------------------------------------------ 模组列表（R818）
+
+func _mod_list_rect() -> Rect2:
+	var h := float(MOD_MAX_ROWS) * MOD_ROW_H + 16.0
+	return Rect2((size.x - ROW_W) * 0.5, CONTENT_Y, ROW_W, h)
+
+
+func _build_mod_list() -> void:
+	_mod_list = ModList.new()
+	_mod_list.visible = false
+	_mod_list.toggled.connect(_on_mod_toggled)
+	add_child(_mod_list)
+	_sync_mod_list()
+	resized.connect(_sync_mod_list)
+
+
+func _sync_mod_list() -> void:
+	if _mod_list == null:
+		return
+	var items := _mod_items()
+	# 空列表整块隐藏：空状态由本页的 `_draw_mod_note` 画 —— 一层就够，别两处各写一套。
+	_mod_list.visible = _tab == TAB_MOD and not items.is_empty()
+	if not _mod_list.visible:
+		_mod_list.release_focus()
+		return
+	var r := _mod_list_rect()
+	_mod_list.position = r.position
+	_mod_list.size = r.size
+	_mod_list.setup(items, MOD_ROW_H)
+
+
+func _mod_items() -> Array:
+	var out: Array = []
+	for m: Dictionary in ModRegistry.all_mods():
+		var id := str(m["id"])
+		out.append({
+			"id": id,
+			"name": str(m.get("name", id)),
+			"version": str(m.get("version", "")),
+			"author": str(m.get("author", "")),
+			"enabled": ModRegistry.is_enabled(id),
+		})
+	return out
+
+
+func _on_mod_toggled(id: String, on: bool) -> void:
+	ModRegistry.set_enabled(id, on)
+	sfx.play("click")
+	if RunState.run_active:
+		# 对局进行中：卡池 / 道具 / 关卡在开局时就构造好了，这时换数据只会让
+		# 「手里的牌」和「奖励池」各说各话。只记配置，下一局开局自然生效。
+		UiToast.toast(L10n.t("settings.mod_next_run"))
+	else:
+		# 不在对局里 → 立刻让数据层重算（图鉴 / 百科 / 下一局的卡池当场就是新的）
+		DataPaths.reset_root()
+	queue_redraw()
+
+
+func _draw_mod_note() -> void:
+	var r := _mod_list_rect()
+	if _mod_list == null or not _mod_list.visible:
+		# 空状态：说清「没有」和「以后从哪来」，比留一片白有用
+		_draw_fit(L10n.t("settings.mod_empty"), Vector2(r.position.x, r.position.y + 34.0),
+				r.size.x, UiTheme.FS_BODY, UiTheme.PAGE_MUTED, true)
+		_draw_fit(L10n.t("settings.mod_hint"), Vector2(r.position.x, r.position.y + 62.0),
+				r.size.x, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED, false)
+		return
+	_draw_fit(L10n.t("settings.mod_footer"), Vector2(r.position.x, r.end.y + 28.0),
+			r.size.x, UiTheme.FS_CAPTION, UiTheme.PAGE_MUTED, false)
+	var probs := ModRegistry.problems()
+	if not probs.is_empty():
+		_draw_fit(L10n.tf("settings.mod_problems", [str(probs.size())]),
+				Vector2(r.position.x, r.end.y + 50.0), r.size.x,
+				UiTheme.FS_CAPTION, Color("9c3b32"), false)
+
+
+func _draw_fit(text: String, at: Vector2, width: float, fs: int,
+		col: Color, bold: bool) -> void:
+	## 英文 / 西语比中文长，按可用宽逐档缩字 —— 与 `_draw_diag_button` 同一条兜底。
+	var f: Font = _font_bold if bold else _font
+	var s := fs
+	while s > 9 and f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, s).x > width:
+		s -= 1
+	draw_string(f, at, text, HORIZONTAL_ALIGNMENT_LEFT, width, s, col)
+
+
 func _rebuild_menu() -> void:
 	## UiMenu 的文案在 attach 时定死；换语言后重挂一份，免得 Esc 菜单还是旧语言。
 	if _overlay or _menu == null:
@@ -506,6 +602,9 @@ func _activate_row(d: Dictionary) -> void:
 		"sfx":
 			GameSettings.set_sfx_on(not GameSettings.sfx_on)
 			sfx.enabled = GameSettings.sfx_on
+			# R764：浮层模式下宿主（战斗）那份 Sfx 还活着 —— 一起对齐，
+			# 否则「关了声音、战斗里还在响」（硬闸在 Sfx.settings_silent）
+			Sfx.sync_all(get_tree())
 			if sfx.enabled:
 				sfx.play("click")
 		"music":
@@ -539,6 +638,7 @@ func _set_volume(id: String, v: float) -> void:
 	if id == "sfx_vol":
 		GameSettings.set_sfx_volume(nv)
 		sfx.volume = nv
+		Sfx.sync_all(get_tree())   # R764：音量同样要落到宿主那份实例上
 		if nv > 0.0:
 			sfx.play("click")   # 当场听到新音量
 	else:
@@ -646,6 +746,8 @@ func _draw() -> void:
 	elif _tab == TAB_RUN:
 		_draw_seed_panel()
 		_draw_diag_button()
+	elif _tab == TAB_MOD:
+		_draw_mod_note()
 
 
 func _draw_diag_button() -> void:

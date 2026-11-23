@@ -40,13 +40,12 @@
       "group": "enemy",
       "class": "敌人",
       "traits": [
-        "龙",
-        "战吼"
+        "龙"
       ],
       "affixes": [
         "疾行"
       ],
-      "effect_text": "登场后首个回合开始时：对所有敌方单位造成 4 点伤害。",
+      "effect_text": "",
       "target_mode": "none",
       "actions": 2,
       "color": "火",
@@ -271,7 +270,7 @@
       "kind": "工事",
       "cost": 2,
       "power": 0,
-      "health": 6,
+      "health": 8,
       "attack_range": 0,
       "move_speed": 0,
       "rarity": 3,
@@ -298,7 +297,8 @@
       "traits": [
         "攻击"
       ],
-      "effect_text": "对一个目标造成 4 点伤害。",
+      "effect_text": "对一个目标造成 5 点伤害。",
+      "value": 5,
       "target_mode": "unit",
       "color": "",
       "image": ""
@@ -597,7 +597,7 @@
       "kind": "盟友",
       "cost": 8,
       "power": 6,
-      "health": 55,
+      "health": 50,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
@@ -631,7 +631,7 @@
       "traits": [
         "成长"
       ],
-      "effect_text": "每回合开始时，所有友方单位力量 +1（每个单位最多累计 +4）。效果区多张本卡不可叠加。",
+      "effect_text": "每回合开始时，所有友方单位力量 +1（每个单位最多累计 +4）。",
       "target_mode": "none",
       "value": 1,
       "color": "物理",
@@ -673,7 +673,7 @@
       "traits": [
         "召唤"
       ],
-      "effect_text": "每 3 个回合召唤一只鸭子骑士。效果区多张本卡不可叠加。",
+      "effect_text": "每 3 个回合召唤一只鸭子骑士。",
       "target_mode": "none",
       "value": 3,
       "color": "物理",
@@ -708,7 +708,7 @@
       "kind": "盟友",
       "cost": 3,
       "power": 3,
-      "health": 18,
+      "health": 15,
       "attack_range": 2,
       "move_speed": 1,
       "rarity": 4,
@@ -870,7 +870,7 @@
       "traits": [
         "哈气"
       ],
-      "effect_text": "己方第 3、5、7 个回合开始时，使一个现存生命最高且没有双动的己方单位获得双动（本局；原本就能行动两次的单位不会被选中）。效果区多张本卡不可叠加。",
+      "effect_text": "己方第 3、5、7 个回合开始时，使一个现存生命最高且没有双动的己方单位获得双动（本局；原本就能行动两次的单位不会被选中）。",
       "target_mode": "none",
       "value": 2,
       "color": "冰",
@@ -892,7 +892,7 @@
         "工事",
         "孵化"
       ],
-      "effect_text": "自己回合开始时召唤陶瓷鸭：场上陶瓷鸭少于3只时，在相邻的空格上各召唤一只；达到3只时，改为在相邻的空格中随机选1个只召唤1只，并给所有陶瓷鸭+1血量。新烧出的生命值每过2回合+1。",
+      "effect_text": "自己回合开始时召唤陶瓷鸭：场上陶瓷鸭少于3只时，在相邻的空格上各召唤一只；达到3只时，改为在相邻的空格中随机选1个只召唤1只，并给所有陶瓷鸭+1生命。新烧出的生命每过2回合+1。",
       "target_mode": "none",
       "value": 9026,
       "color": "火",
@@ -914,7 +914,7 @@
         "鸭",
         "陶瓷"
       ],
-      "effect_text": "它的生命值每过2回合+1。",
+      "effect_text": "它的生命每过2回合+1。",
       "target_mode": "none",
       "color": "物理",
       "image": ""
@@ -1063,7 +1063,7 @@
       "traits": [
         "狐"
       ],
-      "effect_text": "使用后从卡组随机抽取一张技能牌，该卡本回合费用 -1。",
+      "effect_text": "使用后从抽牌库随机抽取一张技能牌，该卡本回合费用 -1。",
       "target_mode": "none",
       "color": "自然",
       "image": "",
@@ -1168,7 +1168,7 @@
       "traits": [
         "鸦"
       ],
-      "effect_text": "使用后选择弃牌堆中一张盟友回到手卡，乌鸦除外。",
+      "effect_text": "使用后选择弃牌区中一张盟友回到手牌，乌鸦除外。",
       "target_mode": "none",
       "color": "暗影",
       "image": "",
@@ -1212,7 +1212,7 @@
       "traits": [
         "号令"
       ],
-      "effect_text": "这个回合，手卡中盟友的费用 -1。",
+      "effect_text": "这个回合，手牌中盟友的费用 -1。",
       "target_mode": "none",
       "color": "",
       "image": ""
@@ -1307,7 +1307,7 @@
       "traits": [
         "鼠"
       ],
-      "effect_text": "使用后从抽牌库将一张费用最低的盟友加入手卡。",
+      "effect_text": "使用后从抽牌库将一张费用最低的盟友加入手牌。",
       "target_mode": "none",
       "color": "自然",
       "image": "",
@@ -1373,7 +1373,7 @@
       "traits": [
         "机械成长"
       ],
-      "effect_text": "每回合开始时，所有友方单位力量 +2（本局）。效果区多张本卡不可叠加。",
+      "effect_text": "每回合开始时，所有友方单位力量 +2（本局）。",
       "target_mode": "none",
       "value": 2,
       "color": "物理",
@@ -1397,7 +1397,7 @@
       "traits": [
         "事件"
       ],
-      "effect_text": "造成 11 点伤害。从弃牌堆选择 2 张卡加入手卡。",
+      "effect_text": "造成 11 点伤害。从弃牌区选择 2 张卡加入手牌。",
       "target_mode": "unit",
       "color": "水风",
       "image": ""
@@ -1639,7 +1639,8 @@
       "target_mode": "none",
       "value": 0,
       "color": "暗影",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9063,
@@ -1870,7 +1871,7 @@
       "traits": [
         "猫头鹰"
       ],
-      "effect_text": "使用时，将一张随机效果卡从卡组加入手卡。",
+      "effect_text": "使用时，将一张随机效果卡从抽牌库加入手牌。",
       "target_mode": "none",
       "color": "自然",
       "image": "",
@@ -1956,10 +1957,11 @@
       "traits": [
         "留手"
       ],
-      "effect_text": "回合结束时手卡的这张卡不会丢弃。对十字范围造成 40 点伤害，不分敌我。技能每次造成伤害，这张卡费用本局 -1。",
+      "effect_text": "回合结束时手牌的这张卡不会丢弃。对十字范围造成 40 点伤害，不分敌我。技能每次造成伤害，这张卡费用本局 -1。",
       "target_mode": "cell",
       "color": "火",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9078,
@@ -1977,7 +1979,8 @@
       "effect_text": "每回合前 X 个死亡并送去弃牌区的己方盟友回到手卡，费用 -1。场上每有 1 个己方盟友，手卡中的这张卡费用 -1。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "color": "",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9079,
@@ -1994,7 +1997,7 @@
       "traits": [
         "魔像"
       ],
-      "effect_text": "在己方半场召唤一个魔像。每回合第一次使用技能卡时，手卡的这张卡本回合费用 -1。",
+      "effect_text": "在己方半场召唤一个魔像。每回合第一次使用技能卡时，手牌的这张卡本回合费用 -1。",
       "target_mode": "cell",
       "color": "物理",
       "image": ""
@@ -2042,7 +2045,8 @@
       "effect_text": "这张卡在场时，技能牌费用 -1；本次对战中每用技能对敌造成伤害，此卡费用 -1。",
       "target_mode": "none",
       "color": "水风",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9083,
@@ -2061,7 +2065,8 @@
       "target_mode": "none",
       "x_cost": true,
       "color": "火",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9084,
@@ -2078,7 +2083,7 @@
       "traits": [
         "火焰"
       ],
-      "effect_text": "对一横行的所有单位造成 14 点伤害，不分敌我。直到下次自己回合开始，经过该横行的单位都会受到 7 点伤害，同一个单位最多受到 14 点伤害。",
+      "effect_text": "对一横行的所有单位造成 14 点伤害，不分敌我。直到下次自己回合开始，经过或进入该横行的单位都会受到 7 点伤害，同一个单位最多受到 14 点伤害。",
       "target_mode": "cell",
       "color": "火",
       "image": ""
@@ -2132,7 +2137,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对目标造成 4 点伤害，随机将一张费用为 0 的技能卡从卡组加入手卡。",
+      "effect_text": "对目标造成 5 点伤害，随机将一张费用为 0 的技能卡从抽牌库加入手牌。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -2150,7 +2155,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对目标造成 3 点伤害，目标本回合失去 3 点力量。",
+      "effect_text": "对目标造成 2 点伤害，目标本回合失去 3 点力量。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -2168,8 +2173,8 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "抽 X 张牌，X 为本回合你已使用的卡牌数，这些牌本回合结束不会丢弃。",
-      "target_mode": "none",
+      "effect_text": "对一个目标造成 X 点伤害，抽 X 张牌，X 为本回合你已使用其他卡的张数。这些牌本回合结束不会丢弃。",
+      "target_mode": "unit",
       "color": "",
       "image": ""
     },
@@ -2181,15 +2186,17 @@
       "power": 1,
       "health": 1,
       "attack_range": 1,
-      "move_speed": 5,
+      "move_speed": 2,
       "rarity": 0,
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "打出时，若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡。",
+      "effect_text": "打出时，若本回合已经使用过 3 张其他卡，抽 2 张牌。",
       "target_mode": "none",
       "color": "暗影",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "draw_if_third", "value": 2}]}
     },
     {
       "id": 8007,
@@ -2204,7 +2211,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "使用时，手卡中所有技能牌本回合费用 -1；手卡每有一张费用为 0 的技能卡，这张卡获得 +3 生命。",
+      "effect_text": "使用时，手牌中所有技能牌本回合费用 -1；手牌每有一张费用为 0 的技能卡，这张卡获得 +3 生命。",
       "target_mode": "none",
       "color": "暗影",
       "image": "",
@@ -2224,7 +2231,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "造成 5 点伤害，若目标处于满血状态则改为造成 12 点伤害。",
+      "effect_text": "造成 4 点伤害，若目标处于满血状态则改为造成 10 点伤害。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -2242,7 +2249,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "每使用一张卡，随机对一个敌人造成 2 点伤害。效果区多张本卡不可叠加。",
+      "effect_text": "同一个回合内每使用 3 张卡，对一个随机敌人造成 8 点伤害，并使其力量 -1。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "color": "水风",
       "image": ""
@@ -2278,10 +2285,12 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "自己回合开始时，这张卡破坏。这张卡破坏时，从卡组将一张随机技能卡加入手卡。",
+      "effect_text": "自己回合开始时，这张卡破坏。这张卡破坏时，从抽牌库将一张随机技能卡加入手牌。",
       "target_mode": "none",
       "color": "暗影",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "death", "effects": [], "turn_start_effects": [{"type": "self_destruct"}]},
+      "lower_effect": {"effects": [{"type": "fetch_skill"}]}
     },
     {
       "id": 9093,
@@ -2332,7 +2341,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对目标造成 10 点伤害，从弃牌区将所有费用为 0 的卡返回手卡。",
+      "effect_text": "对目标造成 10 点伤害，从弃牌区将所有费用为 0 的卡返回手牌。",
       "target_mode": "unit",
       "color": "水风",
       "image": ""
@@ -2389,7 +2398,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "选一个效果：从弃牌区选一张费用为 0 的技能卡加入手卡；或从卡组随机将一张费用不为 0 的技能卡加入手卡。",
+      "effect_text": "选一个效果：从弃牌区选一张费用为 0 的技能卡加入手牌；或从抽牌库随机将一张费用不为 0 的技能卡加入手牌。",
       "target_mode": "none",
       "color": "",
       "image": ""
@@ -2410,10 +2419,11 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "丢弃所有手卡，之后从弃牌区把**所有 0 费卡和 1 费卡**按弃牌区顺序加入手卡，最多填到手牌上限。",
+      "effect_text": "丢弃所有手牌，之后从弃牌区把**所有 0 费卡和 1 费卡**按弃牌区顺序加入手牌，最多填到手牌上限。",
       "target_mode": "none",
       "color": "",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9099,
@@ -2505,7 +2515,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对所有敌人造成 2 点伤害，所有敌人本回合失去 1 点力量。使用后返回手卡，费用最低为 1。",
+      "effect_text": "对所有敌人造成 2 点伤害，所有敌人本回合失去 1 点力量。使用后返回手牌，费用最低为 1。",
       "target_mode": "none",
       "color": "暗影",
       "image": ""
@@ -2519,12 +2529,12 @@
       "health": 0,
       "attack_range": 0,
       "move_speed": 0,
-      "rarity": 0,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "这个回合，所有友方单位获得嘲讽。",
-      "target_mode": "none",
+      "effect_text": "使一个敌方单位力量 -X，X 为你本回合打出的牌数。",
+      "target_mode": "unit",
       "color": "",
       "image": ""
     },
@@ -2541,7 +2551,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "造成 6 点伤害，若这张卡是你手卡中仅剩的一张则改为造成 22 点伤害。",
+      "effect_text": "造成 6 点伤害，若这张卡是你手牌中仅剩的一张则改为造成 22 点伤害。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -2574,7 +2584,7 @@
       "name": "地狱猫",
       "kind": "盟友",
       "cost": 0,
-      "power": 1,
+      "power": 0,
       "health": 1,
       "attack_range": 1,
       "move_speed": 1,
@@ -2649,7 +2659,7 @@
       "traits": [
         "暗影之刃"
       ],
-      "effect_text": "自己回合结束时，对随机一个敌人造成 X 点伤害，X 为你本回合已使用的费用数。效果区多张本卡不可叠加。",
+      "effect_text": "自己回合结束时，对随机一个敌人造成 X 点伤害，X 为你本回合已使用的卡牌张数。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "color": "暗影",
       "image": ""
@@ -2796,7 +2806,7 @@
       "traits": [
         "使魔成长"
       ],
-      "effect_text": "每回合开始时，所有使魔鸭子力量 +1（本局）。效果区多张本卡不可叠加。",
+      "effect_text": "每回合开始时，所有使魔鸭子力量 +1（本局）。",
       "target_mode": "none",
       "value": 1,
       "color": "暗影",
@@ -2817,7 +2827,7 @@
       "traits": [
         "契约签订者"
       ],
-      "effect_text": "入场时：回复 4 点费用。本回合手卡中所有卡费用 +4。",
+      "effect_text": "入场时：回复 4 点费用。本回合手牌中所有卡费用 +4。",
       "target_mode": "none",
       "color": "暗影",
       "image": "",
@@ -2841,7 +2851,7 @@
         "恶魔",
         "沉睡"
       ],
-      "effect_text": "初始沉睡 2：不会行动。每过一个自己的回合沉睡 -1，每次受到伤害也 -1；沉睡归零后立刻恢复行动。醒着时每次受伤力量 +1（本局）。",
+      "effect_text": "初始沉睡 2：不会行动，开局获得 10 护甲（不会重置）。护甲未破时受到伤害不减少沉睡；每过一个自己的回合沉睡 -1，护甲被打破后每次受伤也 -1；沉睡归零后立刻恢复行动并失去所有护甲。醒着时每次受伤力量 +1（本局）。",
       "target_mode": "none",
       "color": "暗影",
       "image": ""
@@ -2862,7 +2872,7 @@
         "使魔成长",
         "恶魔召唤"
       ],
-      "effect_text": "每回合开始时，所有使魔鸭子力量 +1（本局）；每 2 回合在随机的空格上召唤一只使魔鸭子（玩家后排除外）。效果区多张本卡不可叠加。",
+      "effect_text": "每回合开始时，所有使魔鸭子力量 +1（本局）；每 2 回合在随机的空格上召唤一只使魔鸭子（玩家后排除外）。",
       "target_mode": "none",
       "value": 1,
       "color": "暗影",
@@ -3006,7 +3016,7 @@
         "机械",
         "过载"
       ],
-      "effect_text": "从抽牌堆里随机选一张**没有「一回合行动两次」**的盟友，给它添加「一回合行动两次」。抽牌堆里没有这样的盟友时，效果落空。",
+      "effect_text": "从抽牌库里随机选一张**没有「每回合可以行动两次」**的盟友，给它添加「每回合可以行动两次」。抽牌库里没有这样的盟友时，效果落空。",
       "target_mode": "none",
       "color": "雷",
       "image": ""
@@ -3023,7 +3033,7 @@
         "机械",
         "改造"
       ],
-      "effect_text": "**手牌和卡组**里所有**盟友和工事**获得改造：生命 +3。两处都没有盟友 / 工事时效果落空。",
+      "effect_text": "**手牌和抽牌库**里所有**盟友和工事**获得改造：生命 +3。两处都没有盟友 / 工事时效果落空。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -3062,7 +3072,7 @@
         "机械",
         "改造"
       ],
-      "effect_text": "从抽牌堆里随机改造一张**还没有能量屏障**的盟友或工事，使它**初次受到的伤害变为 0**。然后抽 3 张卡。",
+      "effect_text": "从抽牌库里随机改造一张**还没有能量屏障**的盟友或工事，使它**初次受到的伤害变为 0**。然后抽 3 张卡。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -3086,7 +3096,9 @@
       "effect_text": "每拥有一层改造，这张卡获得 **+3 生命**。",
       "target_mode": "none",
       "color": "物理",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "upgraded", "effects": []},
+      "lower_effect": {"effects": [{"type": "bonus_hp_per_upgrade", "value": 3}]}
     },
     {
       "id": 8035,
@@ -3385,7 +3397,7 @@
         "机械",
         "改造"
       ],
-      "effect_text": "指定自己一个己方盟友或工事，将其**破坏**，回复 3 点费用，并将一张「素体」加入手卡。若目标**被改造**，则额外获得一张「升级」。",
+      "effect_text": "指定自己一个己方盟友或工事，将其**破坏**，回复 3 点费用，并将一张「素体」加入手牌。若目标**被改造**，则额外获得一张「升级」。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -3627,7 +3639,7 @@
       "affixes": [
         "嘲讽"
       ],
-      "effect_text": "嘲讽。入场时，本次对战中你每使用过一张「聚能炮击」，本卡生命 +3。本回合，你手卡里的「聚能炮击」费用为 0。",
+      "effect_text": "嘲讽。入场时，本次对战中你每使用过一张「聚能炮击」，本卡生命 +3。本回合，你手牌里的「聚能炮击」费用为 0。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -3752,7 +3764,7 @@
       "health": 0,
       "attack_range": 0,
       "move_speed": 0,
-      "rarity": 2,
+      "rarity": 1,
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
@@ -3913,7 +3925,7 @@
         "量产型"
       ],
       "affixes": [],
-      "effect_text": "入场时，选一张手卡变成「聚能炮击」。若本卡在**战斗内**被**随机变化**出来，力量 +2、生命 +2。",
+      "effect_text": "入场时，选一张手牌变成「聚能炮击」。若本卡在**战斗内**被**随机变化**出来，力量 +2、生命 +2。",
       "target_mode": "none",
       "color": "火",
       "image": ""
@@ -3956,7 +3968,7 @@
         "机械"
       ],
       "affixes": [],
-      "effect_text": "入场时，手卡中的盟友获得改造：生命 +4。",
+      "effect_text": "入场时，手牌中的盟友获得改造：生命 +4。",
       "target_mode": "none",
       "color": "圣光",
       "image": "",
@@ -4038,7 +4050,7 @@
         "装配"
       ],
       "affixes": [],
-      "effect_text": "每过 3 回合，随机从量产型俄倪厄 / 量产型赫利俄斯中召唤一个到己方半场。效果区多张本卡不可叠加。",
+      "effect_text": "每过 3 回合，随机从量产型俄倪厄 / 量产型赫利俄斯中召唤一个到己方半场。",
       "target_mode": "none",
       "value": 3,
       "color": "物理",
@@ -4064,7 +4076,8 @@
       "target_mode": "none",
       "value": 0,
       "color": "自然",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9149,
@@ -4082,7 +4095,7 @@
         "疲惫"
       ],
       "affixes": [],
-      "effect_text": "打出无效果。在手卡时，所有技能卡费用 +1。",
+      "effect_text": "打出无效果。在手牌时，所有技能卡费用 +1。",
       "target_mode": "none",
       "value": 0,
       "color": "暗影",
@@ -4108,7 +4121,8 @@
       "target_mode": "none",
       "value": 0,
       "color": "自然",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9151,
@@ -4196,7 +4210,7 @@
       "affixes": [
         "次元"
       ],
-      "effect_text": "将手卡一张卡变成「聚能炮击」。",
+      "effect_text": "将手牌一张卡变成「聚能炮击」。",
       "target_mode": "hand_any",
       "color": "火",
       "image": ""
@@ -4217,12 +4231,12 @@
         "夜蚀"
       ],
       "affixes": [],
-      "effect_text": "自己回合结束时，回复 X 点生命值，X 为自己剩余费用（每 1 点剩余费用回复 1 点生命，不超过生命上限）。",
+      "effect_text": "自己回合结束时，对所有敌人造成 X 点伤害，X 为自己剩余费用。",
       "target_mode": "none",
       "color": "暗影",
       "image": "",
       "upper_effect": {"trigger": "turn_end", "effects": []},
-      "lower_effect": {"effects": [{"type": "heal_per_energy", "value": 1}]}
+      "lower_effect": {"effects": [{"type": "damage_per_energy", "value": 1}]}
     },
     {
       "id": 9119,
@@ -4238,7 +4252,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "对目标造成 4 点伤害，然后抽 1 张卡。",
+      "effect_text": "对目标造成 5 点伤害，然后抽 1 张卡。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -4276,7 +4290,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "对目标造成 8 点伤害，然后从**弃牌区任选一张卡**返回你的手卡。",
+      "effect_text": "对目标造成 13 点伤害，然后从**弃牌区任选一张卡**返回你的手卡。",
       "target_mode": "unit",
       "color": "暗影",
       "image": ""
@@ -4361,7 +4375,7 @@
         "暗杀召唤"
       ],
       "affixes": [],
-      "effect_text": "战斗**开始时**以及**每 3 个回合**，召唤一只鸭子暗杀者。效果区多张本卡不可叠加。",
+      "effect_text": "战斗**开始时**以及**每 3 个回合**，召唤一只鸭子暗杀者。",
       "target_mode": "none",
       "value": 3,
       "color": "暗影",
@@ -4379,7 +4393,7 @@
         "机械",
         "改造"
       ],
-      "effect_text": "从弃牌区选一张盟友或工事，那张卡返回手卡，并获得本局改造：生命+3。",
+      "effect_text": "从弃牌区选一张盟友或工事，那张卡返回手牌，并获得本局改造：生命+3。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -4390,7 +4404,7 @@
       "kind": "工事",
       "cost": 0,
       "power": 0,
-      "health": 50,
+      "health": 70,
       "attack_range": 0,
       "move_speed": 0,
       "rarity": 4,
@@ -4400,7 +4414,7 @@
         "工事",
         "机械"
       ],
-      "effect_text": "在场时，场上的「量产型俄倪厄」一回合行动两次，且每回合回复 2 点生命。",
+      "effect_text": "在场时，场上的「量产型」卡每回合可以行动两次，且受到技能伤害 -2（最少为 1）。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -4432,9 +4446,9 @@
       "kind": "盟友",
       "cost": 5,
       "power": 10,
-      "health": 80,
+      "health": 100,
       "attack_range": 1,
-      "move_speed": 1,
+      "move_speed": 3,
       "rarity": 4,
       "group": "enemy",
       "class": "敌人",
@@ -4457,7 +4471,7 @@
       "kind": "盟友",
       "cost": 5,
       "power": 3,
-      "health": 35,
+      "health": 60,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
@@ -4465,9 +4479,9 @@
       "class": "敌人",
       "traits": [
         "机械",
-        "铸造"
+        "铸甲"
       ],
-      "effect_text": "铸造：我方回合结束时倒计时 -1；减到 0 时破坏自身，并在原地立起一座「钢铁要塞」。",
+      "effect_text": "每回合开始时，给随机一个其他友方单位 10 护甲。",
       "target_mode": "none",
       "color": "物理",
       "image": ""
@@ -4602,7 +4616,7 @@
         "巨炮"
       ],
       "affixes": [],
-      "effect_text": "己方每个回合开始时，随机破坏一个敌方单位。效果区多张本卡不可叠加。",
+      "effect_text": "己方每个回合开始时，随机破坏一个敌方单位。",
       "target_mode": "none",
       "value": 1,
       "color": "火",
@@ -4627,7 +4641,7 @@
       "affixes": [
         "疾行"
       ],
-      "effect_text": "每过3回合，行动次数+1。",
+      "effect_text": "每过3回合，行动次数+1。每回合最多受到 20 点伤害。",
       "target_mode": "none",
       "color": "水风",
       "image": ""
@@ -4710,7 +4724,7 @@
       "affixes": [
         "保存"
       ],
-      "effect_text": "造成 0 点伤害。回合结束时，每有 1 点未使用的费用，手卡的此卡伤害 +3，本局累计。",
+      "effect_text": "造成 0 点伤害。回合结束时，每有 1 点未使用的费用，手牌的此卡本局伤害 +3。",
       "target_mode": "unit",
       "value": 0,
       "color": "",
@@ -4830,7 +4844,7 @@
       "affixes": [
         "次元"
       ],
-      "effect_text": "使一个己方盟友获得改造：**力量 +2**，并获得「死亡」：它被破坏时，将一张「辅助刃」加入手卡。",
+      "effect_text": "使一个己方盟友获得改造：**力量 +2**，并获得「死亡」：它被破坏时，将一张「辅助刃」加入手牌。",
       "target_mode": "unit",
       "color": "物理",
       "image": ""
@@ -4873,7 +4887,7 @@
       "affixes": [
         "次元"
       ],
-      "effect_text": "入场时，将两张「聚能炮击」加入抽牌库。每次获得改造时，从卡组把一张「聚能炮击」加入手卡。",
+      "effect_text": "入场时，将两张「聚能炮击」加入抽牌库。每次获得改造时，从抽牌库把一张「聚能炮击」加入手牌。",
       "target_mode": "none",
       "color": "火",
       "image": "",
@@ -4986,7 +5000,7 @@
       "affixes": [
         "次元"
       ],
-      "effect_text": "从卡组选择一张卡加入手卡。",
+      "effect_text": "从抽牌库选择一张卡加入手牌。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -5087,7 +5101,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "抽 5 张牌。这回合结束为止，你不能使用盟友和工事卡。",
+      "effect_text": "抽 4 张牌。这回合结束为止，你不能使用盟友和工事卡。",
       "target_mode": "none",
       "color": "",
       "image": ""
@@ -5106,7 +5120,7 @@
       "class": "机械之心",
       "traits": [],
       "affixes": [],
-      "effect_text": "从卡组选择一张盟友或工事卡，将其变成「素体」。抽 4 张卡。",
+      "effect_text": "从抽牌库选择一张盟友或工事卡，将其变成「素体」。抽 4 张卡。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -5130,12 +5144,13 @@
       "effect_text": "场上每有一个单位被破坏，抽 1 张卡。效果区多张本卡不可叠加。",
       "target_mode": "none",
       "color": "暗影",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9176,
       "name": "本能",
-      "kind": "技能",
+      "kind": "效果",
       "cost": 2,
       "power": 0,
       "health": 0,
@@ -5148,7 +5163,7 @@
         "本能"
       ],
       "affixes": [],
-      "effect_text": "随机打出抽牌库中 3 张费用 1 或以下的技能卡。",
+      "effect_text": "接下来一次你受到的大于 1 的伤害变为 1，然后抽 2 张牌。",
       "target_mode": "none",
       "color": "",
       "image": ""
@@ -5193,7 +5208,7 @@
         "永夜"
       ],
       "affixes": [],
-      "effect_text": "夜鸭不再虚弱：不再受「惧光」影响（奇数回合也不降攻击距离、移动速度与力量）。效果区多张本卡不可叠加。",
+      "effect_text": "夜鸭不再虚弱：不再受「惧光」影响（奇数回合也不降攻击距离、移动速度与力量）。",
       "target_mode": "none",
       "value": 1,
       "color": "暗影",
@@ -5308,7 +5323,7 @@
       "affixes": [
         "次元"
       ],
-      "effect_text": "将一张随机森林精魄盟友加入手卡，其本回合费用 -2。",
+      "effect_text": "将一张随机森林精魄盟友加入手牌，其本回合费用 -2。",
       "target_mode": "none",
       "value": 2,
       "color": "自然",
@@ -5329,7 +5344,7 @@
       "class": "机械之心",
       "traits": [],
       "affixes": [],
-      "effect_text": "随机将卡组里的两张卡分别变成另一张随机卡。",
+      "effect_text": "随机将抽牌库里的两张卡分别变成另一张随机卡。",
       "target_mode": "none",
       "color": "圣光",
       "image": ""
@@ -5522,7 +5537,7 @@
         "机械"
       ],
       "affixes": [],
-      "effect_text": "",
+      "effect_text": "每回合最多受到 20 点伤害。",
       "target_mode": "none",
       "color": "水风",
       "image": ""
@@ -5540,7 +5555,7 @@
       "group": "player",
       "class": "暗影刺客",
       "traits": [],
-      "effect_text": "对一个敌人造成 7 点伤害，使其本回合失去 1 点力量。随机使手卡一张盟友或工事消失，将其生命值本局加到此卡的伤害上，将其力量本局加到此卡的降力上。",
+      "effect_text": "对一个敌人造成 7 点伤害，使其本回合失去 1 点力量。随机使手牌一张盟友或工事消失，将其生命本局加到此卡的伤害上，将其力量本局加到此卡的降力上。",
       "target_mode": "unit",
       "color": "暗影",
       "image": ""
@@ -5618,7 +5633,8 @@
       "first_kill_power": 3,
       "first_kill_health": 6,
       "color": "自然",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 8081,
@@ -5724,7 +5740,7 @@
         "空袭"
       ],
       "affixes": [],
-      "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 5 点伤害，每回合此伤害 +1。效果区多张本卡不可叠加。",
+      "effect_text": "玩家回合开始时随机标记 5 个格子。敌方行动前，标记格上的玩家单位受到 5 点伤害，每回合此伤害 +1。",
       "target_mode": "none",
       "value": 5,
       "color": "火",
@@ -5746,7 +5762,7 @@
         "寒霜"
       ],
       "affixes": [],
-      "effect_text": "每 2 个回合开始时，所有友方单位力量 +1，每个单位最多累计 +4。效果区多张本卡不可叠加。",
+      "effect_text": "每 2 个回合开始时，所有友方单位力量 +1，每个单位最多累计 +4。",
       "target_mode": "none",
       "value": 1,
       "color": "冰",
@@ -5791,7 +5807,7 @@
         "枭熊本能"
       ],
       "affixes": [],
-      "effect_text": "枭熊的生命在一半以上时，它受到的伤害 -1；生命降到一半或以下时获得「践踏」——它造成的伤害击杀单位时，溢出的伤害沿同列继续传下去，没有攻击到单位时不触发。效果区多张本卡不可叠加。",
+      "effect_text": "枭熊的生命在一半以上时，它受到的伤害 -1；生命降到一半或以下时获得「践踏」——它造成的伤害击杀单位时，溢出的伤害沿同列继续传下去，没有攻击到单位时不触发。",
       "target_mode": "none",
       "value": 1,
       "color": "自然",
@@ -5922,7 +5938,7 @@
         "超负荷",
         "死亡"
       ],
-      "effect_text": "**超负荷**。死亡：若此卡生命为负数，对敌方所有单位造成等同于负血量的伤害。",
+      "effect_text": "**超负荷**。死亡：若此卡生命为负数，对敌方所有单位造成等同于负生命的伤害。",
       "target_mode": "none",
       "color": "火",
       "image": ""
@@ -5944,7 +5960,7 @@
         "阵地保卫者"
       ],
       "affixes": [],
-      "effect_text": "己方带「超负荷」的盟友因超负荷死亡时，将抽牌堆、手牌或弃牌区里的一张此卡放到它原本的位置。",
+      "effect_text": "己方带「超负荷」的盟友因超负荷死亡时，将抽牌库、手牌或弃牌区里的一张此卡放到它原本的位置。",
       "target_mode": "none",
       "color": "物理",
       "image": ""
@@ -5993,7 +6009,7 @@
         "超负荷",
         "次元"
       ],
-      "effect_text": "**超负荷**。每次此卡的生命降到 0 或更低，将一张「聚能炮击」加入手卡。",
+      "effect_text": "**超负荷**。每次此卡的生命降到 0 或更低，将一张「聚能炮击」加入手牌。",
       "target_mode": "none",
       "color": "圣光",
       "image": "",
@@ -6180,7 +6196,7 @@
         "噩兆"
       ],
       "affixes": [],
-      "effect_text": "自己回合结束时，处于标记格的敌人受到 4X 点伤害。X 为本卡在效果区的张数。",
+      "effect_text": "使用时，若场上没有标记，随机标记一个格子。自己回合结束时，处于标记格的敌人受到 4X 点伤害。X 为本卡在效果区的张数。",
       "target_mode": "none",
       "color": "暗影",
       "image": ""
@@ -6199,7 +6215,7 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "攻击被标记的敌人时回复 3 点生命值。",
+      "effect_text": "攻击被标记的敌人时回复 3 点生命。",
       "target_mode": "none",
       "color": "暗影",
       "image": "",
@@ -6220,10 +6236,11 @@
       "class": "暗影刺客",
       "traits": [],
       "affixes": [],
-      "effect_text": "每次对被标记的敌人造成伤害，此卡费用本局 -1。这张卡击杀单位时，这张卡回满生命。",
+      "effect_text": "每次对被标记的敌人造成伤害，此卡费用本局 -1。这张卡击杀单位时，回复 2 点费用并抽 2 张牌。",
       "target_mode": "none",
       "color": "暗影",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9234,
@@ -6261,10 +6278,11 @@
         "嘲讽"
       ],
       "affixes": [],
-      "effect_text": "回合结束时不会被丢弃。入场时，对敌方单位分配 3X 点伤害（X = 本次战斗中已使用的盟友数量，含本卡）：由近及远，打倒一个就把剩下的分给下一个。场上每有 1 个己方盟友，手卡中的这张卡费用 -2。",
+      "effect_text": "回合结束时不会被丢弃。入场时，对敌方单位分配 3X 点伤害（X = 本次战斗中已使用的盟友数量，含本卡）：由近及远，打倒一个就把剩下的分给下一个。场上每有 1 个己方盟友，手牌中的这张卡费用 -2。",
       "target_mode": "none",
       "color": "物理",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9236,
@@ -6280,7 +6298,7 @@
       "class": "森林精魄",
       "traits": [],
       "affixes": [],
-      "effect_text": "入场时，清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害。",
+      "effect_text": "入场时，清除你的抽牌库、手牌、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害。",
       "target_mode": "none",
       "color": "火",
       "image": "",
@@ -6300,7 +6318,7 @@
       "group": "enemy",
       "class": "敌人",
       "traits": ["机械", "阵亡双动"],
-      "effect_text": "己方单位死亡时，此卡获得「一回合行动两次」。",
+      "effect_text": "己方单位死亡时，此卡获得「每回合可以行动两次」。",
       "target_mode": "none",
       "color": "物理",
       "image": ""
@@ -6354,7 +6372,7 @@
       "group": "enemy",
       "class": "敌人",
       "traits": ["通缉"],
-      "effect_text": "敌方场上所有单位获得「次元」。己方第 12 个回合结束时，破坏己方场上所有单位。效果区多张本卡不可叠加。",
+      "effect_text": "敌方场上所有单位获得「次元」。己方第 12 个回合结束时，破坏己方场上所有单位。",
       "target_mode": "none",
       "value": 12,
       "color": "暗影",
@@ -6373,7 +6391,7 @@
       "group": "enemy",
       "class": "敌人",
       "traits": ["工事", "机械", "沉睡", "激光炮"],
-      "effect_text": "不能进行常规攻击。沉睡 2 回合。每回合随机选取两列并预告；行动时对这两列中每列的第一个敌方单位造成等同于力量的伤害，该列没有目标则直击对方 HP。每回合力量 +1。",
+      "effect_text": "不能进行常规攻击。沉睡 2 回合，开局获得 10 护甲（不会重置，护甲未破时受到伤害不减少沉睡）。每回合随机选取两列并预告；行动时对这两列中每列的第一个敌方单位造成等同于力量的伤害，该列没有目标则直击对方 HP。每回合力量 +1。",
       "target_mode": "none",
       "color": "火",
       "image": ""
@@ -6391,14 +6409,14 @@
       "group": "enemy",
       "class": "敌人",
       "traits": ["普罗诺亚", "变形"],
-      "effect_text": "每回合开始时，根据对方本回合使用最多的卡牌类型改变形态：盟友或工事 → 炮击构状体；技能或场地 → 护盾构状体；其他类型 → 迅捷构状体。场上只有自己时，损失 10 点生命召唤一个构状体；否则把当前构状体变成对应形态。",
+      "effect_text": "每回合开始时，根据对方本回合使用最多的卡牌类型改变形态：盟友或工事 → 炮击构装体；技能或场地 → 护盾构装体；其他类型 → 迅捷构装体。场上只有自己时，损失 10 点生命召唤一个构装体；否则把当前构装体变成对应形态。",
       "target_mode": "none",
       "color": "暗影",
       "image": ""
     },
     {
       "id": 9243,
-      "name": "炮击构状体",
+      "name": "炮击构装体",
       "kind": "盟友",
       "cost": 6,
       "power": 15,
@@ -6408,7 +6426,7 @@
       "rarity": 4,
       "group": "enemy",
       "class": "敌人",
-      "traits": ["构状体", "炮击"],
+      "traits": ["构装体", "炮击"],
       "effect_text": "每个回合开始时，使一个其他友方单位力量 +1。",
       "target_mode": "none",
       "color": "火",
@@ -6416,7 +6434,7 @@
     },
     {
       "id": 9244,
-      "name": "护盾构状体",
+      "name": "护盾构装体",
       "kind": "盟友",
       "cost": 6,
       "power": 10,
@@ -6426,7 +6444,7 @@
       "rarity": 4,
       "group": "enemy",
       "class": "敌人",
-      "traits": ["构状体", "护盾"],
+      "traits": ["构装体", "护盾"],
       "effect_text": "这张卡在场时，其他己方单位受到的伤害减半。",
       "target_mode": "none",
       "color": "圣光",
@@ -6434,7 +6452,7 @@
     },
     {
       "id": 9245,
-      "name": "迅捷构状体",
+      "name": "迅捷构装体",
       "kind": "盟友",
       "cost": 6,
       "power": 10,
@@ -6445,7 +6463,7 @@
       "rarity": 4,
       "group": "enemy",
       "class": "敌人",
-      "traits": ["构状体", "迅捷"],
+      "traits": ["构装体", "迅捷"],
       "affixes": ["疾行"],
       "effect_text": "",
       "target_mode": "none",
@@ -6539,13 +6557,14 @@
       "target_mode": "none",
       "value": 0,
       "color": "",
-      "image": ""
+      "image": "",
+      "no_demo": true
     },
     {
       "id": 9190,
       "name": "猫鼠游戏",
       "kind": "技能",
-      "cost": 5,
+      "cost": 4,
       "rarity": 0,
       "group": "player",
       "class": "暗影刺客",
@@ -6624,7 +6643,9 @@
       "effect_text": "使用时，在这张卡两边各召唤一只「小鸭」（如果可能）。",
       "target_mode": "none",
       "color": "自然",
-      "image": ""
+      "image": "",
+      "upper_effect": {"trigger": "use", "effects": []},
+      "lower_effect": {"effects": [{"type": "summon", "value": 9251, "count": 2}]}
     },
     {
       "id": 9251,
@@ -6675,7 +6696,7 @@
       "kind": "盟友",
       "cost": 0,
       "power": 0,
-      "health": 60,
+      "health": 80,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
@@ -6696,7 +6717,7 @@
       "kind": "盟友",
       "cost": 6,
       "power": 6,
-      "health": 60,
+      "health": 80,
       "attack_range": 1,
       "move_speed": 2,
       "rarity": 4,
@@ -6717,7 +6738,7 @@
       "kind": "盟友",
       "cost": 4,
       "power": 4,
-      "health": 60,
+      "health": 80,
       "attack_range": 1,
       "move_speed": 1,
       "rarity": 4,
@@ -6769,6 +6790,461 @@
       "target_mode": "none",
       "value": 1,
       "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9265,
+      "name": "懊悔",
+      "kind": "诅咒",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 6,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "懊悔"
+      ],
+      "affixes": ["次元"],
+      "effect_text": "选弃牌区一张其他职业卡消失。",
+      "target_mode": "none",
+      "value": 0,
+      "color": "暗影",
+      "image": ""
+    },
+    {
+      "id": 9266,
+      "name": "呼唤",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "费用本局 +1。将一张随机比这张卡费用高 1 的其他职业盟友加入手卡，其费用本局变为 0。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9267,
+      "name": "激励乐章",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "本回合场上所有盟友力量 +4；原本职业不属于自己的盟友改为 +6。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9268,
+      "name": "管风琴",
+      "kind": "工事",
+      "cost": 4,
+      "power": 0,
+      "health": 19,
+      "attack_range": 7,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "工事",
+        "管风琴"
+      ],
+      "affixes": [],
+      "effect_text": "攻击时，从卡组将一张随机技能卡加入手卡，该卡本回合费用 -1。在场时，每使用一张技能卡，对所有敌人造成 3 点伤害。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9269,
+      "name": "彩虹诗",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "随机 3 个不同其他职业，各将一张随机盟友或技能卡加入手卡，其费用本局 -1。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9270,
+      "name": "疾风乐章",
+      "kind": "效果",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "疾风乐章"
+      ],
+      "affixes": [],
+      "effect_text": "所有盟友移动速度 +1；若为其他职业盟友，改为一回合行动两次。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9271,
+      "name": "巧克力工厂",
+      "kind": "工事",
+      "cost": 2,
+      "power": 0,
+      "health": 30,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "工事",
+        "巧克力工厂",
+        "事件"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "回合开始时，获得 1 费用并抽一张卡。",
+      "target_mode": "none",
+      "color": "火",
+      "image": ""
+    },
+    {
+      "id": 9272,
+      "name": "连斩",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "暗影刺客",
+      "traits": [],
+      "effect_text": "X 费，打出时消耗全部费用。对一个目标造成 7 点伤害，重复 X 次；目标中途倒下则剩余次数作废。没有费用时也能使用（此时 X 为 0）。",
+      "target_mode": "unit",
+      "x_cost": true,
+      "color": "物理",
+      "image": ""
+    },
+    {
+      "id": 9273,
+      "name": "炮火就位",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "机械之心",
+      "traits": [],
+      "effect_text": "X 费，打出时消耗全部费用。将 X 张「聚能炮击」加入抽牌库，对所有敌人造成 3 点伤害，重复 X 次。没有费用时也能使用（此时 X 为 0）。",
+      "target_mode": "none",
+      "x_cost": true,
+      "color": "火",
+      "image": ""
+    },
+    {
+      "id": 9274,
+      "name": "余音",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "X 费，打出时消耗全部费用。将 X 张「音符」加入抽牌库。没有费用时也能使用（此时 X 为 0）。",
+      "target_mode": "none",
+      "x_cost": true,
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9275,
+      "name": "音符",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 0,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "获得 2 点费用，抽 2 张卡。",
+      "target_mode": "none",
+      "event_only": true,
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9276,
+      "name": "诅咒娃娃",
+      "kind": "诅咒",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 6,
+      "group": "player",
+      "class": "",
+      "traits": [
+        "诅咒娃娃"
+      ],
+      "affixes": [
+        "保存"
+      ],
+      "effect_text": "不能打出。回合结束时，你受到 3 点伤害。回合开始时，若这张卡在弃牌区，这张卡从弃牌区加入你的手牌。",
+      "target_mode": "none",
+      "color": "暗影",
+      "image": "",
+      "unplayable": true
+    },
+    {
+      "id": 9277,
+      "name": "Do",
+      "kind": "技能",
+      "cost": 0,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "抽 2 张卡。下个回合开始时获得 1 点费用并抽 1 张卡。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9278,
+      "name": "Re",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "对所有敌人造成 4 点伤害。将另一张随机音符加入抽牌库。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9279,
+      "name": "Mi",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "随机两个敌人本回合力量 -6。抽 1 张卡。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9280,
+      "name": "Fa",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "对一个敌人造成 18 点伤害，并对其他所有敌人各造成 5 点伤害。",
+      "target_mode": "unit",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9281,
+      "name": "Sol",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "使目标眩晕 1 个回合，并对所有敌人造成 6 点伤害。",
+      "target_mode": "unit",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9282,
+      "name": "La",
+      "kind": "技能",
+      "cost": 3,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "抽 4 张卡，这些卡本局费用 -1；其中盟友与工事力量 +2。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9283,
+      "name": "Si",
+      "kind": "技能",
+      "cost": 4,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 5,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [
+        "音符"
+      ],
+      "affixes": [
+        "次元"
+      ],
+      "effect_text": "对随机敌方单位造成 7 点伤害，重复 7 次。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9284,
+      "name": "鸭蛋投手",
+      "kind": "盟友",
+      "cost": 6,
+      "power": 6,
+      "health": 55,
+      "attack_range": 1,
+      "move_speed": 1,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "鸭",
+        "投手"
+      ],
+      "effect_text": "若持有金鸭蛋：作为行动的代替，向正前方（同纵列方向）扔出一枚金鸭蛋。金鸭蛋在碰撞到第一个单位时会停止并对这个单位造成等同于自己力量的伤害，践踏（没有单位则直接对 HP 造成伤害）；若自己不持有金鸭蛋，移动速度变为 3，回合开始时力量 +3。",
+      "target_mode": "none",
+      "color": "物理",
+      "image": ""
+    },
+    {
+      "id": 9285,
+      "name": "金鸭蛋",
+      "kind": "工事",
+      "cost": 0,
+      "power": 0,
+      "health": 3,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 4,
+      "group": "enemy",
+      "class": "敌人",
+      "traits": [
+        "工事",
+        "鸭蛋",
+        "金鸭蛋"
+      ],
+      "effect_text": "受到非攻击伤害时，每次最多受到 1 点伤害。死亡：将一张随机史诗卡加入对手手牌，并使鸭子投手重新获得金鸭蛋。",
+      "target_mode": "none",
+      "color": "自然",
       "image": ""
     }
   ]

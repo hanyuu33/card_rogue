@@ -50,6 +50,34 @@
   "7012": {
    "name": "Piedra",
    "desc": "Arrástrala sobre una unidad enemiga. Inflige 15 de daño y la herramienta se consume."
+  },
+  "7013": {
+   "name": "Paquete de cartas",
+   "desc": "Tócala dos veces para usarla, sin arrastrarla. Llena tu mano con cartas aleatorias; después, la herramienta se consume."
+  },
+  "7014": {
+   "name": "Poción de sabiduría",
+   "desc": "Tócala dos veces para usarla, sin arrastrarla. Roba 3 cartas; después, la herramienta se consume."
+  },
+  "7015": {
+   "name": "Pez globo",
+   "desc": "Arrástrala a una casilla vacía del campo. El enemigo que la pise retrocede una casilla y recibe 3 de daño; después, la herramienta se consume."
+  },
+  "7016": {
+   "name": "Seta explosiva",
+   "desc": "Arrástrala a una casilla vacía del campo. El enemigo que la pise hace que explote y causa 15 de daño a todas las unidades a una casilla o menos (aliadas o enemigas); después, la herramienta se consume."
+  },
+  "7017": {
+   "name": "Ajo",
+   "desc": "Arrástrala a una casilla vacía del campo de batalla para colocarla. Esa casilla no se puede usar durante 3 de tus turnos: ninguna unidad puede entrar ni pasar por ella; después, la herramienta se consume."
+  },
+  "7018": {
+   "name": "Mazo",
+   "desc": "Arrástralo sobre una unidad enemiga para golpearla. El objetivo queda aturdido un turno (no puede actuar en su siguiente turno); después, la herramienta se consume."
+  },
+  "7019": {
+   "name": "Aceite lubricante",
+   "desc": "Tócala dos veces para usarla; no hace falta arrastrarla al campo de batalla. Elige una carta de tu mano: su coste se reduce en 3 durante el resto de este combate; después, la herramienta se consume."
   }
  }
 }

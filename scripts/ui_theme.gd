@@ -210,16 +210,28 @@ const CARD_FS_BADGE := 12.0
 # **缺图回退语义色圆盘**，所以这份版式在零素材时也成立。
 
 
-## 卡图占卡片高度的比例 —— **上半卡图 / 下半文字，对半分**（就是需求原话）。
-## ⚠️ 这个值不是「好看就行」：下半要同时装下**卡名 + 种类·字段 + 效果文字**三样。
-## 数值不占内部空间（它们骑在卡框上，见 `CARD_BLEED`），所以 0.50 是安全的；
-## 但 R114 实测 0.52 时 k=1.7 的手牌上「种类」会被挤掉 —— 想调大先按最坏情况算一遍。
-const CARD_ART_RATIO := 0.662  ## R193：对齐 card_paper.png v4 底图的卡图/姓名牌分隔金条
-const CARD_NAMEPLATE_TOP := 0.745    ## 姓名牌内框上沿（归一化）
-const CARD_NAMEPLATE_BOTTOM := 0.94  ## 姓名牌内框下沿
-const CARD_NAMEPLATE_X0 := 0.06      ## 姓名牌内框左沿
-const CARD_NAMEPLATE_X1 := 0.94      ## 姓名牌内框右沿
-const CARD_PAD := 3.0             ## 卡面内距（基准）
+## R843g：回收详情里重复的卡种行，把空间优先还给卡图、稀有度底托与卡名。
+## 详情 / 紧凑的底托都对应素材底部 96px；文字直接按这一真实区域居中。
+const CARD_ART_RATIO := 0.540
+const CARD_ART_INSET_X := 0.035
+const CARD_ART_INSET_TOP := 0.024
+const CARD_RARITY_TOP := 0.550
+const CARD_RARITY_BOTTOM := 0.660
+const CARD_NAMEPLATE_TOP := 0.660
+## R843h：详情也不再写效果，卡名在稀有度下沿至属性栏上沿整块居中。
+const CARD_NAMEPLATE_BOTTOM := 0.845
+const CARD_NAMEPLATE_X0 := 0.080
+const CARD_NAMEPLATE_X1 := 0.920
+## 卡名区 / 属性栏的分界与属性栏下沿。R843h 起详情卡名独占至 CARD_BODY_BOTTOM。
+const CARD_BODY_BOTTOM := 0.845
+const CARD_STATS_BOTTOM := 0.940
+## 战斗手牌 / 选卡不画正文：卡图同样增高，稀有度与卡名分别独占一行。
+const CARD_COMPACT_ART_RATIO := 0.600
+const CARD_COMPACT_RARITY_TOP := 0.610
+const CARD_COMPACT_RARITY_BOTTOM := 0.715
+const CARD_COMPACT_NAME_TOP := 0.715
+const CARD_COMPACT_NAME_BOTTOM := 0.835
+const CARD_PAD := 3.0
 ## 数值图标半径（基准）。R117 从 8.5 提到 9.2 —— 战场卡 k ≈ 1.086
 ## → 实到 10.0（**直径 20**，正是用户口径「徽章直径 17 → 约 20」）。
 ## ⚠️ 上限仍由**底部一排**决定：力量/生命挪到卡框左右两角之后，约束是
@@ -1157,6 +1169,40 @@ static func adventure_button_style(primary: bool, state := "normal", px := BTN_P
 	elif state == "pressed":
 		sb.modulate_color = Color(0.82, 0.84, 0.78)
 	return sb
+
+
+static func apply_return_button(btn: Button) -> void:
+	## R825：地图「返回奖励 / 返回同一间商店」共用的 codex 羊皮纸按钮底。
+	## 文字仍由 Godot 按当前语言绘制；素材缺失 / 未导入时回退到既有 button_paper。
+	if btn == null:
+		return
+	var tex: Texture2D = UiAssets.get_tex("return_context_button")
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		if tex == null:
+			btn.add_theme_stylebox_override(state, adventure_button_style(false, state, 12, 6))
+			continue
+		var sb := StyleBoxTexture.new()
+		sb.texture = tex
+		sb.texture_margin_left = 44
+		sb.texture_margin_right = 34
+		sb.texture_margin_top = 6
+		sb.texture_margin_bottom = 6
+		sb.content_margin_left = 28
+		sb.content_margin_right = 12
+		sb.content_margin_top = 2
+		sb.content_margin_bottom = 2
+		if state == "hover" or state == "hover_pressed":
+			sb.modulate_color = Color(1.10, 1.10, 1.06)
+		elif state == "pressed":
+			sb.modulate_color = Color(0.86, 0.88, 0.82)
+		btn.add_theme_stylebox_override(state, sb)
+	btn.add_theme_stylebox_override("focus", _btn_box(Color.TRANSPARENT, ADVENTURE_BRASS_LIT, 2, RADIUS_SM))
+	for role in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		btn.add_theme_color_override(role, PAGE_INK)
+	btn.add_theme_color_override("font_disabled_color", PAGE_MUTED)
+	btn.add_theme_font_override("font", font())
+	btn.add_theme_font_size_override("font_size", FS_LABEL)
+	UiPressFx.attach(btn)
 
 
 static func adventure_panel_style(padding := 24.0, dark := false) -> StyleBox:

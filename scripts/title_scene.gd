@@ -31,19 +31,17 @@ func _ready() -> void:
 		DisplayServer.window_set_title(GameBrand.window_title())
 	# R604：主界面主视觉（16:9，标题字已烘焙在图里）优先；缺图回退 R154 的晨光小镇 +
 	# 文字标题，再退战斗背景 → 纯色（_draw 里的 BOARD_BG）。三级兜底，缺任何一张都不黑屏。
-	# R660：非中文不用这张烘焙了中文标题的主视觉 —— 换无字背景 + 当前语言的文字标题，
-	# 否则英文/日文界面顶着一行中文大字，语言切换看起来像没生效。
+	# R660：非中文不用这张烘焙了中文标题的主视觉 —— 否则英文/日文界面顶着一行中文大字，
+	# 语言切换看起来像没生效。
+	# R854：非中文改走**英文版主视觉**（QUACKILL 已烘焙，与中文版同一套奶油立体字）。
+	# 仍然是**一行**主标题 —— R607「全游戏不设副标题」不变，图里没有第二行小字。
 	var lang := L10n.current()
-	if lang == "zh":
-		_bg_tex = UiAssets.title_art()
-		_has_art = _bg_tex != null
-	else:
-		_bg_tex = UiAssets.title_bg()
-		_has_art = false
+	_bg_tex = UiAssets.title_art() if lang == "zh" else UiAssets.title_art_en()
+	_has_art = _bg_tex != null
 	if _bg_tex == null:
 		_bg_tex = UiAssets.title_bg()
 	if _bg_tex == null:
-		_bg_tex = load("res://assets/battle_bg.png")
+		_bg_tex = DataPaths.load_texture("res://assets/battle_bg.png")
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	_apply_brand()
@@ -51,6 +49,12 @@ func _ready() -> void:
 	add_child(sfx)
 	# R176：标题页 BGM（Holy_Place）；选人 / 地图 / 战斗各自在进入时换曲。
 	Bgm.play("title")
+	# R767：玩家在标题页停留的时间足够长，顺手把「开始游戏 → 模式选择 → 选人页」这条链
+	# 送去后台读。安卓上这几步原来是同步加载，点下去要黑屏卡一阵。
+	SceneWarm.warm_all([
+		"res://scenes/mode_select.tscn",
+		"res://scenes/class_pick.tscn",
+	])
 	# R576：Steam 成就初始化（未装 GodotSteam 时静默跳过，见 steam_achievements.gd）。
 	SteamAchievements.init()
 	$Buttons/Row1/StartBtn.text = L10n.t("title.start")

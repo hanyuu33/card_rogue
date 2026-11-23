@@ -1,0 +1,24 @@
+R796 图标四件 · 生成提示词（内置图像生成，参考图 assets/ui/relic_icon_6070.png，input_fidelity=high）
+
+共同后缀：
+chunky rounded silhouette, thick dark navy outline, soft cel shading with warm highlight,
+slightly whimsical storybook style like a cozy indie roguelike game icon, centered, flat clean,
+no text, no frame, transparent background
+
+6076 兔脚
+A cute hand-drawn cartoon game relic icon of a lucky rabbit's foot charm, soft cream fur with a
+small golden ring at the top, ...
+
+6077 钻头
+A cute hand-drawn cartoon game relic icon of a short metal drill bit with a chunky hexagonal base
+and a spiral twist shaft pointing up, steel gray metal with warm brass bands, ...
+
+7013 卡牌包
+A cute hand-drawn cartoon game icon of a small kraft paper card pack held together by a ribbon,
+with three colorful cards peeking out of the top, ...
+
+7014 智慧药剂
+A cute hand-drawn cartoon game icon of a round glass potion bottle filled with glowing sky-blue
+liquid, a small cork stopper, one tiny golden star sparkle beside the neck, ...
+
+（四张都是 1024×1024、quality=high、background=transparent）

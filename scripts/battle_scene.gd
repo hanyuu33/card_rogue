@@ -176,10 +176,9 @@ const TOOL_BAR_BTN_H := 32.0
 const TOOL_BAR_GAP := 6.0
 const TOOL_BAR_PAD := 5.0
 const TOOL_BAR_OFFSET := 10.0     ## 按钮栏右缘与槽左缘的间距
-# ---- 手牌：比战场小卡大一号，卡身一路长到窗口下沿之外 ----
-# 空间账：手牌区只有 592~720 这 128px。既然「底部不必完全显示」，
-# 就把卡底往屏幕外沉 HAND_CROP_BOTTOM 像素，省下的位置全换成卡面尺寸：
-# 卡顶下移 → 卡看着更贴底、也更大；沉出去的那截只有底部留白（内容按可见高度重锚）。
+# ---- 手牌：比战场小卡大一号，R843 起完整露出底部属性栏 ----
+# 空间账：手牌区只有 592~720 这 128px。卡高 119，卡顶 601；
+# 悬停只抬 10px（卡顶 591），因此既不遮战场，也不再把属性数字裁出窗口。
 const COL_FRAME_STONE := Color("221a10")       # 边框直边的暗石底（与角花素材的深色石头同系）
 const COL_FRAME_GOLD := Color("b9924a")        # 边框外沿金线
 const COL_FRAME_GOLD_DIM := Color("6b5426")    # 边框外沿内侧的暗金细线
@@ -201,7 +200,7 @@ const LP_MS := 500              # R186：触屏长按判定时长（毫秒）—
 const LP_SLOP := 18.0           # R186：长按允许的最大位移（px，超过视为拖拽）
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
-const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（恶魔鸭 9116）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
+const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（带「沉睡」trait 的单位：恶魔鸭 9116 / 激光巨炮 9241）：紫脉冲环 + Zzz（还差 N 点伤害就醒）
 const COL_FUSE := UiTheme.STATE_FUSE                # 铸造倒计时（R149）：橙红脉冲环 +「倒数 N」徽标
 const COL_STUN := UiTheme.STATE_STUN                # 眩晕（R341 惊奇盒子 / 摇篮曲 / 组合）：金色虚线环 + 绕头星点
 const COL_FIELD_SELF := Color("ffb03a")         # 场地效果（R74）：我方放的 —— 琥珀色斜纹 + 名字角标
@@ -214,21 +213,34 @@ const COL_FIELD_PERSIST := Color("5ad0e6")      # 持续型场地（R83：清泉
 const HAND_CARD_SCALE := 1.565                  # ≈ 119 / 76
 const HAND_CARD_W := CARD_W * HAND_CARD_SCALE   # ≈ 98.6
 const HAND_CARD_H := CARD_H * HAND_CARD_SCALE   # ≈ 119.0（整张，含沉出屏幕的部分）
-const HAND_CROP_BOTTOM := 18.0                  # 卡底沉到窗口下沿之外多少像素
-const OWN_HAND_Y := WINDOW_H - HAND_CARD_H + HAND_CROP_BOTTOM   # = 619（卡顶）
+const HAND_CROP_BOTTOM := 0.0                   # R843：属性栏必须完整可见，不再裁掉卡底
+const OWN_HAND_Y := WINDOW_H - HAND_CARD_H + HAND_CROP_BOTTOM   # = 601（卡顶）
 # ---- 手牌扇形布局 ----
 # 手牌整体可用宽度：卡变宽（98.6）后要留神右边 x=900 起的道具栏 —— 最右那张会绕底部中心
 # 转出去（sin12° × 露出高度 ≈ 21px），356 是「满手也不越界」的上限（见 test_smoke 的越界断言）。
 const HAND_FAN_WIDTH := 356.0     # 手牌整体可用宽度（装不下就靠重叠压缩）
-# R154：手牌羊皮纸底板的几何（扇形居中于 WINDOW_W/2；底板略宽于扇形活动范围）
+
+## R786：手牌扇形 / 手牌底板 / 手牌数徽标的**横向基准** = 站场（棋盘）中轴。
+## 窗口 1280 的中线是 640，棋盘 3 列的中线是 590（GRID_X 404 + GRID_W 372 / 2），
+## 差整整 50px：以前整组按窗口居中，看着比上面对齐的棋盘偏右半个格子。
+## ⚠️ 凡是「跟着手牌走」的横坐标都读 HAND_CX，别再写 WINDOW_W / 2。
+const HAND_CX := GRID_X + GRID_W / 2.0
+## 徽标宽度：128 是按「本回合用卡 10」在 15px 下量出来的（5 个汉字 75 + 数字 9 + 两侧留白）
+## —— 110 装不下，`_draw_string_center_fit` 会降字号，两只徽标字号就不一致了（R786 实拍）。
+const HAND_BADGE_W := 128.0
+const HAND_BADGE_H := 42.0
+const HAND_BADGE_Y := 628.0
+const HAND_BADGE_GAP := 20.0   # 手牌数徽标右沿 ↔ 手牌底板左沿
+const PLAYS_BADGE_GAP := 8.0   # 「本回合用卡」徽标 ↔ 手牌数徽标（并排成一对，留 8px 缝）
+# R154：手牌羊皮纸底板的几何（扇形居中于 HAND_CX；底板略宽于扇形活动范围）
 const HAND_BASE_W := 420.0
-const HAND_BASE_X := (WINDOW_W - HAND_BASE_W) / 2.0
+const HAND_BASE_X := HAND_CX - HAND_BASE_W / 2.0
 const HAND_BASE_Y := 600.0        # 扇形卡顶 619、抬手最高 ~590 —— 板顶压在两者之间
 const HAND_BASE_H := WINDOW_H - HAND_BASE_Y
 const HAND_FAN_MIN_STEP := 0.40   # 最小步进 = 卡宽 × 此比例（即最多 60% 重叠）
 const HAND_FAN_MAX_DEG := 12.0    # 两端最大倾角（度）
 const HAND_FAN_DEG_PER := 4.0     # 相邻两张的倾角差（度）
-const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（正好把底边框沉掉）
+const HAND_FAN_DROP := 3.0        # 两端略下沉；最外侧属性栏仍完整露出
 # R114：数值徽章改成**骑在卡框上**（圆心在框线、一半露在框外）之后，
 # 沉在窗口下沿之外的那截从「底部留白」变成了「四个数值徽章」——
 # 抬手高度必须补上徽章外露的一个半径（手牌 k=1.7 → 约 12px）才看得见。
@@ -236,7 +248,7 @@ const HAND_FAN_DROP := 4.0        # 扇弧两端相对扇心的下沉像素（�
 #     OWN_HAND_Y - HAND_FAN_HOVER_LIFT >= GRID_Y + GRID_H - 2   （= 590）
 #   即「抬手后的卡顶不能盖住战场下沿」。619 - 28 = 591 ≥ 590 ✓ —— 28 就是安全上限，
 #   不要为了露出更多徽章而调大它（会盖住棋盘单位）。徽章此时约 92% 可见，数字读得全。
-const HAND_FAN_HOVER_LIFT := 28.0 # 悬停时抬手高度（纯显示，不影响命中判定）
+const HAND_FAN_HOVER_LIFT := 10.0 # R843：601 - 10 = 591，仍不盖战场下沿 592
 const HAND_SELECT_RAISE := 28.0   # 选中手牌时抬起的高度
 const HAND_SELECT_SCALE := 1.30   # 选中手牌时整张卡放大倍率（点击选中 / 拖拽均生效）
 const INFO_X := 8.0
@@ -502,6 +514,10 @@ var _tool_use_until := 0
 ## R752：选卡型工具（万能牌 / 神秘牌）是从哪个槽点出来的 ——
 ## 只有「确认」那一刻才该摘槽，所以要记着它（引擎不知道槽号，槽是界面的事）。
 var _tool_pick_slot := -1
+## R782：鼠标此刻压着的工具槽（-1 = 没压）——电脑端悬浮就靠它弹出完整效果说明。
+## 安卓没有 MouseMotion 事件：点一下上膛（`_tool_use_arm`）走同一条绘制。
+## 两条路合成一个判据 `_tool_tip_anchor_slot()`，别在绘制处各写一份。
+var _tool_tip_slot := -1
 
 
 func _say(text: String) -> void:
@@ -612,6 +628,20 @@ var _fx_wave_tex: Texture2D = null     # 冲击波环（清场）
 var _fx_lone_col_tex: Texture2D = null   # 竖直吸取光柱（底端在图的底部，顶端在顶部）
 var _fx_lone_maw_tex: Texture2D = null   # 虚空漩涡（圆形，吞噬点）
 var _fx_lone_ring_tex: Texture2D = null  # 收束光环（圆形，空心）
+## R785：免伤力场的环形素材（codex 纯文生图 → 黑底亮度转 alpha，
+## 管线见 art_src/2026-11-17_免伤力场素材_R785/，三版候选可切换）。
+##   1 = 金色六角晶格结界 / 2 = 琥珀符文结界 / 3 = 白金色棱镜力场
+const CAP_AURA_VARIANT := 1
+## 环带厚度（屏幕像素）：从卡边向外 11.5px。**不能用圆环**（R785 首版实拍）：
+## 圆环直径必须 ≥ 卡牌对角线 120，而格子宽只有 124 —— 相邻两个满额度单位的
+## 光环会咬在一起，还会在卡边外留一圈空气。贴卡框总宽 ≈ 111.5 < 124，相邻不咬。
+## 素材画布 = 卡宽高各加 2×(CAP_AURA_GAP + CAP_AURA_BAND + CAP_AURA_PAD_PX)，见 _finish_fx.py。
+const CAP_AURA_BAND := 11.5
+## 环带内缘与卡边之间的空气（屏幕像素）：严丝合缝压上去会被读成「边框加粗」。
+const CAP_AURA_GAP := 3.0
+const CAP_AURA_PAD_PX := 6.0
+var _cap_aura_tex: Texture2D = null
+
 var _flames: Array = []                # {pos, sc, start, dur, size, seed[, tint]}   正在烧的火
 var _breaths: Array = []         # R645：{from, to, sc, start, dur} 龙息喷流（格锚像素中心）
 var _breath_src: Dictionary = {} # R645：{"cell", "at"} 最近一次「龙息」的发动者 ——
@@ -675,6 +705,14 @@ var _ai_stall_n := 0                     # R400：同一格连续排在队首的
 var _ghosts: Array = []         # {center, name, start, dur}                  击破淡出
 var _dying: Array = []          # {cell, card, p, hide_at}                    已归零但仍要显示到命中时刻的卡
 var _floaters: Array = []       # {pos, text, col, start, dur}                伤害/治疗飘字
+## R764：宣传录制模式（`--trailer-clean`）。只压显示，不动规则：状态栏留空、
+## 飘字只画伤害数字、左栏卡牌详情不弹 —— 这三处仍是中文硬编码，英文片里会串味。
+var _trailer_clean := false
+## R770：伤害数字底板（只有拖卡预览用）。每帧 new 一个 StyleBoxFlat 太浪费 →
+## 复用同一实例，只改颜色 / 圆角。
+var _dmg_plate_box: StyleBoxFlat = null
+## R770b：说明类飘字（胶囊徽标）的 1px 色相细边。同样复用实例。
+var _dmg_edge_box: StyleBoxFlat = null
 ## R386：战场对话气泡（`SpeechBubble` 实例）。台词由关卡 / 道具 / 引擎播报通过
 ## `say_bubble()` 排进来；本层只负责按格锚点绘制、排队推进与回收。
 ## 同时最多 3 句 —— 再多就互相盖住；同一张卡连说两句走**队列**（一句接一句），
@@ -775,6 +813,16 @@ var _hp_pending: Dictionary = {} # 尚未在「命中演出」中体现的待扣
 								 #   单位卡面 / HP 横幅 把显示数字冻结在「实际值 + 未演出伤害之和」，
 								 #   等对应的 hit / hp_hit 定时特效触发时才移除这一笔，数字才往下掉。
 var _bursts: Array = []         # {pos, start, dur, col, big}                 打击爆点（扩散环+火花）
+## R836：缺陷时钟「时针转动」演出 —— 棋盘正中的一只大钟面，指针转一整圈后卡住抖两下。
+## 时长 1.15s：引擎侧 `end_turn(true)` 是**同步**跑完的（丢手牌 + 起新回合同一帧），
+## 这段动画只负责把「时间被跳过去」演出来，不排队、不延迟、不碰时序。
+## `{pos, sc, start, dur}` —— 与 `_bursts` 同一套 `_fx_pos()` 取位（跟棋盘滚动补正）。
+const CLOCK_FX_MS := 1150
+const CLOCK_FX_D := 240.0       # 表盘直径（棋盘坐标，随棋盘缩放）
+## 素材里轴座相对纹理中心偏 (+6, +9)（512 空间，程序测的质心）——
+## 绘制时整张表盘反向平移这点偏移，指针从**轴座**出发而不是从几何中心出发。
+const CLOCK_FACE_PIVOT := Vector2(6.0, 9.0) / 512.0
+var _clock_fx := {}
 ## R430：流星雨（9083）逐颗坠落 —— 引擎一批同步发 N 条 `meteor`，节奏只能在演出侧排：
 ## 按 `idx` 把落地时刻依次错开，每颗从屏幕上方飞 `METEOR_FLY_MS`，
 ## **落地那一帧**才出爆点 / 飘字 / 掉血（`_apply_delayed` 的 `meteor_land`）。
@@ -840,7 +888,7 @@ var _cam_to := 0.0
 var _cam_t0 := 0
 var _cam_ms := 0                # >0 = 镜头正在补间（玩家一操作就取消）
 var _fx_claimed: Dictionary = {}   # Vector2i -> ms：这一格已有专属命中表现，通用演出让路
-var _wake_rings: Array = []     # {pos, start, dur, col}                       恶魔鸭苏醒的挣脱环（R72）
+var _wake_rings: Array = []     # {pos, start, dur, col}                       沉睡单位苏醒的挣脱环（R72）
 var _shake_until := 0           # 屏幕震动截止时刻
 var _shake_mag := 0.0           # 屏幕震动幅度（像素）
 
@@ -1006,30 +1054,35 @@ func _ready() -> void:
 	# 与抽牌动画共用 `_draw_card_back` / `_draw_card_back_fade`，换这里一处全跟着变。
 	_back_tex = UiAssets.card_back()
 	if _back_tex == null:
-		_back_tex = load("res://assets/cardback.png")
-	_frame_tex = load("res://assets/ui/grid_frame.png")
-	_fx_meteor_tex = load("res://assets/fx/fx_meteor.png")
-	_fx_beam_tex = load("res://assets/fx/fx_beam.png")
-	_fx_shine_tex = load("res://assets/fx/fx_shine.png")
-	_fx_knife_tex = load("res://assets/fx/fx_knife.png")
-	_fx_glow_tex = load("res://assets/fx/fx_glow.png")
-	_fx_laser_tex = load("res://assets/fx/fx_laser.png")
-	_fx_hit_burst_tex = load("res://assets/fx/fx_hit_burst.png")
+		_back_tex = DataPaths.load_texture("res://assets/cardback.png")
+	_frame_tex = DataPaths.load_texture("res://assets/ui/grid_frame.png")
+	_fx_meteor_tex = DataPaths.load_texture("res://assets/fx/fx_meteor.png")
+	_fx_beam_tex = DataPaths.load_texture("res://assets/fx/fx_beam.png")
+	_fx_shine_tex = DataPaths.load_texture("res://assets/fx/fx_shine.png")
+	_fx_knife_tex = DataPaths.load_texture("res://assets/fx/fx_knife.png")
+	_fx_glow_tex = DataPaths.load_texture("res://assets/fx/fx_glow.png")
+	_fx_laser_tex = DataPaths.load_texture("res://assets/fx/fx_laser.png")
+	_fx_hit_burst_tex = DataPaths.load_texture("res://assets/fx/fx_hit_burst.png")
 	# R645：龙息吐息（codex 出图 → 黑底亮度转 alpha，见 art_src/2026-11-13_龙息特效_R645）
-	_fx_breath_tex = load("res://assets/fx/fx_breath_cone.png")
-	_fx_breath_impact_tex = load("res://assets/fx/fx_breath_impact.png")
-	_fx_flame_tex = load("res://assets/fx/fx_flame.png")
-	_fx_ember_tex = load("res://assets/fx/fx_ember.png")
-	_fx_shield_tex = load("res://assets/fx/fx_shield.png")
-	_fx_arc_tex = load("res://assets/fx/fx_arc.png")
-	_fx_wave_tex = load("res://assets/fx/fx_shockwave.png")
-	_fx_arc_elec_tex = load("res://assets/fx/fx_arc_elec.png")
-	_fx_lone_col_tex = load("res://assets/fx/fx_lone_column.png")
-	_fx_lone_maw_tex = load("res://assets/fx/fx_lone_maw.png")
-	_fx_lone_ring_tex = load("res://assets/fx/fx_lone_ring.png")
-	_discard_tex = load("res://assets/ui/discard_icon.png")
-	_void_tex = load("res://assets/ui/void_icon.png")
-	_hp_icon = load("res://assets/ui/icon_health.png")
+	_fx_breath_tex = DataPaths.load_texture("res://assets/fx/fx_breath_cone.png")
+	_fx_breath_impact_tex = DataPaths.load_texture("res://assets/fx/fx_breath_impact.png")
+	_fx_flame_tex = DataPaths.load_texture("res://assets/fx/fx_flame.png")
+	_fx_ember_tex = DataPaths.load_texture("res://assets/fx/fx_ember.png")
+	_fx_shield_tex = DataPaths.load_texture("res://assets/fx/fx_shield.png")
+	_fx_arc_tex = DataPaths.load_texture("res://assets/fx/fx_arc.png")
+	_fx_wave_tex = DataPaths.load_texture("res://assets/fx/fx_shockwave.png")
+	_fx_arc_elec_tex = DataPaths.load_texture("res://assets/fx/fx_arc_elec.png")
+	_fx_lone_col_tex = DataPaths.load_texture("res://assets/fx/fx_lone_column.png")
+	_fx_lone_maw_tex = DataPaths.load_texture("res://assets/fx/fx_lone_maw.png")
+	_fx_lone_ring_tex = DataPaths.load_texture("res://assets/fx/fx_lone_ring.png")
+	# R785：免伤力场素材（三版里挑 CAP_AURA_VARIANT 那一张）
+	var _cap_aura_path := "res://assets/fx/fx_cap_aura_%02d_card.png" % CAP_AURA_VARIANT
+	if ResourceLoader.exists(_cap_aura_path):
+		_cap_aura_tex = load(_cap_aura_path)
+
+	_discard_tex = DataPaths.load_texture("res://assets/ui/discard_icon.png")
+	_void_tex = DataPaths.load_texture("res://assets/ui/void_icon.png")
+	_hp_icon = DataPaths.load_texture("res://assets/ui/icon_health.png")
 	_font = UiTheme.font()
 	_font_bold = UiTheme.font_bold()
 	sfx = Sfx.new()
@@ -1093,6 +1146,11 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	_demo_args = args
 	_shot_pending = "--screenshot" in args or "--demo" in args
+	# R764：宣传录制专用（`--trailer-clean`）—— 战斗内的说明文字（状态栏提示 / 说明类
+	# 飘字 / 左栏卡牌详情）仍是硬编码中文，英文宣传片里会串味。这个开关**只影响显示**：
+	# 状态栏留空、飘字只画伤害数字、左栏详情不弹，战斗规则与数值一律不动。
+	# 未传该参数时行为与之前完全一致。
+	_trailer_clean = "--trailer-clean" in args
 	_show_scroll_hint = ScrollHint.is_new_player()   # ⚠️ 会读盘 → 只在 _ready 调一次
 	_demo_pending = "--demo" in args
 	if _shot_pending:
@@ -1163,6 +1221,16 @@ func _ready() -> void:
 			RunState.traps = [7012, 7005, 7001]
 			RunState.run_active = true
 			# 出图直接上膛（`--toolarm` 在截图模式下要等第 60 帧，这里更稳）
+			_tool_use_arm = 0
+			_tool_use_until = Time.get_ticks_msec() + 600000
+		if args[i] == "--totemtip":
+			# R782 出图：工具栏塞野性图腾并**直接上膛**，核验「使用 / 丢弃」双按钮
+			# 与槽左侧的完整效果说明面板（图腾描述较长 → 折两行）。
+			# 出图：`battle.tscn -- --screenshot --totemtip --level 0 --shotframe 200`
+			# ⚠️ 不能挂在 `--tooldemo` 下面：那个参数被 `reward_panel` 认领，
+			#    会弹出「获得奖励」面板把工具栏整个盖住（R754 踩过，R782 复现一次）。
+			RunState.traps = [7008, 7005, 7006]
+			RunState.run_active = true
 			_tool_use_arm = 0
 			_tool_use_until = Time.get_ticks_msec() + 600000
 		if args[i] == "--shotms" and i + 1 < args.size():
@@ -1362,9 +1430,9 @@ func _ready() -> void:
 			seed(0x214)
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		RunState.ensure_deck_mods()
-		# ⚠️ 按**商店的合法条件**挑卡（不然出图里会出现「工事带伤害 +10」这种玩家
+		# ⚠️ 按**商店的合法条件**挑卡（不然出图里会出现「工事带伤害 +8」这种玩家
 		#    永远做不到的状态，图就没法用来验收）：费用 -1 要 cost>1 且非 X 费 /
-		#    伤害 +10 只给技能卡 / 次元之力只给盟友·工事 / 保存任意。一张卡只吃一个附魔。
+		#    伤害 +8 只给技能卡 / 次元之力只给盟友·工事 / 保存任意。一张卡只吃一个附魔。
 		var em_ids := ["costdown", "damage", "dimension", "save"]
 		var em_used := {}
 		var em_repo := CardRepo.load_json()
@@ -1630,7 +1698,7 @@ func _ready() -> void:
 				play_idx = hi
 				break
 		if play_idx >= 0 and engine.state.unit_at(Vector2i(4, 1)) == null:
-			_place_from = {"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 60),
+			_place_from = {"pos": Vector2(HAND_CX, OWN_HAND_Y - 60),
 					"card_id": (engine.state.hand[play_idx] as CardData).id, "at": hf_n}
 			engine.play_from_hand(play_idx, Vector2i(4, 1))
 			var placed: Placement = engine.state.unit_at(Vector2i(4, 1))
@@ -2232,7 +2300,7 @@ func _ready() -> void:
 			bt1.upgrade_stacks = 2
 		engine.state.hand.append(CardData.from_dict(repo.get_card(9162).to_dict()))
 		var fx: CardData = CardData.from_dict(repo.get_card(9003).to_dict())
-		fx.power = 10     # 附魔「伤害 +10」烤进 power
+		fx.power = 8      # 附魔「伤害 +8」烤进 power
 		engine.state.hand.append(fx)
 		var bidx := 0
 		for bi in args.size():
@@ -2533,19 +2601,21 @@ func _ready() -> void:
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--dodge" in args and engine != null:
-		# 演示（2026-10-02，R48；R542 改效果）：闪躲（9103）—— 0 费普通；本回合所有友方单位获得嘲讽。
+		# 演示（2026-10-02，R48；R846 改效果）：闪躲（9103）—— 0 费**稀有**；
+		#   使一个敌方单位力量 -X，X = 本回合打出的牌数。先垫 3 张牌再打它 → X = 3。
 		RunState.player_class = PlayerClass.ROGUE
 		engine.state.hand.clear()
-		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DODGE_ID).to_dict()))
-		engine.state.energy = 5
+		engine.state.energy = 9
 		engine.state.place(CardData.from_dict(repo.get_card(8005).to_dict()),
 				Vector2i(4, 1), GameEngine.SIDE_SELF)
 		engine.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
 				Vector2i(2, 1), GameEngine.SIDE_OPPONENT)
-		engine.use_spell(0, null)                  # 闪躲：全员嘲讽
+		engine.state.self_card_plays = 3           # 本回合已经打过 3 张
+		engine.state.hand.append(CardData.from_dict(repo.get_card(GameEngine.DODGE_ID).to_dict()))
+		engine.use_spell(0, Vector2i(2, 1))        # 闪躲：敌方力量 -3
 		_demo_hover_idx = 0
 		_hover_hand = 0
-		status_text = "闪躲：本回合所有友方单位获得嘲讽（含后上场的单位）"
+		status_text = "闪躲：敌方力量 -X（X = 本回合已打出的牌数）"
 		_shot_t0 = _now()
 		queue_redraw()
 	if "--finisher" in args and engine != null:
@@ -2849,26 +2919,6 @@ func _ready() -> void:
 		_clear_hover_state()
 		selection = null
 		print("[R361] 就绪：模式 %s" % _r361_mode)
-	if "--r332instinct" in args and engine != null:
-		# 演示（R332）：本能 9176 —— 牌库里只放 3 张 ≤1 费技能 + 4 张高费干扰，
-		# 截图上能直接看出「1 费的被打出去、2 费的还留在牌库」。
-		# ⚠️ 出牌动作**不在这里**：放在截图前 40 帧（见 `_demo_tick`），
-		#    否则 `--shotframe 600` 时状态栏播报与「本能 · …」飘字早就过去了。
-		RunState.player_class = PlayerClass.ROGUE
-		engine.state.hand.clear()
-		engine.state.deck.clear()
-		engine.state.energy = 6
-		for _sid in [9094, 9103, 9087, 9095, 9098, 9095, 9098]:
-			engine.state.deck.append(CardData.from_dict(repo.get_card(_sid).to_dict()))
-		for _cell in [Vector2i(2, 1), Vector2i(2, 3)]:
-			var _foe: Placement = engine.state.place(
-					CardData.from_dict(repo.get_card(8003).to_dict()),
-					_cell, GameEngine.SIDE_OPPONENT)
-			_foe.health = 30
-		engine.state.hand.append(CardData.from_dict(repo.get_card(9176).to_dict()))
-		_hover_hand = -1
-		_shot_t0 = _now()
-		queue_redraw()
 	if "--r326chimera" in args and engine != null:
 		# 演示（R326）：嵌合暴君入场「融合」→ **每破坏 1 张回复 1 费**（这条不写进卡面文本）。
 		# 摆两张己方树人接通、手上放暴君：4 费打出 → 破坏 2 张、回 2 费（费用 6 → 4）。
@@ -3177,6 +3227,20 @@ func _ready() -> void:
 				% [engine.state.energy, maxi(0, dm_demo.health), dm_demo.card.health]
 		_shot_t0 = _now()
 		queue_redraw()
+	if "--handbonus" in args and engine != null:
+
+		# 演示（R783）：手牌里「影魔 8007 + 0 费终结 9086」→ 影魔满足
+		# `hand_bonus_ready`（手卡里有 0 费技能）→ 金色额外效果框。
+		# 出图：`battle.tscn -- --screenshot --handbonus --level 0 --shotframe 200`
+		engine.state.hand.clear()
+		engine.state.hand.append(CardData.from_dict(repo.get_card(8007).to_dict()))
+		engine.state.hand.append(CardData.from_dict(repo.get_card(9086).to_dict()))
+		engine.state.energy = 5
+		_demo_hover_idx = 0
+		_hover_hand = 0
+		status_text = "影魔：手卡有 0 费技能 → 现在打出去每张 +生命（金框＝可触发额外效果）"
+		_shot_t0 = _now()
+		queue_redraw()
 	if "--mapview" in args and engine != null:
 		# 演示（R64）：战斗内地图总览面板。
 		# R128：演示模式默认没有 run（run_active=false → 面板打不开）→ 先开一局假 run。
@@ -3436,7 +3500,7 @@ func _ready() -> void:
 			RunState.ensure_deck_mods()
 			for di in RunState.deck_ids.size():
 				if RunState.deck_ids[di] == 8002:
-					RunState.enchant_deck_card(di, {"power": 10})
+					RunState.enchant_deck_card(di, {"power": 8})
 					break
 		_close_zone_panels()
 		_run_deck_visible = true
@@ -3739,13 +3803,6 @@ func _demo_tick() -> void:
 		engine._destroy_dead()
 		# 窗口开局时系统鼠标会投一次 MouseMotion（正好压在树人身上）→ 左栏详情
 		# 会盖住「效果区」。出图前把悬停 + 选中一起清掉（左栏也认 `selection` 兜底）。
-		_clear_hover_state()
-		selection = null
-	if _shot_pending and "--r332instinct" in _demo_args \
-			and _demo_frame == _shot_frame - 40 and engine != null:
-		# R332 出图：截图前 40 帧才打本能 —— 躲过开局横幅，又让状态栏播报 +
-		# 「本能 · 卡名列表」飘字还在屏上（1700ms 生命周期）。
-		engine.use_spell(0, null)
 		_clear_hover_state()
 		selection = null
 	if _shot_pending and "--deckfly" in _demo_args \
@@ -4669,6 +4726,7 @@ func _on_flee() -> void:
 	if not RunState.spend_relic(RunState.CAVE_ROPE_RELIC_ID):
 		return
 	engine.self_relics = RunState.active_relics()
+	RunState.cave_rope_refund()   # R772：逃跑退还进房扣掉的 1 块巧克力（第三层不返还）
 	_ai_timer.stop()
 	_foe_phase = false
 	_clear_battle_checkpoint()
@@ -5397,11 +5455,11 @@ func _hand_vis_h(i: int) -> float:
 
 func _hand_rect(i: int) -> Rect2:
 	## 手牌第 i 张的**未旋转**矩形；命中判定 / 拖拽起点 / 引导框都基于它。
-	## 卡底会落在窗口下沿之外（HAND_CROP_BOTTOM）：卡面照整张排版画，多出的那截由视口裁掉。
+	## R843：HAND_CROP_BOTTOM=0，底栏不再靠裁切换空间；命中与绘制仍共用同一矩形。
 	var n := engine.state.hand.size()
 	var step := _hand_step(n)
 	var total: float = step * (n - 1) + HAND_CARD_W
-	var x: float = (WINDOW_W - total) / 2 + step * i
+	var x: float = HAND_CX - total / 2.0 + step * i
 	var raised := HAND_SELECT_RAISE \
 			if selection != null and selection[0] == "hand" and selection[1] == i else 0.0
 	return Rect2(x, OWN_HAND_Y - raised + _hand_drop(i), HAND_CARD_W, HAND_CARD_H)
@@ -5911,11 +5969,11 @@ func _start_drag(i: int, pos: Vector2) -> void:
 		elif card.is_field():
 			status_text = "%s：拖到高亮格放置（可落在已有单位上）" % card.card_name
 		elif engine.fence_merge_allowed(card):
-			status_text = "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并" % card.card_name
+			status_text = GameI18n.ui("battle", "BATTLE_DRAG_PLACE_MERGE", "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并") % card.card_name
 		elif card.has_affix(GameEngine.AFFIX_SWAP):
 			status_text = "%s：拖到绿色空格放置；也可拖到己方单位上 → 把它顶回手" % card.card_name
 		else:
-			status_text = "%s：拖到绿色格子放置（自己半场空格）" % card.card_name
+			status_text = GameI18n.ui("battle", "BATTLE_DRAG_PLACE_SELF", "%s：拖到绿色格子放置（自己半场空格）") % card.card_name
 		queue_redraw()
 		return
 	if card.id == GameEngine.INFILTRATE_ID:
@@ -5999,6 +6057,8 @@ func _own_place_cells(card: CardData) -> Array[Vector2i]:
 			var c := Vector2i(x, y)
 			if not GameEngine.hand_place_allowed(c, GameEngine.SIDE_SELF):
 				continue
+			if engine.cell_sealed(c):
+				continue          # R839 大蒜：封锁格「不可使用」，别亮成绿格
 			if not engine.state.board.has(c):
 				out.append(c)
 			elif engine.fence_merge_target(c, card):
@@ -6022,7 +6082,9 @@ func _field_place_cells(card: CardData) -> Array[Vector2i]:
 	for x in FieldState.BOARD_ROWS:
 		for y in FieldState.BOARD_COLS:
 			var c := Vector2i(x, y)
-			if GameEngine.field_place_allowed(c, aim):
+			# R839 大蒜：`field_place_allowed()` 是 static（拿不到 state），
+			# 封锁格由引擎的 `cell_sealed()` 这一刀挡 —— 高亮与真实可放必须一致。
+			if GameEngine.field_place_allowed(c, aim) and not engine.cell_sealed(c):
 				out.append(c)
 	return out
 
@@ -6362,10 +6424,10 @@ func _draw_foresight_mode() -> void:
 			rs[0].size.x + 52.0, 168.0)
 	UiTheme.draw_panel_bg(self, box)
 	draw_rect(box, UiTheme.INK_600, false, 2.0)
-	_draw_string_center(_font_bold, UI_FS_LABEL, "预判：选择一个效果",
+	_draw_string_center(_font_bold, UI_FS_LABEL, "预判：选择一个效果（之后本卡消失）",
 			Vector2(WINDOW_W / 2, rs[0].position.y - 28), UiTheme.INK_800, -1)
 	var labels := [
-		"① 从弃牌区选一张费用为 0 的技能卡加入手卡（之后本卡消失）",
+		"① 从弃牌区选一张费用为 0 的技能卡加入手卡",
 		"② 从卡组将一张随机费用不为 0 的技能卡加入手卡",
 	]
 	for k in 2:
@@ -6451,6 +6513,9 @@ func _pick_active_kind() -> String:
 		return "wish"
 	if engine.crow_pending:
 		return "crow"
+	# R766 懊悔（9265）：从弃牌区选一张其他职业卡让它消失。
+	if engine.regret_pending:
+		return "regret"
 	if engine.whale_pending:
 		return "whale"
 	if engine.endless_pending:
@@ -6585,6 +6650,17 @@ func _build_pick_cfg(k: String) -> Dictionary:
 						"note": "点卡选中，再点确认 —— 复制品费用 0、回合结束消失",
 						"cards": tp_cards, "max_sel": 1, "confirm_label": "确认复制",
 						"cancel_label": "不使用"}
+			# R841 润滑油 7019：候选是**手牌本身**（不是抽牌库），改的是这张卡的当场所价。
+			if engine.tool_pick_kind == "hand_down":
+				var tp_down := 3
+				if tp_data != null:
+					tp_down = maxi(1, tp_data.cost_down)
+				return {"kind": k, "short": tp_name, "opts": tp_opts,
+						"title": "%s：选择一张手牌，它的费用本场 -%d（手牌 %d 张）"
+								% [tp_name, tp_down, tp_cards.size()],
+						"note": "点卡选中，再点确认 —— 确认后工具才会从工具栏移除",
+						"cards": tp_cards, "max_sel": 1, "confirm_label": "确认上油",
+						"cancel_label": "不使用"}
 			return {"kind": k, "short": tp_name, "opts": tp_opts,
 					"title": "%s：从这 3 张里选一张加入手卡" % tp_name,
 					"note": "点卡选中，再点确认 —— 本回合它的费用为 0",
@@ -6606,6 +6682,14 @@ func _build_pick_cfg(k: String) -> Dictionary:
 					"title": "乌鸦：选择弃牌堆一张盟友回到手卡（必须选一张）",
 					"note": "点卡选中，再点确认 —— 它立即回到你的手牌",
 					"cards": copts.map(disc_cards),
+					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
+		"regret":
+			# R766 懊悔（9265）：候选只列**其他职业卡**（引擎 `regret_options()` 唯一判据）。
+			var gopts: Array = engine.regret_options()
+			return {"kind": k, "short": "懊悔", "opts": gopts,
+					"title": "懊悔：选择弃牌区一张其他职业卡，让它消失（必须选一张）",
+					"note": "点卡选中，再点确认 —— 它本场对战消失（不回手牌、也不进消耗区）",
+					"cards": gopts.map(disc_cards),
 					"max_sel": 1, "confirm_label": "确认", "cancel_label": ""}
 		"whale":
 			var wopts: Array = engine.whale_options()
@@ -6910,6 +6994,10 @@ func _on_pick_confirmed(sel: Array) -> void:
 			# R752：确认 → 引擎结算（复制 / 入手 + 费用 0），**成功才摘槽**。
 			# 失败（手牌在面板打开后被别的东西塞满之类）→ 工具留在工具栏里。
 			var tp_all: Array = engine.tool_pick_cards()
+			# R841：**确认前**先把 kind / 数据取下来 —— `tool_pick_confirm()` 成功后会
+			# 立刻 `tool_pick_cancel()` 把这两个字段清空，之后再读就永远是空。
+			var tp_kind := engine.tool_pick_kind
+			var tp_td: TrapData = TrapRepo.load_json().get_trap(engine.tool_pick_id)
 			var tp_pick := int(opts[sel[0]])
 			var tp_nm := ""
 			if tp_pick >= 0 and tp_pick < tp_all.size():
@@ -6919,8 +7007,17 @@ func _on_pick_confirmed(sel: Array) -> void:
 			if engine.tool_pick_confirm(tp_pick):
 				if tp_slot >= 0:
 					RunState.consume_trap(tp_slot)
-				status_text = "工具：%s 加入手卡（本回合费用 0）" % tp_nm
-				_say("「%s」加入手牌" % tp_nm)
+				# R841：hand_down（润滑油）不是「加入手卡」——照抄万能牌那句会告诉玩家
+				# 「加入手卡（费用 0）」，其实什么都没加，只是把手里那张改便宜了。
+				if tp_kind == "hand_down":
+					var tp_down := 3
+					if tp_td != null:
+						tp_down = maxi(1, tp_td.cost_down)
+					status_text = "工具：%s 的费用本场 -%d" % [tp_nm, tp_down]
+					_say("「%s」上油了：这张卡在本场战斗中 -%d 费" % [tp_nm, tp_down])
+				else:
+					status_text = "工具：%s 加入手卡（本回合费用 0）" % tp_nm
+					_say("「%s」加入手牌" % tp_nm)
 			else:
 				status_text = "工具没有生效 —— 栏位保留"
 				_say("卡没能进入手牌，工具留在工具栏里")
@@ -6941,6 +7038,14 @@ func _on_pick_confirmed(sel: Array) -> void:
 				cnm = engine.state.discard[ci].card_name
 			if engine.crow_recall(ci):
 				status_text = "乌鸦：%s 从弃牌堆回到手牌" % cnm
+			_clear_selection()
+		"regret":
+			var gi := int(opts[sel[0]])
+			var gnm := "?"
+			if gi >= 0 and gi < engine.state.discard.size():
+				gnm = engine.state.discard[gi].card_name
+			if engine.regret_pick(gi):
+				status_text = "懊悔：弃牌区的「%s」消失" % gnm
 			_clear_selection()
 		"whale":
 			var wi := int(opts[sel[0]])
@@ -7313,7 +7418,10 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 		for x in FieldState.BOARD_ROWS:
 			for y in FieldState.BOARD_COLS:
 				out.append(Vector2i(x, y))
-	elif card.id == 9004 or card.id == GameEngine.DRAGON_BREATH_ID:
+	elif card.id == 9004 or card.id == GameEngine.DRAGON_BREATH_ID \
+			or card.id == GameEngine.DODGE_ID or card.id == GameEngine.SPIN_DRAW_ID:
+		# R846：闪躲（使敌方单位降力）/ 回转（对目标造成 X 伤）也只列**敌方单位** ——
+		# 默认分支会把己方单位一起高亮，点上去引擎只会回一句「需要指定一个敌方单位」。
 		for c: Vector2i in engine.state.board:
 			if engine.state.board[c].owner == GameEngine.SIDE_OPPONENT:
 				out.append(c)
@@ -7475,6 +7583,14 @@ func _spell_target_cells(card: CardData) -> Array[Vector2i]:
 		for x in FieldState.BOARD_ROWS:
 			for y in FieldState.BOARD_COLS:
 				out.append(Vector2i(x, y))
+	elif card.id == GameEngine.NOTE_FA_ID or card.id == GameEngine.NOTE_SOL_ID:
+		# Fa / Sol（音符，R826）：主目标只能点敌方单位（Fa 打 18 溅射、Sol 眩晕 + AOE）——
+		# 落进 else 会把己方单位也高亮，点下去才被引擎拒「没有敌方目标」。
+		for c: Vector2i in engine.state.board:
+			var np: Placement = engine.state.board[c]
+			if np.owner == GameEngine.SIDE_OPPONENT:
+				out.append(c)
+		out.sort()
 	elif card.id == GameEngine.GOLEM_SPELL_ID:
 		# 魔像术：在自己半场选一格召唤魔像 → 只列出自己半场的空格
 		for x in range(FieldState.OPPONENT_ROWS, FieldState.BOARD_ROWS):
@@ -7746,6 +7862,10 @@ func _on_right_click() -> void:
 	if engine.crow_pending:
 		_say("乌鸦：必须从弃牌堆选择一张盟友回到手牌")
 		return
+	# R766 懊悔的消失面板：同样必须选一张（不接受取消）
+	if engine.regret_pending:
+		_say("懊悔：必须从弃牌区选择一张其他职业卡")
+		return
 	# 鲸鱼之怒的取牌面板：右键 = 放弃剩余的取牌（本效果可选）
 	if engine.whale_pending:
 		engine.whale_skip()
@@ -7803,6 +7923,12 @@ func _clear_hover_state() -> void:
 	_hover_hand = -1
 	_hover_zone_rect = Rect2()   # R614：跟着一起清，否则浮窗会留在屏幕上
 	_hover_relic_tip = ""
+	# R782：工具说明跟着一起收；只在「本来挂着」时重绘一次 ——
+	# 本函数每次鼠标移动都会走，无条件 queue_redraw 会把安卓的节流重绘打回每帧。
+	var had_tool_tip: bool = _tool_tip_slot >= 0
+	_tool_tip_slot = -1
+	if had_tool_tip:
+		queue_redraw()
 	_hover_mention = {}          # R302：提及浮窗跟着一起收
 
 
@@ -7851,6 +7977,7 @@ func _on_hover(pos: Vector2) -> void:
 	# 「提及」那两个字的一瞬间左栏已经空了，根本没东西可悬停。提及判定排在最前。
 	if _info_panel_rect().has_point(pos):
 		_hover_mention = {}
+		_tool_tip_slot = -1   # R782：进左栏 = 离开工具槽，说明面板跟着收（这里没走 _clear_hover_state）
 		for h: Dictionary in _mention_hits:
 			if (h["rect"] as Rect2).has_point(pos):
 				_hover_mention = h
@@ -7900,7 +8027,7 @@ func _on_hover(pos: Vector2) -> void:
 			# R122：沉睡有**两个**递减口 —— 自己的回合结束 -1（回合口）、每次受伤 -1
 			#（受伤口）。写清「还剩几点」，玩家才知道该不该现在就打。
 			if p.sleep_left > 0:
-				tip += "　💤 沉睡（还剩 %d：自己的回合结束 -1，挨打也 -1）" % p.sleep_left
+				tip += "　💤 沉睡（还剩 %d：自己的回合结束 -1，受到伤害也 -1）" % p.sleep_left
 			# R87：护盾 / 自我修复都是隐藏状态，悬停必须写明「为什么它没掉血」。
 			if p.first_hit_shield:
 				tip += "　🛡 能量屏障（**第一次受到的伤害为 0**，用完消失）"
@@ -7979,8 +8106,6 @@ func _on_hover(pos: Vector2) -> void:
 			var charge := engine.charge_count(GameEngine.SIDE_SELF)
 			if charge > 0:
 				tip += "；蓄力 %d：下一张技能结算 %d 次" % [charge, charge + 1]
-			if engine.taunt_all_active(GameEngine.SIDE_SELF):
-				tip += "；闪躲：友军嘲讽"
 	if _hover_card == null:
 		var merged_eff := _merged_effects(engine.state.effects)
 		for i in merged_eff.size():
@@ -8016,6 +8141,21 @@ func _on_hover(pos: Vector2) -> void:
 			tip = "敌方效果区（空）"
 		else:
 			tip = "敌方效果 %d 张，持续生效中" % engine.state.enemy_effects.size()
+	# ③''' R782：工具槽悬停 → 弹出完整效果说明（电脑端）。
+	# 用户口径「工具栏看不到工具的效果描述」：描述有四五十字，状态栏一行读不完，
+	# 所以走与道具说明同一套浮动折行面板。安卓没有 MouseMotion，
+	# 点一下槽上膛（`_tool_use_arm`）时同一个面板照样弹（见 `_tool_tip_anchor_slot`）。
+	if _hover_card == null:
+		var want_tool_tip := -1
+		for ti in RunState.TRAP_SLOTS:
+			if RunState.trap_at(ti) > 0 and _trap_slot_rect(ti).has_point(pos):
+				want_tool_tip = ti
+				break
+		if want_tool_tip != _tool_tip_slot:
+			_tool_tip_slot = want_tool_tip
+			# 进/出槽这一下立刻重绘：敌方回合画面是静止的，脉冲节流不一定在跑，
+			# 只改状态不重绘会出现「鼠标压上去半天才弹」。
+			queue_redraw()
 	# ③'' 右栏道具栏：悬停看道具描述（装不下时悬停「+N」摘要 → 提示点开看全部）
 	if _hover_card == null:
 		var rel_hit := false
@@ -8042,7 +8182,7 @@ func _on_hover(pos: Vector2) -> void:
 				break
 		if not rel_hit and tip == "" and _relic_zone_rect().has_point(pos):
 			# 悬浮就能逐个看描述；装不下时才有「点开看全部」这条路
-			tip = "道具 %d 个" % _relic_bar_ids().size()
+			tip = GameI18n.ui("battle", "BATTLE_RELIC_TIP", "道具 %d 个") % _relic_bar_ids().size()
 	# ④ 弃牌区（R140 改图标后不再显示顶牌 → 悬停只报张数，详情进点击面板）
 	if _hover_card == null:
 		var discard_rect := _zone_rect("discard")
@@ -8585,6 +8725,9 @@ func _show_over(win: bool) -> void:
 		# 肉鸽 run 结算：写战斗记录（卡组内容 / 是否失败 / 最终血量）
 		if win:
 			RunState.hp = maxi(0, engine.state.hp_self)
+			# R853（店长口径）：战斗胜利默认回血 +3（0/1 档，2+ 档为 0），
+			# 走 run 层的 `heal()` —— 苹果 6027 持有期间自动锁住（换层回满例外）。
+			RunState.heal(RunState.battle_win_heal())
 			# 鸭梨（6019）：战斗内每次 HP 受伤累计的最大生命提升，写回 run（跨战斗保留）
 			RunState.max_hp = maxi(RunState.max_hp, engine.state.max_hp_self)
 			# R234 止血绷带（6029）：本场受伤合计 > 20 → 本层下次休息额外 +8（同层累计）。
@@ -8619,6 +8762,13 @@ func _show_over(win: bool) -> void:
 				RunState.gain_gold(gold_gain)
 				gold_total += gold_gain
 				gold_parts.append(GameI18n.ui("reward", "REWARD_GOLD_PART_BATTLE", "战斗 %d") % gold_gain)
+			# R796 兔脚（6076）：战后金币 +10。**单独记一项**（不并进上面那条「战斗 %d」）——
+			# R423 的口径就是「结算面板要说清这些钱从哪来」，并进去等于把道具效果藏了。
+			var rabbit_gold := RunState.rabbit_foot_gold()
+			if rabbit_gold > 0:
+				RunState.gain_gold(rabbit_gold)
+				gold_total += rabbit_gold
+				gold_parts.append(GameI18n.ui("reward", "REWARD_GOLD_PART_RABBIT_FOOT", "兔脚 %d") % rabbit_gold)
 			# R351：**效果卡**的战斗结束收益（月亮 9180 / 硬币 9181）。
 			# 只管入队 / 加钱 —— 队列后面交给结算面板的奖励悬浮窗，别在这里弹界面。
 			var fx := engine.battle_end_rewards()
@@ -8723,6 +8873,13 @@ func _show_over(win: bool) -> void:
 				# 结算标题据此显示「胜利？」（见 run_summary_scene）。
 				if _run_next_layer == GameLayers.LAYER_THREE \
 						and not RunState.can_enter_third_layer():
+					_run_next_layer = 0
+				# R814 试玩版：内容只到第二层 —— 打完二层 Boss 直接收尾，不进第三层。
+				# 结算标题不用另写：`run_summary_scene._draw_head()` 的判据是「该局没停在
+				# 第三层」→ 自动显示「胜利？」，与「信物不齐」那条路共用一个口径。
+				# ⚠️ 必须放在算 `_run_next_layer` 之后、清 `pending_rewards` 之前：
+				#    下面那段 R756 的判据读的就是它（进结算页不该还挂着「待领 N 件」）。
+				if GameBuild.is_demo() and _run_next_layer == GameLayers.LAYER_THREE:
 					_run_next_layer = 0
 			# R472（用户口径「打完 3 层 boss 游戏都胜利了，不需要结算奖励了，直接提示胜利」）：
 			# **这一局到此为止**时，卡组 / 道具 / 金币都不会再被用到 —— 留一批「待领 N 件」
@@ -8877,6 +9034,12 @@ func _show_over(win: bool) -> void:
 	# **不再自动弹奖励窗** —— 玩家先看清这一场拿了多少金币，再点「查看奖励」进去。
 	# 奖励不会丢：`RunState.pending_rewards` 一直在，左上角常驻「✦ 待领奖励 N」；
 	# 关掉奖励窗时 `_on_reward_panel_closed` 会照旧把玩家送走。
+	# R825：函数开头 `_clear_battle_checkpoint()` 写的是「清掉战斗续点」那一瞬，
+	# 当时战后生命与奖励还没入账；若玩家在胜利 / 奖励页退出，旧档会表现为无故回血 + 吞奖励。
+	# 这里在整段结算全部完成后覆盖一份：普通胜利与「Boss 已打、尚未换层」都保留当下状态。
+	if RunState.run_active and not RunState.run_finished and not _shot_pending \
+			and not _net_mode and DisplayServer.get_name() != "headless":
+		RunSave.save_run()
 
 
 func _spawn_confetti() -> void:
@@ -9620,6 +9783,10 @@ func _on_end_turn() -> void:
 		_ensure_pick_visible("crow")
 		_say("乌鸦：请先选择一张要回到手牌的盟友")
 		return
+	if engine.regret_pending:
+		_ensure_pick_visible("regret")
+		_say("懊悔：请先选择一张要让它消失的其他职业卡")
+		return
 	if engine.whale_pending:
 		_ensure_pick_visible("whale")
 		_say("鲸鱼之怒：请先点一张卡取回，或点「不选了」结束取牌")
@@ -9773,6 +9940,7 @@ func _draw() -> void:
 	_draw_laser_aim()        # R722：激光巨炮的两列瞄准提示线（整列警告，压在准星同层）
 	_draw_highlights()
 	_draw_bursts()
+	_draw_clock_fx()     # R836：缺陷时钟的时针转动（压在爆点之上）
 	_draw_trap_fx()      # R669：陷阱触发素材图（压在卡牌之上、通用光带之下）
 	_draw_battle_fx()    # R670：通用特效素材图（断链 / 技能通用 / B 档）
 	_draw_primal_fx()
@@ -9863,6 +10031,7 @@ func _draw() -> void:
 	if _relics_visible:
 		_draw_relic_panel()
 	_draw_relic_tip_panel()
+	_draw_tool_tip_panel()   # R782：工具槽的完整效果说明（电脑悬浮 / 安卓点一下上膛）
 	_draw_tutorial_cue()
 	_draw_confetti()
 	_draw_banner()
@@ -10073,6 +10242,8 @@ func _draw_grid() -> void:
 	_draw_field_markers()
 	if not engine.state.trap_fields.is_empty():
 		_draw_trap_markers()      # R663：已布置的陷阱（非卡牌场地，独立一张表）
+	if not engine.state.sealed_cells.is_empty():
+		_draw_seal_markers()      # R839：大蒜封住的格子（不可使用）
 	# 火墙术（9084）：正在燃烧的横行（引擎是唯一数据源，施放方下次回合开始自动熄灭）
 	for fw_row in engine.fire_wall_rows():
 		var fw_rect := Rect2(GRID_X, GRID_Y + fw_row * CELL - _grid_scroll, GRID_W, CELL)
@@ -10095,6 +10266,8 @@ func _board_has_pulsing_field() -> bool:
 	## 只有一个清泉在场上时不需要逐帧重绘 —— 这是 `_process` 里的重绘判据。
 	if engine != null and not engine.state.trap_fields.is_empty():
 		return true   # R663：陷阱格带呼吸描边，得逐帧重绘
+	if engine != null and not engine.state.sealed_cells.is_empty():
+		return true   # R839：大蒜封锁格同样带呼吸描边
 	if engine == null or engine.state.field_effects.is_empty():
 		return false
 	for c: Vector2i in engine.state.field_effects:
@@ -10293,16 +10466,16 @@ func _start_trap_drag(slot: int, pos: Vector2) -> void:
 	# 放置型要的是**空格**，两种都在 `GameEngine.trap_drop_cells()` 里分。
 	_trap_drag_cells = engine.trap_drop_cells(RunState.trap_at(slot))
 	if _trap_drag_cells.is_empty():
-		if t0 != null and t0.direct_damage > 0:
+		if t0 != null and (t0.direct_damage > 0 or t0.direct_stun > 0):
 			_say("场上没有可以砸的敌人")
 		else:
 			_say("没有可以放置工具的空格")
-	elif t0 != null and t0.direct_damage > 0:
+	elif t0 != null and (t0.direct_damage > 0 or t0.direct_stun > 0):
 		status_text = "「%s」：拖到高亮的敌方单位身上砸出去" % t0.trap_name
 	else:
 		# R763c（用户口径「陷阱类工具，需要可以放到对方场地上」）：
 		# 提示里必须说出来 —— 否则玩家沿用旧印象，仍然以为只能放自己这半边。
-		status_text = "「%s」：拖到绿色格子放置（我方或敌方场地都可以）" % t0.trap_name
+		status_text = GameI18n.ui("battle", "BATTLE_DRAG_PLACE_TRAP", "「%s」：拖到绿色格子放置（我方或敌方场地都可以）") % t0.trap_name
 	queue_redraw()
 
 
@@ -10346,6 +10519,14 @@ func _use_tool_slot(slot: int, td: TrapData) -> void:
 		_say("已使用「%s」，回复 %d%% 生命" % [td.trap_name, td.heal_pct])
 	elif td.ally_atk > 0:
 		_say("已使用「%s」，本场所有盟友 +%d 力量" % [td.trap_name, td.ally_atk])
+	elif td.fill_hand:
+		# R796 卡牌包 7013：报「补进来几张」而不是「手牌满了」——
+		# 手牌本来就满时 `use_tool` 直接拒绝（见那边的早退），走不到这里。
+		_say("已使用「%s」，手牌补到 %d 张" % [td.trap_name, engine.state.hand.size()])
+	elif td.draw_cards > 0:
+		# R796 智慧药剂 7014：手牌满时抽到的会直接进弃牌区（与战斗中一切抽卡同口径），
+		# 所以这里只报「抽了几张」，不承诺「全都进手里」。
+		_say("已使用「%s」，抽 %d 张卡" % [td.trap_name, td.draw_cards])
 	else:
 		_say("已使用「%s」，回复 %d 点费用" % [td.trap_name, td.energy])
 	queue_redraw()
@@ -10373,14 +10554,17 @@ func _finish_trap_drag(pos: Vector2) -> void:
 		return
 	var c2 := Vector2i(int(cell.x), int(cell.y))
 	var td: TrapData = TrapRepo.load_json().get_trap(id)
-	# R754 石头（7012）：落点是**敌方单位**，砸下去当场结算，不埋进格子。
-	# 伤害与致死收尾都在 `use_tool_on_unit()`（唯一口）；这里只负责摘槽与提示。
-	if td != null and td.direct_damage > 0:
+	# R754 石头（7012）/ R841 锤子（7018）：落点是**敌方单位**，砸下去当场结算，不埋进格子。
+	# 效果与致死收尾都在 `use_tool_on_unit()`（唯一口）；这里只负责摘槽与提示。
+	if td != null and (td.direct_damage > 0 or td.direct_stun > 0):
 		if not engine.use_tool_on_unit(id, c2):
 			_say("这一下没砸到人（要有敌方单位才砸得下去）")
 			return
 		RunState.consume_trap(slot)
-		_say("「%s」砸中目标：%d 点伤害" % [td.trap_name, td.direct_damage])
+		if td.direct_stun > 0:
+			_say("「%s」砸中目标：眩晕 %d 回合" % [td.trap_name, td.direct_stun])
+		else:
+			_say("「%s」砸中目标：%d 点伤害" % [td.trap_name, td.direct_damage])
 		queue_redraw()
 		return
 	if not engine.place_trap(id, c2):
@@ -10388,7 +10572,11 @@ func _finish_trap_drag(pos: Vector2) -> void:
 		return
 	RunState.consume_trap(slot)   # 放置那一刻才从栏位移除（R663 口径）
 	var nm := td.trap_name if td != null else "工具"
-	_say("已布置「%s」，敌人踩到就会触发" % nm)
+	# R839 大蒜：封锁型不是「等人踩」，提示语必须换口径（照抄会骗玩家「踩了会触发」）。
+	if td != null and td.block_turns > 0:
+		_say("已封住这一格：「%s」生效期间任何单位都无法进入或经过" % nm)
+	else:
+		_say("已布置「%s」，敌人踩到就会触发" % nm)
 	queue_redraw()
 
 
@@ -10482,6 +10670,42 @@ func _draw_trap_markers() -> void:
 				id, false)
 
 
+func _draw_seal_markers() -> void:
+	## R839 大蒜 7017：被封住的格子 = **「这一格不可使用」**。
+	## 画法与场上另外三套标记刻意分开，别让玩家读混：
+	##   * 陷阱 = 小图标 + 呼吸方框（「埋着东西，踩了会炸」）；
+	##   * 场地 = 45° 斜纹 + 名字角标（「这格挂着效果」）；
+	##   * 空袭 = 红色准星（「这格被点名了」）；
+	##   * **封锁 = 满格暗底 + 两道对角封条 + 中央蒜图标 + 右上角剩余回合数**
+	##     （「这格被封死了，谁都别想用」）。
+	## 判据只读 `engine.state.sealed_cells`（引擎是唯一数据源）；回合数也直接读表 ——
+	## 界面**绝不**自己按「放下时记几」倒推，两套账必然分叉。
+	var t := float(_now()) / 1000.0
+	var pulse := 0.5 + 0.5 * sin(t * 2.4)
+	for cell: Vector2i in engine.state.sealed_cells:
+		var left := int(engine.state.sealed_cells[cell])
+		if left <= 0:
+			continue
+		var r := _cell_rect(cell)
+		draw_rect(r.grow(-3.0), Color(0.24, 0.22, 0.31, 0.56), true)
+		draw_rect(r.grow(-3.0), Color(0.78, 0.76, 0.88, 0.55 + 0.35 * pulse), false, 2.5)
+		# 两道对角封条（不是斜纹：斜纹是场地卡的语汇）
+		var pad := 9.0
+		var seal_col := Color(0.84, 0.82, 0.92, 0.50 + 0.20 * pulse)
+		draw_line(r.position + Vector2(pad, pad), r.end - Vector2(pad, pad), seal_col, 3.0)
+		draw_line(Vector2(r.end.x - pad, r.position.y + pad),
+				Vector2(r.position.x + pad, r.end.y - pad), seal_col, 3.0)
+		# 中央蒜图标：**只画图案、不画底框**（暗格上再叠一个深色方块就认不出是蒜了），
+		# 尺寸按格子走（0.5 格宽）—— 固定 34px 在 128px 的格子里太小。
+		var gs := CELL_W * 0.50
+		TrapArt.draw_glyph(self, Rect2(r.get_center() - Vector2(gs * 0.5, gs * 0.5),
+				Vector2(gs, gs)), 7017)
+		# 右上角剩余我方回合数（「3」= 还能封 3 个我方回合）。不带底条 ——
+		# 底条会压住格子右上边框，而这一格本身已经是深色底，白字 + 描边就够读。
+		_draw_string_center(_font_bold, UI_FS_CAPTION, str(left),
+				Vector2(r.end.x - 21.0, r.position.y + 23.0), Color("f4efff"))
+
+
 func _draw_field_markers() -> void:
 	## 场地效果标记（R74）：画在格子上的**角标 + 斜纹底**，不是一张卡。
 	## 为什么这么画：场地**不是单位**（不能被攻击、不占位），所以不能画成卡面 ——
@@ -10501,22 +10725,32 @@ func _draw_field_markers() -> void:
 		var persistent := GameEngine.is_persistent_field(card)
 		var col := (COL_FIELD_PERSIST if persistent
 				else (COL_FIELD_SELF if mine else COL_FIELD_FOE))
-		# 斜纹底（4 条45° 短线）
-		for k in 4:
-			var off := float(k) * CELL / 4.0
-			draw_line(rect.position + Vector2(off, 0),
-					rect.position + Vector2(0, off), Color(col.r, col.g, col.b, 0.30), 2.0)
-		draw_rect(rect, col, false, 2.0)
-		# 右下角小标签（场地名，缩到能塞进角里）
+		# R847：优先用**每张场地自己的边框素材**（`FieldArt`，文件名带 id）；
+		# 缺图才回落到「45° 斜纹 + 冷色描边」这套程序化画法。
+		# 两套**互斥不叠加**：斜纹是「这格挂着个效果」的兜底语汇，有了真边框之后再叠
+		# 一层斜纹只会把画面弄脏（而且斜纹只画左上三角，本来就没盖满格）。
+		# 店长口径（R847）：场地要有真边框素材，且「漩涡和清泉不该一样」→ 按 id 分图。
+		var framed := FieldArt.draw_frame(self, rect, card.id)
+		if not framed:
+			# 斜纹底（4 条45° 短线）
+			for k in 4:
+				var off := float(k) * CELL / 4.0
+				draw_line(rect.position + Vector2(off, 0),
+						rect.position + Vector2(0, off), Color(col.r, col.g, col.b, 0.30), 2.0)
+			draw_rect(rect, col, false, 2.0)
+		# 名字角标：**有边框素材时不画**（R847）。边框本身就是「这是哪张场地」的答案，
+		# 再叠一行字只会压在卡面数值行上（实机核验：标签有一半被卡框吃掉）。
+		# 缺素材（mod 去图 / 旧包没带图）时照旧写出来 —— 那种情况下文字是唯一辨识手段。
 		# R503/R562：标记角标直接写当前加伤数值 —— 现在固定 +1，但照旧读 `mark_bonus`
 		# （数值出口只有一个，将来若调档位/加变体，画法不用跟着改）。
-		var tag := card.card_name
-		if card.id == GameEngine.MARK_ID:
-			tag = "标记 +%d" % engine.state.mark_bonus
-		var px := 10
-		while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL_W - 10.0:
-			px -= 1
-		_draw_string_box_nw(_font_bold, px, tag, rect.position + Vector2(5, CELL - 6), col)
+		if not framed:
+			var tag := card.card_name
+			if card.id == GameEngine.MARK_ID:
+				tag = "标记 +%d" % engine.state.mark_bonus
+			var px := 10
+			while px > 7 and _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > CELL_W - 10.0:
+				px -= 1
+			_draw_string_box_nw(_font_bold, px, tag, rect.position + Vector2(5, CELL - 6), col)
 		# R84：触发类型角标（一次性场地）。「范围伤害」这类标签太长塞不进 6 字宽的角，
 		#   缩字号 + 靠左排；清泉是持续型、**没有** trigger，不画这个（别误导成「会被触发」）。
 		if not persistent and card.trigger != "":
@@ -10622,6 +10856,13 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 		# 是看卡面看不出来的隐藏状态 → 必须常驻可见，槽位角标写出**数字**：光有沙漏图标
 		# 等于把「还能拖几回合 / 要不要现在就拆」这个决策藏起来（与「沉睡 N」同一套路）。
 		_draw_fuse_aura(center, w, h)
+	if engine.damage_cap_left(p) == 0:
+		# R780b 赫尔墨斯 9140 / 量产型赫尔墨斯 9188：本回合 20 点伤害额度已经吃满，
+		# 接下来谁打它都进不去。这是**看卡面看不出来**的隐藏状态 ——
+		# 卡面只写「每回合最多受到 20 点伤害」，不写「这一刻已经满了」，
+		# 而玩家恰恰要靠这个决定「还要不要继续砸它」。
+		# 图标由 `_state_slots()` 送进右上角圆槽，环与薄金罩在这里画。
+		_draw_damage_cap_aura(center, w, h)
 	if p.first_hit_shield:
 		# 能量屏障（8033，R87）：**首次受伤免掉**的一次性护盾。
 		# 徽标同样交给字段系统（字段「护盾」），这里只留**呼吸青环**提示「还剩一次」——
@@ -10662,12 +10903,16 @@ func _state_slots(p: Placement, cell: Vector2i) -> Array:
 	##    要等 1.8 秒才轮到，等于没提示。它改由 `_draw_activate_callout()` 单独画在
 	##    卡框上沿正中，并且是**动态**的：选中后放大到卡心。
 	## ⚠️ 嘲讽默认**不在这里**：它是卡面字段（`AFFIX_DEFS.嘲讽`），字段队列已经会画图标。
-	##    只有两种「卡面没写嘲讽、此刻却生效」的情况要补：嘲讽来自 traits，或闪躲 9103 的
-	##    全员嘲讽窗口 —— 否则那个橙色环就成了唯一线索，等于没说明。
+	##    唯一要补的是「嘲讽来自 traits」（卡面字段没写）—— 否则那个橙色环就成了唯一线索。
+	##    ⚠️ R846：闪躲 9103 改成敌方降力后，不再有任何「卡面外临时嘲讽」的窗口。
 	## ⚠️ 沉睡 / 倒数的 `count` 是**决策信息**（还剩几下 / 几回合），不是文字标记，必须带。
 	var out: Array = []
 	if p == null or p.card == null:
 		return out
+	if engine.damage_cap_left(p) == 0:
+		# R780b：本回合额度吃满 = 现在打它没用。**排在队列最前** —— 冰封 / 眩晕说的是
+		# 「它不能动」，这条说的是「你打不动」，玩家下一步怎么打直接取决于它。
+		out.append({"glyph": "immune", "label": "免伤"})
 	if p.frozen:
 		out.append({"glyph": "frozen", "label": "冰封"})
 	if p.stun_left > 0:
@@ -10679,6 +10924,64 @@ func _state_slots(p: Placement, cell: Vector2i) -> Array:
 	if engine.unit_has_taunt(p) and not p.card.has_affix("嘲讽"):
 		out.append({"glyph": "taunt", "label": "嘲讽"})
 	return out
+
+func _draw_damage_cap_aura(center: Vector2, w: float, h: float) -> void:
+	## 免伤力场（`GameEngine.damage_cap_left(p) == 0` 的唯一表现口，R780b）。
+	## 赫尔墨斯 9140 / 量产型赫尔墨斯 9188 本回合的 20 点伤害额度已经吃满，
+	## 接下来所有伤害都被上限吃掉、一点血也扣不动。
+	## ⚠️ R785（店长口径）：R780b 那版程序化六边形金线「不好看」，改成**贴素材** ——
+	##    codex 纯文生图出的环形结界（黑底 → 亮度转 alpha，见
+	##    art_src/2026-11-17_免伤力场素材_R785/）。程序化那版降级为**兜底**：
+	##    素材没导入 / 被裁掉时仍然要有「打不动」的表现，不能静默消失。
+	## ⚠️ 用的是**贴卡框**素材（不是圆环）；且**只套一圈** —— 卡牌自带华丽金框，
+	##    再叠一道高对比金线就读成「描边加粗」而不是「多了个力场」。
+	## ⚠️ 呼吸只动 alpha 和 ±0.8% 缩放：环带是贴着卡边的，缩放大一点就会一进一出
+	##    地啃卡框，看起来像卡在抖。
+	if _cap_aura_tex != null:
+		var ct := float(_now()) / 1000.0
+		var cp := (sin(ct * 2.6) + 1.0) * 0.5
+		# 尺寸口径：卡宽高各加 2×(GAP+BAND+PAD)，与素材画布严格 4x 对应（470x534）。
+		# 缩放只给 0.8%：环带是贴着卡边的，缩放一大就会一进一出地啃卡框。
+		var ext := (CAP_AURA_GAP + CAP_AURA_BAND + CAP_AURA_PAD_PX) * 2.0 * (1.0 + 0.008 * cp)
+		var dw := w + ext
+		var dh := h + ext
+		draw_texture_rect(_cap_aura_tex,
+				Rect2(center - Vector2(dw, dh) * 0.5, Vector2(dw, dh)), false,
+				Color(1.0, 1.0, 1.0, 0.86 + cp * 0.14))
+		return
+	# ---- 以下是 R780b 的程序化兜底：仅在素材缺失时才会走到 ----
+	var dc_t := float(_now()) / 1000.0
+	var dc_pulse := (sin(dc_t * 2.6) + 1.0) * 0.5
+	var dc_col := Color(1.0, 0.90, 0.55)
+	# 罩子与光环**同形**（六边形填充）：卡面会盖住中心，只剩卡框外那圈金色薄雾。
+	# 矩形罩会在卡角露出直角金块，和六边形互相打脸（R780b 实拍）。
+	var wash := PackedVector2Array()
+	for i in 6:
+		var wa: float = -PI * 0.5 + TAU * float(i) / 6.0
+		wash.append(center + Vector2(cos(wa) * (w * 0.5 + 12.0), sin(wa) * (h * 0.5 + 12.0)))
+	draw_colored_polygon(wash, Color(dc_col.r, dc_col.g, dc_col.b, 0.10 + dc_pulse * 0.07))
+	for k in 2:
+		var hw := w * 0.5 + 12.0 + float(k) * 8.0 + dc_pulse * 1.8
+		var hh := h * 0.5 + 12.0 + float(k) * 8.0 + dc_pulse * 1.8
+		var pts := PackedVector2Array()
+		for i in 6:
+			var a: float = -PI * 0.5 + TAU * float(i) / 6.0
+			pts.append(center + Vector2(cos(a) * hw, sin(a) * hh))
+		pts.append(pts[0])
+		# 深底必须比亮金**宽一倍**：亮水面上细半透线会被背景吃掉（实拍调出来的）
+		draw_polyline(pts, Color(0.06, 0.05, 0.02, 0.80), 6.2 if k == 0 else 4.2, true)
+		draw_polyline(pts, Color(dc_col.r, dc_col.g, dc_col.b,
+				(0.94 if k == 0 else 0.60) + dc_pulse * 0.06), 3.4 if k == 0 else 1.9, true)
+	# 六个顶点各点一颗小方块（深底 + 亮金）：呼吸时跟着亮，远看也认得出「有东西罩着」
+	for i in 6:
+		var a2: float = -PI * 0.5 + TAU * float(i) / 6.0
+		var vp := center + Vector2(cos(a2) * (w * 0.5 + 12.0 + dc_pulse * 1.8),
+				sin(a2) * (h * 0.5 + 12.0 + dc_pulse * 1.8))
+		var sq := 2.6 + dc_pulse * 1.2
+		draw_rect(Rect2(vp - Vector2(sq, sq) * 1.6, Vector2(sq, sq) * 3.2),
+				Color(0.06, 0.05, 0.02, 0.80), true)
+		draw_rect(Rect2(vp - Vector2(sq, sq), Vector2(sq, sq) * 2.0),
+				Color(dc_col.r, dc_col.g, dc_col.b, 0.84 + dc_pulse * 0.16), true)
 
 func _draw_stun_aura(center: Vector2, w: float, h: float) -> void:
 	## 眩晕特效（`Placement.stun_left` 的唯一表现口，R654）：**金色虚线环**旋转 +
@@ -12217,7 +12520,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		if pg_cell is Vector2i and (pg_cell as Vector2i).x >= 0 and not _shot_pending:
 			_pow_fx.append({"cell": pg_cell, "start": grow_at, "dur": 300})
 	# R151 P2-14：格上治疗事件族 → 上升光点（与伤害的扩散爆点对称）
-	if kind in ["heal", "regen", "charge_heal", "self_repair", "night_erosion"]:
+	if kind in ["heal", "regen", "charge_heal", "self_repair"]:
 		var hl_cell = data.get("cell")
 		if hl_cell is Vector2i and (hl_cell as Vector2i).x >= 0 and not _shot_pending:
 			for hf_i in 4:
@@ -12318,13 +12621,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_transform_fx.append({"zone": "cell", "cell": pb_cell, "start": n, "dur": 520})
 				sfx.play("place")
 		"pronoia_morph":
-			# R541 普罗诺亚之影（9242）：召唤 / 变形构状体。
+			# R541 普罗诺亚之影（9242）：召唤 / 变形构装体。
 			# 召唤那一半另有一条 `place`（带 summon）负责落位动画与「召唤 xxx」播报，
 			# 这里只补「损失了多少生命」；变形那一半走 `_transform_fx`
 			# （与涂装机器人 8080 的「变幻」同一条视觉）。
 			var pm_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var pm_new = data.get("new", null)
-			var pm_name := (pm_new as CardData).card_name if pm_new is CardData else "构状体"
+			var pm_name := (pm_new as CardData).card_name if pm_new is CardData else "构装体"
 			if bool(data.get("summon", false)):
 				var pm_src: Vector2i = data.get("src", Vector2i(-1, -1))
 				if pm_src.x >= 0:
@@ -12391,7 +12694,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": _cell_center(fm_cell) + Vector2(0, -20), "sc": _grid_scroll,
 					"text": "叠栅栏 生+%d" % int(data.get("gained", 0)),
 					"col": Color("e08a2e"), "start": n, "dur": 1500, "size": 18})
-			_say("▣ 栅栏修复术：两张栅栏合并 → %s 生命 %d" % [fm_name,
+			_say("▣ 栅栏修复术：两张栅栏合并 → %s 生命 %d（回满）" % [fm_name,
 					int(data.get("health", 0))])
 		"void_lord":
 			# 风元素（9082）：本次对战中每用技能牌对敌方造成一次伤害 → 手卡里的本卡费用 -1
@@ -12489,19 +12792,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 							"say": "⚔ %s 攻击 %s！" % [data.get("atk_name", "?"),
 									data.get("def_name", "?")]}})
 		"soul_harvest":
-			# R679 灵魂收割者 9233：击杀单位后**生命回满**。引擎从 `_reap()` 之后发，
-			# 界面一直是「零臂」—— 玩家只看见自己那张卡的血条突然涨回去，没有任何
-			# 因果提示（R504 上线以来一直如此）。这里补一张暗影图 + 一行飘字。
+			# R679 → R845 灵魂收割者 9233：击杀单位后原来是「生命回满」，R845 起改成
+			# 「回复 2 点费用 + 抽 2 张牌」。演出沿用 R679 补的那张暗影图。
+			# ⚠️ 文案必须短：飘字是 `_draw_string_box_center` **居中**画的，
+			# 且 x 方向没有兜底。灵魂收割发生在敌方行，敌方格可能贴着棋盘左沿，
+			# 长句会有一半被画到棋盘外。「+2 费 抽2」七个字宽 ≈ 84px，最左列也落得下。
 			var sh_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			if sh_cell.x >= 0:
 				var sh_pos := _cell_center(sh_cell)
 				_fx_push_cell(FxArt.SKILL_SHADOW, sh_cell, n, BATTLE_FX_MS, 148.0)
-				# ⚠️ 文案必须短：飘字是 `_draw_string_box_center` **居中**画的，
-				# 且 x 方向没有兜底。灵魂收割发生在敌方行，敌方格可能贴着棋盘左沿，
-				# 11 个字的长句会有一半被画到棋盘外（y 那边有 `maxf(pos.y,44)`，
-				# x 这边没有）。「↑ 回满 N」五个字宽 ≈ 60px，最左列也落得下。
 				_floaters.append({"pos": sh_pos + Vector2(0, 6), "sc": _grid_scroll,
-						"text": "↑ 回满 %d" % int(data.get("health", 0)),
+						"text": "+%d 费 抽%d" % [int(data.get("energy", 0)), int(data.get("draw", 0))],
 						"col": Color("c07ad0"), "size": 16, "start": n, "dur": 1500})
 		"hp":
 			# 攻击方 side；被打的是对面 → 飘字/爆点落在对应 HP 横幅。
@@ -12604,7 +12905,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					_say("◆ 回收：%s → 素体 %d 攻 / %d 血（改造 +%d，本场战斗永久）" % [
 							str(data.get("recycled", "?")), rc_n.power, rc_n.health,
 							int(data.get("recycle_hp", 0))])
-					_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+					_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 						"text": "%s → 素体 %d/%d" % [str(data.get("recycled", "?")),
 							rc_n.power, rc_n.health],
 						"col": Color("8ad4f0"), "start": n, "dur": 2000})
@@ -12905,7 +13206,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var sl_name := str(data.get("name", ""))
 			var sl_amt := int(data.get("amount", 1))
 			_say("✦ 雪豹：手牌「%s」本回合费用 -%d" % [sl_name, sl_amt])
-			_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "雪豹 · 「%s」本回合 -%d 费" % [sl_name, sl_amt],
 					"col": Color("7fc8e8"), "size": 17, "start": n, "dur": 2100})
 		"hand_burn":
@@ -12932,14 +13233,14 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var hburn := int(data.get("burned", 0))
 			if hburn > 0:
 				_say("手牌已满（%d 张）：%d 张抽到的牌已进弃牌区" % [hlim, hburn])
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 						"text": "手牌已满 %d/%d · %d 张进弃牌" % [
 								int(data.get("hand", 0)), hlim, hburn],
 						"col": Color("b26a00"), "size": 17,
 						"start": n, "dur": 2200})
 			else:
 				_say("手牌已满（%d 张）" % hlim)
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 						"text": "手牌已满 %d/%d" % [int(data.get("hand", 0)), hlim],
 						"col": Color("b26a00"), "size": 17,
 						"start": n, "dur": 2200})
@@ -12977,7 +13278,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"crow_token":
 			# 使魔之夜（9062）：使用效果牌 → 一张乌鸦进手卡（本回合 0 费）
 			sfx.play("draw")
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "使魔之夜 · 乌鸦 +1（本回合 0 费）", "col": Color("6a6a9a"), "size": 17,
 					"start": n, "dur": 2100})
 		"aether":
@@ -13022,7 +13323,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					if data.get("card") is CardData else "?"
 			# R171：hpos 两个分支都活着（格治疗 / HP 横幅）→ 只给格分支打标
 			var h_flo := {"pos": hpos + Vector2(0, -12),
-					"text": "治疗 +%d" % int(data.get("amount", 0)),
+					"text": "%s +%d" % [StatusBadge.word_of(StatusBadge.GLYPH_HEAL), int(data.get("amount", 0))],
 					"col": Color("2fa36b"), "start": n, "dur": 1500}
 			if hcell is Vector2i:
 				h_flo["sc"] = _grid_scroll
@@ -13135,6 +13436,29 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				# R697：这两条是「把库里的卡**改了**」（屏障 / 双动），不是「加了 1 张」——
 				#       金环 + 「+1」只认入库（`_on_deck_added`），这里只留紫环（变幻）。
 				_transform_fx.append({"zone": "deck", "start": n, "dur": 460})
+		"damage_capped":
+			# R780b：赫尔墨斯 / 量产型赫尔墨斯本回合的 20 点伤害额度吃掉了多少。
+			# 额度满时引擎把扣血压到 0，`fx_impact` 判的是 `dmg > 0` → 不会发，
+			# 于是敌人一拳打上去**画面一动不动**，看着像卡死了。这条就是补那个反馈。
+			# 文案写「免伤 N」而不是「0 伤」：N 是**被上限吃掉**的量，玩家据此判断
+			# 「这回合还吃不吃得动」；与能量屏障的「护盾 · 0 伤」（护盾碎掉，另一种事）区分开。
+			var dcap_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var dcap_blocked := int(data.get("blocked", 0))
+			if dcap_cell.x >= 0 and dcap_blocked > 0:
+				var dcap_at := _hit_cue_at(dcap_cell)
+				_bursts.append({"pos": _cell_center(dcap_cell), "sc": _grid_scroll,
+						"start": dcap_at, "dur": 460, "col": Color("ffd863"), "big": false})
+				_floaters.append({"pos": _cell_center(dcap_cell) + Vector2(0, -14),
+						"sc": _grid_scroll, "text": "免伤 %d" % dcap_blocked,
+						"col": Color("ffd863"), "start": dcap_at, "dur": 1400, "size": 17})
+		"armor_capped":
+			# R793 应急装甲（6074）：玩家 HP 每回合最多受 20 点伤害 —— 这里报「被上限吃掉」的量。
+			# 玩家 HP 没有格子可画环（赫尔墨斯那套 aura 用不了），引擎又把这一下压成 0 →
+			# 血条一动不动。不补一句播报，玩家只会以为道具根本没生效。
+			var acap_blocked := int(data.get("blocked", 0))
+			var acap_cap := int(data.get("cap", 0))
+			if acap_blocked > 0:
+				_say("🛡 应急装甲：本回合已受满 %d 点，免伤 %d" % [acap_cap, acap_blocked])
 		"barrier":
 			# 护盾**挡下**伤害的瞬间（R87）：这是玩家最需要看到的反馈 —— 护盾消失且不扣血。
 			sfx.play("heal")
@@ -13319,11 +13643,17 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": rg_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
 					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
 		"night_erosion":
-			# 夜蚀 8062（R103）：回合结束按剩余费用回复生命 —— 绿色回血飘字（同自我修复口径）。
-			var ne_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
-			_floaters.append({"pos": ne_pos, "sc": _grid_scroll, "text": "+%d" % int(data.get("amount", 0)),
-					"col": Color("8ce09a"), "start": n, "dur": 1400, "size": 16})
-			sfx.play("heal")
+			# 夜蚀 8062（R103 → R845）：从「按剩余费用回血」改成「对所有敌人造成 X 点伤害」，
+			# 演出对齐黑暗扩散 9113 —— 暗影图落在棋盘正中 + 一行「剩余 N 费 → 全体 -M」，
+			# 逐格伤害数字由 `_hit_unit` 自己那条 `fx_impact` 出，这里不再逐格贴图。
+			var ne_dmg := int(data.get("amount", 0))
+			_fx_push_pos(FxArt.SKILL_SHADOW,
+					Vector2(GRID_X + GRID_W / 2.0, GRID_Y + GRID_H / 2.0), n, 640, 224.0)
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 24),
+					"text": "夜蚀 · 剩余 %d 费用 → 全体敌人 -%d"
+						% [int(data.get("left", 0)), ne_dmg],
+					"col": Color("5a2a8a"), "start": n, "dur": 2000})
+			sfx.play("attack")
 		"batch_upgrade":
 			# 集体改造 8031（R86 → R394）：手牌 + 卡组里所有盟友/工事各 +3 生命。
 			var bu_n: int = int(data.get("count", 0))
@@ -13419,7 +13749,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("◆ 系统升级：%s → %d 费 / %d 攻 / %d 血（本场战斗永久）" % [
 					su_d.card_name, su_d.cost, su_d.power, su_d.health])
 				# R301：同上 —— 费用与四项数值都由卡面染色 / 数字表达，飘字不重复
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s 改造" % su_d.card_name,
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
@@ -13436,7 +13766,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("spell")
 				_say("◆ 轻量化：%s → %d 费 / 移速 %d（本场战斗永久）" % [
 					li_d.card_name, li_d.cost, li_d.move_speed])
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s -1费 +1移速" % li_d.card_name,
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 			else:
@@ -13453,7 +13783,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_say("◆ 批量传输：%d 张手牌 +1 攻 / +4 血（不加费），抽 %d 张卡" % [bt_n, bt_drw])
 			else:
 				_say("批量传输：手牌里没有盟友或工事（未改造），仍抽 %d 张卡" % bt_drw)
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 				# R394：8031 改名「集体改造」后，这里再写「批量改造」会被读成那张卡
 				"text": "改造 %d 张 · 抽 %d" % [bt_n, bt_drw],
 				"col": Color("8ad4f0"), "start": n, "dur": 2000})
@@ -13468,7 +13798,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("draw")
 				_say("◆ 无限装甲供能：「%s」入手（在手牌里 %d 费）"
 					% [ia_name, GameEngine.INF_ARMOR_FEED_COST])
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s · 0 费入手" % ia_name, "col": Color("8ad4f0"),
 					"start": n, "dur": 2000})
 			else:
@@ -13479,6 +13809,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				cr_name = (data["card"] as CardData).card_name
 			_say("乌鸦：%s 从弃牌堆回到手牌" % cr_name)
+		"regret_pick":
+			sfx.play("place")
+			var rp_name := "?"
+			if data.get("card") is CardData:
+				rp_name = (data["card"] as CardData).card_name
+			_say("懊悔：弃牌区的「%s」消失" % rp_name)
 		"whale_pick":
 			sfx.play("place")
 			var wp_name := "?"
@@ -13523,7 +13859,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				oh_name = (data["card"] as CardData).card_name
 			var oh_hp := int(data.get("hp", 0))
 			_say("返修：%s 从弃牌区回到手牌（生命 +%d，本场战斗永久）" % [oh_name, oh_hp])
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "%s 生命 +%d" % [oh_name, oh_hp],
 					"col": Color("8ad4f0"), "start": n, "dur": 2000})
 		"shadow_step_recall":
@@ -13568,7 +13904,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 		"stoneskin_hit":
 			var sk_left := int(data.get("left", 0))
 			# R466：石肤是「这一下打中时才压成 1」→ 飘字跟着撞击帧（否则比拳头早 ≈930ms）
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "石肤 → 1", "col": Color("6a6a6a"),
 					"start": _hit_cue_at(), "dur": 1600, "size": 18})
 			_say("石肤：这次伤害变为 1（原本 %d，还剩 %d 次）" % [
@@ -13580,7 +13916,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			var fp_debuff := int(data.get("debuff", 0))
 			if fp_cell.x >= 0:
 				_floaters.append({"pos": _cell_center(fp_cell) + Vector2(0, -16),
-						"sc": _grid_scroll, "text": "力量 -%d" % fp_debuff,
+						"sc": _grid_scroll, "text": "%s -%d" % [StatusBadge.word_of(StatusBadge.GLYPH_SWORD), fp_debuff],
 						"col": Color("a06ae0"), "start": n, "dur": 1500, "size": 18})
 			_say("恐惧投射：本回合力量 -%d（现 %d）" % [fp_debuff,
 					int(data.get("power", 0))])
@@ -13647,12 +13983,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("回响：%s -%d，力量 -%d" % [ec_name, int(data.get("dmg", 0)),
 					int(data.get("amount", 0))])
 		"dodge":
+			# 闪躲（9103，R846）：敌方单位力量 -X —— 与敲晕 / 威慑同一条降力表现（紫字 + 暗影图）。
+			var dd_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var dd_n := int(data.get("amount", 0))
 			sfx.play("spell")
-			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 62),
-					"text": "闪躲：所有友方单位获得嘲讽",
-					"col": UiTheme.KIND_EFFECT, "size": 16, "outline": 6,
-					"start": n, "dur": 2200})
-			_say("闪躲：本回合所有友方单位获得嘲讽")
+			if dd_cell.x >= 0:
+				_floaters.append({"pos": _cell_center(dd_cell) + Vector2(0, -6),
+						"sc": _grid_scroll, "text": "力量 -%d" % dd_n,
+						"col": Color("b06ad0"), "size": 16, "start": n, "dur": 1400})
+			_say("闪躲：敌方力量 -%d（本回合已打出 %d 张）" % [dd_n, dd_n])
 		"finisher":
 			# 收尾（9104）：手卡里仅剩它 → 22 伤（金色大飘字）；平时 6 伤（普通飘字）。
 			var fn_last := bool(data.get("last", false))
@@ -13670,6 +14009,70 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("spell")
 				_say("收尾：这是你手卡里仅剩的一张 → %d 点伤害（平时只有 4 点）"
 						% int(data.get("dmg", 0)))
+		"egg_throw":
+			# R856 鸭蛋投手：蛋沿**同一列**飞出去。
+			# ⚠️ 没有单独画「抛物线」：`path` 是引擎给的真实落点序列，沿它逐格推一张
+			#    `egg_gain`、每格错开 70ms —— 时间差冒充飞行，不必再改 `_draw` 的绘制层。
+			#    最后在真正的落脚点补一张大的，玩家能看清「蛋停在哪里」。
+			var et_path: Array = data.get("path", [])
+			var et_to: Vector2i = data.get("to", Vector2i(-1, -1))
+			var et_hit: Vector2i = data.get("hit", Vector2i(-1, -1))
+			var et_spill := int(data.get("spilled", 0))
+			var et_pierced := str(data.get("pierced", ""))
+			for et_i in et_path.size():
+				var et_c: Vector2i = et_path[et_i]
+				_fx_push_cell(FxArt.EGG_GAIN, et_c, n + et_i * 70, 360, 96.0)
+			if et_to.x >= 0:
+				_fx_push_cell(FxArt.EGG_GAIN, et_to, n + et_path.size() * 70, 520, 140.0)
+			sfx.play("place")
+			_shake(2.0, 150)
+			var et_msg := "🥚 鸭蛋投手：扔出金鸭蛋"
+			if et_hit.x >= 0:
+				et_msg += "，撞上第一个单位"
+			if et_spill > 0:
+				et_msg += "，%d 点穿到 HP" % et_spill
+				if et_pierced != "":
+					et_msg += "（打穿的是 %s）" % et_pierced
+			_say(et_msg)
+			queue_redraw()
+		"egg_fury":
+			# R856 无蛋形态：每个自己回合开始力量 +3。飘字写在投手头顶，
+			# 让「它正在变强」这件事看得见 —— 否则玩家只会觉得莫名其妙越打越疼。
+			var ef_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var ef_amt := int(data.get("amount", 0))
+			if ef_cell.x >= 0:
+				_fx_push_cell(FxArt.EGG_GAIN, ef_cell, n, 600, 124.0)
+				_floaters.append({"pos": _cell_center(ef_cell) + Vector2(0, -34),
+					"sc": _grid_scroll, "text": "力量 +%d" % ef_amt,
+					"col": Color("ffcf4a"), "start": n, "dur": 1500})
+			_say("🥚 鸭蛋投手：没有蛋了 → 力量 +%d（现 %d）" % [ef_amt, int(data.get("power", 0))])
+			queue_redraw()
+		"egg_break":
+			# R856 金鸭蛋被打碎 —— 店长要的那个「重新获得金鸭蛋」特殊演出就在这里。
+			# ⚠️ 光爆落在**投手脚下**（`pitcher`），不是蛋碎的位置：玩家要看懂的是
+			#    「它又拿到蛋了、而且退回后排了」，而不是「一个蛋没了」。
+			var eb_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var eb_pit: Vector2i = data.get("pitcher", Vector2i(-1, -1))
+			var eb_egg: Vector2i = data.get("egg", Vector2i(-1, -1))
+			if eb_cell.x >= 0:
+				_fx_push_cell(FxArt.BLAST, eb_cell, n, 380, 118.0)
+			if eb_pit.x >= 0:
+				_fx_push_cell(FxArt.EGG_GAIN, eb_pit, n + 180, 900, 210.0)
+				_floaters.append({"pos": _cell_center(eb_pit) + Vector2(0, -44),
+					"sc": _grid_scroll, "text": "重新获得金鸭蛋",
+					"col": Color("ffd45e"), "outline": 6, "size": 19,
+					"start": n + 180, "dur": 1900})
+			sfx.play("spell")
+			var eb_msg := "🥚 金鸭蛋破碎"
+			if data.get("card") is CardData:
+				eb_msg += "：你获得一张随机史诗卡「%s」" % (data["card"] as CardData).card_name
+			if eb_pit.x >= 0:
+				eb_msg += "；鸭蛋投手重新获得金鸭蛋"
+				if eb_egg.x >= 0:
+					eb_msg += "并退回后排"
+			_say(eb_msg)
+			queue_redraw()
+
 		"egg_token":
 			sfx.play("place")
 			var eg_name := "?"
@@ -13709,7 +14112,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			if data.get("card") is CardData:
 				kg_name = (data["card"] as CardData).card_name
 			var kg_center := _cell_center(data["cell"]) if data.has("cell") \
-					else Vector2(WINDOW_W / 2, OWN_HAND_Y - 30)
+					else Vector2(HAND_CX, OWN_HAND_Y - 30)
 			# R459：`start` 走 `grow_at`（= 命中 + 破灭留帧 + 呼吸），不再是 `_now()`。
 			# 否则这条「+2 攻」比自己的拳头还早 900 多毫秒冒出来，看起来像先加工再打人。
 			_floaters.append({"pos": kg_center + Vector2(0, -24), "sc": _grid_scroll,
@@ -13791,7 +14194,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_say("关卡成长：敌方 %d 个单位攻击力 %+d" % [
 					int(data.get("count", 0)), int(data.get("stacks", 0))])
 		"self_heal":
-			_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 30),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30),
 					"text": "+%d" % int(data.get("healed", 0)),
 					"col": Color("2a9d55"), "start": n, "dur": 1800, "size": 22})
 			var _sh := int(data.get("healed", 0))
@@ -13800,6 +14203,11 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				else ("黄桃罐头" if _ph > 0 else "自愈")
 			_say("%s：战斗结束回复 %d 点生命（剩余 %d）" % [
 					_src, _sh, int(data.get("hp", 0))])
+			if int(data.get("max_gain", 0)) > 0:
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 54),
+						"text": "最大生命 +%d" % int(data.get("max_gain", 0)),
+						"col": Color("a9b83c"), "start": n, "dur": 2000, "size": 18})
+				_say("黄桃罐头：最大生命 +%d" % int(data.get("max_gain", 0)))
 		"destroy":
 			var cell: Vector2i = data["cell"]
 			var center := _cell_center(cell)
@@ -13862,7 +14270,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 这里只在手牌上方飘一句「送葬 +N 张」，让玩家知道这张牌是**效果卡**给的。
 			var fn_drawn := int(data.get("drawn", 0))
 			if fn_drawn > 0:
-				_floaters.append({"pos": Vector2(WINDOW_W / 2, OWN_HAND_Y - 62),
+				_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 62),
 						"text": "送葬 +%d 张" % fn_drawn,
 						"col": UiTheme.KIND_EFFECT, "start": n, "dur": 1600, "size": 20})
 		"blast":
@@ -13917,7 +14325,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("9ad8ff"), "big": false})
 			_bursts.append({"pos": fz_pos, "sc": _grid_scroll, "start": fz_at + 90, "dur": 520,
 					"col": Color("e8f6ff"), "big": false})
-			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": "冰封",
+			_floaters.append({"pos": fz_pos + Vector2(0, -14), "sc": _grid_scroll, "text": StatusBadge.word_of(StatusBadge.GLYPH_ICE),
 					"col": Color("2b6fb3"), "start": fz_at, "dur": 1500, "size": 20})
 			_say("❄ %s 被冰封：下回合不能行动" % str(data.get("name", "")))
 		"stun":
@@ -13930,7 +14338,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_bursts.append({"pos": st_pos, "sc": _grid_scroll, "start": st_at, "dur": 560,
 					"col": Color("f0c040"), "big": false})
 			_floaters.append({"pos": st_pos + Vector2(0, -14), "sc": _grid_scroll,
-					"text": "眩晕", "col": Color("8a6d1f"), "start": st_at, "dur": 1500, "size": 20})
+					"text": StatusBadge.word_of(StatusBadge.GLYPH_STAR), "col": Color("8a6d1f"), "start": st_at, "dur": 1500, "size": 20})
 			_say("💫 %s 被眩晕：下回合不能行动" % str(data.get("name", "")))
 		"field_place":
 			# 场地卡（R74）放置：斜纹格亮一下 + 提示挂在哪一格
@@ -14170,7 +14578,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				sfx.play("spell")
 				# 起点固定在屏幕下方中央（手牌区上方）—— 引擎事件不带手卡槽位，
 				# 而卡在事件之前就已经离手了，取不到它原来那格。
-				_lone_fx.append({"from": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 26.0),
+				_lone_fx.append({"from": Vector2(HAND_CX, OWN_HAND_Y - 26.0),
 						"pos": _cell_center(lw_cell2), "sc": _grid_scroll, "start": n,
 						"dur": LONE_BITE_MS + LONE_SWALLOW_MS + 120,
 						"hold": LONE_ABSORB_MS})
@@ -14204,6 +14612,26 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_floaters.append({"pos": sb_pos + sb_off, "sc": _grid_scroll,
 					"text": "%s 力量 -%d" % [sb_lab, int(data.get("amount", 0))],
 					"col": UiTheme.STAT_POWER, "start": sb_at, "dur": 1300, "size": 16})
+		"anthem":
+			# 激励乐章（9267，R776）：本回合全场盟友 +4 力量，其他职业盟友改为 +6。
+			# 飘字写清两个数 —— 同一张卡两种数值，只写一个会被读成「另一个是 bug」。
+			sfx.play("spell")
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2, GRID_Y - 12),
+					"text": "激励乐章 · %d 个盟友 +%d 力量（其他职业 +%d）"
+						% [int(data.get("count", 0)), int(data.get("power", 0)),
+							int(data.get("other_power", 0))],
+					"col": Color("4fb0d8"), "start": n, "dur": 1500})
+		"organ":
+			# 管风琴（9268，R776）：每用一张技能卡 → 所有敌人各 3 伤（场上每台各结算一份）。
+			# 飘字**按格逐个挂**（引擎给的是真正命中的格子）：命中几个写几处，
+			# 不做「全体 -N」那种假汇总。
+			sfx.play("hit")
+			for og_c: Vector2i in (data.get("cells", []) as Array):
+				var og_pos := _cell_center(og_c)
+				_fx_push_cell(FxArt.SKILL_SHADOW, og_c, n, 460, 150.0)
+				_floaters.append({"pos": og_pos + Vector2(0, -12), "sc": _grid_scroll,
+						"text": "管风琴 -%d" % int(data.get("dmg", 0)),
+						"col": Color("3d7fb8"), "start": n, "dur": 1200})
 		"gale":
 			# 疾风（9091）：随机敌人吃 2 伤
 			var ga_pos := _cell_center(data.get("cell", Vector2i(-1, -1)))
@@ -14359,16 +14787,19 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_hand_fly.append({"mode": "fade", "start": n, "dur": 300})
 			_earring_missed = 0
 		"wake":
-			# 恶魔鸭（9116，R63 / R72 补特效）：沉睡结束 / 被击中提前醒来。
+			# 沉睡单位（恶魔鸭 9116 / 激光巨炮 9241 …，R63 / R72 补特效）：沉睡结束 / 被击中提前醒来。
 			# R72：原来只有一圈爆点 + 飘字，「挣脱束缚」的观感不足；补一圈向外扩散的
 			# 紫色冲击环（从卡面中心扩散出去），和常驻的沉睡环在颜色上呼应 ——
 			# 玩家扫一眼就知道「刚才那圈紫的就是这个状态，现在它没了」。
 			var wk_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
 			var wk_pos:= _cell_center(wk_cell)
-			var wk_txt := "恶魔鸭 苏醒"
+			# R820：沉睡不再只属于恶魔鸭 —— 飘字按**卡名**取，谁醒就显示谁。
+			var wk_card := data.get("card", null) as CardData
+			var wk_name := str(wk_card.card_name) if wk_card != null else ""
+			var wk_txt := ("%s 苏醒" % wk_name) if wk_name != "" else "苏醒"
 			var wk_col := Color("9b6bff")
 			if bool(data.get("hurt", false)):
-				wk_txt = "恶魔鸭 提前醒来"
+				wk_txt = ("%s 提前醒来" % wk_name) if wk_name != "" else "提前醒来"
 				wk_col = Color("d84a12")
 			# 挣脱环：2 圈错峰扩散的描边圆（不是实心块，保留卡面可读性）
 			for _wi in 2:
@@ -14454,8 +14885,13 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 不眠（9101）：没手牌时补抽
 			_say("🌙 不眠：手里没牌 → 抽 1 张「%s」" % str(data["card"].card_name))
 		"shadow_cat":
-			var sc_c = data.get("card")
-			_say("🐈 影子猫：%s" % (("「%s」加入手卡" % sc_c.card_name) if sc_c != null else "卡组里没有技能卡"))
+			# 影子猫（8006，R846）：本回合其他卡满 3 张 → 抽 2 张；不满就落空。
+			var sc_got := int(data.get("draw", 0))
+			if sc_got > 0:
+				_say("🐈 影子猫：本回合已打 %d 张 → 抽 %d 张" % [
+						int(data.get("plays", 0)), sc_got])
+			else:
+				_say("🐈 影子猫：本回合其他卡不足 3 张 → 没有抽牌")
 		"shadow_demon":
 			# 影魔（8007）：技能牌 -1 费 + 0 费技能卡加生命
 			_say("😈 影魔：手卡技能牌本回合 -1 费；0 费技能卡 %d 张 → 生命 +%d（当前 %d）" % [
@@ -14544,17 +14980,15 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# R331 惊喜运单 8079：回合开始开面板（由 `_sync_pick` 自动弹）。
 			_say("◈ 惊喜运单：从卡组选一张卡 → 变成随机卡并加入手卡")
 		"instinct":
-			# R332 本能 9176：随机打出抽牌库中 3 张 ≤1 费技能卡（免费打出）。
-			# 状态栏只写张数（264px ≈ 19 全角字），卡名列表走飘字。
-			var in_cards: Array = data.get("cards", [])
-			_say("◈ 本能：随机打出 %d 张技能卡" % in_cards.size())
-			if not in_cards.is_empty():
-				var in_names: Array[String] = []
-				for _in in in_cards:
-					in_names.append(str(_in))
-				_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
-						"text": "本能 · " + "、".join(in_names),
-						"col": Color("b9a6ff"), "size": 15, "start": n, "dur": 1700})
+			# R845 本能 9176（改成 2 费效果卡）：接下来一次 >1 的伤害变 1，然后抽 2 张。
+			# 引擎在 `_damage_player()` 里发，此时 HP 飘字已经由 `hp` 事件自己出，
+			# 这里只补一句因果 + 顶部飘字，别在 HP 横幅上再叠一层数字。
+			_say("◈ 本能：挡下 %d 点伤害 → 变为 %d，抽 %d 张"
+					% [int(data.get("blocked", 0)), int(data.get("capped", 0)),
+					int(data.get("draw", 0))])
+			_floaters.append({"pos": Vector2(GRID_X + GRID_W / 2.0, GRID_Y + 34.0),
+					"text": "本能 · 挡下 %d 点" % int(data.get("blocked", 0)),
+					"col": Color("b9a6ff"), "size": 15, "start": n, "dur": 1700})
 		"surprise_pick":
 			# R331 惊喜运单 8079：选完一张。
 			var sp_c: CardData = data.get("card", null)
@@ -14576,7 +15010,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			# 飘字只写「拿到了什么」，有时间维度（start + dur → 位移 + 淡出）。
 			var pc_d := int(data.get("draw", 1))
 			_say("◇ 爆米花：没用技能指向敌人 → 下回合多抽 %d 张" % pc_d)
-			_floaters.append({"pos": Vector2(WINDOW_W / 2.0, OWN_HAND_Y - 30.0),
+			_floaters.append({"pos": Vector2(HAND_CX, OWN_HAND_Y - 30.0),
 					"text": "爆米花 · 下回合 +%d 抽" % pc_d,
 					"col": Color("f0d68a"), "size": 15, "start": n, "dur": 1700})
 		"lucky7":
@@ -14611,6 +15045,58 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 				_floaters.append({"pos": _cell_center(wc) + Vector2(0, -24),
 						"sc": _grid_scroll, "text": "风妖精 -%d" % wf_d,
 						"col": Color("7fd2a0"), "size": 15, "start": n, "dur": 1500})
+		"sun_ring":
+			# R810 太阳指环（6082）：对所有敌方单位 3 点伤害。R812 起**每场战斗只放一次**。
+			# 与风妖精同一套「全体 ping」演出，只换色：日轮 = 金 + 象牙白。
+			# 一场就这一下 → 爆点换成 big + 加一次轻抖，让它有分量；
+			# ⚠️ 仍**不弹横幅** —— 回合头本来就有「我方回合 · 第 N 回合」的横幅，
+			#    这里是同一拍触发的，再压一条会被它盖掉（不是「每回合所以不弹」那个理由了）。
+			sfx.play("spell")
+			_shake(4.0, 260)     # R812：一场只这一下，给点分量（幅度小于缺陷时钟的 6.0）
+			var sr_d := int(data.get("dmg", 0))
+			var sr_n := int(data.get("hits", 0))
+			_say("☀ 太阳指环：对所有敌方单位造成 %d 点伤害（%d 个目标）" % [sr_d, sr_n])
+			var sr_i := 0
+			for sc: Vector2i in (data.get("cells", []) as Array):
+				var sr_at := n + sr_i * 60
+				_fx_push_cell(FxArt.SKILL_HOLY, sc, sr_at, 560, 132.0)
+				_bursts.append({"pos": _cell_center(sc), "sc": _grid_scroll,
+						"start": sr_at, "dur": 620, "col": Color("f2c14e"), "big": true})
+				_floaters.append({"pos": _cell_center(sc) + Vector2(0, -24),
+						"sc": _grid_scroll, "text": "太阳指环 -%d" % sr_d,
+						"col": Color("f0c24e"), "size": 15, "start": sr_at, "dur": 1400})
+				sr_i += 1
+		"harpoon":
+			# R810 海妖鱼叉（6083）：同一回合第 3 次命中同一敌人 → 追加 HARPOON_DMG 点
+			# （R812 起为 4 点，且这一笔**不进自身的命中计数**）。
+			# 这一下是**追加伤害**，`fx_impact` 可能被「同格 700ms 只演一次」吞掉，
+			# 所以这里单独给一次更重的爆点 + 自己的飘字，保证「追加的那一下」看得见。
+			sfx.play("hit")
+			var hp_cell: Vector2i = data.get("cell", Vector2i(-1, -1))
+			var hp_d := int(data.get("amount", 0))
+			var hp_n := int(data.get("hits", 0))
+			if hp_cell.x >= 0:
+				# 45ms 往后挪一点：让它压在「第 3 次命中」那一下之后，读作「追加」而不是「同一击」。
+				var hp_at := n + 45
+				_bursts.append({"pos": _cell_center(hp_cell), "sc": _grid_scroll,
+						"start": hp_at, "dur": 620, "col": Color("37b3c8"), "big": true})
+				_floaters.append({"pos": _cell_center(hp_cell) + Vector2(0, -34),
+						"sc": _grid_scroll, "text": "海妖鱼叉 +%d" % hp_d,
+						"col": Color("6fe0ea"), "size": 17, "start": hp_at, "dur": 1500})
+			_say("🔱 海妖鱼叉：本回合第 %d 次命中 → 追加 %d 点伤害" % [hp_n, hp_d])
+		"defect_clock":
+			# R810 缺陷时钟（6084）：第 12 张牌打完 → 结束本回合、**跳过敌方回合**、
+			# 直接开始新的我方回合。这是「白赚一个回合」的大事件，必须明确提示，
+			# 否则玩家只会看到手牌突然全换掉、以为出 bug。
+			# 不新增贴图：横幅 + 震屏 + 表盘金脉冲（棋盘中线一圈），全部复用现成件。
+			sfx.play("turn")
+			_show_banner("缺陷时钟 · 跳过敌方回合", Color("c8a24a"), 1700)
+			_shake(6.0, 320)
+			_bursts.append({"pos": Vector2(GRID_X + GRID_W * 0.5, GRID_Y + GRID_H * 0.5),
+					"start": n, "dur": 780, "col": Color("e8d08a"), "big": true})
+			# R836：棋盘正中浮起一只大钟面，指针转一整圈（用户要求「时针转动的小动画」）
+			_start_clock_fx()
+			_say("⏳ 缺陷时钟：本场第 %d 张牌 → 回合结束，立即开始新的我方回合" % int(data.get("at", 0)))
 		"boss_phase":
 			# R356 启示者转阶段 —— 用户口径「转换阶段需要有明确的动画提示，并重新弹出
 			# 敌方效果显示」：横幅 + 震屏 + 本体双层爆点 + 镜头收过去，然后把
@@ -14891,7 +15377,7 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 			_bursts.append({"pos": _cell_center(ec_cell), "sc": _grid_scroll, "start": n,
 					"dur": 540, "col": Color("e2a03a"), "big": false})
 			_floaters.append({"pos": _cell_center(ec_cell) + Vector2(0, -20), "sc": _grid_scroll,
-					"text": "力量 +%d" % GameEngine.EMERGENCY_CALL_ATK,
+					"text": "%s +%d" % [StatusBadge.word_of(StatusBadge.GLYPH_SWORD), GameEngine.EMERGENCY_CALL_ATK],
 					"col": Color("e2a03a"), "size": 16, "start": n, "dur": 1500})
 			_say("📣 紧急呼叫：%s 入场（力量 +%d）" % [ec_name, GameEngine.EMERGENCY_CALL_ATK])
 		"revelator_cover":
@@ -15814,6 +16300,93 @@ func _draw_bursts() -> void:
 			draw_line(pos + dir * near, pos + dir * far, lcol, 2.0 if big else 1.5)
 
 
+func _start_clock_fx() -> void:
+	## R836：缺陷时钟的「时针转动」演出起点（用户口径：战斗区域正中）。
+	## ⚠️ 与回合结算的关系写在这里，免得以后有人来「补齐时序」：
+	##    引擎 `end_turn(true)` 是同步完成的（弃手牌 / 超负荷 / 起新回合都在同一帧里跑完），
+	##    这一段动画**只是把它演出来**。不延迟换牌、不排队等动画 ——
+	##    玩家看到的就是「钟开始转的那一下，手牌已经换了」，正是「同步进行」的意思。
+	_clock_fx = {"start": _now(), "dur": CLOCK_FX_MS,
+			"pos": Vector2(GRID_X + GRID_W * 0.5, GRID_Y + GRID_H * 0.5),
+			"sc": _grid_scroll}
+
+
+func _draw_clock_fx() -> void:
+	## R836：缺陷时钟的时针转动。三段节奏：
+	##   0.00~0.16  钟面弹入（0.84 → 1.0）+ 金色光晕环
+	##   0.16~0.74  指针顺时针转**整整一圈**（ease-out，末段越来越慢）
+	##   0.74~1.00  卡住抖两下（坏掉的钟）+ 整体淡出
+	## 指针用代码画：连续旋转贴图会有像素偏移与描边锯齿，角度也对不上表盘刻度。
+	if _clock_fx.is_empty():
+		return
+	var t := float(_now() - int(_clock_fx.get("start", 0))) / float(int(_clock_fx.get("dur", 1)))
+	if t < 0.0 or t >= 1.0:
+		return
+	var c := _fx_pos(_clock_fx)
+	# 弹入 + 收尾淡出
+	var s := 1.0
+	if t < 0.16:
+		var p := t / 0.16
+		s = lerpf(0.84, 1.0, 1.0 - pow(1.0 - p, 3.0))
+	var a := 1.0
+	# 淡出压到 92% 才开始：抖动那两下（74%~100%）得在还看得清的时候发生
+	if t > 0.92:
+		a = maxf(0.0, 1.0 - (t - 0.92) / 0.08)
+	var d := CLOCK_FX_D * s
+	# ① 外光晕：三层金色软环，往外越来越淡（把钟面从棋盘底里托出来）
+	for i in 3:
+		var gr := Color("e8d08a")
+		gr.a = 0.20 * a * (1.0 - float(i) * 0.3)
+		draw_arc(c, d * (0.5 + 0.040 * float(i + 1)), 0.0, TAU, 48, gr, 5.5 - float(i) * 1.6)
+	# ② 表盘（缺图 → 程序化）
+	var tex := UiAssets.clock_face()
+	if tex != null:
+		var fc := c - CLOCK_FACE_PIVOT * d      # 轴座落在 c：整张表盘反向平移
+		draw_texture_rect(tex, Rect2(fc - Vector2(d, d) * 0.5, Vector2(d, d)), false,
+				Color(1.0, 1.0, 1.0, a))
+	else:
+		_draw_clock_face_fallback(c, d, a)
+	# ③ 指针：从 12 点位置转一整圈回到 12 点，末段卡顿抖两下
+	var spin := clampf((t - 0.16) / 0.58, 0.0, 1.0)
+	var ang := -PI * 0.5 + TAU * (1.0 - pow(1.0 - spin, 2.2))
+	if spin >= 1.0:
+		var jt := clampf((t - 0.74) / 0.26, 0.0, 1.0)
+		ang += sin(jt * 34.0) * 0.085 * (1.0 - jt)
+	var dir := Vector2(cos(ang), sin(ang))
+	# 时针比例（用户口径「时针」）：短而粗，长度落在刻度内圈之内，不压刻度
+	var tip := c + dir * (d * 0.29)
+	var tail := c - dir * (d * 0.08)
+	var hb := Color(0.16, 0.13, 0.09, a)
+	var hg := Color(0.85, 0.66, 0.25, a)
+	# 先深褐描边再压金芯 —— 与卡面同一套「细黑描边 + 平涂」
+	draw_line(tail, tip, hb, maxf(1.0, 8.0 * s), true)
+	draw_line(c - dir * (d * 0.05), tip - dir * 1.5, hg, maxf(1.0, 4.6 * s), true)
+	# 针尖小菱形（时针的读法）：先深褐外廓、再金芯，才有描边感
+	var side := Vector2(-dir.y, dir.x)
+	draw_colored_polygon(PackedVector2Array([
+			tip + dir * (6.0 * s), tip + side * (4.4 * s),
+			tip - dir * (3.6 * s), tip - side * (4.4 * s)]), hb)
+	draw_colored_polygon(PackedVector2Array([
+			tip + dir * (4.0 * s), tip + side * (2.5 * s),
+			tip - dir * (2.2 * s), tip - side * (2.5 * s)]), hg)
+	# ④ 中心轴帽
+	draw_circle(c, maxf(1.0, 6.4 * s), Color(0.16, 0.13, 0.09, a))
+	draw_circle(c, maxf(0.5, 4.2 * s), Color(0.94, 0.90, 0.82, a))
+
+
+func _draw_clock_face_fallback(c: Vector2, d: float, a: float) -> void:
+	## R836：钟面素材缺失时的程序化表盘（暗底 + 金环 + 12 个刻度）。
+	## 项目纪律：特效缺图必须能退化，不能黑屏也不能刷报错。
+	draw_circle(c, d * 0.5, Color(0.13, 0.11, 0.09, 0.88 * a))
+	draw_arc(c, d * 0.5, 0.0, TAU, 48, Color(0.85, 0.66, 0.25, a), 3.0)
+	draw_circle(c, d * 0.42, Color(0.94, 0.90, 0.82, 0.92 * a))
+	for i in 12:
+		var ta := -PI * 0.5 + TAU * float(i) / 12.0
+		var tv := Vector2(cos(ta), sin(ta))
+		draw_line(c + tv * (d * 0.33), c + tv * (d * 0.39),
+				Color(0.16, 0.13, 0.09, a), 3.2 if i % 3 == 0 else 2.0)
+
+
 func _draw_trap_fx() -> void:
 	## R669：陷阱触发的**素材图**演出 —— 四张 codex 黑底发光图（亮度转 alpha），
 	## 由 UiAssets.trap_fx(id) / TrapArt.draw_trigger_fx() 取用。店长口径：
@@ -16182,7 +16755,7 @@ static func _rev_hash(a: int, b: int, c: int) -> float:
 
 
 func _draw_wake_rings() -> void:
-	## 恶魔鸭苏醒（R72）：一圈圈向外扩散并淡出的**空心**挣脱环。
+	## 沉睡单位苏醒（R72；恶魔鸭 / 激光巨炮等通用）：一圈圈向外扩散并淡出的**空心**挣脱环。
 	## 为什么不用 _bursts：那个是打击爆点（带放射火花、收缩的内圈），观感是「被打」。
 	## 苏醒是「挣脱束缚」，用**只扩张、不收缩、无线条**的环，且比爆点晚画（压在上层）——
 	## 常驻的紫色沉睡环正在同一位置消失，这一圈紫色扩散正好接上，状态变化的因果一眼可见。
@@ -16580,18 +17153,51 @@ func _draw_floaters() -> void:
 		var t := clampf(float(n - int(f.start)) / int(f.dur), 0.0, 1.0)
 		if t <= 0.0:
 			continue  # 延迟启动的飘字
-		var alpha := 1.0 - t * t
-		var pos: Vector2 = _fx_pos(f) + Vector2(0, -30.0 * t)  # R171：格锚飘字随棋盘滚动补正
+		# R171：格锚飘字随棋盘滚动补正
+		var base_pos: Vector2 = _fx_pos(f)
 		# R117：棋盘上沿从 136 移到 52，`GRID_Y - 36 / -62` 这类飘字起点会钻到顶栏
 		# 底下（顶栏 36px，且是子节点、画在本层之上）→ 统一压在顶栏之下。
-		pos.y = maxf(pos.y, 44.0)
+		base_pos.y = maxf(base_pos.y, 44.0)
 		var col: Color = f.col
-		# 伤害数字更大更醒目；文字类（法术/击破）保持原字号
-		var size := int(f.get("size", 20 if str(f.text).begins_with("-") else 15))
-		# R140：飘字也改成**带背景条**（R138 的暗描边在地图底图上仍不够清晰，用户实测）。
-		col.a = alpha
-		_draw_string_box_center(_font_bold, size, str(f.text), pos, col,
-				Color(TEXT_BG.r, TEXT_BG.g, TEXT_BG.b, TEXT_BG.a * alpha))
+		var txt := str(f.text)
+		# R770：数字与说明文字**分两套画法** —— 数字走 GBF 风弹字，说明保持带底条。
+		# ⚠️ 形状判据只认「整串带符号整数」；**别拿正负当判据** —— 伤害数字本身是负数。
+		var is_num := DmgNumber.is_number_text(txt)
+		# R764 宣传录制：说明类飘字（「复制入手」「冰封」这类）固定是中文，直接不画；
+		# 伤害 / 治疗数字照旧 —— 宣传片要的正是那套新数字素材。
+		if _trailer_clean and not is_num:
+			continue
+		# 每轮都先把变换钉回屏幕空间的震动 —— 上一轮的数字改过 transform，
+		# 说明类分支不改 → 不钉回来就会被上一张数字的缩放 / 旋转带歪。
+		draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+		if not is_num:
+			# R770b：说明类飘字（法术名 / 「接下 5」/「冰封」）从「便利贴方块」换成
+			# **胶囊徽标** —— 它们要**读**，所以不进数字那套弹性弹字；但样式得跟
+			# 数字同代，不然同屏一个贴纸一个大字。
+			var alpha := 1.0 - t * t
+			_paint_status_label(_font_bold, base_pos + Vector2(0, -30.0 * t), txt,
+					col, alpha, int(f.get("size", 15)))
+			continue
+		# R770：伤害 / 治疗数字 —— 弹性 pop + 双层描边 + 厚度层 + 顶高光。
+		# 字号仍以调用方给的 `size`（历史默认 20）为基准，按分级再放大一档。
+		var tier := DmgNumber.tier_of_amount(DmgNumber.amount_of_text(txt))
+		var an := DmgNumber.anim(t)
+		var px := int(round(float(f.get("size", 20)) * DmgNumber.size_scale(tier)))
+		var sc := float(an["scale"])
+		var center := base_pos + Vector2(float(an["dx"]), float(an["dy"]))
+		# 变换叠在**屏幕空间的震动**上（此刻棋盘变换已在 _draw() 里复位）
+		draw_set_transform(_shake_cur + center, float(an["rot"]), Vector2(sc, sc))
+		_paint_dmg_number(_font_bold, Vector2.ZERO, px, txt, float(an["alpha"]),
+				DmgNumber.palette(tier, col), tier)
+	draw_set_transform(_shake_cur, 0.0, Vector2.ONE)
+
+
+func _paint_dmg_number(font: Font, center: Vector2, px: int, text: String, alpha: float,
+		pal: Dictionary, tier: int) -> void:
+	## R770：GBF 风伤害数字的笔法 —— **R774d 起唯一实现在 `DmgNumber.paint()`**。
+	## 留这一层只是为了不动调用点（飘字 / 拖卡预览两处坐标语义不同），内部纯转发。
+	## ⚠️ 仍然不加变换：`center` 由调用方按自己那套空间算好再传进来。
+	DmgNumber.paint(self, font, center, px, text, alpha, pal, tier)
 
 
 func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
@@ -16601,15 +17207,74 @@ func _draw_dmg_preview(cell: Vector2i, info: Dictionary) -> void:
 	## `preview_spell_damage`）；`dmg < 0` = 引擎自己都拿不准 → **什么都不画**。
 	## ⚠️ 0 也要画：玩家得知道「这一下打不穿护甲 / 被挡掉了」，不画会被读成「没生效」。
 	## 位置挑右下角：卡面主体居中、血条在底部正中、状态徽标在顶部 —— 只剩这里不挡东西。
+	##
+	## R770：深红硬方块底板 → 粗描边数字。方块压在卡图上像贴纸、还挡掉一块画面；
+	## 描边能同样地把数字抠出来却不挡内容。字号跟最终伤害分级（重击更大更金），
+	## 扫一眼就知道这一下值不值得打。
 	var d := int(info.get("dmg", -1))
 	if d < 0:
 		return
 	var r := _cell_rect(cell)
-	var text := ("-%d" % d) if d > 0 else "0"
-	var fg := Color("fff1e0") if d > 0 else Color("ddd6c8")
-	var bg := Color(0.42, 0.09, 0.07, 0.92) if d > 0 else Color(0.17, 0.16, 0.15, 0.86)
-	_draw_string_box_center(_font_bold, UI_FS_LABEL, text,
-			Vector2(r.position.x + r.size.x - 22.0, r.position.y + r.size.y - 13.0), fg, bg)
+	var txt := ("-%d" % d) if d > 0 else "0"
+	var tier := DmgNumber.TIER_NORMAL
+	var pal := {}
+	if d > 0:
+		tier = DmgNumber.tier_of_amount(d)
+		pal = DmgNumber.palette(tier, UiTheme.SIDE_FOE)
+	else:
+		# 打不穿：灰调 —— 不是「没生效」，是「生效了但被吃掉了」，颜色要区别于普通伤害
+		pal = {"core": Color("d9d3c6"), "depth": Color("5c564c"),
+				"edge": Color("14120f"), "hi": Color(1.0, 1.0, 1.0, 0.26)}
+	var px := DmgNumber.preview_size(tier)
+	var w := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	# 右对齐、贴着格子右下角（字的下缘离格线只留 4px）—— 那里是卡面唯一没有
+	# 正文 / 血条的区域；再往上就会被卡面自己的数值行吃掉。
+	var center := Vector2(r.end.x - 10.0 - w * 0.5, r.end.y - 6.0 - float(px) * 0.45)
+	# R770：卡图是亮的 —— 只靠描边，浅色卡面上根本读不出「-10」。垫一块**小圆角暗底**：
+	# 比旧版那个硬方块窄一大圈，但压得够实（不然会和卡面数值糊成一片）。
+	var plate := Rect2(center.x - w * 0.5 - 8.0, center.y - float(px) * 0.52 - 3.0,
+			w + 16.0, float(px) + 6.0)
+	_dmg_plate(plate, Color(0.045, 0.034, 0.027, 0.86), 7)
+	# R770b：再加一圈同色相细边 —— 纯黑块压在浅卡面上像贴了块膏药，
+	# 有边才像「数值芯片」，也顺手把它的边和卡面数值行分开。
+	var dep: Color = pal["depth"]
+	_dmg_edge(plate, Color(dep.r, dep.g, dep.b, 0.88), 7)
+	_paint_dmg_number(_font_bold, center, px, txt, 1.0, pal, tier)
+
+
+func _dmg_plate(rect: Rect2, col: Color, rad: int) -> void:
+	## R770：伤害数字的**唯一底板**（圆角暗块）。复用同一个 StyleBoxFlat 实例 ——
+	## 预览一次最多 5 格、每帧重画，逐帧 new 属于白给的分配。
+	if _dmg_plate_box == null:
+		_dmg_plate_box = StyleBoxFlat.new()
+		_dmg_plate_box.anti_aliasing = true
+	_dmg_plate_box.bg_color = col
+	_dmg_plate_box.set_corner_radius_all(rad)
+	draw_style_box(_dmg_plate_box, rect)
+
+
+func _dmg_edge(rect: Rect2, col: Color, rad: int) -> void:
+	## R770b：1px 色相细边（透明底 + 一圈 border）。Capsule 的圆角直接给 rad
+	## （= 高的一半），StyleBoxFlat 会自动夹到合法范围。
+	if _dmg_edge_box == null:
+		_dmg_edge_box = StyleBoxFlat.new()
+		_dmg_edge_box.anti_aliasing = true
+		_dmg_edge_box.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+		_dmg_edge_box.set_border_width_all(1)
+	_dmg_edge_box.border_color = col
+	_dmg_edge_box.set_corner_radius_all(rad)
+	draw_style_box(_dmg_edge_box, rect)
+
+
+func _paint_status_label(font: Font, center: Vector2, text: String, tint: Color,
+		alpha: float, px: int) -> void:
+	## R770c：说明类飘字的**唯一入口**。真正的画法在 `StatusBadge.paint()` ——
+	## 那里要按关键词配图案（冰封 → 雪晶 / 中毒 → 毒滴…），比一层「胶囊 + 描边字」
+	## 重得多；留在本函数里会把 battle_scene 再撑长两百行。
+	## ⚠️ 仍然**不改变换**（坐标是屏幕空间中心），与 `_paint_dmg_number()` 同规矩。
+	# R770c：短状态名在 15px 上图案只有 8px，细节全糊 → 抬到 16 起画。
+	StatusBadge.paint(self, font, center, text, tint, alpha, maxi(px, 16))
+
 
 
 func _draw_highlights() -> void:
@@ -16891,7 +17556,7 @@ func _end_turn_ready() -> bool:
 	if engine.current_side != GameEngine.SIDE_SELF:
 		return false
 	if engine.crow_pending or engine.whale_pending or engine.endless_pending \
-			or engine.rebirth_pending or _recall_pending():
+			or engine.rebirth_pending or engine.regret_pending or _recall_pending():
 		return false
 	if engine.foresight_mode or engine.foresight_pick:
 		return false
@@ -17039,7 +17704,7 @@ func _draw_enemy_effect_popup() -> void:
 		if int(m["count"]) > 1:
 			nm += " ×%d" % int(m["count"])
 		items.append({"name": nm,
-				"desc": CardText.naturalize_card(m["card"]).replace("\n", " ").strip_edges()})
+				"desc": CardText.naturalize_detail(m["card"]).replace("\n", " ").strip_edges()})
 	var lay := ee_popup_layout(_font, items, max_w, bottom - top)
 	var lfs := int(lay["fs"])
 	var lh := float(lay["line_h"])
@@ -17422,6 +18087,8 @@ func _draw_relic_bar() -> void:
 		# R577f：唯一动态层 —— 暖黄渐隐拖尾弧，画在蓝边之后，每格错相 22°。
 		if lit577f:
 			_draw_relic_sweep(rect, i)
+		# R809：计数角标 —— 图标模式下不画名字，「还剩几次 / 还差几回合」得有地方露脸。
+		_draw_relic_badge(rect, int(ids[i]))
 	# 道具太多装不下 → 末位换成「+N 点击查看全部」摘要行（点道具栏打开浏览面板）
 	if n_rel > shown_r:
 		_draw_more_tile(_relic_rect(shown_r), "+%d" % (n_rel - shown_r), "")
@@ -17430,6 +18097,33 @@ func _draw_relic_bar() -> void:
 		_draw_string_box_nw(_font_bold, UI_FS_CAPTION,
 				"鸭之低语：%s" % (_whisper_txt if _whisper_txt != "" else "…"),
 				Vector2(draw_z.position.x + 6.0, draw_z.position.y + draw_z.size.y + 20.0), Color("d9a8ff"))
+
+
+func _draw_relic_badge(rect: Rect2, id: int) -> void:
+	## R809：道具图标右下角的计数角标（lucky 7 剩余回合 / 火柴剩余刷新 / 洞窟绳 1 次 /
+	## 雕像与不锈钢盆的余量）。数值唯一口 = `RunState.relic_badge_text()` ——
+	## 界面不另算一遍，免得「角标写 3、悬停说 4」变成两套账。
+	## 样式跟着 UI 的暖金描边走：深底 + 1px 金边 + 浅米字，压在弧与蓝边之上。
+	# R832：缺陷时钟的计数在**引擎**里（本场已打出张数）—— 这里把引擎值递进去，
+	# 界面不自己拿 `_clock_plays` 反算。其余道具不读这个参数，照旧只认 RunState。
+	var txt := RunState.relic_badge_text(id, engine.defect_clock_left())
+	if txt == "":
+		return
+	var fs := 12
+	var tw := _font_bold.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var bw := maxf(14.0, tw + 6.0)
+	var bh := 14.0
+	# 贴图标右下角、往外探 1px：完全内缩时角标会被读成「图标缺了一角」。
+	var br := Rect2(rect.position.x + rect.size.x - bw + 1.0,
+			rect.position.y + rect.size.y - bh + 1.0, bw, bh)
+	draw_rect(br.grow(1.0), Color(0.06, 0.05, 0.04, 0.55), true)   # 外描边：深色图标上也要立得住
+	draw_rect(br, Color(0.11, 0.10, 0.08, 0.94), true)
+	draw_rect(br, Color(0.96, 0.84, 0.48, 1.0), false, 1.0)
+	# ⚠️ `_draw_string_center` 内部已经加了 `px * 0.36` 的基线补偿 ——
+	#   这里传**视觉中心**（框中心），别再加一次偏移，否则数字会贴底被切。
+	_draw_string_center(_font_bold, fs, txt,
+			Vector2(br.position.x + bw * 0.5, br.position.y + bh * 0.5),
+			Color(1.0, 0.96, 0.82), -1)
 
 
 ## R117：这里原本是 `_draw_opponent_hand()`（顶部一排**卡背** + 「（对手手牌区）」占位字）。
@@ -17444,7 +18138,7 @@ func _draw_cost_zone() -> void:
 	var epanel := Rect2(COST_X, COST_Y, TAP_W + 12, ENERGY_H)
 	preload("res://scripts/battle_energy_hud.gd").draw(self, _font_bold,
 			_roll("energy", state.energy), engine.max_energy(), epanel,
-			engine.charge_count(GameEngine.SIDE_SELF), engine.taunt_all_active(GameEngine.SIDE_SELF))
+			engine.charge_count(GameEngine.SIDE_SELF))
 	# 效果区
 	var zone := Rect2(COST_X, COST_Y + ENERGY_H, TAP_W + 12, bottom - COST_Y - ENERGY_H)
 	BattleHudMaterial.draw(self, Rect2(zone.position, Vector2(zone.size.x, minf(zone.size.y, 46 + 58 * maxi(1, _merged_effects(state.effects).size())))))
@@ -17767,12 +18461,41 @@ func _draw_hand_base() -> void:
 	draw_style_box(sb, Rect2(HAND_BASE_X, HAND_BASE_Y, HAND_BASE_W, HAND_BASE_H))
 
 
+func _hand_badge_rect() -> Rect2:
+	## R786：手牌数徽标 —— 贴在**手牌底板左沿**外侧（底板跟着棋盘中轴走了，它也一起）。
+	## 坐标全由常量算：以前写死 `Rect2(300, 628, 110, 42)`，手牌一挪就脱节。
+	return Rect2(HAND_BASE_X - HAND_BADGE_GAP - HAND_BADGE_W, HAND_BADGE_Y,
+			HAND_BADGE_W, HAND_BADGE_H)
+
+
+func _plays_badge_rect() -> Rect2:
+	## R786：暗影刺客的「本回合用卡数」徽标 —— 摆在手牌数徽标**左边**，同高同宽成一对。
+	var hb := _hand_badge_rect()
+	return Rect2(hb.position.x - PLAYS_BADGE_GAP - HAND_BADGE_W, HAND_BADGE_Y,
+			HAND_BADGE_W, HAND_BADGE_H)
+
+
+func _shows_plays_badge() -> bool:
+	## 只给暗影刺客：终结 9086 的 4+X / 回转 9089 抽 X / 连环戏法 9093 / 疾风 9091 的 X
+	## 读的都是 `state.self_card_plays`（本回合已用张数），以前玩家只能心里数。
+	return RunState.player_class == PlayerClass.ROGUE
+
+
 func _draw_hand() -> void:
 	var n := engine.state.hand.size()
 	var full: bool = engine.state.hand_full()
-	var hand_badge := Rect2(300, 628, 110, 42)
+	var hand_badge := _hand_badge_rect()
 	BattleHudMaterial.draw(self, hand_badge)
 	_draw_string_center(_font_bold, 15, GameI18n.ui("battle", "BATTLE_HAND", "手牌 %d/%d") % [n, FieldState.HAND_LIMIT], hand_badge.get_center(), Color("9a493e") if full else Color("45654e"), -1)
+	# R786：暗影刺客多一个「本回合用卡数」徽标，摆在手牌数徽标**左边**（同高同宽成一对）。
+	# 计数读 `state.self_card_plays` —— 与终结 9086 的 X 是同一份数（`_note_card_played` 唯一口）。
+	if _shows_plays_badge():
+		var plays_badge := _plays_badge_rect()
+		BattleHudMaterial.draw(self, plays_badge)
+		_draw_string_center_fit(_font_bold, 15,
+				GameI18n.ui("battle", "BATTLE_TURN_PLAYS", "本回合用卡 %d")
+						% engine.state.self_card_plays,
+				plays_badge.get_center(), HAND_BADGE_W - 12.0, Color("5b4276"))
 	# 悬停的那张抬起来、并压在最上层（重叠时才看得清）；被选中的卡（点击 / 拖拽）
 	# 也压到最上层，放大后才不会被相邻卡盖住（R416）。
 	var order: Array[int] = []
@@ -17796,7 +18519,8 @@ func _draw_hand() -> void:
 func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> void:
 	## 按扇形角度画一张手牌：绕卡牌**底部中心**旋转。
 	## lift 只是视觉抬手（不改 _hand_rect，所以命中判定不会因为抬手而抖）。
-	## 卡底沉出窗口下沿：卡面照常整张排版，多出来的那截由视口裁掉（不补偿、不挪数值）。
+	## R843：底部是常驻属性栏，整张手牌留在窗口内；lift 只负责轻微抬手。
+	## 选中放大仍允许临时覆盖战场，命中判定继续跟随真实绘制几何。
 	var r := _hand_rect(i)
 	r.position.y -= lift
 	# R151 P1-6/7：回合归属 —— 敌方回合手牌整体下沉 +6；我方回合上浮 −3（纯显示，不动命中）
@@ -17815,13 +18539,17 @@ func _draw_hand_card(i: int, card: CardData, selected: bool, lift: float) -> voi
 	# 「现在打出能吃到额外效果」→ 金色高亮框 + 顶部金星标（R65）。
 	# 判定走 engine.hand_bonus_ready（唯一口），条件不满足就不画。
 	var bonus := engine.hand_bonus_ready(card)
+	# R783b：金环必须画在卡面**之前** —— 卡牌底部的力量 / 生命徽章圆心压在卡框下沿、
+	# 一半探到卡外，画在之后再亮的环会横穿它们，把数字盖住（店长口径「框把数字挡住了」）。
+	if bonus:
+		_draw_hand_bonus_mark(Rect2(r.position - pivot, r.size))
 	_draw_card_face(card, Rect2(r.position - pivot, r.size), card.health, selected, false,
 			engine.cost_of(card))
 	# R151 P1-7：敌方回合的暗罩（自绘卡面没法整体降饱和，罩子是唯一便宜的等效）
 	if _turn_dim > 0.01:
 		draw_rect(Rect2(r.position - pivot, r.size), Color(0.102, 0.110, 0.133, _turn_dim), true)
 	if bonus:
-		_draw_hand_bonus_mark(Rect2(r.position - pivot, r.size))
+		_draw_hand_bonus_star(Rect2(r.position - pivot, r.size))
 	# R209：原来这里给「可改造 / 可回收」的手牌描青边 —— 系统升级 / 回收改走**全屏
 	# 选卡页**后，选卡期间手牌根本点不到（`_on_left_click` 被 `_pick` 拦下），
 	# 那两块高亮成了死代码，一并删掉（选卡页里每张候选都是可选的，不需要再标）。
@@ -17854,9 +18582,12 @@ func _draw_pow_fx() -> void:
 		var ctr := _display_center(p, f["cell"])
 		var w := BOARD_CARD_W
 		var h := BOARD_CARD_H
-		var bc := Vector2(ctr.x - w / 2.0, ctr.y + h / 2.0)   # 力量徽章圆心（左下，压左框线）
-		var br := UiTheme.CARD_BADGE_R * BOARD_SCALE
-		var bfs: int = maxi(7, roundi(UiTheme.CARD_FS_BADGE * BOARD_SCALE))
+		var card_rect := Rect2(ctr - Vector2(w, h) * 0.5, Vector2(w, h))
+		var cell := CardFace.stat_cell_rect(card_rect, 0, 4 if p.card.kind == "盟友" else 3)
+		# R843：力量已进底部属性栏第一格，跳字跟随该格，不再找旧版左下外溢徽章。
+		var bc := cell.get_center()
+		var br: float = minf(cell.size.y * 0.46, cell.size.x * 0.30)
+		var bfs: int = maxi(8, roundi(cell.size.y * 0.76))
 		var sc := 1.0 + 0.35 * sin(t * PI)
 		CardFace.draw_badge(self, _font_bold, bc, br * sc, bfs, "power",
 				str(p.effective_power()), UiTheme.BADGE_POWER)
@@ -17956,7 +18687,7 @@ func _draw_hand_fly() -> void:
 			_draw_card_back(Rect2(pos - slot.size * sc / 2.0, slot.size * sc))
 		elif mode == "fade":
 			# 耳环合并淡出：手牌区中央一张卡背整体淡掉
-			var r3 := Rect2(Vector2(WINDOW_W / 2.0, OWN_HAND_Y + 40) - Vector2(CARD_W, CARD_H) / 2.0,
+			var r3 := Rect2(Vector2(HAND_CX, OWN_HAND_Y + 40) - Vector2(CARD_W, CARD_H) / 2.0,
 					Vector2(CARD_W, CARD_H))
 			_draw_card_back_fade(r3, 1.0 - t)
 		else:
@@ -18211,17 +18942,82 @@ func _draw_card_back_fade(rect: Rect2, alpha: float) -> void:
 	draw_rect(rect, edge, false, 1.5)
 
 
+func _round_frame(rect: Rect2, rad: float, col: Color, w: float) -> void:
+	## 圆角矩形描边（四条直边 + 四段圆弧）。Godot 没有 draw_round_rect，
+	## 而卡面本身就是圆角金框 —— 直角套上去正是「粗糙」的来源，所以自己拼一个。
+	## 只画线、不填充；`w` 会跟着手牌的选中缩放一起变（调用点在旋转/缩放坐标系里）。
+	var r := clampf(rad, 0.0, minf(rect.size.x, rect.size.y) * 0.5)
+	if r <= 0.5:
+		draw_rect(rect, col, false, w)
+		return
+	var l := rect.position.x
+	var t := rect.position.y
+	var rt := rect.end.x
+	var bt := rect.end.y
+	draw_line(Vector2(l + r, t), Vector2(rt - r, t), col, w, true)
+	draw_line(Vector2(l + r, bt), Vector2(rt - r, bt), col, w, true)
+	draw_line(Vector2(l, t + r), Vector2(l, bt - r), col, w, true)
+	draw_line(Vector2(rt, t + r), Vector2(rt, bt - r), col, w, true)
+	draw_arc(Vector2(l + r, t + r), r, PI, PI * 1.5, 10, col, w, true)
+	draw_arc(Vector2(rt - r, t + r), r, PI * 1.5, TAU, 10, col, w, true)
+	draw_arc(Vector2(rt - r, bt - r), r, 0.0, PI * 0.5, 10, col, w, true)
+	draw_arc(Vector2(l + r, bt - r), r, PI * 0.5, PI, 10, col, w, true)
+
+
 func _draw_hand_bonus_mark(r: Rect2) -> void:
-	## 手卡「额外效果可触发」的金色标记：外框 + 右上角一颗金星。
-	## 只做视觉，判定在 engine.hand_bonus_ready。
+	## 手卡「额外效果可触发」的金色标记（判定在 `engine.hand_bonus_ready`，这里只管画）。
+	## R783（店长口径「效果生效的框比较粗糙」）：旧版是一圈 2.2k 纯金**直角**粗线 + 0.20
+	## 平涂，贴在圆角卡面上像绕了一圈黄胶带。改了两版才收住：
+	##   · 圆角化之后发现"一个颜色一根线"永远像塑料 —— 金属感靠的是**明暗台阶**；
+	##   · 金环还必须**离开卡边**，卡面自带金漆边，贴上去两条金会糊成一条。
+	## 现在的画法（由外向内）：
+	##   ① 外侧发丝线（与主环之间留 ~2.6k 的缝 → 双线）
+	##   ② 主环四层叠出圆管的明暗：暗边 → 金身 → 亮芯 → 高光
+	##   ③ 四角各一段更亮的短弧（角部聚光），是最见精致的一笔
+	##   ④ 慢呼吸：金色分量的 alpha 随 sin 轻微起伏，读作"生效中"而非静态贴纸
+	## ⚠️ 只画**环**，调用点在 `_draw_card_face` **之前** —— 卡牌底部的力量 / 生命徽章
+	##    圆心压在卡框下沿、一半探到卡外，环画在之后会横穿它们把数字盖掉（R783b）。
+	##    右上角金星另走 `_draw_hand_bonus_star()`，那个要压在卡面上。
 	var k := r.size.y / CardFace.CARD_H_DESIGN
 	var col := COL_HAND_BONUS
-	draw_rect(r.grow(2.0 * k), Color(col.r, col.g, col.b, 0.20), true)
-	draw_rect(r.grow(2.0 * k), col, false, 2.2 * k)
-	var star := r.position + Vector2(r.size.x - 9.0 * k, 11.0 * k)
-	draw_circle(star, 7.0 * k, Color(0.10, 0.09, 0.12, 0.92))
-	draw_arc(star, 7.0 * k, 0, TAU, 20, col, 1.6 * k, true)
-	_draw_string_center(_font_bold, int(10 * k), "★", star, col, -1)
+	var breath := 0.5 + 0.5 * sin(float(_now()) / 1000.0 * 2.2)
+	var cr := 8.4 * k
+	var ring := r.grow(3.6 * k)
+	# ① 外侧发丝线（细、淡，只负责"这圈不是贴纸"）
+	_round_frame(r.grow(6.8 * k), cr + 3.2 * k,
+			Color(col.r, col.g, col.b, 0.34 + 0.22 * breath), 0.8 * k)
+	# ② 主环：四层同心地叠出金属圆管的明暗
+	_round_frame(ring, cr, Color(0.34, 0.22, 0.03, 0.92), 2.9 * k)
+	_round_frame(ring, cr, Color(0.78, 0.55, 0.10, 0.96), 1.9 * k)
+	_round_frame(ring, cr, Color(col.r, col.g, col.b, 0.98), 1.0 * k)
+	_round_frame(ring, cr, Color(1.0, 0.94, 0.74, 0.30 + 0.30 * breath), 0.40 * k)
+	# ③ 环内暖光：整体极淡（0.04）—— 卡面被"照亮"一点点，但不糊住画面
+	draw_rect(ring, Color(col.r, col.g, col.b, 0.030 + 0.025 * breath), true)
+	# ④ 四角聚光：只点亮角尖那一小段，比整圈加亮更"收"
+	var hot := Color(1.0, 0.97, 0.82, 0.55 + 0.32 * breath)
+	draw_arc(Vector2(ring.position.x + cr, ring.position.y + cr), cr, PI * 1.10, PI * 1.40, 8,
+			hot, 2.0 * k, true)
+	draw_arc(Vector2(ring.end.x - cr, ring.position.y + cr), cr, PI * 1.60, PI * 1.90, 8,
+			hot, 2.0 * k, true)
+	draw_arc(Vector2(ring.end.x - cr, ring.end.y - cr), cr, PI * 0.10, PI * 0.40, 8,
+			hot, 2.0 * k, true)
+	draw_arc(Vector2(ring.position.x + cr, ring.end.y - cr), cr, PI * 0.60, PI * 0.90, 8,
+			hot, 2.0 * k, true)
+func _draw_hand_bonus_star(r: Rect2) -> void:
+	## 右上角金星（R783b 从 `_draw_hand_bonus_mark` 里拆出来的）。
+	## **必须画在卡面之后**：金环让到卡面底下是为了不压住数值徽章，但星徽是"盖章"，
+	## 得压在卡角上，所以单独留这一个调用点在 `_draw_card_face` 后面。
+	var k := r.size.y / CardFace.CARD_H_DESIGN
+	var col := COL_HAND_BONUS
+	var breath := 0.5 + 0.5 * sin(float(_now()) / 1000.0 * 2.2)
+	var star := r.position + Vector2(r.size.x + 1.8 * k, 0.8 * k)
+	var sr := 7.0 * k
+	draw_circle(star, sr * 1.45, Color(col.r, col.g, col.b, 0.10 + 0.07 * breath))
+	draw_circle(star, sr, Color(0.09, 0.08, 0.11, 0.96))
+	draw_arc(star, sr, 0, TAU, 24, Color(0.78, 0.55, 0.10, 0.98), 2.0 * k, true)
+	draw_arc(star, sr - 1.1 * k, 0, TAU, 24,
+			Color(col.r, col.g, col.b, 0.90), 1.0 * k, true)
+	_draw_string_center(_font_bold, int(9 * k), "★", star, col, -1)
 
 
 func _draw_drag() -> void:
@@ -18453,7 +19249,7 @@ static func _info_blocks(card: CardData, pl: Placement, now := {}) -> Array:
 	#   例：集中突破 `造成 **10** 点伤害` → `造成 18（10＋8）点伤害`。
 	# R702：正文走 `parse_card()` —— 本局成长（猎杀 +4/击杀）已经把卡库的 22 抬到 30 了，
 	# 这里若还读 `effect_text` 原文，左栏会一直印基础伤害。
-	var body_segs: Array = CardText.parse_card(card)
+	var body_segs: Array = CardText.parse_card_detail(card)
 	if not now.is_empty():
 		if bool(now.get("amount", false)):
 			# R706：`3X` 这种**整体标记**（土元素）→ `30（3×10）`。X=1 时只换字、不染红：
@@ -18531,6 +19327,14 @@ func _draw_info_panel() -> void:
 	##   编号·名字 → 种类·费用·稀有度 → 数值（战场单位带当前/上限）→ 词条 →
 	##   每回合行动数 → 效果正文（按面板宽度自动换行，放不下画省略号）。
 	_hover_purge_stale()   # R294：手牌变了 → 先清掉过期的悬停，别让左栏停在旧卡上
+	# R764 宣传录制：左栏详情（卡名 / 词条 / 效果正文）还没进 i18n，英文片里会露中文。
+	# 走「没有卡」那条分支即可 —— 子节点也一并隐藏，不留残影。
+	if _trailer_clean:
+		_info_scroll_max_v = 0.0
+		if info_clip != null:
+			info_clip.visible = false
+		_mention_hits.clear()
+		return
 	var card: CardData = null
 	var pl: Placement = null
 	if _hover_card != null:
@@ -18970,9 +19774,13 @@ func _relic_panel_rows() -> Array:
 			nm += "（已耗尽）"
 			tag = "已耗尽 · " + tag
 			scol = Color("8a8f98")
-			var s_note := RunState.relic_state_note(int(ids[i]))
-			if s_note != "":
-				desc += "  （%s）" % s_note
+		# R809：状态注**不再只给已耗尽的**。旧版把这段写在 `if rspent:` 里面，
+		# 于是活着的 lucky 7 / 火柴在战斗内点开面板看不到倒计时；
+		# 而 `map_scene._relic_panel_rows()` 一直是无条件拼 note —— 同一个名字两套口径。
+		# 已耗尽时 note 本身就是「已耗尽，效果不再生效。」，与旧行为逐字一致。
+		var s_note := RunState.relic_state_note(int(ids[i]))
+		if s_note != "":
+			desc += "  （%s）" % s_note
 		# R343：名字与标签**分开画** —— 传奇道具名要单独换色，混在一整串里就得整串变金
 		#（标签也跟着金，「来源 · 时机」就不好读了）。位置按名字实际宽度顺排。
 		var ncol: Color = rel.name_color(Color("4a3c14")) if rel != null else Color("4a3c14")
@@ -19143,6 +19951,70 @@ func _draw_relic_tip_panel() -> void:
 		var by: float = y + RELIC_TIP_PAD + lh * (float(li) + 0.5) + fs * 0.36
 		draw_string(_font, Vector2(x + RELIC_TIP_PAD, by), lines[li],
 				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("f0ead8"))
+
+
+func _tool_tip_anchor_slot() -> int:
+	## R782：工具说明面板**此刻该显示哪个槽**（-1 = 不显示）——绘制与回归共用的唯一判据。
+	## ① 上膛期优先：安卓没有 hover 事件，「点一下」就是「我要看这个工具」；
+	##    电脑端上膛后同样一直显示，直到用掉 / 丢掉 / 2.6 秒过期。
+	## ② 否则看鼠标悬停的槽（电脑端）。
+	if _tool_use_arm >= 0 and _tool_use_arm < RunState.TRAP_SLOTS \
+			and Time.get_ticks_msec() <= _tool_use_until:
+		return _tool_use_arm
+	if _tool_tip_slot >= 0 and _tool_tip_slot < RunState.TRAP_SLOTS:
+		return _tool_tip_slot
+	return -1
+
+
+func _draw_tool_tip_panel() -> void:
+	## R782：工具槽的完整效果说明（用户口径「工具栏看不到工具的效果描述」）。
+	## 版式与 `_draw_relic_tip_panel()` 共用同一套常量与折行，锚点换成**槽左侧**，
+	## 并且让开按钮栏 —— 按钮栏画在独立高层 CanvasLayer 上，压在它下面会被整块盖住。
+	var slot := _tool_tip_anchor_slot()
+	if slot < 0:
+		return
+	var tid := RunState.trap_at(slot)
+	if tid <= 0:
+		return
+	var td: TrapData = TrapRepo.load_json().get_trap(tid)
+	if td == null:
+		return
+	var sr := _trap_slot_rect(slot)
+	var w := 400.0
+	var inner := w - RELIC_TIP_PAD * 2.0
+	# 右缘：上膛时让开按钮栏（它开在槽左侧），否则只让开槽本身。
+	var armed: bool = _tool_use_arm >= 0 and slot == _tool_use_arm \
+			and Time.get_ticks_msec() <= _tool_use_until
+	var right: float = sr.position.x - TOOL_BAR_OFFSET
+	if armed:
+		var bar: Rect2 = _tool_bar_layout(slot)["bar"]
+		right = bar.position.x - TOOL_BAR_GAP
+	var x: float = clampf(right - w, 8.0, maxf(8.0, WINDOW_W - w - 8.0))
+	var fs := RELIC_TIP_SIZE
+	var lines: Array[String] = ["「%s」" % td.trap_name]
+	for ln in CardFace.wrap_text(_font, td.desc, inner, fs):
+		lines.append(ln)
+	var lh: float = maxf(_font.get_height(fs), float(fs))
+	var max_h: float = WINDOW_H - 16.0
+	while fs > RELIC_TIP_SIZE_MIN \
+			and RELIC_TIP_PAD * 2.0 + float(lines.size()) * lh > max_h:
+		fs -= 1
+		lines = ["「%s」" % td.trap_name]
+		for ln in CardFace.wrap_text(_font, td.desc, inner, fs):
+			lines.append(ln)
+		lh = maxf(_font.get_height(fs), float(fs))
+	var h: float = RELIC_TIP_PAD * 2.0 + float(lines.size()) * lh
+	var y: float = clampf(sr.position.y, 8.0, maxf(8.0, WINDOW_H - h - 8.0))
+	draw_rect(Rect2(x, y, w, h), Color(0.06, 0.07, 0.10, 0.96), true)
+	draw_rect(Rect2(x, y, w, h), Color("ffd76a"), false, 1.6)
+	for li in lines.size():
+		var by: float = y + RELIC_TIP_PAD + lh * (float(li) + 0.5) + fs * 0.36
+		if li == 0:
+			draw_string(_font_bold, Vector2(x + RELIC_TIP_PAD, by), lines[li],
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("ffe6a2"))
+		else:
+			draw_string(_font, Vector2(x + RELIC_TIP_PAD, by), lines[li],
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("f0ead8"))
 
 
 func _draw_log_panel() -> void:
@@ -19362,7 +20234,7 @@ func _process(delta: float) -> void:
 	map_btn.disabled = not _mapview_available()
 	# R602：顶栏状态是「一行 + 固定 180px 宽」，长消息原来直接省略尾部。
 	# 先缩字号（17→11）把整句塞进去，缩到底仍不够才由 Label 的 overrun 省略。
-	var shown_status := GameI18n.source(status_text)
+	var shown_status := "" if _trailer_clean else GameI18n.source(status_text)
 	status_label.tooltip_text = shown_status
 	UiTheme.autoshrink_label(status_label, shown_status, 17, 10, Vector2(180.0, 28.0))
 

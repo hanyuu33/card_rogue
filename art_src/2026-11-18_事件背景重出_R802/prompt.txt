@@ -1,0 +1,44 @@
+R802 事件整屏背景重出（bg_sword / bg_factory）
+
+背景：店长口径「事件有大背景图就不需要小图」，并要求重出的大背景**给对话框留出位置**。
+对话框（居中卡片）在 1280x720 下占 y≈265..595、x≈190..890（英文文案最长时最宽），
+所以构图口径统一为：
+
+  * 主体全部放在**上半部**（y < 250），并尽量往左／右两侧推；
+  * 下方 45% 只留雾、虚化地面 / 巧克力河面，低对比、无主体、无可读细节；
+  * 比例 16:9，出图 1536x864 → 直接缩到 1280x720（不裁）。
+
+生成渠道：codex 不可用（chatgpt.com / api.openai.com 直连与代理均返回 000，
+clash-verge 在跑但节点不通），改用内置出图（后端默认模型，非 Seedream v5）。
+下列 prompt 原样存档，网络恢复后可直接用 codex 重跑。
+
+================================================================
+图 1 — bg_sword_v2.png（林中的剑）
+================================================================
+Painted illustration, 16:9 widescreen game background for a fantasy card game, completely empty of UI and text.
+
+Scene: a quiet clearing in an ancient forest at dawn. A grey-white standing stone (menhir) with a long sword wedged deep into its crack, hilt pointing upward, moss and ivy draped over the crossguard, faint cold glint on the blade.
+
+COMPOSITION IS CRITICAL: place the WHOLE stone-and-sword centerpiece in the UPPER-LEFT area of the frame - the hilt sits near the top edge, the base of the stone ends about 30-33% down from the top. The leftmost 55% of the upper band carries the subject; the upper-right shows receding tall tree trunks in mist.
+
+The BOTTOM 45% of the image MUST stay calm and empty: only soft misty forest floor, fallen leaves, dim moss and drifting fog, low contrast, heavily out-of-focus. No objects, no stones, no branches, no figures, nothing readable down there - that area will be covered by a semi-transparent dialog panel, so keep it dark, quiet and detail-free.
+
+Palette: cool green-grey, deep evergreen shadow, pale cold light. Sparse volumetric light shafts through the canopy, thin morning fog. Style: Japanese anime concept art fused with western fantasy, soft painterly brushwork, gentle gradients, clean shapes without hard outlines. No characters, no text, no letters, no numbers, no logo, no watermark, no signature, no border, no frame.
+
+================================================================
+图 2 — bg_factory_v2.png（巧克力工厂）
+================================================================
+Painted illustration, 16:9 widescreen game background for a fantasy card game, completely empty of UI and text.
+
+Scene: interior of a whimsical fantasy chocolate factory. Copper pipes and brass gears twist along plastered walls, a conveyor belt carries a row of glossy duck-shaped chocolate molds, a warm slow river of melted chocolate crosses the floor, wooden shelves hold wrapped chocolate slabs, light steam drifts in the air, forest visible through tall arched windows.
+
+COMPOSITION IS CRITICAL: keep EVERYTHING of interest - the conveyor belt, the duck molds, the copper pipework, the gears, the shelves, the windows - inside the UPPER HALF of the frame, and push the large machinery toward the LEFT and RIGHT edges so the top-center stays fairly open and airy.
+
+The BOTTOM 45% of the image MUST stay calm and empty: only soft warm haze drifting over the surface of the chocolate river, smooth out-of-focus caramel-brown tones, low contrast, absolutely nothing readable - no molds, no pipes, no shelves, no objects down there. That area will be covered by a semi-transparent dialog panel, so keep it quiet and detail-free.
+
+Palette: caramel brown, cream white, warm brass highlights, gentle golden steam. Style: Japanese anime concept art fused with western fantasy, soft painterly brushwork, cozy and magical, gentle gradients, clean shapes without hard outlines. No characters, no text, no letters, no numbers, no logo, no watermark, no signature, no border, no frame.
+
+================================================================
+落图：`tools/_make_r802_bg.py`（抹右下角「AI生成 / WORKBUDDY」水印 → 缩到 1280x720）
+水印处理：取水印块左侧等宽条带水平镜像覆盖 + 高斯模糊 3，缩放后痕迹不可见。
+================================================================

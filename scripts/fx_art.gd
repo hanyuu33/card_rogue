@@ -41,6 +41,12 @@ const SKILL_NATURE := "skill_nature"
 ## 168px 铺在草皮上几乎看不见 —— 那是「电流爬过护盾」的量级，不是「一道雷炸开」。
 ## 已委托 codex 单独出图：白芯 + 青紫分叉闪电，成同心放射状。
 const BOLT := "bolt"
+
+## R856：金鸭蛋（9285）的「获得 / 投掷」金光 —— 蛋形竖椭圆 + 同心冲击环 + 外溢金光。
+## 两个用处共用这一张：投手扔蛋的轨迹（沿同列逐格错开 70ms，靠时间差冒充飞行）
+## 与「重新获得金鸭蛋」的光爆（在投手脚下放大 210px）。
+const EGG_GAIN := "egg_gain"
+
 ## R679：中毒每回合的持续伤害（`_poison_tick` → `_hit_unit(p, dmg, "中毒")`）。
 ## 走的是 `trap_fx_7003` 那张毒绿 —— 与毒瓶陷阱、毒沼**同一张图**
 ## （店长定案：毒瓶与毒沼统一口径，不另出毒雾）。所以这个常量**故意不符合**
@@ -84,7 +90,7 @@ static var _cache := {}
 static func all_names() -> Array:
 	## 全部素材名（回归断言「十一张都落盘了」用这一份，不手抄第二处）。
 	return [VORTEX, AIR_RAID, BLAST, GALE, STUN, BOLT,
-			SKILL_FIRE, SKILL_ICE, SKILL_SHADOW, SKILL_HOLY, SKILL_NATURE]
+			SKILL_FIRE, SKILL_ICE, SKILL_SHADOW, SKILL_HOLY, SKILL_NATURE, EGG_GAIN]
 
 
 static func path_of(name: String) -> String:
@@ -134,6 +140,8 @@ static func color_of(name: String) -> Color:
 	match name:
 		VORTEX:
 			return Color(0.36, 0.72, 0.95)     # 漩涡 · 青蓝
+		EGG_GAIN:
+			return Color(0.99, 0.78, 0.30)   # 金鸭蛋 · 暖金
 		AIR_RAID:
 			return Color(0.98, 0.66, 0.26)     # 空袭 · 橙金
 		BLAST:

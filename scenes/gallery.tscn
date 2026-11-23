@@ -246,23 +246,12 @@ theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.35, 0.38, 0.44, 1)
 text = ""
 
-[node name="TextLabel" type="Label" parent="DetailPanel"]
-layout_mode = 0
-offset_left = 18.0
-offset_top = 150.0
-offset_right = 254.0
-offset_bottom = 380.0
-theme_override_fonts/font = SubResource("SysFont_cjk")
-theme_override_font_sizes/font_size = 16
-autowrap_mode = 2
-text = ""
-
 [node name="TargetBadge" type="Label" parent="DetailPanel"]
 layout_mode = 0
 offset_left = 18.0
-offset_top = 400.0
+offset_top = 612.0
 offset_right = 254.0
-offset_bottom = 430.0
+offset_bottom = 642.0
 theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.42, 0.29, 0.84, 1)

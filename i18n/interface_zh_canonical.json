@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-15",
+  "updated": "2026-11-19",
   "purpose": "R667 界面与共享组件翻译专用规范中文底本。权威 GDScript 中文不改；仅明确审计的规则漂移在 canonical 修正。",
   "rules": [
     "卡组是跨战斗完整构筑，抽牌堆是本场待抽区；删除是跨战斗 Remove，消失是本场 Banish。",
@@ -178,20 +178,20 @@
       "scripts/shop_scene.gd": "3161f11e37d1c0ff2aa726c7072b8ae5763a47872908dd6e8aba8ef73f7fe9e8",
       "scripts/assemble_overlay.gd": "bdbe1a7e2338367a1f1b899859f2df843f2c2b62b3b85fe2be0e9fd36bb0afa9",
       "scripts/card_data.gd": "be36dbce66758566b6841505e50f2ee4f9b32ced5d5ff84ef48b6e0664f0b5cf",
-      "scripts/run_state.gd": "0101d902137585791e2153dcf55f1a5f7e0ac0b9b2d9a8327957bf84c2a7c767"
+      "scripts/run_state.gd": "e50ea22431dc25bb72673f2d786866c2cf8c2d6812cbbead6305c735f3896848"
     },
     "reward": {
-      "scripts/reward_panel.gd": "dc2bd6893e3dde7e5c0be8483d283b56a448cb4ee927bb9b236311379ed9d486",
+      "scripts/reward_panel.gd": "be430a3f36412f5456aa08b8f87c5fb91cc4ee8de47c53573ba7a14207954ee1",
       "scripts/reward_panel_adventure_v2.gd": "8c8815d609b1dc311e94ac8ffa037f02628986a3befbba475a094e51d1cd84a8",
       "scripts/card_reward.gd": "c37251c64fbff151de0a677b52a1a447af6582380c98541b946117cd5a8f1b0f",
       "scripts/relic_pick_scene.gd": "9c8e28c5265287cbbb1d9fabd17b8dd0eda9db502c8d98f8eb9cb526592481af",
       "scripts/ui_card_grant.gd": "55d4a22f3e3086c98931e634ab79ae80eff843af6f6856b20cb1194b1559508c",
-      "scripts/run_state.gd": "0101d902137585791e2153dcf55f1a5f7e0ac0b9b2d9a8327957bf84c2a7c767",
+      "scripts/run_state.gd": "e50ea22431dc25bb72673f2d786866c2cf8c2d6812cbbead6305c735f3896848",
       "scripts/battle_scene.gd": "b9426e1c9f7a77afc4ef8f20bfb43f9fa33a112a6da24b8363fc76ce9808ea8c",
-      "scripts/event_scene.gd": "ed557759355e27bb5ce9afb7142961a48705c855004110209aab7fed203e4003"
+      "scripts/event_scene.gd": "038f8be23e85302cabf740150ae381a114b8d009ab50b2b2ce84e68ad3f07756"
     },
     "map": {
-      "scripts/map_scene.gd": "b1af2bdb4b57075bee7f8d0a92da561c47c42dc9b670fa8b525fdccddd358060",
+      "scripts/map_scene.gd": "c69fbbd03f86895c5fb64ae23952c259f6a35b2265db80f08d0787ec64bc0d55",
       "scripts/map_visual.gd": "638358a73bf109dd9629b860e1a794c671c410f8955a26b44f8036b75ec7fc05",
       "scripts/rogue_map.gd": "634b5d1059ee099fe9ddeeee9a08dc8f083c18daede7cae1a13c25843bf80ba8",
       "scripts/deck_edit_scene.gd": "cf3a3e281c7a2656ad2e80defd93f4e2e5b4b981952a95c1464cbb4b0c058254",
@@ -242,6 +242,180 @@
     }
   },
   "scopes": {
+    "daily": {
+      "MOD_RICH": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "富裕"
+      },
+      "MOD_STURDY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "强健"
+      },
+      "MOD_RATIONS": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "旅粮"
+      },
+      "MOD_LUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "幸运"
+      },
+      "MOD_WARM": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "温暖"
+      },
+      "MOD_GIFTED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "工具箱"
+      },
+      "MOD_MIXED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "杂牌"
+      },
+      "MOD_FRAIL_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌之孱弱"
+      },
+      "MOD_QUIET": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "冷清"
+      },
+      "MOD_SURGE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "灵光"
+      },
+      "MOD_POOR": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "贫瘠"
+      },
+      "MOD_ANEMIC": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "贫血"
+      },
+      "MOD_HUNGRY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "饥饿"
+      },
+      "MOD_UNLUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "倒霉"
+      },
+      "MOD_COLD": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "阴冷"
+      },
+      "MOD_CURSED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "诅咒"
+      },
+      "MOD_TOUGH_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌之顽强"
+      },
+      "MOD_FIERCE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "凶猛"
+      },
+      "MOD_CROWDED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "拥挤"
+      },
+      "MOD_DRAINED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "滞涩"
+      },
+      "MODDESC_RICH": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "初始金币 +80"
+      },
+      "MODDESC_STURDY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "最大生命 +15%"
+      },
+      "MODDESC_RATIONS": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每层巧克力 +2"
+      },
+      "MODDESC_LUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "稀有卡获取概率 ×1.6"
+      },
+      "MODDESC_WARM": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "火堆可以选两个选项"
+      },
+      "MODDESC_GIFTED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "开局多一件工具"
+      },
+      "MODDESC_MIXED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "卡组多 3 张随机卡"
+      },
+      "MODDESC_FRAIL_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌人生命 −15%"
+      },
+      "MODDESC_QUIET": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "精英出现概率 ×0.75"
+      },
+      "MODDESC_SURGE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每回合费用 +1"
+      },
+      "MODDESC_POOR": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "初始金币 −50"
+      },
+      "MODDESC_ANEMIC": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "最大生命 −12%"
+      },
+      "MODDESC_HUNGRY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每层巧克力 −2"
+      },
+      "MODDESC_UNLUCKY": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "稀有卡获取概率 ×0.5"
+      },
+      "MODDESC_COLD": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "火堆全部变为战斗"
+      },
+      "MODDESC_CURSED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "卡组塞 2 张木栅栏"
+      },
+      "MODDESC_TOUGH_FOE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌人生命 +20%"
+      },
+      "MODDESC_FIERCE": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "敌人攻击 +1"
+      },
+      "MODDESC_CROWDED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "精英出现概率 ×1.5"
+      },
+      "MODDESC_DRAINED": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "每回合抽卡 −1"
+      },
+      "DAILY_MODS": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "今日修正"
+      },
+      "DAILY_DECK": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "卡组"
+      },
+      "MOD_DECK_RANDOM": {
+        "source": "scripts/daily_modifiers.gd",
+        "zh": "随机构筑"
+      }
+    },
     "shop": {
       "SHOP_ENCHANT_COSTDOWN_NAME": {
         "source": "scripts/card_data.gd:112",
@@ -252,12 +426,12 @@
         "zh": "一次性降低 1 点费用，之后一直保持（只能选费用 > 1 且非 X 费的卡）"
       },
       "SHOP_ENCHANT_DAMAGE_NAME": {
-        "source": "scripts/card_data.gd:114",
-        "zh": "伤害 +10"
+        "source": "scripts/card_data.gd:132",
+        "zh": "伤害 +8"
       },
       "SHOP_ENCHANT_DAMAGE_DESC": {
-        "source": "scripts/shop_scene.gd:71",
-        "zh": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）"
+        "source": "scripts/shop_scene.gd:74",
+        "zh": "这张技能卡造成的伤害 +8（只能选能直接造成伤害的技能卡）"
       },
       "SHOP_ENCHANT_DIMENSION_NAME": {
         "source": "scripts/card_data.gd:116",
@@ -550,8 +724,8 @@
         "zh": "史诗卡牌"
       },
       "REWARD_PENDING_ENTRY": {
-        "source": "scripts/reward_panel.gd:267",
-        "zh": "✦ 待领奖励 %d"
+        "source": "scripts/reward_panel.gd",
+        "zh": "返回待领奖励 %d"
       },
       "REWARD_UNKNOWN_RELIC": {
         "source": "scripts/reward_panel.gd:311",
@@ -944,6 +1118,10 @@
         "source": "scripts/run_state.gd:2325",
         "zh": "距下次生效还有 %d 个回合。"
       },
+      "REWARD_RELIC_STATE_CRESCENT_WAITING": {
+        "source": "scripts/run_state.gd:2317",
+        "zh": "距获得下一点费用还有 %d 场战斗。"
+      },
       "REWARD_VICTORY_GOLD_HEADING": {
         "source": "scripts/battle_scene.gd:7805",
         "zh": "获得金币"
@@ -984,6 +1162,10 @@
         "source": "scripts/battle_scene.gd:8137",
         "zh": "赏金猎人 %d"
       },
+      "REWARD_GOLD_PART_RABBIT_FOOT": {
+        "source": "scripts/battle_scene.gd:8750",
+        "zh": "兔脚 %d"
+      },
       "REWARD_GOLD_LEGACY_SUMMARY": {
         "source": "scripts/battle_scene.gd:17083",
         "zh": "金币 ＋%d（%s）　现有 %d"
@@ -1012,10 +1194,6 @@
         "source": "scripts/reward_panel.gd:443",
         "zh": "（这件工具的说明缺失）"
       },
-      "REWARD_TOOL_FULL_SWAP": {
-        "source": "scripts/reward_panel.gd",
-        "zh": "工具栏已满：点一个旧工具，把它换下来"
-      },
       "REWARD_TOOL_SWAP_TAG": {
         "source": "scripts/reward_panel.gd",
         "zh": "丢掉它"
@@ -1031,10 +1209,6 @@
       "REWARD_TOOL_SWAP_NOTE": {
         "source": "scripts/reward_panel.gd",
         "zh": "点上面的旧工具 = 丢掉它，新工具立刻补进那个栏位。"
-      },
-      "REWARD_TOOL_FULL_BTN": {
-        "source": "scripts/reward_panel.gd",
-        "zh": "工具栏已满"
       }
     },
     "map": {
@@ -1898,10 +2072,6 @@
         "source": "scripts/gallery_scene.gd:433",
         "zh": "%s · 共 %d 种卡牌"
       },
-      "GALLERY_SUMMARY_LOCKED": {
-        "source": "scripts/gallery_scene.gd:437",
-        "zh": "（其中 %d 张未解锁）"
-      },
       "GALLERY_SUMMARY_TEXT_ONLY": {
         "source": "scripts/gallery_scene.gd:442",
         "zh": "（其中 %d 张的卡名不含搜索词）"
@@ -2017,6 +2187,10 @@
       "MAP_REWARD_FORFEIT": {
         "source": "scripts/map_scene.gd",
         "zh": "离开上一格：%d 件没领的奖励已作废（要拿就得在进新格子之前回去）"
+      },
+      "MAP_RETURN_TO_SHOP": {
+        "source": "scripts/map_scene.gd",
+        "zh": "返回同一间商店"
       }
     },
     "battle": {
@@ -2084,6 +2258,22 @@
         "source": "scripts/battle_scene.gd:15878",
         "zh": "道具 %d"
       },
+      "BATTLE_RELIC_TIP": {
+        "source": "scripts/battle_scene.gd:8074",
+        "zh": "道具 %d 个"
+      },
+      "BATTLE_DRAG_PLACE_MERGE": {
+        "source": "scripts/battle_scene.gd:5920",
+        "zh": "%s：拖到绿色格子放置；拖到橙色「叠」格 = 与已有栅栏合并"
+      },
+      "BATTLE_DRAG_PLACE_SELF": {
+        "source": "scripts/battle_scene.gd:5924",
+        "zh": "%s：拖到绿色格子放置（自己半场空格）"
+      },
+      "BATTLE_DRAG_PLACE_TRAP": {
+        "source": "scripts/battle_scene.gd:10338",
+        "zh": "「%s」：拖到绿色格子放置（我方或敌方场地都可以）"
+      },
       "BATTLE_DRAW_PILE": {
         "source": "scripts/battle_scene.gd:16188",
         "zh": "抽牌库"
@@ -2100,6 +2290,10 @@
         "source": "scripts/battle_scene.gd:16260",
         "zh": "手牌 %d/%d"
       },
+      "BATTLE_TURN_PLAYS": {
+        "source": "scripts/battle_scene.gd:18131",
+        "zh": "本回合用卡 %d"
+      },
       "BATTLE_VICTORY_TITLE": {
         "source": "scripts/battle_scene.gd:7818",
         "zh": "战斗胜利"
@@ -2111,10 +2305,6 @@
       "BATTLE_ENERGY_CHARGE": {
         "source": "scripts/battle_energy_hud.gd:40",
         "zh": "蓄力%d · 技能×%d"
-      },
-      "BATTLE_ENERGY_DODGE": {
-        "source": "scripts/battle_energy_hud.gd:46",
-        "zh": "闪躲：友军嘲讽"
       },
       "BATTLE_EFFECTS": {
         "source": "scripts/battle_scene.gd:15978",
@@ -2378,10 +2568,6 @@
         "source": "scripts/story_scene.gd:794-799",
         "zh": "解锁：道具 %d"
       },
-      "STORY_GRANTS_BOTH": {
-        "source": "scripts/story_scene.gd:794-799",
-        "zh": "解锁：卡牌 %d · 道具 %d"
-      },
       "STORY_DETAIL_LOCKED": {
         "source": "scripts/story_scene.gd:519",
         "zh": "这一段还没有解锁"
@@ -2431,59 +2617,59 @@
         "zh": "按任意键继续"
       },
       "CURTAIN_MENU_CONTINUE": {
-        "source": "scripts/curtain_scene.gd:127",
+        "source": "scripts/curtain_scene.gd:146",
         "zh": "继续这段对话"
       },
       "CURTAIN_MENU_SUBTITLE": {
-        "source": "scripts/curtain_scene.gd:128",
+        "source": "scripts/curtain_scene.gd:147",
         "zh": "起点"
       },
       "CURTAIN_OPTION_EMPTY": {
-        "source": "scripts/curtain_scene.gd:367",
+        "source": "scripts/curtain_scene.gd:396",
         "zh": "（空缺）"
       },
       "CURTAIN_OPTION_UNKNOWN": {
-        "source": "scripts/curtain_scene.gd:371",
+        "source": "scripts/curtain_scene.gd:400",
         "zh": "（未知道具 %d）"
       },
       "CURTAIN_OPTION_NAME": {
-        "source": "scripts/curtain_scene.gd:375",
+        "source": "scripts/curtain_scene.gd:404",
         "zh": "「%s」"
       },
       "CURTAIN_LEAVE": {
-        "source": "scripts/curtain_scene.gd:411",
+        "source": "scripts/curtain_scene.gd:440",
         "zh": "离开"
       },
       "CURTAIN_ACCEPTED_FALLBACK": {
-        "source": "scripts/curtain_scene.gd:413",
+        "source": "scripts/curtain_scene.gd:442",
         "zh": "「%s」收下了——路上小心哦。"
       },
       "CURTAIN_RELIC_KIND": {
-        "source": "scripts/curtain_scene.gd:542",
+        "source": "scripts/curtain_scene.gd:572",
         "zh": "道具 · %s"
       },
       "CURTAIN_LINKED_CARD_TITLE": {
-        "source": "scripts/curtain_scene.gd:579",
+        "source": "scripts/curtain_scene.gd:609",
         "zh": "获得卡牌"
       },
       "CURTAIN_LINKED_CARD_META": {
-        "source": "scripts/curtain_scene.gd:592",
+        "source": "scripts/curtain_scene.gd:622",
         "zh": "%s · %d 费 · %s"
       },
       "CURTAIN_SOUND_ON": {
-        "source": "scripts/curtain_scene.gd:609",
+        "source": "scripts/curtain_scene.gd:639",
         "zh": "音效：开"
       },
       "CURTAIN_SOUND_OFF": {
-        "source": "scripts/curtain_scene.gd:609",
+        "source": "scripts/curtain_scene.gd:639",
         "zh": "音效：关"
       },
       "CURTAIN_BACK_TITLE": {
-        "source": "scripts/curtain_scene.gd:611",
+        "source": "scripts/curtain_scene.gd:641",
         "zh": "返回标题"
       },
       "CURTAIN_SPEAKER": {
-        "source": "scripts/curtain_lines.gd:16",
+        "source": "scripts/curtain_lines.gd:36",
         "zh": "卷卷"
       },
       "CURTAIN_SPEAKER_SUBTITLE": {
@@ -2491,39 +2677,39 @@
         "zh": "豚鼠吟游诗人"
       },
       "CURTAIN_GREETING_DEFAULT": {
-        "source": "scripts/curtain_lines.gd:23",
+        "source": "scripts/curtain_lines.gd:42",
         "zh": "看看这里有什么能帮到你的。"
       },
       "CURTAIN_GREETING_DRUID": {
-        "source": "scripts/curtain_lines.gd:26",
+        "source": "scripts/curtain_lines.gd:55",
         "zh": "在这里遇到你真开心。"
       },
       "CURTAIN_GREETING_ROGUE": {
-        "source": "scripts/curtain_lines.gd:28",
+        "source": "scripts/curtain_lines.gd:57",
         "zh": "这些就当做定金吧。"
       },
       "CURTAIN_GREETING_MECH": {
-        "source": "scripts/curtain_lines.gd:30",
+        "source": "scripts/curtain_lines.gd:59",
         "zh": "你喜欢音乐吗？"
       },
       "CURTAIN_REPLY_DRUID": {
-        "source": "scripts/curtain_lines.gd:45",
+        "source": "scripts/curtain_lines.gd:84",
         "zh": "我也是。"
       },
       "CURTAIN_REPLY_ROGUE": {
-        "source": "scripts/curtain_lines.gd:47",
+        "source": "scripts/curtain_lines.gd:86",
         "zh": "我就喜欢这种有趣的工作。"
       },
       "CURTAIN_REPLY_MECH": {
-        "source": "scripts/curtain_lines.gd:49",
+        "source": "scripts/curtain_lines.gd:88",
         "zh": "是的，这个节奏让我安心。"
       },
       "CURTAIN_SKIP_LAYER_ONE": {
-        "source": "scripts/curtain_lines.gd:61",
+        "source": "scripts/curtain_lines.gd:100",
         "zh": "摇摇头（不拿）"
       },
       "CURTAIN_SKIP_LAYER_TWO": {
-        "source": "scripts/curtain_lines.gd:62",
+        "source": "scripts/curtain_lines.gd:101",
         "zh": "摆手拒绝（不拿）"
       },
       "RUN_SUMMARY_CLASS": {
@@ -2559,6 +2745,10 @@
         "source_parts": [
           " 场"
         ]
+      },
+      "RUN_SUMMARY_DIFFICULTY": {
+        "source": "scripts/run_summary_scene.gd:242",
+        "zh": "难度 %s"
       },
       "RUN_SUMMARY_VICTORY": {
         "source": "scripts/run_summary_scene.gd:227",
@@ -2645,8 +2835,8 @@
         "zh": "种子：%s"
       },
       "RECORD_CLASS_DIFFICULTY_TIME": {
-        "source": "scripts/record_list_scene.gd:345",
-        "zh": "角色：%s · 难度 %d · 用时 %s"
+        "source": "scripts/record_list_scene.gd:583",
+        "zh": "角色：%s · 难度 %s · 用时 %s"
       },
       "RECORD_HP": {
         "source": "scripts/record_list_scene.gd:355",
@@ -2679,10 +2869,6 @@
         "source": "scripts/record_list_scene.gd:393",
         "zh": "（这一局没有获得道具）"
       },
-      "RECORD_MORE_RELICS": {
-        "source": "scripts/record_list_scene.gd:405",
-        "zh": "…还有 %d 件"
-      },
       "RECORD_FINAL_DECK": {
         "source": "scripts/record_list_scene.gd:413",
         "zh": "最终卡组（%d 张 / %d 种）"
@@ -2704,8 +2890,8 @@
         "zh": "角色：%s"
       },
       "RECORD_ROW_DIFFICULTY_TIME": {
-        "source": "scripts/record_list_scene.gd:460",
-        "zh": "难度 %d · 用时 %s"
+        "source": "scripts/record_list_scene.gd:713",
+        "zh": "难度 %s · 用时 %s"
       },
       "RECORD_ROW_END_TIME": {
         "source": "scripts/record_list_scene.gd:467",
@@ -2839,30 +3025,102 @@
         "source": "scripts/class_pick_scene.gd:638",
         "zh": "尚未解锁"
       },
-      "MODE_BACK": {"source": "scripts/mode_select_scene.gd", "zh": "返回标题"},
-      "MODE_STANDARD_START": {"source": "scripts/mode_select_scene.gd", "zh": "标准模式 · 选择角色"},
-      "DAILY_USED": {"source": "scripts/mode_select_scene.gd", "zh": "今日已挑战"},
-      "DAILY_START": {"source": "scripts/mode_select_scene.gd", "zh": "开始今日挑战"},
-      "DAILY_STEAM_REFRESH": {"source": "scripts/mode_select_scene.gd", "zh": "刷新"},
-      "DAILY_STEAM_IDLE": {"source": "scripts/mode_select_scene.gd", "zh": "连接后读取今日前十"},
-      "DAILY_STEAM_LOADING": {"source": "scripts/mode_select_scene.gd", "zh": "正在读取……"},
-      "DAILY_STEAM_OFFLINE": {"source": "scripts/mode_select_scene.gd", "zh": "Steam 未连接 · 本地成绩仍保留"},
-      "DAILY_STEAM_FAILED": {"source": "scripts/mode_select_scene.gd", "zh": "读取失败 · 不影响本地成绩"},
-      "MODE_TITLE": {"source": "scripts/mode_select_scene.gd", "zh": "选择游戏模式"},
-      "MODE_SUBTITLE": {"source": "scripts/mode_select_scene.gd", "zh": "自由构筑，或挑战今天所有人相同的一局"},
-      "MODE_STANDARD": {"source": "scripts/mode_select_scene.gd", "zh": "标准模式"},
-      "MODE_DAILY": {"source": "scripts/mode_select_scene.gd", "zh": "每日挑战"},
-      "MODE_STANDARD_DESC": {"source": "scripts/mode_select_scene.gd", "zh": "自选角色与难度，也可输入种子。\n卡组、道具和剧情进度按标准规则累积。"},
-      "DAILY_CLASS": {"source": "scripts/mode_select_scene.gd", "zh": "固定角色"},
-      "DAILY_DIFFICULTY": {"source": "scripts/mode_select_scene.gd", "zh": "固定难度"},
-      "DAILY_DIFFICULTY_NAME_2": {"source": "scripts/mode_select_scene.gd", "zh": "严酷"},
-      "DAILY_SEED": {"source": "scripts/mode_select_scene.gd", "zh": "今日种子"},
-      "DAILY_ONCE": {"source": "scripts/mode_select_scene.gd", "zh": "每天一次 · 开局即计次 · 可续档"},
-      "DAILY_PLAYING": {"source": "scripts/mode_select_scene.gd", "zh": "今日挑战进行中"},
-      "DAILY_RESULT": {"source": "scripts/mode_select_scene.gd", "zh": "今日成绩"},
-      "DAILY_LOCAL_BOARD": {"source": "scripts/mode_select_scene.gd", "zh": "本地成绩 · 高分优先"},
-      "DAILY_NO_SCORE": {"source": "scripts/mode_select_scene.gd", "zh": "还没有已结算的每日挑战"},
-      "DAILY_STEAM_BOARD": {"source": "scripts/mode_select_scene.gd", "zh": "Steam 今日榜"},
+      "MODE_BACK": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "返回标题"
+      },
+      "MODE_STANDARD_START": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "标准模式 · 选择角色"
+      },
+      "DAILY_USED": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日已挑战"
+      },
+      "DAILY_START": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "开始今日挑战"
+      },
+      "DAILY_STEAM_REFRESH": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "刷新"
+      },
+      "DAILY_STEAM_IDLE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "连接后读取今日前十"
+      },
+      "DAILY_STEAM_LOADING": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "正在读取……"
+      },
+      "DAILY_STEAM_OFFLINE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "Steam 未连接 · 本地成绩仍保留"
+      },
+      "DAILY_STEAM_FAILED": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "读取失败 · 不影响本地成绩"
+      },
+      "MODE_TITLE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "选择游戏模式"
+      },
+      "MODE_SUBTITLE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "自由构筑，或挑战今天所有人相同的一局"
+      },
+      "MODE_STANDARD": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "标准模式"
+      },
+      "MODE_DAILY": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "每日挑战"
+      },
+      "MODE_STANDARD_DESC": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "自选角色与难度，也可输入种子。\n卡组、道具和剧情进度按标准规则累积。"
+      },
+      "DAILY_CLASS": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "固定角色"
+      },
+      "DAILY_DIFFICULTY": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "固定难度"
+      },
+      "DAILY_DIFFICULTY_NAME_2": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "严酷"
+      },
+      "DAILY_SEED": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日种子"
+      },
+      "DAILY_ONCE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "每天一次 · 开局即计次 · 可续档"
+      },
+      "DAILY_PLAYING": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日挑战进行中"
+      },
+      "DAILY_RESULT": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "今日成绩"
+      },
+      "DAILY_LOCAL_BOARD": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "本地成绩 · 高分优先"
+      },
+      "DAILY_NO_SCORE": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "还没有已结算的每日挑战"
+      },
+      "DAILY_STEAM_BOARD": {
+        "source": "scripts/mode_select_scene.gd",
+        "zh": "Steam 今日榜"
+      },
       "TITLE_START": {
         "source": "scripts/l10n.gd:27",
         "zh": "开始对战"
@@ -3122,6 +3380,34 @@
       "GAME_BRAND_FOOTER": {
         "source": "scripts/game_brand.gd:51",
         "zh": "v{v}"
+      },
+      "CURTAIN_DUCK_SPEAKER": {
+        "source": "scripts/curtain_lines.gd:35",
+        "zh": "鸭绅士"
+      },
+      "CURTAIN_DUCK_GREETING_DRUID": {
+        "source": "scripts/curtain_lines.gd:46",
+        "zh": "这次又给你添麻烦了。"
+      },
+      "CURTAIN_DUCK_GREETING_ROGUE": {
+        "source": "scripts/curtain_lines.gd:48",
+        "zh": "能帮我逮住那只该死的猫吗？走私，逃税，偷窃，简直无恶不作。"
+      },
+      "CURTAIN_DUCK_GREETING_MECH": {
+        "source": "scripts/curtain_lines.gd:51",
+        "zh": "别急着走，我还要很多合作想和你谈。"
+      },
+      "CURTAIN_DUCK_REPLY_DRUID": {
+        "source": "scripts/curtain_lines.gd:76",
+        "zh": "很高兴能帮到大家。"
+      },
+      "CURTAIN_DUCK_REPLY_ROGUE": {
+        "source": "scripts/curtain_lines.gd:78",
+        "zh": "强吗，那家伙？"
+      },
+      "CURTAIN_DUCK_REPLY_MECH": {
+        "source": "scripts/curtain_lines.gd:80",
+        "zh": "下次一定。"
       }
     },
     "shared": {
@@ -3499,8 +3785,8 @@
     "shop": 72,
     "reward": 125,
     "map": 245,
-    "battle": 75,
-    "shell": 216,
+    "battle": 79,
+    "shell": 222,
     "shared": 92
   }
 }

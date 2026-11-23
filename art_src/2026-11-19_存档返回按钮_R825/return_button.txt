@@ -1,0 +1,11 @@
+Create ONE production-ready transparent PNG game UI asset, using the supplied reference image ONLY for its established visual language: warm ivory parchment, slim antique-brass double border, clipped storybook corners, tiny subtle four-point star ornaments, clean Japanese anime / storybook fantasy game UI, crisp line art, restrained cel shading.
+
+ASSET: a single wide horizontal RETURN / CONTEXT BUTTON BACKGROUND, designed to be scaled down to about 184 x 42 pixels in Godot and stretched horizontally with a nine-patch style. Overall composition around 400 x 92 pixels. Transparent outside the button silhouette.
+
+The central 72 percent must remain calm, blank warm ivory space for runtime-rendered multilingual text. Add a small elegant LEFT-POINTING RETURN ARROW inside the left end cap, drawn in dark forest green with a slim brass edge. No other symbols. Keep all borders and the arrow well inside the canvas with a small transparent safety margin. Balanced left/right construction even though only the left cap carries an arrow.
+
+Match the reference's parchment cream, muted antique gold and understated handcrafted ornament. Slightly clearer contrast at small size, but NO new visual style.
+
+The image contains NO letters, NO words, NO numbers, NO fake writing, NO logo, NO watermark, NO checkerboard fake transparency, NO extra buttons, NO preview background, NO shadow outside the asset. NO photorealism, NO 3D render, NO ray-traced metal, NO airbrushed glossy mobile-game style. Only this one clean UI button asset.
+
+Generate the image and save it locally. Do not edit any source code, project files, documentation, or repository history.

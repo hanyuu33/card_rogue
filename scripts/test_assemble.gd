@@ -85,12 +85,16 @@ func _init() -> void:
 	_test_r592_combo_dimension()
 	_test_r604_opening()
 	_test_r714_defer_note()
+	_test_r775_materials()
 	print("Combination tests failures: ", failures)
 	quit(failures)
 
 func _fx_in_text(fx: Dictionary, text: String) -> bool:
 	## 单个组合动作是否能在原卡文本里找到出处（R565 保真判据）。
 	var n := int(fx.get("value", 0))
+	# R833：卡面已统一术语，判据先归一化再比对（旧写法也不会误判）。
+	text = text.replace("手卡", "手牌").replace("弃牌堆", "弃牌区")
+	text = text.replace("抽牌堆", "抽牌库").replace("生命值", "生命")
 	match str(fx.type):
 		"heal": return text.contains("%d 点生命" % n)
 		"damage": return text.contains("%d 点伤害" % n)
@@ -110,7 +114,8 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"buff_per_energy":
 			return text.contains("剩余费用每有 1 点") \
 					and text.contains("%d 点生命" % int(fx.get("hp", 0)))
-		"heal_per_energy": return text.contains("剩余费用") and text.contains("回复 %d 点生命" % n)
+		"damage_per_energy":
+			return text.contains("剩余费用") and text.contains("对所有敌人造成")
 		"draw_random_skill":
 			return text.contains("技能牌") and text.contains("本回合费用 -%d" % n)
 		"hand_cost_raise": return text.contains("费用 +%d" % n)
@@ -122,9 +127,9 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		# R584：出处 = 原句点名这张卡，且写「加入…手牌/手卡」。错卡名不放过。
 		"add_card":
 			var ac_ok := text.contains("「" + Rules.card_label(int(fx.get("card_id", 0))) + "」") \
-					and (text.contains("加入你的手牌") or text.contains("加入手卡"))
+					and (text.contains("加入你的手牌") or text.contains("加入手牌"))
 			if str(fx.get("from", "")) == "deck":
-				return ac_ok and text.contains("从卡组")
+				return ac_ok and (text.contains("从抽牌库") or text.contains("从卡组"))
 			return ac_ok
 		# R585：入库句的出处必须写「加入抽牌库」，光有卡名不算。
 		"add_card_to_deck":
@@ -135,15 +140,28 @@ func _fx_in_text(fx: Dictionary, text: String) -> bool:
 		"next_effect_discount": return text.contains("下一张效果卡费用减少 %d" % n)
 		"next_ally_discount": return text.contains("下一个盟友时，费用 -%d" % n)
 		"add_effect_from_deck":
-			return text.contains("从卡组") and text.contains("效果卡加入手卡") \
+			return (text.contains("从抽牌库") or text.contains("从卡组")) and text.contains("效果卡加入手牌") \
 					and text.contains("费用减少 %d" % int(fx.get("discount", 0)))
 		"hand_skill_discount": return text.contains("所有技能牌本回合费用 -%d" % n)
 		"hp_per_zero_skill":
 			return text.contains("费用为 0 的技能卡") and text.contains("+%d 生命" % n)
 		"fetch_cheapest_ally":
-			return text.contains("费用最低的盟友") and text.contains("加入手卡")
+			return text.contains("费用最低的盟友") and text.contains("加入手牌")
 		"recall_ally_from_discard":
-			return text.contains("弃牌堆") and text.contains("盟友回到手卡")
+			return text.contains("弃牌区") and text.contains("盟友回到手牌")
+		# ── R775：补 summon 保真（鸭妈妈）+ 三条新动作。每条都要有判据，
+		#    不写就落到 return true 零校验（R583 踩过的坑）。
+		"summon":
+			return text.contains("召唤")
+		"bonus_hp_per_upgrade":
+			return text.contains("+%d 生命" % n)
+		"fetch_skill":
+			return text.contains("随机技能卡")
+		# R846：影子猫 8006 的下半句改成「其他卡满 3 张 → 抽 N 张」。
+		"draw_if_third":
+			return text.contains("3 张其他卡") and text.contains("抽 %d 张牌" % n)
+		"self_destruct":
+			return text.contains("这张卡破坏")
 	return true
 
 
@@ -166,6 +184,11 @@ func _test_r565_fidelity() -> void:
 		for fx in (c.upper_effect.get("enter_effects", []) as Array):
 			check(_fx_in_text(fx, text),
 					"R585 保真：%d %s 的入场段「%s」在原文里找不到出处（原文：%s）"
+					% [c.id, c.card_name, Rules.effect_text(fx), text])
+		# R775：独立回合开始段（幽灵自毁）同样逐字对原文。
+		for fx in (c.upper_effect.get("turn_start_effects", []) as Array):
+			check(_fx_in_text(fx, text),
+					"R775 保真：%d %s 的回合开始段「%s」在原文里找不到出处（原文：%s）"
 					% [c.id, c.card_name, Rules.effect_text(fx), text])
 		check(str(c.upper_effect.get("trigger", "")) in Rules.TRIGGERS,
 				"R565：%d 上半时机必须在白名单" % c.id)
@@ -211,7 +234,7 @@ func _test_r565_fidelity() -> void:
 	r585_base.attack_range = 1
 	var r585_built: CardData = Rules.build(r585_base, r585_up, r585_gun.lower_effect)
 	check(r585_built != null
-			and r585_built.effect_text == "入场时，将2张「聚能炮击」加入抽牌库。每次被改造时：从卡组把1张「聚能炮击」加入手卡"
+			and r585_built.effect_text == "入场时，将2张「聚能炮击」加入抽牌库。每次被改造时：从抽牌库把1张「聚能炮击」加入手牌"
 			and (r585_built.assemble.get("enter_effects", []) as Array).size() == 1
 			and str(r585_built.assemble.get("trigger", "")) == "upgraded"
 			and (r585_built.assemble.get("lower_effects", []) as Array).size() == 1,
@@ -226,7 +249,7 @@ func _test_r565_fidelity() -> void:
 	check(_fx_in_text({"type": "add_card", "card_id": 9145, "value": 1, "from": "deck"}, r584_gun_t)
 			and _fx_in_text({"type": "add_card_to_deck", "card_id": 9145, "value": 2}, r584_gun_t)
 			and not _fx_in_text({"type": "add_card", "card_id": 8027, "value": 1, "from": "deck"}, r584_inf_t),
-			"R585：保真判据认「从卡组」与「加入抽牌库」，错来源不放过")
+			"R585：保真判据认「从抽牌库」与「加入抽牌库」，错来源不放过")
 	# 复制通道：enter_effects 必须随 from_dict 一起走，漏了组合卡一被复制就丢入场段。
 	var r585_copy := CardData.from_dict(r585_built.to_dict())
 	check((r585_copy.assemble.get("enter_effects", []) as Array).size() == 1,
@@ -773,7 +796,7 @@ func _test_combo() -> void:
 			and fox_prod.per_kill_damage == 0 and fox_prod.growth_power == 0
 			and fox_prod.upper_effect.is_empty() and fox_prod.lower_effect.is_empty(),
 			"R637 组合：traits / affixes / 各类效果字段一律不继承")
-	check(fox_prod.effect_text.find("从卡组随机抽取") < 0,
+	check(fox_prod.effect_text.find("从抽牌库随机抽取") < 0,
 			"R637 组合：卡面不再写母卡效果")
 	# 行为锁：产物上场 → 牌库不减少（赤狐的「抽一张技能牌」不触发）；真赤狐照旧触发
 	var fox_st := FieldState.new([], 20, 20, -1, "测试", false)
@@ -911,7 +934,7 @@ func _test_r569_purge() -> void:
 			and (fire.upper_effect.get("effects", []) as Array).is_empty(),
 			"R569：火元素上半 = 纯钩子「入场时」")
 	check(Rules.body_text(fire.lower_effect)
-			== "清除你的抽牌堆、手卡、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害",
+			== "清除你的抽牌库、手牌、弃牌区中的所有诅咒；每清除 1 张，对随机一个敌人造成 2 点伤害",
 			"R569：火元素下半逐字 = 原卡效果（实际「%s」）" % Rules.body_text(fire.lower_effect))
 	# 产物文本：扳机只印一次，整条效果跟在后面
 	var base := CardData.new()
@@ -922,7 +945,7 @@ func _test_r569_purge() -> void:
 	base.attack_range = 1
 	var prod := Rules.build(base, fire.upper_effect, fire.lower_effect)
 	check(prod != null and prod.effect_text.count("入场时") == 1
-			and prod.effect_text.begins_with("入场时：清除你的抽牌堆"),
+			and prod.effect_text.begins_with("入场时：清除你的抽牌库"),
 			"R569：产物 = 一个「入场时：」+ 整条效果（实际「%s」）"
 			% (prod.effect_text if prod != null else "null"))
 	# 结算：三个区域的诅咒全清，每清 1 张 → 随机敌人 2 伤
@@ -1072,7 +1095,9 @@ func _test_r569_pool_forms() -> void:
 	# 源码锁：超框缩字号（用户口径「文字应该增加自适应大小，超框需要缩小」）
 	var cf := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 	check(cf.find("func fit_text_lines") >= 0, "R569 源码锁：卡面有「超框缩字号」公共口")
-	check(cf.find("fit_text_lines(font, eff") >= 0, "R569 源码锁：卡面效果文字走自适应")
+	check(cf.find("fit_text_lines(font, eff") < 0
+			and cf.find("name_layout(_display_name(card)") >= 0,
+			"R569/R843h 源码锁：卡面效果正文已移除，卡名走自适应")
 	var ao := FileAccess.get_file_as_string("res://scripts/assemble_overlay.gd")
 	check(ao.find("CardFace.fit_text_lines") >= 0,
 			"R569 源码锁：组合页上/下效果框也走自适应（犀牛那三行不再顶出框底）")
@@ -1144,16 +1169,18 @@ func _test_r570_actions() -> void:
 	eng2b._assemble_execute(p2b, Vector2i(3, 0), "turn_end")
 	check(p2b.health == hp2b and p2b.end_atk == 0, "R570：剩余费用 0 时 `buff_per_energy` 不结算")
 
-	# ③ heal_per_energy（夜蚀 8062）：剩余 5 费、只差 2 血 → 回 2（不超过上限）
+	# ③ damage_per_energy（夜蚀 8062，R845 换成群体伤害）：剩余 5 费 → 对所有敌人各 5 伤
 	var eng3 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
 	eng3.ai_enabled = false
 	var p3 := _probe_unit(eng3, "turn_end", Vector2i(3, 0))
-	p3.card.assemble = {"trigger": "turn_end", "effects": [{"type": "heal_per_energy", "value": 1}]}
-	p3.health = p3.card.health - 2
+	p3.card.assemble = {"trigger": "turn_end", "effects": [{"type": "damage_per_energy", "value": 1}]}
+	var foe3 := eng3.state.place(CardData.from_dict(repo.get_card(1051).to_dict()),
+			Vector2i(1, 1), GameEngine.SIDE_OPPONENT)
+	var foe3_hp := foe3.health
 	eng3.state.energy = 5
 	eng3._assemble_execute(p3, Vector2i(3, 0), "turn_end")
-	check(p3.health == p3.card.health,
-			"R570：剩余 5 费、只差 2 血 → 回满且不越界（实际 %d / %d）" % [p3.health, p3.card.health])
+	check(foe3.health == foe3_hp - 5,
+			"R845：剩余 5 费 → 组合的夜蚀对所有敌人各 5 伤（%d → %d）" % [foe3_hp, foe3.health])
 
 	# ④ draw_random_skill（赤狐 9034）：牌库 -1、手牌 +1，且只有那张本回合 -1 费
 	var skill: CardData = null
@@ -1263,8 +1290,10 @@ func _test_r570_actions() -> void:
 			"R570 源码锁：自我复制只有 `_spawn_self_clone` 一个实现口（野兔 + 组合）")
 	check(gs.find("func _buff_other_allies_atk") >= 0 and gs.count("_buff_other_allies_atk(") >= 3,
 			"R570b 源码锁：其他盟友加攻只有 `_buff_other_allies_atk` 一个实现口（老虎 + 组合）")
-	check(gs.count("_night_erosion_heal(") >= 3,
-			"R570 源码锁：按剩余费用回血只有 `_night_erosion_heal` 一个实现口（夜蚀 + 组合）")
+	check(gs.count("_night_erosion_strike(") >= 3,
+			"R845 源码锁：按剩余费用群伤只有 `_night_erosion_strike` 一个实现口（夜蚀 + 组合）")
+	check(gs.count("_night_erosion_heal(") == 0,
+			"R845 源码锁：旧的按费回血实现（`_night_erosion_heal`）已整条删除")
 
 
 func _test_r571_no_cancel() -> void:
@@ -1425,7 +1454,7 @@ func _test_r589_materials() -> void:
 	##   · 忒修斯奇械 9222「上半超负荷 + 每次生命降到 0 或更低」→ `lethal` 跨越判定 + 常驻字段；
 	##   · 小精灵 9074 / 斑鸠 9052 / 巨鼠 9046 / 乌鸦 9039：上半「使用后」；
 	##   · 水元素 9068 / 影魔 8007：上半「使用时」。
-	## 另外两张**明确不入池**：堡垒 8034（纯持续效果，没有扳机）、素体 8025（万用素材）。
+	## 另外**明确不入池**：素体 8025（万用素材）。堡垒 8034 已在 R775 入池（upgraded 扳机）。
 	var repo := CardRepo.load_json()
 	# ① 三条新扳机在白名单与文案表里
 	for tk: String in ["active", "use_after", "lethal"]:
@@ -1477,11 +1506,10 @@ func _test_r589_materials() -> void:
 	check(sdl.size() == 2 and str((sdl[1] as Dictionary).get("type", "")) == "hp_per_zero_skill" \
 			and int((sdl[1] as Dictionary).get("value", 0)) == 3,
 			"R589：影魔下半 = 减 1 费 + 每张 0 费技能卡 +3 生命")
-	# ③ 两张明确不入池
-	for cid: int in [8034, 8025]:
-		var c2: CardData = repo.get_card(cid)
-		check(c2 != null and c2.upper_effect.is_empty() and c2.lower_effect.is_empty(),
-				"R589：%d 不加入候选池（用户口径）" % cid)
+	# ③ 素体永不入池（堡垒 8034 已入池，R775 口径变更，素材校验见 _test_r775_materials）
+	var proto: CardData = repo.get_card(8025)
+	check(proto != null and proto.upper_effect.is_empty() and proto.lower_effect.is_empty(),
+			"R589：素体 8025 不加入候选池（用户口径）")
 	# ④ 产物文案：主动发动必须把规则句一起印出来（卡面写了才敢这么结算）
 	var probe := CardData.new()
 	probe.card_name = "R589 探针"
@@ -1703,4 +1731,75 @@ func _test_r714_defer_note() -> void:
 	e4._end_turn_surplus("foe")
 	check(e4.state.opp_energy == 5 and e4._assemble_deferred.is_empty(),
 			"R716：敌方回合结束才兑现它自己那笔 +5")
+
+
+func _test_r775_materials() -> void:
+	## R775：堡垒 / 鸭妈妈 / 影子猫 / 幽灵 入池 —— 三个新动作 + 幽灵回合开始自毁段。
+	## 素体 8025 / 小鸭 9251 是衍生卡，**永不入池**（引擎 _combo_candidate_cards 已写死挡素体）。
+	var repo := CardRepo.load_json()
+	# ① 堡垒：upgraded + 每层改造 +3 生命（bonus_hp_per_upgrade）
+	var fort: CardData = repo.get_card(8034)
+	check(fort != null and str(fort.upper_effect.get("trigger", "")) == "upgraded"
+			and (fort.upper_effect.get("effects", []) as Array).is_empty()
+			and str((fort.lower_effect.effects[0] as Dictionary).get("type", "")) == "bonus_hp_per_upgrade"
+			and int((fort.lower_effect.effects[0] as Dictionary).get("value", 0)) == 3,
+			"R775：堡垒切分 = upgraded + bonus_hp_per_upgrade(3)")
+	# ② 鸭妈妈：use + summon 小鸭 ×2
+	var duck: CardData = repo.get_card(9250)
+	check(duck != null and str(duck.upper_effect.get("trigger", "")) == "use"
+			and str((duck.lower_effect.effects[0] as Dictionary).get("type", "")) == "summon"
+			and int((duck.lower_effect.effects[0] as Dictionary).get("value", 0)) == 9251
+			and int((duck.lower_effect.effects[0] as Dictionary).get("count", 1)) == 2,
+			"R775：鸭妈妈切分 = use + summon(9251 ×2)")
+	# ③ 影子猫：use + draw_if_third(2)（R846 从 fetch_skill + if_third 改过来）
+	var cat: CardData = repo.get_card(8006)
+	check(cat != null and str(cat.upper_effect.get("trigger", "")) == "use"
+			and str((cat.lower_effect.effects[0] as Dictionary).get("type", "")) == "draw_if_third"
+			and int((cat.lower_effect.effects[0] as Dictionary).get("value", 0)) == 2,
+			"R775/R846：影子猫切分 = use + draw_if_third(2)")
+	check(cat != null and cat.effect_text.begins_with("打出时"), "R775：影子猫描述改为「打出时」")
+	# ④ 幽灵：death 主扳机 + turn_start_effects 自毁段 + fetch_skill
+	var ghost: CardData = repo.get_card(8008)
+	var g_ts: Array = (ghost.upper_effect.get("turn_start_effects", []) as Array) if ghost != null else []
+	check(ghost != null and str(ghost.upper_effect.get("trigger", "")) == "death"
+			and g_ts.size() == 1
+			and str((g_ts[0] as Dictionary).get("type", "")) == "self_destruct"
+			and str((ghost.lower_effect.effects[0] as Dictionary).get("type", "")) == "fetch_skill",
+			"R775：幽灵切分 = death + turn_start 自毁 + fetch_skill")
+	# ⑤ 四个新动作都在白名单（含补保真的 summon）
+	for t in ["summon", "bonus_hp_per_upgrade", "fetch_skill", "self_destruct",
+			"draw_if_third"]:
+		check(CardData.ASSEMBLE_EFFECT_TYPES.has(t), "R775/R846：动作 %s 已登记白名单" % t)
+	# ⑥ 堡垒产物行为：upgraded 扳机触发 bonus_hp_per_upgrade(3) → 额外 +3 生命（不加力量）
+	var base := CardData.new()
+	base.card_name = "测试底座"
+	base.kind = "盟友"
+	base.health = 10
+	base.power = 2
+	base.cost = 0
+	var built := Rules.build(base, fort.upper_effect, fort.lower_effect)
+	check(built != null and built.assemble.trigger == "upgraded", "R775：堡垒组合产物 upgraded 扳机")
+	var e1 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e1.ai_enabled = false
+	var q1 := e1.state.place(CardData.from_dict(built.to_dict()), Vector2i(4, 0), "self")
+	e1._assemble_execute(q1, Vector2i(4, 0), "upgraded")
+	check(q1.upgrade_hp == 3 and q1.health == 13 and q1.upgrade_atk == 0,
+			"R775：bonus_hp_per_upgrade(3) 额外 +3 生命（不加力量）")
+	# ⑦ 幽灵产物行为：turn_start 自毁 → death 加卡
+	var gbuilt := Rules.build(base, ghost.upper_effect, ghost.lower_effect)
+	check(gbuilt != null and gbuilt.assemble.trigger == "death"
+			and (gbuilt.assemble.get("turn_start_effects", []) as Array).size() == 1,
+			"R775：幽灵组合产物 = death + turn_start 自毁段")
+	var e2 := GameEngine.new(FieldState.new([], 20, 20, -1, "测试", false))
+	e2.ai_enabled = false
+	var skill := CardData.new()
+	skill.card_name = "测试技能"
+	skill.kind = "技能"
+	skill.cost = 1
+	e2.state.deck.append(skill)
+	var q2 := e2.state.place(CardData.from_dict(gbuilt.to_dict()), Vector2i(4, 0), "self")
+	e2._assemble_execute(q2, Vector2i(4, 0), "turn_start")
+	check(not e2.state.board.has(Vector2i(4, 0)), "R775：幽灵回合开始自毁（单位已离场）")
+	check(e2.state.hand.size() == 1 and str(e2.state.hand[0].card_name) == "测试技能",
+			"R775：幽灵死亡后从卡组随机技能卡入手")
 

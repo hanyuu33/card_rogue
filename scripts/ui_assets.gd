@@ -13,6 +13,7 @@ class_name UiAssets
 ##   稀有度边框     frame_<0..5>.png  下标同 CardData.RARITY_COLORS
 ##   卡图区边框     art_frame_<归属>.png  归属 = forest / shadow / mech / common / enemy
 ##                  （R498：卡图窗上的窄边框，按卡牌归属分色）
+##   职业一体框     art_rarity_frame_<归属>[_compact].png（R843e：图框 + 稀有度底托）
 ##   稀有度缎带     ribbon_<0..5>.png 下标同上（R170：稀有度的**主通道**，挂在卡面右上角）
 ##   面板羊皮纸     panel_parchment.png（R170：白底面板的统一底，平铺自适应任意大小）
 ##   羊皮卷面板底   scroll_parchment.png（R191：奖励面板的卷轴底，九宫格自适应、无边框）
@@ -220,6 +221,21 @@ static func trap_fx_path(id: int) -> String:
 	return "res://assets/fx/trap_fx_%d.png" % id
 
 
+static func clock_face_path() -> String:
+	## R836：缺陷时钟「时针转动」演出用的**大钟面**（无指针 —— 指针由 battle_scene 画，
+	## 要连续旋转，贴图转会有像素偏移与描边锯齿）。
+	## 与 UI 贴图分目录：它是战斗特效、不是界面元件（R669 陷阱特效的先例）。
+	## 缺图返回 null → `_draw_clock_face_fallback()` 画程序化表盘，不空白不报错。
+	return "res://assets/fx/clock_face.png"
+
+
+static func clock_face() -> Texture2D:
+	## R836：钟面**唯一取图口**；`_load()` 兼容已导入与刚落盘未导入的 PNG。
+	if not _cache.has("clock_face"):
+		_cache["clock_face"] = _load(clock_face_path())
+	return _cache["clock_face"]
+
+
 static func trap_fx(id: int) -> Texture2D:
 	## R669：陷阱触发特效**唯一取图口**；`_load()` 兼容已导入与刚落盘未导入的 PNG。
 	var key := "trap_fx_%d" % id
@@ -283,6 +299,18 @@ static func art_frame(kind: String) -> Texture2D:
 	## 中心全透明、最外 1px 不透明 —— 直接盖在卡图之上即可，既不遮图也不在纸底上露缝。
 	## 缺图返回 null，`CardFace` 回退成同色细线框（不空白、不报错）。
 	return get_tex("art_frame_" + kind)
+
+
+static func art_rarity_frame(kind: String, compact := false) -> Texture2D:
+	## R843e：卡图框 + 稀有度底托的职业一体素材。详情 / 紧凑各有独立比例，禁止跨比例拉伸。
+	## 卡图窗口透明、中央文字区为空白底托；缺图时 CardFace 回退到旧窄框 + 程序稀有度签。
+	return get_tex("art_rarity_frame_" + kind + ("_compact" if compact else ""))
+
+
+static func card_outer_frame(kind: String, compact := false) -> Texture2D:
+	## R843i 预览：覆盖整张卡外圈的职业框，含贯通侧边与底框。
+	## 详情 / 紧凑各自匹配稀有度位置；中央透明，不覆盖文字安全区。
+	return get_tex("card_outer_frame_" + kind + ("_compact" if compact else ""))
 
 
 static func rarity_ribbon(rarity: int) -> Texture2D:
@@ -370,7 +398,8 @@ static func battle_bg(key: String, layer: int) -> Texture2D:
 
 
 static func _path_exists(p: String) -> bool:
-	return FileAccess.file_exists(p) or ResourceLoader.exists(p)
+	## R790：覆盖层里的新图也算存在（否则新加的背景图会被判缺、直接走兜底）。
+	return DataPaths.asset_exists(p)
 
 
 static func bridge_icon() -> Texture2D:
@@ -411,6 +440,14 @@ static func title_art() -> Texture2D:
 	## R604 主界面主视觉：1920×1080，标题字已烘焙进图里（合成脚本 tools/_compose_r604_art.py）。
 	## 缺图返回 null → `title_scene` 回退 `title_bg` + 文字标题，`opening_scene` 直接跳标题。
 	return get_tex("title_art")
+
+
+static func title_art_en() -> Texture2D:
+	## R854 英文版主界面主视觉：1920×1080，QUACKILL 已烘焙进图里。
+	## 背景由 codex 出无字图、标题由 PIL 奶油立体渲染合成
+	## （art_src/2026-11-22_title_en/_compose_title_en.py）——**不让 AI 画字母，八个字母它照样拼错**。
+	## 非中文界面统一用它；缺图返回 null → `title_scene` 回退 `title_bg` + 程序文字标题。
+	return get_tex("title_art_en")
 
 
 static func language_bg() -> Texture2D:
@@ -495,13 +532,7 @@ static func clear_cache() -> void:
 
 
 static func _load(path: String) -> Texture2D:
-	if ResourceLoader.exists(path):
-		var res := load(path)
-		if res is Texture2D:
-			return res
-	# 回退：文件刚丢进目录、编辑器还没导入时，直接解 PNG。
-	if FileAccess.file_exists(path):
-		var img := Image.new()
-		if img.load(path) == OK and not img.is_empty():
-			return ImageTexture.create_from_image(img)
-	return null
+	## R790：统一走 DataPaths —— 覆盖目录（content/assets/...）优先直读 PNG，
+	## 其次 pck 里已导入的资源，最后才是「刚落盘、编辑器还没导入」的原文件。
+	## 三种情况都在 `DataPaths.load_texture()` 里，这里只保留一个入口，避免两套判存漂移。
+	return DataPaths.load_texture(path)

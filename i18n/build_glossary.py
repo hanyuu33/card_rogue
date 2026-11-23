@@ -110,11 +110,13 @@ g["difficulties"] = named([
     ("稀缺", "Scarcity", "欠乏"), ("疲惫", "Fatigue", "疲労"),
     ("凶暴", "Ferocious", "凶暴"), ("贫瘠", "Barren", "不毛"),
     ("匆忙", "Haste", "急ぎ"), ("虚弱", "Weakened", "虚弱"),
-    ("噩梦", "Nightmare", "悪夢"), ("上锁", "Locked", "施錠"),
+    ("噩梦", "Nightmare", "悪夢"), ("初始卡削弱", "Weakened Starter Cards", "初期カード弱体化"),
+    ("上锁", "Locked", "施錠"),
+    ("昂贵", "Pricey", "高値"),
 ])
 g["difficulty_notes"] = named([
     ("无", "None", "なし"),
-    ("篝火回复生命值降低", "Reduced Campfire Healing", "篝火のHP回復量が低下"),
+    ("工具掉落率下降", "Lower Tool Drop Rate", "ツールドロップ率の低下"),
     ("战斗胜利不再回复生命值", "No Healing after Battle Victories", "戦闘勝利時にHPを回復しない"),
     ("敌人更加顽强", "Enemies Are Tougher", "敵がさらに頑強になる"),
     ("稀有卡牌获取概率降低", "Lower Rare Card Chance", "レアカードの入手確率低下"),
@@ -124,9 +126,15 @@ g["difficulty_notes"] = named([
     ("行动力降低", "Less Chocolate", "チョコレート減少"),
     ("虚弱", "Weakened", "虚弱"),
     ("精英出现增多", "More Elites", "エリートの出現増加"),
+    ("初始卡削弱：攻击伤害 4，木栅栏生命 6",
+     "Weakened starter cards: Strike deals 4 damage, Wooden Fence has 6 Health",
+     "初期カード弱体化：攻撃のダメージ4、木の柵のHP6"),
     ("第三层上锁，获取三个信物以解锁第三层",
      "Layer 3 Locked: collect three Key Relics to unlock it",
      "第3層が施錠：3つのキーレリックを集めると解除"),
+    ("商店商品售价 +40%（信物除外）",
+     "Shop prices +40% (Key Relics excluded)",
+     "ショップ価格 +40%（キーレリックを除く）"),
 ])
 g["rooms"] = named([
     ("战斗", "Battle", "戦闘"), ("精英战斗", "Elite Battle", "エリート戦"),
@@ -353,6 +361,7 @@ g["levels"] = named([
     ("巨炮防线", "Great Cannon Line", "巨砲防衛線"),
     ("钢铁要塞", "Steel Fortress", "鋼鉄の要塞"),
     ("鸭子队长登场", "Enter the Duck Captain", "アヒル隊長登場"),
+    ("鸭蛋投手", "Duck Egg Pitcher", "卵投げアヒル"),
 ])
 
 g["events"] = named([

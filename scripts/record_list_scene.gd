@@ -577,10 +577,13 @@ func _draw_detail() -> void:
 	draw_string(_font_bold, Vector2(x0, top + 26.0),
 			GameI18n.ui("shell", "RECORD_SEED", "种子：%s") % ("—" if seed_v == 0 else RunState.seed_text_of(seed_v)),
 			HORIZONTAL_ALIGNMENT_LEFT, 320, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
+	# R795：难度写成「数字 + 名称」（`RunState.difficulty_label()` 唯一口）—— 原来只有
+	# 档位数字，看不出是哪一档。旧记录只存了数字，名称现推；越界脏数据由它钳住。
 	draw_string(_font, Vector2(x0 + 250.0, top + 26.0),
-			GameI18n.ui("shell", "RECORD_CLASS_DIFFICULTY_TIME", "角色：%s · 难度 %d · 用时 %s")
-			% [PlayerClass.legacy_id(str(rec.get("class", "?"))),
-			int(rec.get("difficulty", 2)), RunRecord.fmt_secs(int(rec.get("secs", 0)))],
+			GameI18n.ui("shell", "RECORD_CLASS_DIFFICULTY_TIME", "角色：%s · 难度 %s · 用时 %s")
+			% [PlayerClass.display_name_of(str(rec.get("class", "?"))),
+			RunState.difficulty_label(int(rec.get("difficulty", 2))),
+			RunRecord.fmt_secs(int(rec.get("secs", 0)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 640, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	var has_snap := rec.has("hp") or rec.has("deck") or rec.has("relics")
 	if has_snap:
@@ -700,13 +703,15 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 			RunRecord.fmt_time(str(rec.get("time", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_BODY, UiTheme.PAGE_INK)
 	draw_string(_font_bold, r.position + Vector2(246, 22),
-			GameI18n.ui("shell", "RECORD_ROW_CLASS", "角色：%s") % PlayerClass.legacy_id(str(rec.get("class", "?"))),
+			GameI18n.ui("shell", "RECORD_ROW_CLASS", "角色：%s") % PlayerClass.display_name_of(str(rec.get("class", "?"))),
 			HORIZONTAL_ALIGNMENT_LEFT, 190, UiTheme.FS_BODY, UiTheme.PAGE_GREEN)
 	draw_string(_font_bold, r.position + Vector2(446, 22),
 			RunRecord.result_label(res, int(rec.get("layer", -1))),
 			HORIZONTAL_ALIGNMENT_LEFT, 140, UiTheme.FS_BODY, UiTheme.PAGE_INK)
+	# R795：同详情 —— 「难度 12 昂贵 · 用时 5 分」（数字 + 名称）。
 	draw_string(_font, r.position + Vector2(596, 22),
-			GameI18n.ui("shell", "RECORD_ROW_DIFFICULTY_TIME", "难度 %d · 用时 %s") % [int(rec.get("difficulty", 2)),
+			GameI18n.ui("shell", "RECORD_ROW_DIFFICULTY_TIME", "难度 %s · 用时 %s") % [
+			RunState.difficulty_label(int(rec.get("difficulty", 2))),
 			RunRecord.fmt_secs(int(rec.get("secs", 0)))],
 			HORIZONTAL_ALIGNMENT_LEFT, 280, UiTheme.FS_LABEL, UiTheme.PAGE_INK)
 	# R630：两行一起收（24/43 → 22/38）。行高 48（ROW_H 56 - 8）要塞 FS_BODY 16 + FS_CAPTION 12
@@ -718,5 +723,5 @@ func _draw_row(idx: int, rec: Dictionary) -> void:
 	# R261：种子码也列在列表行上（不用点进详情就能抄下来复现）
 	var row_seed := int(rec.get("seed", 0))
 	draw_string(_font, r.position + Vector2(430, 38),
-			"种子：%s" % ("—" if row_seed == 0 else RunState.seed_text_of(row_seed)),
+			GameI18n.ui("shell", "RECORD_SEED", "种子：%s") % ("—" if row_seed == 0 else RunState.seed_text_of(row_seed)),
 			HORIZONTAL_ALIGNMENT_LEFT, 220, UiTheme.FS_CAPTION, Color("b39a5e"))

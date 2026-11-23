@@ -2260,3 +2260,147 @@ manifest 的 9018 条目已更新 ref / prompt / note。
 
 ## 2026-11-23 吟游诗人卡图预览
 生成杜鹃9263、招募9264带框候选图，保存于 art_src/2026-11-23_bard_preview。使用内置image_gen。已目视核验。此为美术预览，非游戏运行截图，未接入assets/pics。初始git状态干净。
+
+## 2026-11-16 R767 安卓进场不再卡 + 每日挑战重做（修饰池 / 随机卡组）
+
+### 一、安卓「选标准模式进去卡一段时间」
+
+- **病因分两层**：
+  1. `change_scene_to_file()` 是同步的 —— 主线程读盘、解析场景、解码 1280×720 的 CG，安卓上几百毫秒起步；
+  2. 更要命的是 `SceneFx` 的**擦入计时起点记在卡之前**：等主线程回来，`IN_MS + SETTLE_MS` 早已过期，
+     擦入动画整段被吞 —— 玩家看到的就是「黑屏一阵，画面啪地蹦出来」。
+- **修法**（新增 `scripts/scene_warm.gd`，改 `scripts/scene_fx.gd`）：
+  - 后台线程预加载：`warm(path)` → `load_threaded_request`，成品进 `_done`，`take()` 拿走即删（不是资源池）；
+  - 预热链：标题页预热 `mode_select + class_pick`；模式选择页预热 `class_pick + 今日 CG + 4 张头像 + map`；
+    选人页预热 `map + 另外两张 CG`。玩家在这几页停留的几秒就够读完；
+  - 换场景唯一收口 `SceneFx._swap_now()`：优先 `change_scene_to_packed`（用预加载成品），拿不到才回退同步加载；
+  - 擦出满 220ms 时若下一站还在读，就在**已经全黑**的画面上再等最多 `WARM_WAIT_MS = 900ms`；
+  - **擦入从「新场景真的出现那一帧」起表**（`_t0 = -1` 哨兵）—— 这是「画面突变」的直接修复；
+  - `_on_cv_draw` 在 `_t0 < 0` 时画全黑，避免拿 -1 当起点算 p 把旧场景闪一下；
+  - 慢切换日志 `[SceneFx] 慢切换 %dms → path`（阈值 400ms），以后看数字不用猜。
+- **安全闸**：headless / `--screenshot` / `--demo` 全部跳过预热（不把线程引进回归与出图）。
+
+### 二、每日挑战重做
+
+原来只有「固定角色 + 固定难度 + 固定种子」，第三天就长一个样。现在：
+
+- **修饰池 20 条**（`scripts/daily_modifiers.gd`）：10 增益 + 10 减益，每天各摇 2 条。
+
+  | 增益 | 减益 |
+  |---|---|
+  | 富裕 初始金币 +80 | 贫瘠 初始金币 −50 |
+  | 强健 最大生命 +15% | 贫血 最大生命 −12% |
+  | 旅粮 每层巧克力 +3 | 饥饿 每层巧克力 −3 |
+  | 幸运 稀有卡 ×1.6 | 倒霉 稀有卡 ×0.5 |
+  | 温暖 休息回复 +15% | 阴冷 休息回复 −15% |
+  | 工具箱 开局多一件工具 | 诅咒 卡组塞 2 张木栅栏 |
+  | 杂牌 卡组多 3 张随机卡 | 敌之顽强 敌人生命 +20% |
+  | 敌之孱弱 敌人生命 −15% | 凶猛 敌人攻击 +1 |
+  | 冷清 精英 ×0.75 | 拥挤 精英 ×1.5 |
+  | 灵光 每回合费用 +1 | 滞涩 每回合费用 −1 |
+
+- **效果全部落在既有唯一取数口**：`start_gold` / `chocolate_per_layer` / `max_hp_mul` /
+  `rare_weight_mul` / `elite_weight_mul` / `rest_pct` / `enemy_hp_bonus_pct` / `enemy_power_bonus` /
+  `fatigue_active`，外加新增的 `RunState.energy_per_turn()`（替换 `state.energy = FieldState.ENERGY_PER_TURN`
+  的两处赋值）。修饰模块**不直接改任何数值**，加一条先找它的取数口。
+- **每回合费用**：`energy_per_turn()` = `FieldState.ENERGY_PER_TURN` + 修饰，**下限 1**。
+  敌方 `state.opp_energy` 不读它 —— 修饰只针对玩家。
+- **随机卡组 15 张**：木栅栏 4~6 + 攻击补足到 10 + 5 张本职业可达卡（其中至少 1 张盟友）。
+  不整组随机的原因：栅栏与攻击是这个游戏的**下限**，抽不到就是「手里 5 张全下不去」的死局。
+- **每日池刻意不看账号**：`_daily_pool()` 自己过滤，**不看剧情锁、不看个人禁卡** ——
+  `reward_pool_for()` 会按 `ProfileData` 过滤，拿它当池子会让同一天不同账号摇出不同卡组，Steam 榜失去意义。
+- **规则版本 1 → 2**（`DailyChallenge.RULES_VERSION` 与 `DailyModifiers.RULES_VERSION` 必须同步）：
+  榜名变成 `DAILY_<yyyymmdd>_V2`，旧成绩留在 V1 榜。
+- **续档**：`daily_fx` 进 `RunSave.snapshot / apply`。**漏了它，续档后换层金币与费用会跳变**。
+- **界面**：模式选择页每日面板改成「日期·角色 / 固定难度·卡组 / 今日种子 / 今日修正 4 条 / 每日一次」，
+  增益绿、减益赭红；西语等长文案超过一行时压成一行加省略号，不撑破面板。
+- **i18n**：`interface_*.json` 新增 `daily` 域 43 条（20 名称 + 20 效果 + 3 界面），四语齐。
+- **回归**：`_verify.py` 全绿；engine **6279✓ 0✗**（+27 条 `_test_r767`）。
+- 顺带：`_test_r762` 两条旧断言按新口径更新（卡组改随机构筑；榜名里的版本号写成表达式）。
+
+## 2026-11-22 R853 回血口径归位 + 难度 1 改工具掉率 + 苹果代价
+
+- **口径（店长）**：之前把「除到达新的一层外不能回复 HP」当成 R224 的全局难度规则，是记串了。
+  真相＝**苹果 6027 的代价**；难度 2 的「战斗胜利不再回复生命值」只关**战斗胜利默认回血**
+  那一条，其他途径（篝火 / 圣餐 / 道具 / 换层）照常。
+- **难度 1 文本**：`DIFFICULTY_TEXTS[1]` 由「篝火回复生命值降低」换成「工具掉落率下降」；
+  篝火数值表 `DIFFICULTY_REST_PCT` **一律不动**（0 档 0.40 / 1+ 档 0.25）。
+- **工具掉落率**：新增唯一口 `RunState.tool_drop_chance()` / `tool_drop_chance_at(d)`，
+  难度 0 = 33%（`TOOL_DROP_CHANCE_EASY`）、难度 1+ = 10%（`TOOL_DROP_CHANCE`）。
+  `roll_battle_tool_drop()` 读这里；兔脚 6076 仍加算 +10%（0 档 33→43%，1+ 档 10→20%）。
+  `test_traps` ⑥c 段显式钉难度 0（1000 场 285~375）与难度 1（70~130），末尾还原。
+- **战斗胜利默认回血**：`DIFFICULTY_BATTLE_HEAL` 由全 0 改成 `[3,3,0×11]`（0/1 档 +3）。
+  `battle_scene._show_over()` 胜利分支在写回 hp 后真正调用 `RunState.heal(battle_win_heal())`；
+  此前 `battle_win_heal()` 没有任何调用点，只有测试在读（空壳函数）。
+- **苹果代价（锁血）**：新增唯一口 `RunState.hp_recovery_locked()`＝`has_relic(6027)`。
+  `heal()` 开头挡（篝火 / 圣餐 / 止血绷带 / 三层起点补给 / 战斗胜利默认 +3 全覆盖）；
+  `gain_max_hp()` 与类固醇 6001 / 重鸭 6017 的直接写 hp 也挡——**上限照涨、附带回血不给**。
+  **三个例外**：① 换层回满（`advance_layer` 直接写 `hp = max_hp`）；
+  ② 拿苹果瞬间 +7 与 20% 两口直接写 hp（此时 `relics` 已 append、锁已生效，
+  不能再走 `gain_max_hp()`，否则 +7 那口被自己的锁吞掉）；③ 战斗内自愈 9065 / 黄桃罐头走
+  `engine.battle_end_heal()`，不受此锁影响。
+- **i18n**：`difficulty_notes` 换词条（保留 13 条）；`build_glossary.py` 源同步；
+  `validate_glossary` / `validate_spanish` / `_audit_text_sources` 三套全绿。
+  ⚠️ 校验器锚点 `## R224：全局规则` 必须留在 `DIFFICULTY_TEXTS` 之后——注释改名会断锚。
+- **测试**：新增苹果锁血 8 条断言（持有即锁 / 篝火 / heal / 上限 / 源码守卫 / 移除恢复）；
+  修两条旧口径断言——`BATTLE_HEAL[0]` 0→3、R237/R853 那条原本漏设档位跑在 0 档、
+  现补 `set_difficulty(12)`（旧代码全 0 时侥幸没红）。
+- **回归**：`_verify.py` 十套；engine 断点见当轮日志。用户数据备份 `/e/tmp/wt_r851b_userdata_bk`。
+
+## 2026-11-22 English duck lettering illustration
+- Goal: finished QUACKILL title illustration, duck anatomy integrated into Q/C/final L.
+- Scope: new art_src/2026-11-22_title_en/finished_quackill_duck_lettering_v1.png and matching prompt file; existing art and game scenes preserved.
+- Validation: inspected generated illustration for exact QUACKILL lettering and integrated duck features; System.Drawing checked final PNG at 1920x1080. Built-in imagegen used; final sized with bicubic resampling.
+- Known limitation: git status failed because git.exe execution was denied. Existing uncommitted changes could not be enumerated. No commit or push performed. No runtime integration or game-scene acceptance claimed.
+- Next: review asset in real title scene if integration is requested; commit this explicit asset/prompt file list and HANDOFF.md once Git execution is available.
+- Commit: unavailable (Git execution denied).
+
+## 2026-11-22 QUACKILL finished title illustration v2
+- Goal: complete English title screen with exact QUACKILL spelling and integrated Q/U/K/final-L duck anatomy.
+- Scope: added art_src/2026-11-22_title_en/finished_quackill_duck_lettering_v2.png and matching .prompt.txt. Existing images and scenes preserved.
+- Validation: visually inspected generated art for eight-letter spelling, duck features, unclipped title and clear lower menu area; System.Drawing verified final export at 1920x1080. Built-in image_gen used.
+- Known issues: git status failed with git.exe access denied; external uncommitted changes could not be identified. No commit or push performed. Asset-only delivery, no runtime scene integration or scene acceptance claimed.
+- Next: if integrating, inspect the actual title scene including narrow windows. Commit only the two v2 files plus this handoff entry when Git execution is available.
+- Corresponding commit: unavailable, Git execution denied.
+
+## 2026-11-22 R855 英文主视觉鸭子字形定稿
+- 店长反馈 R854 普通英文粗体没有参考中文版的鸭子字形；本轮选择 codex 候选 v2。
+- `QUACKILL` 八字母拼写与顺序已逐字验收；Q 鸭头、K 翅膀、末尾 L 鸭掌均直接参与字形。
+- 正式替换 `assets/ui/title_art_en.png`（1920×1080）；中文图、语言分支及 R607 无副标题规则不变。
+- 已重新导入并用 `tools/_shot_title_lang.gd --lang=en` 实机截图：标题无裁切、不遮六个菜单按钮。
+- 对照图：`art_src/2026-11-22_title_en/preview_ingame_zh_vs_en.png`；候选与旧版备份均保留在同目录。
+- 纯美术资产与生成工程变更，无玩法代码改动，未跑全量玩法回归。
+- R855b 增补：`release/store/quackill_title_en.png` 为商店宣传用标题横幅（1760×570）；
+  由 `_crop_title_logo.py` 按 `(80,60,1840,630)` 从定稿裁出，保留天空背景，全部鸭子字形无裁断。
+- R855c 透明版：`release/store/quackill_title_en_alpha.png`（1685×467 RGBA，37.47% 全透明）。
+  生成脚本 `art_src/2026-11-22_title_en/_matte_title_logo.py`；三底验收图 `preview_title_alpha.png`。
+  不含天空、云、银杏、房屋；尾部小鸭与橙色鸭掌完整，外缘为深棕+暖金薄边。
+
+## 2026-11-23 R862 难度插档（初始卡削弱）+ 初始卡数值上调
+
+- 店长口径：
+  * 低难度（0~10 档）攻击 8002 = **5 伤**、木栅栏 8001 = **8 血**，**图鉴也改**；
+  * 插入新档 **11「初始卡削弱」**：初始卡组里的攻击回到 4 伤、木栅栏回到 6 血；
+  * 原 11「第三层上锁」→ **12**，原 12「昂贵」→ **13**（总档位 13 → 14）；
+  * 角色选择界面**从 11 档起橙色**（原来橙色挂在「上锁」档上）。
+- 落地：
+  * `cards.json` 8001 `health` 6→8；8002 文案「造成 5 点伤害」并补 `value: 5`。
+  * `RunState`：`DIFFICULTY_COUNT` 14；NAMES / TEXTS 插入「初始卡削弱」；BATTLE_HEAL / REST_PCT 补第 14 项；
+    `DIFF_LOCK_FROM` 11→12、`DIFF_SHOP_PRICE_FROM` 12→13；新增 `DIFF_STARTER_WEAK_FROM = 11` 与
+    `STARTER_FENCE_HP / STARTER_ATTACK_DMG / STARTER_WEAK_*`；唯一口
+    `starter_card_weak()` / `starter_fence_hp(_at)` / `starter_attack_dmg(_at)`。
+  * **削弱落在卡组实例层**：`card_with_mod()` 对 8001 / 8002 复制后改 `health` / `value`，并写
+    `body_number_swap = {"from": 5, "to": 4}`；`CardText.parse_card()` 只换正文数字（`inline_amount`，不染红），
+    **绝不改 `effect_text`** —— i18n 译文按中文原串整句硬编码，改原文会掉回中文（R702 教训）。
+  * 引擎取数收口 `GameEngine.spell_base_of(card)`：攻击 / 蓄势 / 猎杀走实例 `value`，其余读 `SPELL_BASE_DMG`
+    （8002 原型值 4→5）；`_run_spell_effect_body` 的 8002 分支、`spell_now`、拖牌预览、`spell_first_hit` 全走它。
+  * `class_pick_scene._draw_difficulty_block()` 橙色判据由 `DIFF_LOCK_FROM` 换成 `DIFF_STARTER_WEAK_FROM`。
+  * `ProfileData`：新增 `diff_schema` 迁移（老档案已解锁难度 ≥ 11 一律 +1）。**必须放在 `ensure_loaded` 末尾
+    并立刻 `save()`**：提前调用会把还没解析的禁卡表冲成空，不落盘则每次读档都 +1。
+- 验证：十套全绿（engine **7327✓ / 0✗**、traps 250、smoke 77、trapinput 77、mod 37、reward 26、bgm 39、
+  content 15、assemble 0、mana PASS）；`validate_glossary`（difficulties / difficulty_notes 各 14）、
+  `validate_spanish` 24634 项、`_audit_text_sources` 0 问题。
+- 教训：
+  * 测试里 `RunState.deck_ids` 未必是初始卡组 → 断言「卡组实例」前必须**显式摆 deck**（本轮自己踩过一次）。
+  * 旧断言写死 8001 = 6 血 / 8002 = 4 伤的一共 **35 处**（叠栅栏 / R67 离场还原 / R792 墙砖 / R811 回满 /
+    鸭之眼 / 鸭之低语 / R316 易伤 / R223 敌血缩放 …），数值一上调必须同步，否则「功能对、断言红」。

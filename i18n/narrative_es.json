@@ -113,6 +113,20 @@
         "SMITH_DONE_DESC": "El fuego se ha apagado y la pieza forjada ha salido del horno.\nLa carta de tu mano se ha convertido en una Valla de Hierro."
       }
     },
+    "factory": {
+      "name": "Fábrica de Chocolate",
+      "texts": {
+        "FACTORY_DESC": "Un dulce aroma flota desde el fondo del bosque. La puerta de cobre está entreabierta; dentro, una cinta transportadora lleva una fila de moldes de chocolate con forma de pato,\ny un río tibio de chocolate fluye junto a tus pies.\nEn el mostrador hay una pequeña pizarra: «Degustación gratis: la primera pieza va por nuestra cuenta. Cada pieza después se paga con algo.»\nY en una esquina, una letra más pequeña: el cliente que más esté dispuesto a pagar puede llevarse la fábrica entera.",
+        "FACTORY_DONE_DESC": "La cinta transportadora se detiene. El último contrato ya está guardado en tu abrigo—\n«Fábrica de Chocolate» se ha añadido a tu mazo: Estructura de 2 de Coste, 0 de Poder / 30 de Vida, Dimensional;\nal comienzo de cada uno de tus turnos, obtén 1 de Coste y roba 1 carta.\nEl dulce aroma queda atrás y el bosque vuelve a estar en silencio."
+      }
+    },
+    "sword": {
+      "name": "La espada del bosque",
+      "texts": {
+        "SWORD_DESC": "En el claro se alza una piedra grisácea, con una espada clavada en su grieta; la hoja está casi enterrada.\nEl musgo ha trepado por la guarda, enroscándose durante años incontables: lleva demasiado tiempo esperando aquí.\nDesenvainar: pierdes 13 de Vida máxima (debes conservar al menos 1; no puedes desenvainar si tu Vida máxima es insuficiente)\ny obtienes el objeto «Espada Sagrada»: el primer Aliado que juegas en cada combate obtiene +10 de Poder;\no no toques nada y sal del bosque.",
+        "SWORD_TAKEN_DESC": "La piedra se parte por la mitad. La espada sale con una ligereza imposible,\ncomo si hubiera estado esperando a que la tomaras.\nLa empuñadura se asienta en tu palma y el bosque enmudece un instante: la «Espada Sagrada» es tuya."
+      }
+    },
     "struggle": {
       "name": "Lucha",
       "texts": {
@@ -194,7 +208,8 @@
         "REST_SACRAMENT_DESC": "Junto a la hoguera hay una ración de Santa Comunión que aún no se ha enfriado.\nLa compartiste antes de sentarte: llegar a la hoguera recuperó 50% de tu Vida máxima (ya resuelto);\naún puedes asar un trozo de carne para llevarlo contigo y comerlo en combate con un toque (ocupa una ranura de herramienta);\no añadir un tronco al fuego para eliminar 1 carta de tu mazo.\n(Elige solo 1 de las 2 opciones restantes; una vez elegida, tu visita a este lugar terminará.)",
         "REST_SACRAMENT_RESULT_DESC": "[Santa Comunión] Ha recuperado %d Vida (ahora %d / %d).",
         "REST_BANDAGE_RESULT_DESC": "[Venda hemostática] Ha recuperado %d Vida (ahora %d / %d).",
-        "REST_PIPE_RESULT_DESC": "[Pipa de fumar] La llama parpadea: la Pipa de fumar vuelve a estar encendida. En tu primer turno del próximo combate: obtén 1 Coste, roba 1 carta adicional y pierde hasta 1 Vida (conserva al menos 1)."
+        "REST_PIPE_RESULT_DESC": "[Pipa de fumar] La llama parpadea: la Pipa de fumar vuelve a estar encendida. En tu primer turno del próximo combate: obtén 1 Coste, roba 1 carta adicional y pierde hasta 1 Vida (conserva al menos 1).",
+        "REST_WARM_NOTE": "(Elige dos de las tres: hoy la hoguera arde más cálida.)"
       }
     },
     "statue": {
@@ -203,6 +218,21 @@
         "STATUE_DESC": "En el claro se alza una colosal estatua de piedra blanca, lavada a gris por la lluvia.\nCuerpo de león, una cabeza de cabra que asoma del lomo, una serpiente enroscada en la punta de la cola:\nya habías visto esa pose en un viejo volumen sobre quimeras, aunque no debería estar en este bosque.\nEl musgo llena cada grieta; las palabras del pedestal se borraron hace mucho.",
         "STATUE_PRAY_DESC": "Apoyas la mano en su pata fría y no dices nada.\nAlgo responde desde dentro de la piedra: un temblor leve, paciente.\nDurante las próximas 3 batallas, cada victoria entregará una herramienta entre los escombros.",
         "STATUE_SMASH_DESC": "Recoges una piedra y la estrellas contra la pata delantera.\nUna grieta sube de la pata a la cabeza de cabra y la estatua entera se derrumba en cascotes blancos:\nlos trozos que aún caben en tu mano bastan para llenar la barra de herramientas."
+      }
+    },
+    "dragon_slab": {
+      "name": "Losa del dragón",
+      "texts": {
+        "DRAGON_SLAB_DESC": "Una losa de piedra ocre se inclina sobre el musgo junto al arroyo, media cabeza más alta que tú.\nEn su cara está tallado un dragón de alas plegadas; el musgo y la lluvia gastaron escamas y garras hasta dejar solo relieves,\ny únicamente la cuenca de su ojo conserva pintura de oro: bajo el sol parece despierto.\nApoyas la palma y algo muy leve respira bajo la piedra.\nNo dice nada, como si esperara que tú digas qué clase de dragón es.\n«El dragón poderoso»: otorga +8 de Poder a un Aliado o Estructura;\n«el dragón noble»: obtienes el objeto «Valor escaso»; tu mazo conserva como máximo 3 copias de cada nombre,\nlas sobrantes se arrancan al azar y pierdes 5 de vida por cada carta retirada por este efecto.\nTambién puedes retirar la mano y dejar la losa donde está.",
+        "DRAGON_SLAB_MIGHT_DESC": "El relieve del dragón brilla un instante, como si un aliento hubiera salido de la piedra.\nAl levantar la vista tienes los dedos cubiertos de polvo de oro y una grieta fina cruza la losa:\nese dragón le ha prestado un poco de su fuerza a lo que llevas.",
+        "DRAGON_SLAB_NOBLE_DESC": "La losa se parte por la mitad y los fragmentos ocres caen al suelo.\nNo hay ningún dragón dentro, solo una escama pulida hasta brillar, fría como agua de pozo.\nContó una a una las cosas sobrantes que llevabas: las primeras 3 se quedaron, y las demás las arrancó y las echó a la grieta."
+      }
+    },
+    "haunted_house": {
+      "name": "La casa embrujada",
+      "texts": {
+        "HAUNTED_DESC": "Al final del sendero se alza una vieja casa de dos plantas. Casi toda la pintura\nse ha caído de los marcos, pero no hay ni un cristal roto, y dentro brilla una luz amarillenta.\nLa puerta está entornada. No hay viento ni pasos, y sin embargo la luz está encendida.\nSobre el dintel hay clavado un cartel de madera descolorido: AQUÍ NO VIVE NADIE.\nUna ventana de arriba tiene la cortina echada, pero la luz se escapa por la rendija.\nSe mece despacio, con mucha regularidad.",
+        "HAUNTED_TAKEN_DESC": "La puerta se cierra sola a tu espalda.\nLa chimenea está fría. Sobre la mesita hay varias bolsas de tela y un puñado de cartas\nescritas, como si alguien se hubiera marchado a medio recoger.\nCuando te lo guardas todo, llega un ruido muy leve desde arriba:\nalguien ha bajado un pie de la cama.\nAl salir y girarte, sobre el alféizar hay una muñeca de tela sentada.\nMira hacia ti."
       }
     }
   },

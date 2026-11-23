@@ -24,6 +24,15 @@ static func color_of(id: int) -> Color:
 		7010: return Color(0.96, 0.72, 0.28)   # 快送鸭 · 快递黄
 		7011: return Color(0.42, 0.82, 0.78)   # 神秘牌 · 谜青
 		7012: return Color(0.68, 0.66, 0.62)   # 石头 · 石灰
+		7013: return Color(0.86, 0.68, 0.42)   # 卡牌包 · 牛皮纸
+		7014: return Color(0.58, 0.72, 0.98)   # 智慧药剂 · 智慧蓝
+		7015: return Color(0.94, 0.62, 0.38)   # 河豚 · 河豚橙
+		7016: return Color(0.86, 0.32, 0.28)   # 爆炸蘑菇 · 蘑菇红
+		# R839 大蒜 7017 —— 蒜苗青（不用蒜白：蒜白在米色格底上几乎看不见）。
+		7017: return Color(0.76, 0.82, 0.52)
+		# R841 锤子 —— 木槌的黄褐；润滑油 —— 琥珀油色。
+		7018: return Color(0.80, 0.62, 0.34)
+		7019: return Color(0.95, 0.72, 0.25)
 	return Color(0.80, 0.76, 0.66)
 
 
@@ -75,6 +84,24 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 	ci.draw_rect(rect, Color(0.07, 0.08, 0.11, 0.90), true)
 	ci.draw_rect(rect.grow(-maxf(2.0, rect.size.x * 0.045)), base, false,
 			maxf(2.0, rect.size.x * 0.045))
+	_glyph(ci, rect, id, ink)
+
+
+static func draw_glyph(ci: CanvasItem, rect: Rect2, id: int) -> void:
+	## R839：**只画图案、不画底框**的入口 —— 给「这一格已经有自己的底色」的场合用。
+	## 目前唯一用户是战场上的大蒜封锁格：那里底板已经是暗格 + 对角封条，
+	## 再叠一个 34px 的深色底框就成了三块黑压一起（实测截图里像块石头，认不出是蒜）。
+	## 颜色直接取 `color_of(id)`（亮色剪影）—— 深色底板上才看得见。
+	var tex: Texture2D = UiAssets.trap_icon(id)
+	if tex != null:
+		ci.draw_texture_rect(tex, rect, false, Color.WHITE)
+		return
+	_glyph(ci, rect, id, color_of(id))
+
+
+static func _glyph(ci: CanvasItem, rect: Rect2, id: int, ink: Color) -> void:
+	## 图案本体（不含底板 / 外框）—— `draw()` 与 `draw_glyph()` 共用同一份，
+	## 保证「工具栏里的样子」和「战场上的样子」永远是同一个形状。
 	var c := rect.get_center()
 	var s := minf(rect.size.x, rect.size.y)
 	match id:
@@ -90,7 +117,97 @@ static func draw(ci: CanvasItem, rect: Rect2, id: int, dim := false) -> void:
 		7010: _deliver(ci, c, s, ink)
 		7011: _mystery(ci, c, s, ink)
 		7012: _stone(ci, c, s, ink)
+		7013: _cardpack(ci, c, s, ink)
+		7014: _wisdom(ci, c, s, ink)
+		7015: _puffer(ci, c, s, ink)
+		7016: _mushroom(ci, c, s, ink)
+		7017: _garlic(ci, c, s, ink)
 		_: ci.draw_circle(c, s * 0.22, ink)
+
+
+static func _puffer(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R797 河豚 7015：圆身 + 一圈短刺 + 小尾鳍（程序化兜底；有 png 时整段不走）。
+	var w := maxf(1.2, s * 0.028)
+	var body := c + Vector2(-s * 0.03, s * 0.01)
+	# 刺：12 根放射短线，长度带一点参差（免得像太阳）
+	for k in 12:
+		var a := TAU * float(k) / 12.0
+		var d := Vector2(cos(a), sin(a))
+		var far := s * (0.34 if k % 3 == 0 else 0.29)
+		ci.draw_line(body + d * s * 0.20, body + d * far, col, w, true)
+	ci.draw_circle(body, s * 0.21, col)
+	# 眼睛：白点 + 黑瞳（小尺寸下就是一深一浅两个点）
+	ci.draw_circle(body + Vector2(s * 0.09, -s * 0.05), s * 0.045,
+			Color(1, 1, 1, col.a))
+	ci.draw_circle(body + Vector2(s * 0.10, -s * 0.05), s * 0.022, col)
+	# 尾鳍：两个三角
+	var tail := c + Vector2(s * 0.26, s * 0.02)
+	ci.draw_colored_polygon(PackedVector2Array([tail, tail + Vector2(s * 0.11, -s * 0.10),
+			tail + Vector2(s * 0.11, s * 0.10)]), col)
+
+
+static func _mushroom(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R801 爆炸蘑菇 7016：半圆伞盖 + 短柄 + 弯曲引信 + 火花（程序化兜底；有 png 时整段不走）。
+	## 单色剪影 —— 与 `_bomb` / `_spike` 同一路数：斑点在同色剪影里看不见，索性不画，
+	## 44px 下靠「伞盖 + 柄 + 引信」三件认形状。
+	var w := maxf(1.3, s * 0.028)
+	var ty := c.y + s * 0.04
+	# 柄：上窄下宽的梯形
+	ci.draw_colored_polygon(PackedVector2Array([
+			Vector2(c.x - s * 0.09, ty), Vector2(c.x + s * 0.09, ty),
+			Vector2(c.x + s * 0.13, ty + s * 0.28),
+			Vector2(c.x - s * 0.13, ty + s * 0.28)]), col)
+	# 伞盖：上半圆（PI → TAU 那半圈，底边压在 ty 上）
+	var pts := PackedVector2Array()
+	var steps := 18
+	for k in steps + 1:
+		var a := PI + PI * float(k) / float(steps)
+		pts.append(Vector2(c.x + cos(a) * s * 0.31, ty + sin(a) * s * 0.31))
+	ci.draw_colored_polygon(pts, col)
+	# 引信：从伞盖顶部往右上弯两折
+	var base := Vector2(c.x, ty - s * 0.31)
+	var mid := base + Vector2(s * 0.09, -s * 0.16)
+	var tip := mid + Vector2(-s * 0.05, -s * 0.14)
+	ci.draw_line(base, mid, col, w, true)
+	ci.draw_line(mid, tip, col, w, true)
+	# 火花：端点一个实心点 + 两根射线，和小血瓶那种「一眼能看出是引信」的量级一致
+	ci.draw_circle(tip, s * 0.05, col)
+	ci.draw_line(tip, tip + Vector2(s * 0.10, -s * 0.05), col, w * 0.8, true)
+	ci.draw_line(tip, tip + Vector2(-s * 0.04, -s * 0.10), col, w * 0.8, true)
+
+static func _ellipse(ci: CanvasItem, c: Vector2, rx: float, ry: float, col: Color) -> void:
+	## 椭圆填充（CanvasItem 只有 draw_circle，缩不成椭圆）——
+	## 大蒜的三片瓣都靠它画，别为此引一张贴图。
+	var pts := PackedVector2Array()
+	var steps := 20
+	for k in steps:
+		var a := TAU * float(k) / float(steps)
+		pts.append(Vector2(c.x + cos(a) * rx, c.y + sin(a) * ry))
+	ci.draw_colored_polygon(pts, col)
+
+
+static func _garlic(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R839 大蒜 7017：**圆胖底 + 收肩 + 短茎尖 + 三道瓣纹**的蒜头剪影。
+	## 前两版（单椭圆 / 三瓣并排）在 60px 下都读成「水滴、叶子」——
+	## 认蒜头靠三件事：底部**胖**、肩部**收**、表面**有瓣纹**，且顶部是断口不是圆顶。
+	## 与 `_mushroom` / `_puffer` 同一路数：单色剪影，靠形状认东西（有 png 时整段不走）。
+	var w := maxf(1.3, s * 0.022)
+	var body := c + Vector2(0, s * 0.125)
+	var dark := Color(col.r * 0.38, col.g * 0.40, col.b * 0.32, col.a)
+	_ellipse(ci, body, s * 0.235, s * 0.200, col)                              # 圆胖底部
+	_ellipse(ci, body + Vector2(0, -s * 0.095), s * 0.150, s * 0.150, col)      # 收肩
+	# 顶端断口（蒜苗切口）：窄三角，别做成圆顶
+	ci.draw_colored_polygon(PackedVector2Array([
+			Vector2(c.x - s * 0.060, body.y - s * 0.195),
+			Vector2(c.x + s * 0.060, body.y - s * 0.195),
+			Vector2(c.x, body.y - s * 0.380)]), col)
+	# 三道瓣纹：中间一道、两侧各一道（落在分瓣的接缝上）
+	for sx: float in [-0.112, 0.0, 0.112]:
+		ci.draw_line(Vector2(c.x + sx * s, body.y - s * 0.130),
+				Vector2(c.x + sx * s, body.y + s * 0.172), dark, w, true)
+	# 底部一道浅横沟（蒜头坐在案板上的那条线）
+	ci.draw_line(Vector2(c.x - s * 0.150, body.y + s * 0.155),
+			Vector2(c.x + s * 0.150, body.y + s * 0.155), dark, w * 0.8, true)
 
 
 static func _bomb(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
@@ -261,6 +378,37 @@ static func _potion(ci: CanvasItem, c: Vector2, s: float, col: Color, mana: bool
 	# 高光
 	ci.draw_line(Vector2(c.x - s * 0.10, c.y - s * 0.02),
 			Vector2(c.x - s * 0.10, c.y + s * 0.09), Color(1, 1, 1, 0.45), w * 0.9, true)
+
+static func _cardpack(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R796 卡牌包 7013：三张叠起来的卡 + 一道系带（程序化兜底；有 png 时整段不走）。
+	var w := maxf(1.5, s * 0.028)
+	var card := Rect2(c + Vector2(-s * 0.22, -s * 0.15), Vector2(s * 0.40, s * 0.30))
+	ci.draw_rect(Rect2(card.position + Vector2(-s * 0.05, s * 0.03), card.size), col, true)
+	ci.draw_rect(card, col.lightened(0.35), true)
+	ci.draw_rect(card, col, false, w)
+	var band := Rect2(card.position + Vector2(card.size.x * 0.42, 0),
+			Vector2(card.size.x * 0.16, card.size.y))
+	ci.draw_rect(band, col.darkened(0.25), true)
+
+
+static func _wisdom(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
+	## R796 智慧药剂 7014：蓝药瓶 + 瓶口一颗星（「智慧」靠星点区分法力药剂）。
+	var w := maxf(1.5, s * 0.032)
+	var body := PackedVector2Array([
+		c + Vector2(-s * 0.15, -s * 0.04),
+		c + Vector2(s * 0.15, -s * 0.04),
+		c + Vector2(s * 0.11, s * 0.20),
+		c + Vector2(-s * 0.11, s * 0.20)])
+	ci.draw_colored_polygon(body, col)
+	var outline := PackedVector2Array([body[0], body[1], body[2], body[3], body[0]])
+	ci.draw_polyline(outline, col.darkened(0.35), w)
+	ci.draw_line(c + Vector2(0, -s * 0.04), c + Vector2(0, -s * 0.13), col, w * 1.6)
+	var star := c + Vector2(s * 0.17, -s * 0.19)
+	for k in 4:
+		var a := TAU * float(k) / 4.0
+		var d := Vector2(cos(a), sin(a))
+		ci.draw_line(star - d * s * 0.055, star + d * s * 0.055, col.lightened(0.45), maxf(1.2, w * 0.8))
+
 
 static func _stone(ci: CanvasItem, c: Vector2, s: float, col: Color) -> void:
 	## R754 石头（7012）：一块带棱角的碎石，右下角一小撮碎屑。

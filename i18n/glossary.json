@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-11-13",
+  "updated": "2026-11-23",
   "source_lang": "zh-CN",
   "targets": [
     "en",
@@ -405,6 +405,30 @@
     "死亡": {
       "en": "Death",
       "ja": "死亡"
+    },
+    "持续场地": {
+      "en": "Persistent Field",
+      "ja": "永続フィールド"
+    },
+    "场地生效·双": {
+      "en": "Field: Both Sides",
+      "ja": "フィールド効果・双方"
+    },
+    "场地生效·友": {
+      "en": "Field: Friendly",
+      "ja": "フィールド効果・味方"
+    },
+    "离场消失": {
+      "en": "Banish on Leave",
+      "ja": "離場時に消滅"
+    },
+    "仅玩家可放置": {
+      "en": "Player Placement Only",
+      "ja": "プレイヤーのみ設置可能"
+    },
+    "跳跃": {
+      "en": "Leap",
+      "ja": "跳躍"
     }
   },
   "kinds": {
@@ -498,6 +522,10 @@
     }
   },
   "traits": {
+    "投手": {
+      "en": "Pitcher",
+      "ja": "投手"
+    },
     "机械": {
       "en": "Mech",
       "ja": "機械"
@@ -550,10 +578,15 @@
       "en": "Fire",
       "ja": "炎"
     },
-    "构状体": {
-      "en": "Automaton",
-      "ja": "構状体",
-      "note": "9243/9244/9245 普罗诺亚之影的变形产物，与 8026 构装体不同"
+    "构装体": {
+      "en": "Construct",
+      "ja": "構装体",
+      "note": "8026 构装体本体，以及 9243/9244/9245 普罗诺亚之影的变形产物（R778b 由「构状体」统一为此名）"
+    },
+    "铸甲": {
+      "en": "Armor Casting",
+      "ja": "鋳甲",
+      "note": "9133 量产型赫卡同克瑞斯：每回合开始时给随机一个其他友方单位 10 护甲"
     },
     "战士": {
       "en": "Warrior",
@@ -650,6 +683,310 @@
     "忒修斯奇械": {
       "en": "Theseus Engine",
       "ja": "テセウスの機械"
+    },
+    "传承": {
+      "en": "Legacy",
+      "ja": "伝承"
+    },
+    "伤害转移": {
+      "en": "Damage Transfer",
+      "ja": "ダメージ転移"
+    },
+    "兔": {
+      "en": "Rabbit",
+      "ja": "兎"
+    },
+    "冰霜": {
+      "en": "Frost",
+      "ja": "氷霜"
+    },
+    "加护": {
+      "en": "Blessing",
+      "ja": "加護"
+    },
+    "协同": {
+      "en": "Synergy",
+      "ja": "シナジー"
+    },
+    "发条": {
+      "en": "Clockwork",
+      "ja": "発条"
+    },
+    "号令": {
+      "en": "Command",
+      "ja": "号令"
+    },
+    "咏唱者": {
+      "en": "Chanter",
+      "ja": "詠唱者"
+    },
+    "增量": {
+      "en": "Increment",
+      "ja": "増量"
+    },
+    "复仇": {
+      "en": "Revenge",
+      "ja": "復讐"
+    },
+    "奥术": {
+      "en": "Arcane",
+      "ja": "奥術"
+    },
+    "奥秘": {
+      "en": "Mystery",
+      "ja": "奥秘"
+    },
+    "寒霜": {
+      "en": "Chill",
+      "ja": "寒霜"
+    },
+    "巨炮": {
+      "en": "Cannon",
+      "ja": "巨砲"
+    },
+    "废铁": {
+      "en": "Scrap",
+      "ja": "スクラップ"
+    },
+    "弓手": {
+      "en": "Archer",
+      "ja": "弓手"
+    },
+    "恶魔召唤": {
+      "en": "Demon Summon",
+      "ja": "悪魔召喚"
+    },
+    "成长": {
+      "en": "Growth",
+      "ja": "成長"
+    },
+    "扑击": {
+      "en": "Pounce",
+      "ja": "飛びかかり"
+    },
+    "执法": {
+      "en": "Enforcement",
+      "ja": "執行"
+    },
+    "折射": {
+      "en": "Refraction",
+      "ja": "屈折"
+    },
+    "护甲积攒": {
+      "en": "Armor Gain",
+      "ja": "装甲蓄積"
+    },
+    "拾荒": {
+      "en": "Scavenge",
+      "ja": "スカベンジ"
+    },
+    "持续改造": {
+      "en": "Persistent Upgrade",
+      "ja": "永続改造"
+    },
+    "改造供能": {
+      "en": "Upgrade Charge",
+      "ja": "改造チャージ"
+    },
+    "改造层数": {
+      "en": "Upgrade Stacks",
+      "ja": "改造スタック"
+    },
+    "改造抽牌": {
+      "en": "Upgrade Draw",
+      "ja": "改造ドロー"
+    },
+    "改造攻程": {
+      "en": "Upgrade Range",
+      "ja": "改造射程"
+    },
+    "改造生命层": {
+      "en": "Upgrade Health Stacks",
+      "ja": "改造HPスタック"
+    },
+    "施法者": {
+      "en": "Caster",
+      "ja": "術者"
+    },
+    "暗影领主": {
+      "en": "Shadow Lord",
+      "ja": "暗影の領主"
+    },
+    "暗杀": {
+      "en": "Assassinate",
+      "ja": "暗殺"
+    },
+    "暗杀召唤": {
+      "en": "Assassin Summon",
+      "ja": "暗殺召喚"
+    },
+    "机械成长": {
+      "en": "Mech Growth",
+      "ja": "機械成長"
+    },
+    "枭熊本能": {
+      "en": "Owlbear Instinct",
+      "ja": "オウルベア本能"
+    },
+    "模仿改造": {
+      "en": "Mimic Upgrade",
+      "ja": "模倣改造"
+    },
+    "治疗": {
+      "en": "Healing",
+      "ja": "治療"
+    },
+    "测量": {
+      "en": "Survey",
+      "ja": "測量"
+    },
+    "激光炮": {
+      "en": "Laser Cannon",
+      "ja": "レーザー砲"
+    },
+    "炮击": {
+      "en": "Bombard",
+      "ja": "砲撃"
+    },
+    "爆炎": {
+      "en": "Flame Burst",
+      "ja": "爆炎"
+    },
+    "犬": {
+      "en": "Hound",
+      "ja": "犬"
+    },
+    "狐": {
+      "en": "Fox",
+      "ja": "狐"
+    },
+    "狼": {
+      "en": "Wolf",
+      "ja": "狼"
+    },
+    "猫": {
+      "en": "Cat",
+      "ja": "猫"
+    },
+    "百眼": {
+      "en": "Hundred Eyes",
+      "ja": "百眼"
+    },
+    "祭坛": {
+      "en": "Altar",
+      "ja": "祭壇"
+    },
+    "穿行": {
+      "en": "Phasing",
+      "ja": "すり抜け"
+    },
+    "精进": {
+      "en": "Mastery",
+      "ja": "精進"
+    },
+    "自主改造": {
+      "en": "Self Upgrade",
+      "ja": "自律改造"
+    },
+    "自我复制": {
+      "en": "Self-Copy",
+      "ja": "自己複製"
+    },
+    "范围": {
+      "en": "Area",
+      "ja": "範囲"
+    },
+    "虎": {
+      "en": "Tiger",
+      "ja": "虎"
+    },
+    "行动力成长": {
+      "en": "Mobility Growth",
+      "ja": "行動力成長"
+    },
+    "装配": {
+      "en": "Equip",
+      "ja": "装備"
+    },
+    "计算": {
+      "en": "Compute",
+      "ja": "計算"
+    },
+    "迅捷": {
+      "en": "Swift",
+      "ja": "迅速"
+    },
+    "远程": {
+      "en": "Ranged",
+      "ja": "遠隔"
+    },
+    "通缉": {
+      "en": "Wanted",
+      "ja": "指名手配"
+    },
+    "野性": {
+      "en": "Feral",
+      "ja": "野生"
+    },
+    "量产护甲": {
+      "en": "Mass Armor",
+      "ja": "量産装甲"
+    },
+    "量产锻造": {
+      "en": "Mass Forge",
+      "ja": "量産鍛造"
+    },
+    "闪电": {
+      "en": "Lightning",
+      "ja": "雷"
+    },
+    "队长": {
+      "en": "Captain",
+      "ja": "隊長"
+    },
+    "阵亡双动": {
+      "en": "On-Death: Double Action",
+      "ja": "死亡時二動"
+    },
+    "阵亡机动": {
+      "en": "On-Death: Maneuver",
+      "ja": "死亡時機動"
+    },
+    "阵亡猎杀": {
+      "en": "On-Death: Hunt",
+      "ja": "死亡時狩猟"
+    },
+    "陶瓷": {
+      "en": "Ceramic",
+      "ja": "セラミック"
+    },
+    "集束": {
+      "en": "Cluster",
+      "ja": "クラスター"
+    },
+    "风": {
+      "en": "Wind",
+      "ja": "風"
+    },
+    "风暴": {
+      "en": "Storm",
+      "ja": "嵐"
+    },
+    "骨骼": {
+      "en": "Bone",
+      "ja": "骨格"
+    },
+    "鸦": {
+      "en": "Crow",
+      "ja": "鴉"
+    },
+    "鼠": {
+      "en": "Rat",
+      "ja": "鼠"
+    },
+    "齿轮": {
+      "en": "Gear",
+      "ja": "歯車"
     }
   },
   "names": {
@@ -819,6 +1156,11 @@
       "ja": "一般",
       "note": "道具 tier，与卡牌稀有度普通是不同枚举"
     },
+    "稀有": {
+      "en": "Rare",
+      "ja": "レア",
+      "note": "与卡牌稀有度「稀有」共用译名"
+    },
     "传奇": {
       "en": "Legendary",
       "ja": "伝説",
@@ -891,9 +1233,17 @@
       "en": "Nightmare",
       "ja": "悪夢"
     },
+    "初始卡削弱": {
+      "en": "Weakened Starter Cards",
+      "ja": "初期カード弱体化"
+    },
     "上锁": {
       "en": "Locked",
       "ja": "施錠"
+    },
+    "昂贵": {
+      "en": "Expensive",
+      "ja": "高価"
     }
   },
   "difficulty_notes": {
@@ -901,9 +1251,9 @@
       "en": "None",
       "ja": "なし"
     },
-    "篝火回复生命值降低": {
-      "en": "Reduced Campfire Healing",
-      "ja": "篝火のHP回復量が低下"
+    "工具掉落率下降": {
+      "en": "Lower Tool Drop Rate",
+      "ja": "ツールドロップ率の低下"
     },
     "战斗胜利不再回复生命值": {
       "en": "No Healing after Battle Victories",
@@ -941,9 +1291,17 @@
       "en": "More Elites",
       "ja": "エリートの出現増加"
     },
+    "初始卡削弱：攻击伤害 4，木栅栏生命 6": {
+      "en": "Weakened starter cards: Strike deals 4 damage, Wooden Fence has 6 Health",
+      "ja": "初期カード弱体化：攻撃のダメージ4、木の柵のHP6"
+    },
     "第三层上锁，获取三个信物以解锁第三层": {
       "en": "Layer 3 Locked: collect three Key Relics to unlock it",
       "ja": "第3層が施錠：3つのキーレリックを集めると解除"
+    },
+    "商店商品售价 +40%（信物除外）": {
+      "en": "Shop prices +40% (Key Relics excluded)",
+      "ja": "商店の商品価格 +40%（キーレリックは除く）"
     }
   },
   "rooms": {
@@ -1119,9 +1477,9 @@
       "en": "Cost -1",
       "ja": "コスト-1"
     },
-    "伤害 +10": {
-      "en": "Damage +10",
-      "ja": "ダメージ+10"
+    "伤害 +8": {
+      "en": "Damage +8",
+      "ja": "ダメージ+8"
     },
     "次元之力": {
       "en": "Dimensional Power",
@@ -1143,6 +1501,11 @@
       "en": "Contract Core",
       "ja": "契約コア",
       "note": "动态数值名；与事件契约的核心区分"
+    },
+    "力量 +8": {
+      "en": "Power +8",
+      "ja": "パワー+8",
+      "note": "R842 事件「龙石板」专属附魔；沿用「伤害 +8」的标记外观"
     }
   },
   "zones": {
@@ -1868,9 +2231,124 @@
       "en": "Poem",
       "ja": "詩",
       "id": 6069
+    },
+    "猴爪": {
+      "en": "Monkey's Paw",
+      "ja": "猿の手",
+      "id": 6066
+    },
+    "板甲": {
+      "en": "Plate Armor",
+      "ja": "板金鎧",
+      "id": 6070
+    },
+    "兵": {
+      "en": "Pawn",
+      "ja": "ポーン",
+      "id": 6071
+    },
+    "墙砖": {
+      "en": "Wall Brick",
+      "ja": "壁のレンガ",
+      "id": 6072
+    },
+    "刺墙": {
+      "en": "Spike Wall",
+      "ja": "トゲの壁",
+      "id": 6073
+    },
+    "应急装甲": {
+      "en": "Emergency Armor",
+      "ja": "緊急装甲",
+      "id": 6074
+    },
+    "圣剑": {
+      "en": "Holy Sword",
+      "ja": "聖剣",
+      "id": 6075,
+      "note": "亚瑟王式圣剑意象"
+    },
+    "兔脚": {
+      "en": "Rabbit's Foot",
+      "ja": "ウサギの足",
+      "id": 6076
+    },
+    "钻头": {
+      "en": "Drill",
+      "ja": "ドリル",
+      "id": 6077
+    },
+    "龟壳": {
+      "en": "Turtle Shell",
+      "ja": "亀の甲羅",
+      "id": 6078
+    },
+    "蜂蜜": {
+      "en": "Honey",
+      "ja": "はちみつ",
+      "id": 6079
+    },
+    "法术卷轴": {
+      "en": "Spell Scroll",
+      "ja": "スペルスクロール",
+      "id": 6080
+    },
+    "新月耳饰": {
+      "en": "Crescent Earring",
+      "ja": "三日月のイヤリング",
+      "id": 6081
+    },
+    "太阳指环": {
+      "en": "Sun Ring",
+      "ja": "太陽の指輪",
+      "id": 6082
+    },
+    "海妖鱼叉": {
+      "en": "Siren Harpoon",
+      "ja": "セイレーンの銛",
+      "id": 6083
+    },
+    "缺陷时钟": {
+      "en": "Defective Clock",
+      "ja": "欠陥時計",
+      "id": 6084
+    },
+    "鸭子闹钟": {
+      "en": "Duck Alarm Clock",
+      "ja": "アヒルの目覚まし時計",
+      "id": 6085
+    },
+    "音乐盒": {
+      "en": "Music Box",
+      "ja": "オルゴール",
+      "id": 6086
+    },
+    "这是礼帽": {
+      "en": "This Is a Top Hat",
+      "ja": "これはシルクハット",
+      "id": 6087
+    },
+    "首饰盒": {
+      "en": "Jewelry Box",
+      "ja": "宝石箱",
+      "id": 6088
+    },
+    "空故事书": {
+      "en": "Empty Storybook",
+      "ja": "空の絵本",
+      "id": 6089
+    },
+    "稀有价值": {
+      "en": "Rare Value",
+      "ja": "希少価値",
+      "id": 6090
     }
   },
   "levels": {
+    "鸭蛋投手": {
+      "en": "Duck Egg Pitcher",
+      "ja": "卵投げアヒル"
+    },
     "洞穴": {
       "en": "Cavern",
       "ja": "洞窟"
@@ -2011,6 +2489,10 @@
       "en": "Mass-Production Line",
       "ja": "量産ライン"
     },
+    "计量工坊": {
+      "en": "Metrology Works",
+      "ja": "計量工房"
+    },
     "量产铁砧": {
       "en": "Mass-Produced Anvils",
       "ja": "量産の金床"
@@ -2041,6 +2523,17 @@
       "en": "Duck Whispers",
       "ja": "アヒルのささやき",
       "key": "whisper"
+    },
+    "林中的剑": {
+      "en": "Sword in the Woods",
+      "ja": "森の剣",
+      "key": "sword",
+      "note": "拔剑的亚瑟王 / 圣剑意象"
+    },
+    "巧克力工厂": {
+      "en": "Chocolate Factory",
+      "ja": "チョコレート工場",
+      "key": "factory"
     },
     "挣扎": {
       "en": "Struggle",
@@ -2157,6 +2650,22 @@
       "en": "Treasure Floor",
       "ja": "宝箱フロア",
       "key": "relic_chest"
+    },
+    "奇异雕像": {
+      "en": "The Strange Statue",
+      "ja": "奇妙な石像",
+      "key": "statue"
+    },
+    "诡异洋房": {
+      "en": "The Haunted House",
+      "ja": "不気味な洋館",
+      "key": "haunted_house"
+    },
+    "龙石板": {
+      "en": "Dragon Slab",
+      "ja": "龍の石板",
+      "key": "dragon_slab",
+      "note": "溪边苔上刻着翼龙的土黄石板；「强力的龙 / 尊贵的龙」是玩家的解读"
     }
   },
   "stories": {
@@ -2311,6 +2820,11 @@
       "en": "Braver with Every Trial",
       "ja": "難しいほど勇ましく",
       "id": "CLEAR_HARD"
+    },
+    "巅峰之上": {
+      "en": "Above the Summit",
+      "ja": "頂点を超えて",
+      "id": "CLEAR_APEX"
     }
   }
 }

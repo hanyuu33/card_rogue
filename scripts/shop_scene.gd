@@ -4,8 +4,8 @@ extends Control
 ## 第一行：随机本职业奖励卡（数量自适应货架宽，约 3~6 张，走 Boss 档概率 35/45/20）。
 ## 第二行：3 个随机附魔（从 4 种里抽 3 种不重复）：
 ##   * 费用 -1（只可费用 > 1 且非 X 费卡）价 50
-##   * 伤害 +10（**只可「能直接造成伤害」的技能卡**，R210 限技能卡 / R226 再收紧；
-##     技能卡造成的伤害 +10）价 60
+##   * 伤害 +8（**只可「能直接造成伤害」的技能卡**，R210 限技能卡 / R226 再收紧；
+##     技能卡造成的伤害 +8）价 60
 ##   * 次元之力（赋字段「次元」；盟友/工事，必须无次元、非效果卡；+2 力 +10 血）价 80（R210：50 → 80）
 ##   * 保存（回合结束手牌不丢弃，做成字段）价 60
 ## 第三行：固定 3 项：删一张卡 50 / +5 最大生命（并回血）50 / 买一块巧克力 80（R295：120 → 80）。
@@ -73,7 +73,7 @@ const ENCHANTS := [
 	# smoke 会逐条比对两处文案，分叉立刻红（R240）。
 	{"id": "costdown", "name": "费用 -1", "desc": "一次性降低 1 点费用，之后一直保持（只能选费用 > 1 且非 X 费的卡）",
 		"price": 50, "icon": "shop_icon_costdown"},
-	{"id": "damage", "name": "伤害 +10", "desc": "这张技能卡造成的伤害 +10（只能选能直接造成伤害的技能卡）",
+	{"id": "damage", "name": "伤害 +8", "desc": "这张技能卡造成的伤害 +8（只能选能直接造成伤害的技能卡）",
 		"price": 60, "icon": "shop_icon_damage"},
 	{"id": "dimension", "name": "次元之力", "desc": "赋字段「次元」+2力+10血，离场消失",
 		"price": 80, "icon": "shop_icon_dimension"},
@@ -236,7 +236,7 @@ func _ready() -> void:
 		var pos_i := maxi(en, en2)
 		var cand := int(args[pos_i + 1]) if pos_i + 1 < args.size() else 0
 		var commit := en2 >= 0
-		# R210：`--enchid <id>` 指定第二行第一件换成哪张附魔（截图核对「伤害 +10 只能选技能卡」）。
+		# R210：`--enchid <id>` 指定第二行第一件换成哪张附魔（截图核对「伤害 +8 只能选技能卡」）。
 		var ench_id := "save"
 		var eid := args.find("--enchid")
 		if eid >= 0 and eid + 1 < args.size():
@@ -284,7 +284,11 @@ func _ready() -> void:
 			RunState.start_run([], GameLayers.LAYER_DEFAULT)
 		if not RunState.relics.has(RunState.DARK_POWER_RELIC_ID):
 			RunState.relics.append(RunState.DARK_POWER_RELIC_ID)
+	# R825：玩家此刻就站在这间店里；回标题 / 关进程后也应能回同一间，而不是等正常离店才登记。
+	if RunState.current_node_id >= 0:
+		RunState.shop_mark_revisit(RunState.current_node_id)
 	_setup_shop()   # R390：见上面那条注释 —— 必须在所有「造 run / 改当前格」的演示参数之后
+	_save_shop_checkpoint()   # 恢复分支不会走 _sync_shop_state，这里把重进标记也落一份
 	# R444 出图：`--affixdemo` 把第一行头两张换成**带字段**的卡（钢铁卫士 = 超负荷 + 嘲讽、
 	# 白狼 = 疾行），并「选中查看」第一张 —— 字段是随卡池随机来的，
 	# 靠运气截图十次有九次截不到带字段的卡，等于没有核验手段。
@@ -500,7 +504,7 @@ func _setup_shop() -> void:
 	_tele_shelf()
 
 
-func _row3_template() -> Array:
+func _row3_template(for_restore := false) -> Array:
 	## 第三行固定三项的**唯一定义**（R390 抽出来）：恢复货架时要按 key 反查，
 	## 两处各写一份 —— 改价只改一处、另一处还留着老价钱，是最典型的漂移。
 	var out: Array = [
@@ -519,7 +523,9 @@ func _row3_template() -> Array:
 	# R543（用户口径「商店第三排额外售卖屠戮匕首，3 格变 4 格」）：
 	# 难度 ≥11 且玩家不持有屠戮匕首（6063）时，第三排追加一个「屠戮匕首」商品。
 	# ⚠️ 只在难度 ≥11 生效 —— 低难度不出现（信物只在第三层上锁难度下才有意义）。
-	if RunState.third_layer_locked() and not RunState.has_key(RunState.DAGGER_RELIC_ID):
+	# R825：for_restore 只供读档反查。已持有不代表存档里的已售罄货位可以消失；
+	# 若这里仍按「持有就删定义」，_restore_shop 会整店回退重摇，把其他成交位也抹掉。
+	if RunState.third_layer_locked() and (for_restore or not RunState.has_key(RunState.DAGGER_RELIC_ID)):
 		out.append({"key": "dagger", "name": "屠戮匕首",
 			"desc": RunState.key_relic_desc(RunState.DAGGER_RELIC_ID),
 			"price": PRICE_DAGGER, "icon": "shop_icon_dagger", "sold": false})
@@ -528,7 +534,7 @@ func _row3_template() -> Array:
 
 func _row3_def(key: String) -> Dictionary:
 	## 按 key 取第三行商品定义（恢复货架用）。找不到返回空字典。
-	for d: Dictionary in _row3_template():
+	for d: Dictionary in _row3_template(true):
 		if str(d["key"]) == key:
 			return d
 	return {}
@@ -620,12 +626,13 @@ func _tele_shelf() -> void:
 	for e2: Dictionary in _row2:
 		if str(e2.get("kind", "")) == "trap":
 			items.append({"k": "trap", "id": int(e2["id"]),
-					"price": int((e2["trap"] as TrapData).price)})
+					"price": _shelf_price(int((e2["trap"] as TrapData).price))})
 		else:
 			items.append({"k": "enchant", "id": 0, "price": 0,
 					"name": str(e2.get("id", ""))})
 	for e3: Dictionary in _row3:
-		items.append({"k": "service", "id": 0, "price": int(e3["price"]),
+		items.append({"k": "service", "id": 0,
+				"price": _shelf_price(int(e3["price"]), str(e3.get("key", "")) == "dagger"),
 				"name": str(e3.get("key", ""))})
 	Telemetry.note_shop_shelf(items, {"layer": RunState.current_layer,
 			"gold": RunState.gold, "hp": RunState.hp, "deck": RunState.deck_ids.size()})
@@ -651,6 +658,14 @@ func _sync_shop_state() -> void:
 	for e3: Dictionary in _row3:
 		r3.append([str(e3["key"]), 1 if bool(e3["sold"]) else 0])
 	RunState.store_shop_state(_shop_node, {"row1": r1, "row2": r2, "row3": r3})
+	_save_shop_checkpoint()   # R825：成交后立刻可续，不再只等「回到标题」那一次
+
+
+func _save_shop_checkpoint() -> void:
+	## R825：商店检查点唯一写盘口。调用方必须先把商品与对应奖励 / 扣款都结算完。
+	if RunState.run_active and DisplayServer.get_name() != "headless" \
+			and "--screenshot" not in OS.get_cmdline_user_args():
+		RunSave.save_run()
 
 
 func _ask_redraw() -> void:
@@ -909,8 +924,20 @@ func _draw_shelf_boards() -> void:
 					visual.size.x, 2.0), Color(0.0, 0.0, 0.0, a), true)
 
 
+func _shelf_price(base: int, key_relic := false) -> int:
+	## 本店**成交价**的唯一口（R794b）。难度 12「昂贵」→ 非信物商品售价 ×1.4
+	## （向上取整：25 → 35 / 50 → 70 / 80 → 112）。
+	## ⚠️ 价签 / 悬停详情 / 触摸端按钮 / 扣款 / 遥测五处**全部**读这里：
+	##    漏一处就是「贴着 35、扣了 25」那种对不上，玩家一眼就看见。
+	var mul := RunState.shop_price_mul(key_relic)
+	if mul <= 1.0:
+		return base
+	return int(ceil(float(base) * mul))
+
+
 func _card_price(card: CardData) -> int:
-	## 基础价（原价）。**不是成交价** —— 第一行要算五折，一律走 `_row1_price()`。
+	## 基础价（原价）。**不是成交价** —— 第一行要先过 `_shelf_price()` 的难度加价、
+	## 再算五折，一律走 `_row1_price()`。
 	match card.rarity:
 		0: return 25
 		1: return 50
@@ -922,7 +949,7 @@ func _row1_price(e: Dictionary) -> int:
 	## 第一行卡牌的**实际成交价**（R432 唯一口）：五折则半价、向上取整。
 	## 绘制价签 / 触摸「购买」按钮 / 购买提示 / 扣款全读这里 ——
 	## 漏一处就是「贴着 -50%，却按原价扣钱」。
-	var base := _card_price(e["card"])
+	var base := _shelf_price(_card_price(e["card"]))   # R794b：难度加价先落在这
 	if not bool(e.get("off", false)):
 		return base
 	return int(ceil(float(base) * OFF_PCT))
@@ -1003,14 +1030,14 @@ func _draw_row2() -> void:
 			var t: TrapData = e["trap"]
 			nm = t.trap_name
 			desc = t.desc
-			price = t.price
+			price = _shelf_price(t.price)                     # R794b：难度加价
 			trap_id = t.id
 		else:
 			var ench: Dictionary = e["ench"]
 			icon_name = str(ench["icon"])
 			nm = _ench_name(ench)
 			desc = GameI18n.source(str(ench["desc"]))
-			price = int(ench["price"])
+			price = _shelf_price(int(ench["price"]))          # R794b：难度加价
 		var hovered := (_sel_goods if _is_touch() else _hover) == _row2_base + i
 		_draw_goods_box(rr, icon_name, nm, desc, price, sold, hovered,
 				_enchanting == i and not sold and not is_trap,
@@ -1057,7 +1084,8 @@ func _draw_row3() -> void:
 		var blocked := str(e["key"]) == "delete" and not RunState.shop_delete_allowed()
 		var rr := _row23_item_rect(2, i)
 		_draw_goods_box(rr, str(e["icon"]), str(e["name"]), str(e["desc"]),
-				int(e["price"]), sold, (_sel_goods if _is_touch() else _hover) == _row3_base + i, false, "service")
+				_shelf_price(int(e["price"]), str(e["key"]) == "dagger"), sold,
+				(_sel_goods if _is_touch() else _hover) == _row3_base + i, false, "service")
 		if blocked:
 			_draw_block_mask(rr, "暗动力")
 		elif sold:
@@ -1111,6 +1139,7 @@ func _draw_goods_popup() -> void:
 	var entry: Dictionary
 	var anchor: Rect2
 	var title: String
+	var price := 0        # R794b：详情板价格也走 `_shelf_price()`，别直读原价
 	if hit >= _row2_base and hit < _row3_base:
 		var re: Dictionary = _row2[hit - _row2_base]
 		anchor = _row2_rect(hit - _row2_base)
@@ -1118,13 +1147,16 @@ func _draw_goods_popup() -> void:
 			var rt: TrapData = re["trap"]
 			entry = {"desc": rt.desc, "price": rt.price}
 			title = rt.trap_name
+			price = _shelf_price(int(rt.price))
 		else:
 			entry = re["ench"]
 			title = _ench_name(entry)
+			price = _shelf_price(int(entry["price"]))
 	elif hit >= _row3_base and hit < _row3_base + _row3.size():
 		entry = _row3[hit - _row3_base]
 		anchor = _row3_rect(hit - _row3_base)
 		title = str(entry["name"])
+		price = _shelf_price(int(entry["price"]), str(entry.get("key", "")) == "dagger")
 	else:
 		return
 	var width := minf(320.0, _vs().x - 24.0)
@@ -1140,7 +1172,7 @@ func _draw_goods_popup() -> void:
 	for i in lines.size():
 		draw_string(_font, rr.position + Vector2(16, 57 + i * 25), lines[i],
 				HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
-	draw_string(_font_bold, Vector2(x + 16, rr.end.y - 15), GameI18n.ui("shop", "SHOP_PRICE_GOLD", "%d 金币") % int(entry["price"]),
+	draw_string(_font_bold, Vector2(x + 16, rr.end.y - 15), GameI18n.ui("shop", "SHOP_PRICE_GOLD", "%d 金币") % price,
 			HORIZONTAL_ALIGNMENT_LEFT, width - 32, 18, UiTheme.PAGE_INK)
 
 
@@ -1705,7 +1737,7 @@ func _ench_name(e: Dictionary) -> String:
 func _demo_enchant(cand: int, commit: bool, ench_id := "save") -> void:
 	## R204 演示/回归：把第二行第一件商品换成指定附魔（默认「保存」，任何卡都能吃）→
 	## 打开选卡页 → 按**真实点击路径**点第 cand 张；commit=true 时再点一次同一张（应当成交）。
-	## R210：`ench_id` 可传 "damage" 出「伤害 +10 只能选技能卡」的对比图。
+	## R210：`ench_id` 可传 "damage" 出「伤害 +8 只能选技能卡」的对比图。
 	var save_ench: Dictionary = {}
 	for e: Dictionary in ENCHANTS:
 		if str(e["id"]) == ench_id:
@@ -1732,24 +1764,25 @@ func _buy_trap(i: int) -> void:
 	if bool(e["sold"]):
 		return
 	var t: TrapData = e["trap"]
+	var price := _shelf_price(int(t.price))   # R794b：难度加价（陷阱不是信物）
 	if RunState.trap_free_slots() <= 0:
 		_set_hint("工具栏已满（%d/%d），先在对战里用掉一个" % [
 				RunState.TRAP_SLOTS, RunState.TRAP_SLOTS])
 		return
-	if not _pay(int(t.price)):
-		_set_hint("金币不足（需要 %d）" % int(t.price))
+	if not _pay(price):
+		_set_hint("金币不足（需要 %d）" % price)
 		return
 	e["sold"] = true
-	_sync_shop_state()      # R390：售罄位要进货架存档，重进店不重摇
 	RunState.gain_trap(int(t.id))
-	Telemetry.note_shop("trap", int(t.id), int(t.price), true)
-	_set_hint("获得工具「%s」· %s" % [t.trap_name, _paid_tag(int(t.price))])
+	_sync_shop_state()      # R390 / R825：商品与售罄位一起进存档
+	Telemetry.note_shop("trap", int(t.id), price, true)
+	_set_hint("获得工具「%s」· %s" % [t.trap_name, _paid_tag(price)])
 
 
 func _buy_row3(i: int) -> void:
 	var e: Dictionary = _row3[i]
-	var price: int = e["price"]
 	var key: String = e["key"]
+	var price: int = _shelf_price(int(e["price"]), key == "dagger")   # R794b：信物不涨价
 	if key == "delete":
 		# R440 暗动力（6054）：持有它就不能在商店删卡 —— 判据只问 RunState。
 		if not RunState.shop_delete_allowed():
@@ -1770,25 +1803,25 @@ func _buy_row3(i: int) -> void:
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
-		_sync_shop_state()      # R390
 		RunState.gain_max_hp(5)
+		_sync_shop_state()      # R390 / R825：生命与售罄位一起进存档
 		_set_hint(GameI18n.ui("shop", "SHOP_MAX_HP_GAINED", "最大生命 +5（并回复 5 点）· %s") % _paid_tag(price))
 	elif key == "choco":
 		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
-		_sync_shop_state()      # R390
 		RunState.add_chocolate(1)   # R236：体力回到 > 0 会撤销「耗尽→开 Boss」的待触发
 		RunState.sync_fatigue()   # R223 难度 5：巧克力回到 6 以上 → 疲惫出卡组
+		_sync_shop_state()      # R390 / R825：巧克力、疲惫与售罄位一起进存档
 		_set_hint(GameI18n.ui("shop", "SHOP_CHOCOLATE_GAINED", "巧克力 +1 · %s") % _paid_tag(price))
 	elif key == "dagger":
 		if not _pay(price):
 			_set_hint("金币不足（需要 %d）" % price)
 			return
 		e["sold"] = true
-		_sync_shop_state()      # R390
 		RunState.gain_key(RunState.DAGGER_RELIC_ID)
+		_sync_shop_state()      # R390 / R825：信物与售罄位一起进存档
 		_set_hint(GameI18n.ui("shop", "SHOP_DAGGER_OBTAINED", "获得信物「屠戮匕首」· %s") % _paid_tag(price))
 
 
@@ -1831,7 +1864,7 @@ func _on_pick_click(pos: Vector2) -> void:
 	var idx: int = d["idx"]
 	# ---- 删除模式 ----
 	if _deleting:
-		var del_price: int = _row3[0]["price"]
+		var del_price: int = _shelf_price(int(_row3[0]["price"]))   # R794b：难度加价
 		# R311：预检同样要认「有盆就一定付得起」（与 `_can_pay` 同源）
 		if not _can_pay(del_price):
 			_set_hint("金币不足（需要 %d）" % del_price)
@@ -1865,7 +1898,7 @@ func _on_pick_click(pos: Vector2) -> void:
 		return
 	# ---- 附魔模式 ----
 	var ench: Dictionary = _row2[_enchanting]["ench"]
-	var price: int = ench["price"]
+	var price: int = _shelf_price(int(ench["price"]))   # R794b：难度加价
 	if not _can_pay(price):
 		_set_hint("金币不足（需要 %d）" % price)
 		_enchanting = -1

@@ -17,6 +17,13 @@ extends RefCounted
 ## 职业解锁顺序：第 N 个 = 累计「见到一层 Boss」N 次后解锁。
 const CLASS_ORDER: Array[String] = [PlayerClass.ROGUE, PlayerClass.MECH]
 
+## R814 试玩版：**只开这两个职业**（机械之心留在选人界面当「未解锁」的招牌，不可选）。
+## 与发布版的区别是**不写任何进度**：试玩版里所有 `note_*` 钩子都因为
+## `is_release()` 恒 false 而提前返回，玩多久都不会解锁第三个职业。
+const DEMO_CLASSES: Array[String] = [PlayerClass.DRUID, PlayerClass.ROGUE]
+## R814 试玩版难度上限（含）：0 轻松 + 1 微恙；再往上的档位一律不给。
+const DEMO_MAX_DIFFICULTY := 1
+
 
 # ------------------------------------------------------------ 查询（唯一闸门口）
 
@@ -26,6 +33,10 @@ static func is_class_unlocked(cid: String) -> bool:
 	## 玩家档案的 `unlocked_classes`：开关打开就整份可用，关着根本不上界面。
 	if PlayerClass.is_hidden_class(cid):
 		return PlayerClass.bard_enabled()
+	# R814：试玩版走白名单，**不看账号档案** —— 试玩包的 profile 可能来自完整版，
+	## 拿它判会让试玩版把机械之心也开出来。
+	if GameBuild.is_demo():
+		return DEMO_CLASSES.has(cid)
 	if not GameBuild.is_release():
 		return true
 	if cid == PlayerClass.DRUID:
@@ -38,6 +49,9 @@ static func difficulty_cap(cid: String) -> int:
 	## R761：隐藏职业不给难度进度留档（它只给店长自测），开关打开即最高档。
 	if PlayerClass.is_hidden_class(cid):
 		return RunState.DIFFICULTY_COUNT - 1
+	# R814：试玩版封在难度 1（`DEMO_MAX_DIFFICULTY`），与职业无关、也不读档案。
+	if GameBuild.is_demo():
+		return mini(DEMO_MAX_DIFFICULTY, RunState.DIFFICULTY_COUNT - 1)
 	if not GameBuild.is_release():
 		return RunState.DIFFICULTY_COUNT - 1
 	return clampi(ProfileData.class_difficulty(cid), 0, RunState.DIFFICULTY_COUNT - 1)
@@ -45,6 +59,10 @@ static func difficulty_cap(cid: String) -> int:
 
 static func global_max_difficulty() -> int:
 	## 已解锁职业中的最高难度上限（随机选择的「尽可能高」目标）。
+	## R814：试玩版先截断 —— 否则下面 `not is_release()` 那条会直接把 12 放出去
+	## （试玩版 `is_release()` 恒 false，不加这一句随机摇人能摇到最高难度）。
+	if GameBuild.is_demo():
+		return mini(DEMO_MAX_DIFFICULTY, RunState.DIFFICULTY_COUNT - 1)
 	if not GameBuild.is_release():
 		return RunState.DIFFICULTY_COUNT - 1
 	var m := 0

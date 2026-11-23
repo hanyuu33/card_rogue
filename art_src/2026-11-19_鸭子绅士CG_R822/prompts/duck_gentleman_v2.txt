@@ -1,0 +1,81 @@
+A 16:9 WIDE horizontal game illustration (1600x900), JAPANESE ANIME cel-shaded style, for a
+light-fantasy card roguelike. Match the attached reference picture: same duck species, same face
+design, same rendering technique, same mood. Thin clean dark line art, exactly 2-3 tone steps per
+surface with crisp hard-edged shadows, soft bloom on highlights, warm amber light against cool
+blue-grey steel.
+
+READ THE ATTACHED PICTURE FIRST. It shows a cute round duck knight. Copy from it ONLY:
+- the FACE design (huge round glossy eyes with brown iris and big white highlights, thin dark
+  upper eyelash line, small rosy cheek blush, short rounded ORANGE BILL),
+- the white feather rendering (smooth short feathers, soft cream shadow tone),
+- the overall drawing style and the cel-shaded colour treatment.
+Do NOT copy from it: the knight armour, the plumed helmet, the sword, the shield, the blue cape,
+the stone castle background.
+
+THE CHARACTER — one anthropomorphic WHITE DUCK GENTLEMAN, the only figure in the picture.
+He is the SAME BREED of cute round duck as the reference, dressed as a gentleman.
+
+PROPORTIONS — READ CAREFULLY, BOTH HALVES MATTER:
+- CHIBI-CUTE, NOT REALISTIC. He is about 3 head-heights from the top of his head to his heels.
+  The head is very large: a big round ball with a diameter of roughly ONE THIRD of his total
+  height. He is NOT 6 heads tall, NOT 7 heads tall, NOT a tall elegant butler, NOT long-legged.
+- His body is a PLUMP ROUND EGG, wide across the chest and belly, soft and chubby — the classic
+  cute toy-duck silhouette. Short stubby arms, short legs, small rounded tail feathers.
+- BUT compared with the knight in the reference, he is a TOUCH slimmer: his belly is a rounded
+  oval rather than a perfect circle, so he reads as a well-built gentleman instead of a ball.
+  Keep him clearly cute and chubby — do not slim him down into a fashion model.
+
+NECK — THE ONE FEATURE THAT DIFFERS FROM THE REFERENCE, THIS IS THE POINT:
+- Between his chin and his collar there is a SHORT but CLEARLY VISIBLE white feathered NECK:
+  about one quarter to one third of the head height in length, about 40% of the head width thick.
+- His head does NOT sit directly on his shoulders — there is a gap filled by that neck.
+- The dress-shirt collar sits LOW, at the base of the neck, so at least one band of white neck
+  feathers is always showing between the chin and the collar.
+- This is a duck neck, not a giraffe neck and not a human neck. Short, thick, soft.
+
+OUTFIT — count these pieces, all in scale with his big head:
+- ONE black TOP HAT with a deep crimson ribbon band, sitting on top of his head, sized so the
+  hat brim is about the width of his head.
+- ONE black TAILCOAT with two short pointed tails hanging behind his knees, worn open over the
+  round belly.
+- ONE crisp white dress shirt, ONE dark crimson BOW TIE, ONE grey waistcoat with three visible
+  brass buttons stretched a little over the belly.
+- ONE pair of white formal GLOVES on both hands.
+- ONE silver-headed WALKING CANE in his right hand, tip resting on the floor.
+- Short trouser cuffs, and below them his bare ORANGE WEBBED DUCK FEET.
+- Expression: calm, politely pleased with himself, a faint smile at the corners of the bill — the
+  same gentle cuteness as the reference, not smug, not stern.
+
+POSE AND PLACEMENT:
+- He STANDS upright, body turned three-quarters toward the LEFT of the frame, head turned a little
+  further left.
+- Left hand lightly touching the brim of his hat in a small polite greeting; right hand holding
+  the cane planted on the ground.
+- He occupies the RIGHT part of the frame: body spans about 55% to 82% of the frame width.
+- The LEFT THIRD of the frame is background only — open industrial space, nothing important.
+- Top of the hat is about 8% below the top edge. His feet stand at about 88% of the frame height,
+  so the lowest 12% of the picture is bare floor.
+- Camera at his chest height, slightly low, so he reads as small and round but present.
+
+BACKGROUND — the SECOND area of the game, an industrial works:
+- A riveted steel platform underfoot, seams and bolt heads visible.
+- Behind him: steel guard rails, thick insulated pipes with large valve wheels, a bank of
+  pressure tanks, two tall chimneys fading into cool blue-grey haze.
+- White steam venting from three places, drifting sideways in a light breeze.
+- Small warm amber lamps on the railings are the only warm light source. Main light from the upper
+  left (overcast morning), so the hat brim and his left shoulder catch a pale rim light.
+- Keep the background simple and slightly hazy so he stays the sharpest thing in the frame.
+- The BOTTOM THIRD of the picture is plain steel floor and thin drifting steam with NO important
+  detail — a UI dialogue box will be drawn over that area.
+
+STRICTLY:
+- NO text, NO letters, NO numbers, NO logo, NO watermark, NO signature, NO border, NO frame,
+  NO UI elements anywhere.
+- NO second character, NO other ducks, NO people, NO crowd, NO mirror image.
+- NO knight armour, NO helmet with feather plume, NO sword, NO shield, NO cape, NO gauntlets.
+- NO tall thin body, NO long legs, NO narrow waist, NO slim fashion-model silhouette,
+  NO realistic human hands, NO human skin, NO human face.
+- NO neckless blob either: the neck must be visible.
+- NO photorealistic rendering, NO oil painting, NO thick impasto brush texture, NO 3D render,
+  NO ray-traced metal, NO pores, NO film grain, NO depth-of-field bokeh, NO western comic or
+  Marvel cover style.

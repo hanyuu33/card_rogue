@@ -1,0 +1,35 @@
+# R801 · 爆炸蘑菇 7016 图标
+
+## 出图提示词（原文，英文）
+
+```
+A cute hand drawn cartoon game item icon of a single explosive mushroom.
+Fat rounded red mushroom cap with cream colored spots, short cream stem,
+a short lit fuse with an orange spark sticking out of the top of the cap,
+a few small orange spark stars bursting around the cap.
+Thick dark brown outline, flat cel shading, warm saturated colors,
+centered composition, single object isolated on a plain pure white background,
+no text, no frame, no watermark, no shadow on the ground.
+```
+
+- 尺寸 1024×1024 / quality=high / background=opaque（生成模型固定出白底，靠 `cut()` 抠）
+- 原始文件：`raw/7016_爆炸蘑菇.png`
+
+## 为什么要「引信 + 火花」
+
+单看「红伞盖 + 白斑点」就是一颗普通蘑菇，和毒瓶 7003（绿）、烤肉 7007（焦糖）在同一栏里
+区分度不够。引信和火花是唯一能把「会炸」这件事画出来的元素，也是和炼金炸弹 7001 拉开的
+区别（那颗是整颗炸弹，这颗是**被改造成炸弹的蘑菇**）。
+
+## 处理流程
+
+`tools/_make_r755_icons.py` 的 `cut()`：亮且不饱和 → 4-连通泛洪取背景 → RGB/A 分开降采样 →
+按 alpha≥8 取 bbox → 居中留 7% 白边 → 128×128。生成图的两个固定毛病（棋盘格伪透明、右下角
+水印）在这张上都没出现，只做了常规的右下角涂白兜底。
+
+## 验收
+
+- `processed/_preview_44px.png`：44px 实尺寸（炼金炸弹 / 穿刺陷阱 / 石头 / 河豚 / 爆炸蘑菇），
+  蘑菇的引信仍可辨。
+- `processed/_preview_88px.png`：2× 高清屏尺寸，看边缘与斑点。
+- alpha 为真透明（角落 `(0,0)` 的 alpha = 0），与 `assets/ui/` 同字节。

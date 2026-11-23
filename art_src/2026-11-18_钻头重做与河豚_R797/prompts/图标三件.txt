@@ -1,0 +1,36 @@
+R797 图标三件 · 生成提示词（内置图像生成，参考图 assets/ui/relic_icon_6070.png，input_fidelity=high）
+
+共同后缀：
+chunky rounded silhouette, thick dark navy outline, soft cel shading with warm highlight,
+slightly whimsical storybook style like a cozy indie roguelike game icon, centered, flat clean,
+no text, no frame, transparent background
+
+6077 钻头（重做 v2 —— 店长口径「太像螺丝了，斜着放，只要钻头的螺旋部分」）
+A cute hand-drawn cartoon game relic icon of a single tapered auger DRILL BIT, cone shaped:
+broad at the upper end and narrowing to a sharp spike point at the lower end, wrapped by two
+continuous spiral flutes that wind around the cone like an ice-cream swirl with visible sharp
+cutting edges, tilted diagonally at about 45 degrees so the point aims to the lower left.
+Brushed steel gray metal with warm brass glints along the spiral edges. It must read as a drill
+bit / auger tip, NOT a screw, NOT a twisted ribbon: the spiral wraps a solid cone body.
+Absolutely no handle, no hex base, no screw head, no straight cylinder shaft.
+
+6078 龟壳
+A cute hand-drawn cartoon game relic icon of a round turtle shell shield seen from above,
+dome-shaped mossy green carapace with a neat hexagonal scute pattern and a pale cream bony rim,
+a couple of small warm highlights on the dome.
+
+7015 河豚
+A cute hand-drawn cartoon game icon of a round pufferfish, inflated balloon body covered in tiny
+short spikes, two big round eyes, a small tail fin at the back, warm orange body with pale cream
+spikes and a cream belly.
+
+（三张都是 1024×1024、quality=high、background=transparent）
+
+## 落地
+
+- 生成图两个固定毛病照旧：**棋盘格伪透明**（6077 / 6078 / 7015 三张都有）、
+  **右下角水印**（6077 / 6078 有）。抠图前先按 `[0.86w, 0.93h]` 涂白。
+- 抠图走 `tools/_make_r755_icons.cut()`（四边泛洪取背景、RGB/A 分开降采样），
+  `pad_pct=0.07` → 128×128。
+- 6077 v1（`2026-11-18_道具图标_R796/raw/6077_钻头.png`）被这张替换：v1 有六角底座 + 直柄，
+  44px 下像一颗螺丝。

@@ -1,0 +1,6 @@
+Reading prompt from stdin...
+{"type":"thread.started","thread_id":"01a1e344-68c5-7a91-8536-b7852007f657"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’m generating one square chocolate icon with a pure white background and a clearly bitten corner.\n"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Generated exactly one square chocolate food icon on a white background."}}
+{"type":"turn.completed","usage":{"input_tokens":39044,"cached_input_tokens":32128,"cache_write_input_tokens":0,"output_tokens":505,"reasoning_output_tokens":0}}

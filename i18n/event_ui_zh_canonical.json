@@ -49,7 +49,7 @@
       "LEAVE_WITHOUT_INVESTING": "离开（不投入）"
     },
     "core_contract": {
-      "SIGN_CONTRACT": "订立契约（获得道具「咒缚」）",
+      "SIGN_CONTRACT": "订立契约（「咒缚」+ 一张「代偿」）",
       "CONTRACT_SIGNED_DISABLED": "契约已经签过了",
       "TAKE_CORE": "获取核心（收下道具「核心」）",
       "CORE_FORMED_DISABLED": "核心已经成形（战斗结束时在奖励页兑换）",
@@ -71,7 +71,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "离开（两个都不要）"
     },
     "divination": {
-      "START_DIVINATION": "进行占卜（失去 5 点最大生命）",
+      "START_DIVINATION": "进行占卜（失去 %d 点最大生命）",
       "LEAVE_WITHOUT_DIVINATION": "离开（不占卜）",
       "LEAVE_WITHOUT_INTERPRETING": "离开（不去解读）",
       "WHALE_FIGHT": "我会为它而战（获得「鲸鱼之怒」）",
@@ -142,6 +142,27 @@
       "OPEN_CARD_CHEST": "打开宝箱（获得卡牌奖励）",
       "LEAVE_WITHOUT_OPENING": "不打开（转身离开）"
     },
+    "sword": {
+      "TAKE_SWORD": "拔剑（失去 %d 最大生命，获得「圣剑」）",
+      "MAX_HP_LOW_DISABLED": "最大生命不足（拔剑需失去 %d 点）",
+      "ALREADY_OWNED_DISABLED": "已持有「圣剑」（不必再拔）",
+      "LEAVE_THE_SWORD": "转身离开（不碰那把剑）"
+    },
+    "dragon_slab": {
+      "MIGHT": "「强力的龙」：为一张盟友或工事附魔力量 +8",
+      "NOBLE": "「尊贵的龙」：获得「稀有价值」",
+      "NO_ALLY_DISABLED": "卡组里没有可附魔的盟友或工事",
+      "LETHAL_DISABLED": "生命不足（这样选会当场倒下）",
+      "LEAVE": "离开（不碰这块石板）"
+    },
+    "factory": {
+      "FACTORY_STAGE_1": "试吃一块（获得 1 巧克力）",
+      "FACTORY_STAGE_2": "再来一块（失去 %d 最大生命，获得 1 巧克力）",
+      "FACTORY_STAGE_3": "停不下来（失去 %d 最大生命，获得 1 巧克力）",
+      "FACTORY_STAGE_4": "包下整座工厂（失去 %d 最大生命，获得卡片「巧克力工厂」）",
+      "FACTORY_DISABLED": "最大生命不足（这一块要失去 %d 最大生命）",
+      "FACTORY_LEAVE": "离开（闻着就很甜）"
+    },
     "struggle": {
       "ACCEPT_STRUGGLE": "接受挣扎（失去 %d 生命，获得「金属龙」）",
       "LEAVE_UNCHANGED": "转身离开（保持现状）"
@@ -150,6 +171,10 @@
       "PRAY": "祭拜（接下来三场战斗必定掉落工具）",
       "SMASH": "摧毁（工具栏用「石头」填满）",
       "LEAVE": "绕过去（什么都不做）"
+    },
+    "haunted_house": {
+      "EXPLORE": "推门进去（传奇道具 ＋ 史诗卡牌，代价是「诅咒娃娃」）",
+      "LEAVE": "掉头离开（这栋房子不该有人住）"
     }
   },
   "results": {
@@ -250,6 +275,19 @@
     "treasure": {
       "TREASURE_CARD_REWARD_PENDING": "开出卡牌奖励（待领：见奖励悬浮窗）"
     },
+    "sword": {
+      "SWORD_GAINED": "失去 %d 点最大生命（现 %d / %d）——「圣剑」已收进行囊"
+    },
+    "dragon_slab": {
+      "MIGHT_GAINED": "附魔「力量 +8」已烤进你选的那张卡（力量 %d → %d）",
+      "NOBLE_GAINED": "「稀有价值」已收进道具栏：撕掉 %d 张同名卡，失去 %d 点生命（现 %d / %d）",
+      "NOBLE_NONE": "「稀有价值」已收进道具栏：没有超过 3 张的同名卡，一张也没撕"
+    },
+    "factory": {
+      "FACTORY_FREE": "甜的。巧克力 +1（已有 %d 块）",
+      "FACTORY_PAID": "用 %d 点最大生命换了一块巧克力（上限 %d / %d，已有 %d 块）",
+      "FACTORY_CARD": "失去 %d 点最大生命（现 %d / %d）——「巧克力工厂」已加入卡组"
+    },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "失去 %d 生命（当前 %d/%d）——「%s」已加入卡组"
     },
@@ -260,10 +298,11 @@
       "FURNACE_REWARDS_PENDING": "「%s」投进炉里，炉子吐出 %d 件道具：%s。请在奖励悬浮窗里收下。"
     },
     "core_contract": {
-      "CORE_CONTRACT_CURSE_GAINED": "「咒缚」已收进道具栏：%s",
+      "CORE_CONTRACT_CURSE_GAINED": "获得道具「咒缚」，一张「%s」已加入你的卡组。（咒缚：%s）",
       "CORE_CONTRACT_CORE_GAINED": "「核心」收进了道具栏：战斗中累计失去 %d 点生命后成形，这一场结束时的奖励页里会多出一次兑换 —— 献祭一张伤害技能牌，把它第一段伤害附到另一张尚未附魔的伤害技能牌上。用掉之后失效。"
     },
     "divination": {
+      "DIVINATION_COST_PAID": "（占卜的代价：失去 %d 点最大生命 → %d / %d）",
       "DIVINATION_CARD_GAINED": "「%s」已加入卡组。",
       "DIVINATION_RELIC_GAINED": "「%s」已收进道具栏。"
     },
@@ -271,6 +310,10 @@
       "STATUE_PRAY": "已祭拜：接下来 %d 场战斗，每次胜利都必定掉落一件工具。",
       "STATUE_SMASH": "雕像塌了：工具栏里塞进 %d 块「石头」（拖到敌人身上砸 15 点伤害）。",
       "STATUE_SMASH_FULL": "雕像塌了，可你的工具栏已经满了 —— 碎块只能留在原地。"
+    },
+    "haunted_house": {
+      "EXPLORED": "「诅咒娃娃」已加入卡组，它不会走。一件传奇道具和一组史诗卡牌在上面等你挑。",
+      "EXPLORED_NO_RELIC": "「诅咒娃娃」已加入卡组，它不会走。传奇道具已全部拿过，上面只剩一组史诗卡牌。"
     }
   },
   "pickers": {
@@ -280,6 +323,13 @@
       "confirm_label": "接下货物",
       "cancel_label": "不接（收起）",
       "short": "运送委托"
+    },
+    "dragon_slab": {
+      "title": "龙石板 · 挑选一张盟友或工事",
+      "note": "只能选还没附魔的盟友或工事（每张卡只有一个附魔位）",
+      "confirm_label": "附上「力量 +8」",
+      "cancel_label": "再想想（收起）",
+      "short": "龙石板"
     }
   },
   "rest_dynamic": {

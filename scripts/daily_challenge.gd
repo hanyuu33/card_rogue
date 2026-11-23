@@ -6,7 +6,9 @@ extends RefCounted
 ## 本模块只拥有「今天是什么局、今天是否已经开过、成绩是多少」三本账。
 ## Steam 上传由 DailyLeaderboard 负责；离线时本地成绩照常保存。
 
-const RULES_VERSION := 1
+const RULES_VERSION := 6
+## ⚠️ 必须与 `DailyModifiers.RULES_VERSION` 保持一致 —— 两处一起加，别只改一边：
+## 规则一改，同一天的局就该变，而旧成绩必须留在旧板上（榜名带 V 号）。
 const PATH := "user://daily_challenge.json"
 const TEST_PATH := "user://daily_challenge_test.json"
 const FORMAT := 1
@@ -17,9 +19,23 @@ static var _loaded := false
 static var _attempts: Dictionary = {}
 
 
+## R850：日界固定在北京时间午夜（UTC+8 00:00）—— 不是 UTC 午夜，也不是设备本地时区。
+## 原来直接取 UTC 日期，国内玩家要等到**早上 8 点**才换日：跨夜把前一天的局打完，
+## 页面上仍是昨天那张卡、还写着「今日已挑战」，看起来像「第二天不刷新」。
+## 而取设备本地时区更糟 —— 不同时区的玩家会拿到不同种子，Steam 榜按 DAILY_yyyyMMdd
+## 聚合，等于把两局成绩混进同一张榜。固定偏移两头都满足：全球同刻换日、同一天同一局。
+## 偏移只影响「哪一刻换日」，种子仍按日期字符串派生，所以 `RULES_VERSION` 不用升。
+const DAY_TZ_OFFSET_HOURS := 8
+
+
 static func today() -> String:
-	## UTC 日历日：全球同日同榜；不外连校时，回拨到已玩日期仍受原记录约束。
-	return Time.get_date_string_from_system(true)
+	## 全球同一刻换日、同一份种子；不外连校时，回拨到已玩日期仍受原记录约束。
+	return date_for_unix(int(Time.get_unix_time_from_system()))
+
+
+static func date_for_unix(unix: int) -> String:
+	## 先偏移再按 UTC 读日历日 = 东八区的本地日期，不依赖设备时区设置。
+	return Time.get_date_string_from_unix_time(unix + DAY_TZ_OFFSET_HOURS * 3600)
 
 
 static func set_test_mode() -> void:
@@ -64,16 +80,24 @@ static func seed_for_date(date: String, rules := RULES_VERSION) -> int:
 
 static func config_for_date(date: String) -> Dictionary:
 	## 固定配置唯一口。职业轮换只读可见三职业，隐藏职业永不进每日池。
+	##
+	## R767：从「固定角色 + 固定难度」升级成「固定角色 + 固定难度 + 每日修饰 + 随机卡组」。
+	## 两条都从同一个根种子派生，所以同一天在任何机器上算出来完全一样；
+	## 而修饰池 / 卡池一旦变动就得升 `RULES_VERSION`，让旧榜留在旧规则下。
 	var root := seed_for_date(date)
 	var ids := PlayerClass.ids()
 	var cid := ids[root % ids.size()]
+	var mods := DailyModifiers.roll(root)
+	var fx := DailyModifiers.fx_of(mods)
 	return {
 		"date": date,
 		"rules": RULES_VERSION,
 		"seed": root,
 		"class": cid,
 		"difficulty": FIXED_DIFFICULTY,
-		"deck": PlayerClass.start_deck_ids(cid),
+		"deck": DailyModifiers.roll_deck(root, cid, fx),
+		"mods": mods,
+		"fx": fx,
 	}
 
 

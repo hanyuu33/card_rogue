@@ -16,12 +16,10 @@ static func shared() -> TrapRepo:
 
 static func load_json(path: String = "res://traps.json") -> TrapRepo:
 	var repo := TrapRepo.new()
-	if not FileAccess.file_exists(path):
-		push_error("traps.json 不存在")
-		return repo
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	## R789：`content/` 覆盖优先（热更），缺失或损坏时回落 pck 基线。
+	var data: Variant = DataPaths.read_json(path, "traps")
 	if data == null:
-		push_error("traps.json 解析失败")
+		push_error("traps.json 缺失或解析失败")
 		return repo
 	var list: Array = data if data is Array else data.get("traps", [])
 	for d: Dictionary in list:
@@ -37,6 +35,10 @@ func get_trap(id: int) -> TrapData:
 func all_traps() -> Array[TrapData]:
 	var out: Array[TrapData] = []
 	for id: int in _traps.keys():
+		# R817：试玩版只列基线内的工具 —— `random_traps()` / `shop_traps()`
+		# 都基于本函数，所以「新工具默认不进试玩」一处收口就够。
+		if GameBuild.is_demo() and not DemoScope.allows_trap(id):
+			continue
 		out.append(_traps[id])
 	out.sort_custom(func(a: TrapData, b: TrapData): return a.id < b.id)
 	return out

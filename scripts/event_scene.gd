@@ -16,6 +16,11 @@ extends Control
 ##   * event + delivery_done 委托完成（R200）：持有货物时**第二层第一个事件房**替换而来，
 ##                     卡组每保有 1 张货物 → 抽奖一次（卡牌奖励 / 80 金币 / 随机道具 / 巧克力 10%）；
 ##   * event + gaze     鸭之凝视（**第二层**）：获得事件道具「一袋米抗几楼」，或放弃；
+##   * event + sword    林中的剑（R793，第一层专属）：拔剑 -13 最大生命 → 道具「圣剑」，
+##                      或转身离开；
+##   * event + dragon_slab 龙石板（R842，第一层专属）：认为它是「强力的龙」→ 一张盟友 /
+##                      工事附魔力量 +8；认为它是「尊贵的龙」→ 道具「稀有价值」（同名卡
+##                      削到 3 张，每因此效果删一张失 5 点生命，会致死时不可选）；
 ##   * event + arcane   奥秘之泉（第一层专属）：获得道具「奥秘护符」（每回合第一张效果牌费用 -1），
 ##                      或「喝下泉水」从随机 3 张效果 / 技能牌中选 1 张加入卡组（也可什么都不拿）；
 ##                      ⚠️ R147：一次访问只领一份 —— 取走护符后就不能再喝泉水，反之亦然。
@@ -31,11 +36,18 @@ extends Control
 ##   event_<事件>.png 插图（标题下方） / bg_<事件>.png 整屏背景；
 ##   事件 = rest / treasure / whisper / struggle / gaze / pear / apple_doctor /
 ##          moon（R351 赏月）/ relic_chest / flyer（R555 飞行器）。
+##          factory（R794 巧克力工厂，第二层专属）：试吃四连点，最后一档给卡。
 ## 缺图时回退内置绘制（所有事件共用的篝火动画 / 深灰底色）。
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const WHISPER_ID := 6010
+## R781：火堆描述末句的两个「只能挑一样」写法 + 「温暖」修饰下的替代句。
+## `_rest_desc()` 用 `replace()` 换句而不是重新拼整段 —— 叙事底本按整串/逐行对源码校验，
+## 重新拼会让底本与三语译文整批失配。
+const REST_ONCE_NOTE := "（三样只能挑一样——选完这一处就到头了。）"
+const REST_ONCE_NOTE_SACRAMENT := "（剩下两样只能挑一样——选完这一处就到头了。）"
+const REST_WARM_NOTE := "（三样里可以挑两样——今天的火堆格外暖。）"
 const RICE_ID := 6012             # 一袋米抗几楼（鸭之凝视事件道具）
 const PEAR_ID := 6019             # 鸭梨（鸭梨山大事件道具）
 const APPLE_ID := 6027            # 苹果（R244「苹果与医生」事件道具；原奖励道具）
@@ -170,6 +182,91 @@ const STATUE_PRAY_DESC := """你把手按在它冰凉的爪子上，什么也没
 const STATUE_SMASH_DESC := """你抄起一块石头砸向它的前腿。
 裂纹从爪子一路爬到山羊头上，整尊雕像塌成一堆白渣——
 握得住的那些，正好够塞满你的工具栏。"""
+
+# R793 林中的剑（第一层专属）：两个选项 —— 拔剑（失去 13 点最大生命 → 道具「圣剑」）/
+# 转身离开。代价与占卜室 5 点是同一条 `RunState.lose_max_hp()`（**至少保留 1 点最大生命**），
+# 所以最大生命 <= 13 时按钮直接置灰 —— 不拦的话玩家会白掉一截上限换一件拿不到的东西。
+# 已持有圣剑时同样置灰：`gain_relic()` 对重复持有是直接 return，血却是照扣的。
+const SWORD_MASTER_ID := 6075     # 圣剑（事件道具，不进奖励池）
+const SWORD_LIFE_COST := 13       # 拔剑的代价：失去的最大生命
+
+const SWORD_DESC := """空地上立着一块灰白的长石，石缝里插着一把剑，剑身没入大半。
+苔顺着剑格爬下来，缠了不知多少年——它在这里等得太久了。
+拔剑：失去 13 点最大生命（至少保留 1 点，最大生命不足时无法拔），
+获得道具「圣剑」：每场战斗使用的第一个盟友 +10 力量；
+也可以什么都不碰，转身走出这片林子。"""
+
+const SWORD_TAKEN_DESC := """石头从中间裂开。剑离地的那一刻轻得不像话，
+像它一直在等你来拿。
+握柄贴上掌心，林子静了一瞬——「圣剑」已收进行囊。"""
+
+# R842 龙石板（第一层专属）：「雕着龙的土黄石板」——两个选项都是「你认为它是哪种龙」：
+#   · 「强力的龙」→ 卡组里一张**盟友 / 工事**吃附魔「力量 +8」（`brawn`，事件独有：
+#     视觉沿用商店「伤害 +8」那枚标记，但不进商店、不进随机池）；
+#   · 「尊贵的龙」→ 道具「稀有价值」6090：同名卡削到 3 张，**每因此效果删除一张卡**
+#     失去 5 点生命；会当场致死时这个选项不可选（按钮置灰 + 结算口再拦一次）。
+const DRAGON_SLAB_RELIC_ID := 6090
+const DRAGON_ENCHANT_ID := "brawn"
+
+const DRAGON_SLAB_DESC := """溪边的青苔上斜着一块土黄色的石板，比人还高半头。
+正面浮雕着一条收着翼膜的龙，鳞爪被苔痕和雨水磨得只剩起伏的轮廓，
+唯独龙眼那一小窝金漆没被冲掉——太阳一照，像还醒着。
+你伸手按上去，石头底下传来一声极轻的呼吸。
+它没有开口，像是在等你先说出：它是一条什么样的龙。
+「强力的龙」：为一张盟友或工事附魔力量 +8；
+「尊贵的龙」：获得道具「稀有价值」——卡组里同名卡最多留 3 张，
+多出来的会被随机撕下，每因此效果删除一张卡，失去 5 点生命。
+也可以收回手，让这块石板继续站在这里。"""
+
+const DRAGON_SLAB_MIGHT_DESC := """石面上的龙纹亮了一瞬，像有一口气从石头里呼出来。
+再抬头时，指尖沾了一层金粉，石板已经裂开一道细缝——
+那条龙把力气分了一点给你带着的东西。"""
+
+const DRAGON_SLAB_NOBLE_DESC := """石板从中间裂开，土黄的碎屑簌簌落了一地。
+裂口里没有龙，只有一枚打磨得极亮的鳞片，凉得像井水。
+你身上那些多余的东西被它一一数过——前 3 件留下，再往后的一件件撕下来丢进裂缝里。"""
+
+
+# R794 巧克力工厂（第二层专属）：选项 1 可以连点四次 ——
+#   ① 免费得 1 巧克力；② 失 5 最大生命得 1；③ 失 15 得 1；④ 失 25 得卡片「巧克力工厂」。
+# 「巧克力」= 行动力资源（RunState.chocolate），发放走 `RunState.add_chocolate()`；
+# 上限代价照走 `RunState.lose_max_hp()`（至少保留 1 点，不足则按钮置灰、结算再拦）。
+# ⚠️ 故意不走 `_claim_reward()`：R147 的「一次访问只领一份」会把面板锁成只剩离开，
+#    而这张黑板的本意就是「连吃四次」—— 本事件只有 rest_btn 一个奖励按钮，锁无可锁；
+#    收尾只在第 ④ 次之后 `_collapse_to_leave()`。
+const FACTORY_CARD_ID := 9271
+const FACTORY_STAGE_COST := [0, 5, 15, 25]   # 第 n 次试吃的最大生命代价（0 = 免费）
+
+const FACTORY_DESC := """林子深处飘着甜香。铜门虚掩，里面的传送带载着一排鸭子形状的
+巧克力模具缓缓前行，脚下是一条温热的巧克力河。
+柜台上立着一块小黑板：「试吃，第一块免费——之后每块都要用点什么来换。」
+黑板角落还有一行小字：吃得最舍得下本的客人，可以带走整座工厂。"""
+
+const FACTORY_DONE_DESC := """传送带停了下来。最后一份合同已经揣进怀里——
+「巧克力工厂」已加入卡组：2 费工事，0 攻 / 30 血，次元；
+你的每个回合开始时，获得 1 费用并抽一张卡。
+甜香留在身后，林子重新安静下来。"""
+
+# R807 诡异洋房（haunted_house，第二层专属）：
+#   选项 1 探索 → 当场开一次奖励页（一件随机**传奇**道具 + 一组**史诗**卡牌三选一）
+#   ＋ 一张诅咒「诅咒娃娃」9276 强制进卡组；选项 2 离开。
+#   收益是全场最高那一档，代价是**贯穿整局**的每回合掉血 —— 所以只在第二层登记。
+const HAUNTED_CURSE_ID := 9276   # 诅咒娃娃（诅咒 · 不可打出 · 保存）
+
+const HAUNTED_DESC := """林道尽头立着一栋两层的旧洋房。窗框的漆掉得差不多了，
+玻璃却一块没碎，里面透出昏黄的光。
+门虚掩着，没有风，也没有脚步声——可那盏灯是亮着的。
+门楣上钉着一块掉了色的木牌：此屋无人。
+楼上有扇窗关着窗帘，光却从缝里漏出来，慢慢地、很有规律地晃。
+"""
+
+const HAUNTED_TAKEN_DESC := """门在你身后自己合上了。
+壁炉是冷的，茶几上摊着几只布袋和几张写满字的卡，
+像是有人收拾到一半就匆匆离开了。
+你把东西收进怀里的时候，楼上传来一声很轻的响动——
+像是有谁把一只脚从床上放了下来。
+等你走出门口回头，窗台上多了一只布娃娃，正对着你的方向坐着。
+"""
 
 # R573：蓝色大肥鱼事件已删除。只留一句旧存档兜底文案，不发任何奖励。
 const RETIRED_EVENT_DESC := """这里原本有一条蓝色大肥鱼。它已经游走了。"""
@@ -332,18 +429,27 @@ const CORE_TAKEN_DESC := """石台上只剩一圈浅浅的凹痕，核心已经�
 func _rest_desc() -> String:
 	## 休息处文案（R237：恢复篝火回血 —— 休息与烤肉二选一）。
 	## R307 圣餐（6038）：持有它时休息直接回满，文案要跟着改（不然按钮说回 5 实际回满）。
+	## R781「温暖」：整段**保持原文不动**（叙事底本校验是按整串 / 逐行对源码的），
+	## 只在最后把「只能挑一样」那句换成「可以挑两样」—— 换句而不是重新拼，
+	## 否则中文底本与三语译文会整批失配。
+	var text := ""
 	if RunState.has_relic(RunState.RELIC_SACRAMENT_ID):
 		# R473（用户口径）：圣餐改成「到达篝火处回复 50% 最大生命」，进房就结算掉了。
-		return """篝火旁摆着一份还没凉透的圣餐。
+		text = """篝火旁摆着一份还没凉透的圣餐。
 你在坐下之前就把它分掉了——到达篝火处回复 50% 最大生命（已结算）；
 也可以烤一块肉带在身上，战斗里点一下就能吃（占一个工具栏位）；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
 （剩下两样只能挑一样——选完这一处就到头了。）"""
-	return """前路的战斗还在等着你。
+	else:
+		text = """前路的战斗还在等着你。
 在篝火旁休息，恢复 %d%% 最大生命；
 也可以烤一块肉带在身上，战斗里点一下就能吃（占一个工具栏位）；
 还可以往火里添一根柴，让火替你烧掉卡组里的一张牌。
 （三样只能挑一样——选完这一处就到头了。）""" % int(round(RunState.rest_pct() * 100.0))
+	if RunState.rest_extra_pick() > 0:
+		text = text.replace(REST_ONCE_NOTE, REST_WARM_NOTE)
+		text = text.replace(REST_ONCE_NOTE_SACRAMENT, REST_WARM_NOTE)
+	return text
 
 var _font: Font
 var sfx: Sfx
@@ -361,6 +467,17 @@ var _fly_done := false          # R555 飞行器：本次是否已选了「使�
 var _fly_result := ""           # R555 飞行器：收尾态那行结果（重绘要能复现）
 var _statue_pick := ""          # R754 奇异雕像：本次选的是 "pray" / "smash" / 空
 var _statue_result := ""        # R754 奇异雕像：收尾那行结果（重绘要能复现）
+var _sword_taken := false       # R793 林中的剑：本次是否已拔剑（拔了就只剩离开）
+var _sword_result := ""         # R793 林中的剑：收尾那行结果（重绘要能复现）
+var _dragon_pick := ""          # R842 龙石板：本次领了哪一份（"" / "might" / "noble"）
+var _dragon_result := ""        # R842 龙石板：收尾那行结果（重绘要能复现）
+var _dragon_cards: Array = []   # R842 龙石板：选卡页网格下标 → deck 下标的映射表
+var _dragon_overlay: PickOverlay = null  # R842 龙石板：选盟友 / 工事的浮层（懒建）
+var _house_done := false        # R807 诡异洋房：本次是否已探索（探索过就只剩离开）
+var _house_result := ""         # R807 诡异洋房：收尾那行结果（重绘要能复现）
+
+var _factory_stage := 0         # R794 巧克力工厂：下一次试吃的档位（0..3）；4 = 已包下工厂
+var _factory_result := ""       # R794 巧克力工厂：收尾那行结果（重绘要能复现）
 var _furnace_opts: Array[int] = []   # 熔炉（R454）：本次铺出来的可投入道具（_ready 里摇一次）
 var _furnace_invested := -1          # 熔炉（R454）：本次投进去的那件（-1 = 还没投）
 var _furnace_result := ""            # 熔炉（R454）：收尾态那行结果（重绘要能复现）
@@ -380,6 +497,10 @@ var _arcane_charm_taken := false  # 奥秘之泉：**本次访问**是否取走�
                               #   （≠「本来就戴着」—— 后者只是不重复给，不影响喝泉水，见 R71 / R147）
 var _arcane_drunk := false    # 奥秘之泉：是否已选择「喝下泉水」（选卡去了卡牌奖励界面）
 var _reward_claimed := false  # R147：本次事件访问是否已领过奖励（一次访问只领一份，见 _claim_reward）
+## R781「温暖」：本次访问的火堆**已经点过**哪几个选项（"rest" / "bbq" / "alt"）。
+## 只负责本轮重绘时置灰；「还能不能选」这件事一律问 `RunState.rest_pick_quota() - rest_pick_used_here()`，
+## 因为那个是按房间记账的，退出重进同一间也认账。
+var _rest_used: Dictionary = {}
 var _oblivion_done := false   # 遗忘之泉：是否已经遗忘过一张卡（或已选择去删卡）
 var _smith_done := false      # 鸭鸭工匠：是否已经锻造过（或已选择去锻造）
 var _div_stage := 0           # R308 占卜室：0 = 还没占卜 / 1 = 已占卜待解读 / 2 = 已解读完
@@ -501,11 +622,33 @@ func _is_statue() -> bool:
 	return _is_event_node() and _pending_kind() == "statue"
 
 
+func _is_sword() -> bool:
+	## R793 林中的剑（第一层专属）：拔剑（-13 最大生命 → 道具「圣剑」）/ 离开。
+	## 与「挣扎」（-21 当前生命 → 卡「金属龙」）是一对：一个扣血、一个扣上限。
+	return _is_event_node() and _pending_kind() == "sword"
+
+
+func _is_dragon_slab() -> bool:
+	## R842 龙石板（第一层专属）：溪边苔上一块刻着翼龙的土黄石板，你来断定它是哪种龙。
+	## 两个选项都给东西（附魔 / 道具），所以必须留「离开」——不然玩家没法什么都不做。
+	return _is_event_node() and _pending_kind() == "dragon_slab"
+
+
+func _is_choco_factory() -> bool:
+	## R794 巧克力工厂（第二层专属）：试吃巧克力，可连点四次，最后一次给卡。
+	return _is_event_node() and _pending_kind() == "factory"
+
+
 func _is_cave() -> bool:
 	## R467 洞穴（第二层专属）：两个选项 —— 探索（打一场，赢了拿传说卡）／离开。
 	## ⚠️ 这是**唯一一个会进战斗的事件房**（R128 之后事件房本来不再遭遇战斗）：
 	##    选项 1 直接把本页换成「洞穴」这一关（`GameLevels.cave_level()`）。
 	return _is_event_node() and _pending_kind() == "cave"
+
+
+func _is_haunted_house() -> bool:
+	## R807 诡异洋房（第二层专属事件）。
+	return _is_event_node() and _pending_kind() == "haunted_house"
 
 
 func _is_bluefish() -> bool:
@@ -595,7 +738,9 @@ func _is_treasure() -> bool:
 			and not _is_card_merchant() and not _is_lake_lady() \
 			and not _is_divination() and not _is_moon() and not _is_snow_leopard() \
 			and not _is_adventurer() and not _is_furnace() and not _is_core_contract() \
-			and not _is_flyer() and not _is_statue()
+			and not _is_flyer() and not _is_statue() and not _is_sword() \
+			and not _is_dragon_slab() \
+			and not _is_choco_factory() and not _is_haunted_house()
 
 
 func _kind() -> String:
@@ -652,6 +797,14 @@ func _kind() -> String:
 		return "flyer"
 	if _is_statue():
 		return "statue"
+	if _is_sword():
+		return "sword"
+	if _is_dragon_slab():
+		return "dragon_slab"
+	if _is_choco_factory():
+		return "factory"
+	if _is_haunted_house():
+		return "haunted_house"
 	if _is_treasure():
 		return "treasure"
 	return "rest"
@@ -946,8 +1099,12 @@ func _apply_ui_assets() -> void:
 		return
 	var campfire: Control = $Campfire
 	campfire.visible = (kind == "rest")
+	# R802：**整屏背景优先** —— 有 `bg_<kind>` 就不再叠那张居中插图。
+	# 全库同时具备两套图的只有 sword / factory，而这两套画的是同一个主体：
+	# 叠起来既互相压住，又让玩家看到「同一样东西出现两次」。
+	var bg := UiAssets.event_bg(kind)
 	var pic := UiAssets.event_pic(kind)
-	if pic != null:
+	if pic != null and bg == null:
 		campfire.visible = false   # 有自定义插图时不再叠内置篝火
 		var tr := TextureRect.new()
 		tr.name = "EventPic"
@@ -967,7 +1124,6 @@ func _apply_ui_assets() -> void:
 		# R512 修：add_child 是「加到最上层」—— 插图会盖住文案与选项按钮。
 		# 和缺图兜底同一层（$BG 之上、篝火与正文之下）。
 		move_child(tr, 1)
-	var bg := UiAssets.event_bg(kind)
 	if kind == "rest" and bg != null:
 		campfire.visible = false
 	if bg != null:
@@ -1223,13 +1379,13 @@ func _kind_tint(kind: String) -> Color:
 	## 六类事件的主题色：危险 / 交易 / 神秘 / 自然 / 收获 / 休息。
 	## 只改光晕和纹章的颜色，暗底不变 —— 保证 24 种事件「同一套里各有区别」。
 	match kind:
-		"struggle", "gaze", "oblivion", "furnace", "core_contract":
+		"struggle", "gaze", "oblivion", "furnace", "core_contract", "haunted_house":
 			return Color("b5484a")   # 危险：暗红
-		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial":
+		"smith", "card_merchant", "lake_lady", "apple_doctor", "delivery", "delivery_done", "martial", "factory":
 			return Color("c8951c")   # 交易 / 匠人：金
-		"whisper", "divination", "moon", "arcane", "hero", "statue":
+		"whisper", "divination", "moon", "arcane", "hero", "statue", "dragon_slab":
 			return Color("8a7fd4")   # 神秘 / 预兆：紫
-		"pear", "snow_leopard", "adventurer", "cave", "flyer":
+		"pear", "snow_leopard", "adventurer", "cave", "flyer", "sword":
 			return Color("6faa62")   # 自然 / 探索：绿
 		"treasure", "relic_chest":
 			return Color("d99b3f")   # 收获：橙金
@@ -1369,6 +1525,18 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "whisper"
+		if args[i] == "--house":  # R807 演示：伪装 run 诡异洋房事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "haunted_house"
+		if args[i] == "--sword":  # R793 演示：伪装 run 林中的剑事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "sword"
+		if args[i] == "--dragonslab":  # R842 演示：伪装 run 龙石板事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "dragon_slab"
 		if args[i] == "--struggle":  # 演示：伪装 run 挣扎事件（截图验证）
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
@@ -1405,6 +1573,10 @@ func _ready() -> void:
 			RunState.run_active = true
 			RunState.pending_node = {"type": "event"}
 			RunState.pending_event = "martial"
+		if args[i] == "--factory":  # R794 演示：伪装 run 巧克力工厂事件（截图验证）
+			RunState.run_active = true
+			RunState.pending_node = {"type": "event"}
+			RunState.pending_event = "factory"
 		if args[i] == "--rest":  # 演示：伪装 run 休息节点（R519h 篝火背景截图验证）
 			# ⚠️ 休息处不是 event 房：地图节点 type == "rest"，pending_event 为空。
 			# 写成 {"type":"event"} + pending_event="rest" 会被 `_is_treasure()`
@@ -1673,6 +1845,13 @@ func _ready() -> void:
 		_setup_arcane()
 	elif _is_divination():
 		event_name.text = "占 卜 室"
+		# R819：幻象**由「本局种子 + 层 + 节点」派生**（不摇 run_rng、不进存档）——
+		# 退出重进 / 回标题继续拿到的都是同一种，「反复重摇到满意再付 5 点」这条路就此堵死。
+		# 代价与奖励仍在本房间内结算（中途退出 = 作废，与其它事件同口径）。
+		if _div_stage == 0:
+			_div_rolled = RunState.divination_roll_for(
+					RunState.run_seed, RunState.current_layer, RunState.current_node_id,
+					DIVINATION_KINDS)
 		if _div_stage >= 2:
 			desc.text = DIVINATION_DONE_DESC
 			_collapse_to_leave()
@@ -1896,6 +2075,100 @@ func _ready() -> void:
 			leave_btn.text = "绕过去（什么都不做）"
 			leave_btn.disabled = false
 			result_label.text = ""
+	elif _is_sword():
+		event_name.text = "林 中 的 剑"
+		desc.text = SWORD_TAKEN_DESC if _sword_taken else SWORD_DESC
+		if _sword_taken:
+			_collapse_to_leave()
+			result_label.text = _sword_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		else:
+			# R793：三态按钮，**顺序不能反** ——
+			#   * 「已持有」优先：`gain_relic()` 对重复持有直接 return，血却照扣，
+			#     不拦就是白掉 13 点上限换一件拿不到的东西；
+			#   * 其次才是「最大生命不足」：`lose_max_hp()` 至少保留 1 点，
+			#     13 点以下拔剑等于把自己削到 1 点上限。
+			rest_btn.visible = true
+			if RunState.has_relic(SWORD_MASTER_ID):
+				rest_btn.text = "已持有「圣剑」（不必再拔）"
+				rest_btn.disabled = true
+			elif RunState.max_hp <= SWORD_LIFE_COST:
+				rest_btn.text = "最大生命不足（拔剑需失去 %d 点）" % SWORD_LIFE_COST
+				rest_btn.disabled = true
+			else:
+				rest_btn.text = "拔剑（失去 %d 最大生命，获得「圣剑」）" % SWORD_LIFE_COST
+				rest_btn.disabled = false
+			bbq_btn.visible = false
+			alt_btn.visible = false
+			leave_btn.visible = true
+			leave_btn.text = "转身离开（不碰那把剑）"
+			leave_btn.disabled = false
+			result_label.text = ""
+	elif _is_dragon_slab():
+		event_name.text = "龙 石 板"
+		if _dragon_pick == "might":
+			desc.text = DRAGON_SLAB_MIGHT_DESC
+			_collapse_to_leave()
+			result_label.text = _dragon_result
+			result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		elif _dragon_pick == "noble":
+			desc.text = DRAGON_SLAB_NOBLE_DESC
+			_collapse_to_leave()
+			result_label.text = _dragon_result
+			result_label.add_theme_color_override("font_color", Color("b9a06a"))
+		else:
+			desc.text = DRAGON_SLAB_DESC
+			# R842 选项 1：有合格目标才可点（判据与选卡页同源 `_dragon_targets()`）。
+			rest_btn.visible = true
+			if _dragon_targets().is_empty():
+				rest_btn.text = "卡组里没有可附魔的盟友或工事"
+				rest_btn.disabled = true
+			else:
+				rest_btn.text = "「强力的龙」：为一张盟友或工事附魔力量 +8"
+				rest_btn.disabled = false
+			# R842 选项 2：会当场倒下就置灰（店长口径「如果选此选项会立即死亡则不能选」）。
+			alt_btn.visible = true
+			if RunState.rare_value_lethal(CardRepo.load_json()):
+				alt_btn.text = "生命不足（这样选会当场倒下）"
+				alt_btn.disabled = true
+			else:
+				alt_btn.text = "「尊贵的龙」：获得「稀有价值」"
+				alt_btn.disabled = false
+			bbq_btn.visible = false
+			leave_btn.visible = true
+			leave_btn.text = "离开（不碰这块石板）"
+			leave_btn.disabled = false
+			result_label.text = ""
+	elif _is_haunted_house():
+		event_name.text = "诡 异 洋 房"
+		desc.text = HAUNTED_TAKEN_DESC if _house_done else HAUNTED_DESC
+		if _house_done:
+			_collapse_to_leave()
+			result_label.text = _house_result
+			result_label.add_theme_color_override("font_color", Color("a98ad4"))
+		else:
+			rest_btn.visible = true
+			rest_btn.text = "推门进去（传奇道具 ＋ 史诗卡牌，代价是「诅咒娃娃」）"
+			rest_btn.disabled = false
+			bbq_btn.visible = false
+			alt_btn.visible = false
+			leave_btn.visible = true
+			leave_btn.text = "掉头离开（这栋房子不该有人住）"
+			leave_btn.disabled = false
+			result_label.text = ""
+	elif _is_choco_factory():
+		event_name.text = "巧 克 力 工 厂"
+		desc.text = FACTORY_DONE_DESC if _factory_stage >= 4 else FACTORY_DESC
+		# 四连点事件：rest_btn 是**唯一**的奖励按钮（bbq / alt 收起），每按一次升一档；
+		# 第 ④ 档拿到卡后才 `_collapse_to_leave()`（见 `_on_main` 的 factory 分支）。
+		rest_btn.visible = true
+		_setup_factory_button()
+		bbq_btn.visible = false
+		alt_btn.visible = false
+		leave_btn.visible = true
+		leave_btn.text = "离开（闻着就很甜）"
+		leave_btn.disabled = false
+		result_label.text = ""
 	elif _is_cave():
 		event_name.text = "洞 穴"
 		desc.text = CAVE_DESC
@@ -2015,7 +2288,14 @@ func _localize_text() -> void:
 	$TopBar/TitleLabel.text = GameI18n.ui("map", "EVENT_TOP_TITLE", "事  件")
 	if GameI18n.language() == "zh":
 		return
-	event_name.text = GameI18n.source(event_name.text)
+	# R793c：事件标题是「林 中 的 剑」这种**用空格撑字距**的排版写法，而 i18n 的 key 是
+	# narrative 里的「林中的剑」（无空格）—— 全串精确匹配必然落空，于是英 / 日 / 西语版的
+	# **每一个事件标题**都还是中文（R793 出 en 图时才发现，struggle 同样中招）。
+	# 唯一出口在这里：去掉排版空格再查表；查不到就保持原样（别把字距也吃掉）。
+	var ev_title := event_name.text.replace(" ", "")
+	var ev_title_tr := GameI18n.source(ev_title)
+	if ev_title_tr != ev_title:
+		event_name.text = ev_title_tr
 	desc.text = GameI18n.source(desc.text)
 	result_label.text = GameI18n.source(result_label.text)
 	for b: Button in [rest_btn, bbq_btn, alt_btn, leave_btn]:
@@ -2119,6 +2399,15 @@ func _on_main() -> void:
 	## 宝箱层 → 开箱获得 1 个随机奖励道具。
 	## R224：休息处的「休息」已移除（只剩 bbq_btn 的「烤肉」），不再有休息分支。
 	sfx.play("click")
+	if _is_dragon_slab():
+		if _dragon_pick != "":
+			_on_leave()
+			return
+		_dragon_take_might()
+		return
+	if _is_haunted_house():
+		_explore_haunted_house()
+		return
 	if _is_cave():
 		_cave_explore()
 		return
@@ -2214,13 +2503,19 @@ func _on_main() -> void:
 			if RunState.max_hp <= DIVINATION_HP_COST:
 				return
 			var div_paid := RunState.lose_max_hp(DIVINATION_HP_COST)
-			# 进行占卜：1~4 随机（**走本局 run_rng**，同种子一致）
-			_div_rolled = RunState.run_rng.randi_range(1, DIVINATION_KINDS)
+			# R819：幻象在进房时已按「种子 + 层 + 节点」派生好 —— 这里只取，不再摇。
+			if _div_rolled < 1:
+				_div_rolled = RunState.divination_roll_for(
+						RunState.run_seed, RunState.current_layer, RunState.current_node_id,
+						DIVINATION_KINDS)
 			_div_stage = 1
 			_apply_divination_text()
 			if div_paid > 0:
-				result_label.text = "（占卜的代价：失去 %d 点最大生命 → %d / %d）" % [
-						div_paid, RunState.hp, RunState.max_hp]
+				# R819：结果行含三个动态数值 → 必须走模板表（event_ui `DIVINATION_COST_PAID`），
+				# 直接赋中文串的话 en / ja / es 下会原地回落中文（R807 的同一类坑）。
+				result_label.text = GameI18n.source(
+						"（占卜的代价：失去 %d 点最大生命 → %d / %d）" % [
+								div_paid, RunState.hp, RunState.max_hp])
 			_update_orb_vision()
 			sfx.play("click")
 			_redraw()
@@ -2513,17 +2808,70 @@ func _on_main() -> void:
 		result_label.add_theme_color_override("font_color", Color("a44ad0"))
 		_redraw()
 		return
+	if _is_sword():
+		if _sword_taken:
+			_on_leave()
+			return
+		# 与界面置灰**同一条判据**（别只在按钮上拦）：已持有 / 最大生命不足都不许再扣。
+		if RunState.has_relic(SWORD_MASTER_ID) or RunState.max_hp <= SWORD_LIFE_COST:
+			return
+		# 拔剑：先掉上限、再给道具 —— `lose_max_hp()` 至少保留 1 点，所以这一步不会致死。
+		var sword_paid := RunState.lose_max_hp(SWORD_LIFE_COST)
+		RunState.gain_relic(SWORD_MASTER_ID)
+		_sword_taken = true
+		_claim_reward(rest_btn)   # R147
+		_collapse_to_leave()
+		desc.text = SWORD_TAKEN_DESC
+		_sword_result = "失去 %d 点最大生命（现 %d / %d）——「圣剑」已收进行囊" % [
+				sword_paid, RunState.hp, RunState.max_hp]
+		result_label.text = _sword_result
+		result_label.add_theme_color_override("font_color", Color("c8a86a"))
+		_redraw()
+		return
+	if _is_choco_factory():
+		if _factory_stage >= 4:
+			_on_leave()
+			return
+		# 与按钮置灰**同一条判据**（别只在 UI 拦）：上限付不起就不许再吃。
+		var factory_cost: int = FACTORY_STAGE_COST[_factory_stage]
+		if RunState.max_hp <= factory_cost:
+			return
+		var factory_paid := RunState.lose_max_hp(factory_cost) if factory_cost > 0 else 0
+		RunState.add_chocolate(1)
+		_factory_stage += 1
+		if _factory_stage >= 4:
+			# 第 ④ 档：包下整座工厂 → 卡片加入卡组，本页收尾只剩「离开」。
+			RunState.add_card(FACTORY_CARD_ID)
+			_factory_result = "失去 %d 点最大生命（现 %d / %d）——「巧克力工厂」已加入卡组" % [
+					factory_paid, RunState.hp, RunState.max_hp]
+			desc.text = FACTORY_DONE_DESC
+			_collapse_to_leave()
+		elif factory_paid > 0:
+			_factory_result = "用 %d 点最大生命换了一块巧克力（上限 %d / %d，已有 %d 块）" % [
+					factory_paid, RunState.hp, RunState.max_hp, RunState.chocolate]
+			_setup_factory_button()
+		else:
+			_factory_result = "甜的。巧克力 +1（已有 %d 块）" % RunState.chocolate
+			_setup_factory_button()
+		result_label.text = GameI18n.source(_factory_result)
+		result_label.add_theme_color_override("font_color", Color("c8951c"))
+		_redraw()
+		return
 	# R237：休息处「在这里休息」→ 回复 rest_heal_amount() 点生命（与「烤肉」二选一）。
 	# 只有真正的休息节点才走这里（_is_rest 精确判 pending_node.type == "rest"）；
 	# 未识别的事件类型仍然安全不动。
 	if _is_rest():
-		if _bbq_taken:
+		# R781：不再「点过一次就整处收起」—— 收尾交给 `_rest_after_pick()`，普通局它照样
+		# 立刻收起（剩余 0），「温暖」下才会把第二份留给玩家。
+		# ⚠️ 原先这里是 `if _bbq_taken: return`（烤肉过就不能休息）。温暖下「烤肉 + 休息」
+		# 正是最常见的一组，所以闸门改成只看**剩余配额**，不再看烤肉。
+		if _rest_pick_left() <= 0:
 			return
 		var gain := RunState.rest()
 		# R246 附魔大师（6034）：休息的同一次里随机给一张卡附一个合规附魔。
 		# 结算排在回血之后（回血先落，再谈附魔），结果写进同一行提示。
 		var em := RunState.enchant_master_on_rest()
-		_collapse_to_leave()
+		_rest_after_pick(rest_btn, "rest")
 		var em_txt := ""
 		if bool(em.get("ok", false)):
 			em_txt = "；附魔大师给「%s」附上了「%s」" % [
@@ -2724,6 +3072,63 @@ func _collapse_to_leave() -> void:
 	_redraw()
 
 
+func _explore_haunted_house() -> void:
+	## R807 诡异洋房 · 选项 1「探索」。三件事一次做完：
+	##   ① 一件随机**传奇**道具入队（`roll_legendary_relic()`，池空返回 -1）；
+	##   ② 一组**史诗**卡牌三选一入队（`queue_card_reward("epic")`，100% 史诗档）；
+	##   ③ 一张「诅咒娃娃」**直接进卡组** —— 它不是奖励，是代价，所以**不入队**，
+	##      玩家没有「不领」这个选项。
+	## 然后当场 `_reward_panel.open()`：**这里就是「没有战斗胜利标记的奖励页」**——
+	## 战斗那边的入口是 `battle_scene._present_win_panel()`（金框大字「战斗胜利」+ 金币，
+	## 点「查看奖励」才开窗），事件页直接开窗，那一整块根本不经过。
+	## ⚠️ 必须先入队再 open：`open()` 读的就是 `RunState.pending_rewards`，空队列开出来是空页。
+	## ⚠️ 不在这里替玩家领：关窗时没领的条目跟着地图左上「✦ 待领奖励」走（R695 口径）。
+	if _house_done:
+		_on_leave()
+		return
+	_house_done = true
+	_claim_reward(rest_btn)
+	_collapse_to_leave()
+	var relic_id := RunState.roll_legendary_relic()
+	if relic_id > 0:
+		RunState.queue_relic_reward(relic_id)
+	RunState.queue_card_reward("epic", [] as Array[String], "event")
+	RunState.add_card(HAUNTED_CURSE_ID)
+	desc.text = HAUNTED_TAKEN_DESC
+	# ⚠️ 结果行必须是**固定串**：`GameI18n.source()` 靠「全串精确 / 模板」匹配中文原文，
+	#    这里若插进道具名（%s），英文 / 日文 / 西语的模板就对不上，那一行会一直是中文。
+	#    道具名本来就会在奖励页里出现，不必在结果行再复述一遍。
+	if relic_id > 0:
+		_house_result = "「诅咒娃娃」已加入卡组，它不会走。一件传奇道具和一组史诗卡牌在上面等你挑。"
+	else:
+		_house_result = "「诅咒娃娃」已加入卡组，它不会走。传奇道具已全部拿过，上面只剩一组史诗卡牌。"
+	result_label.text = _house_result
+	result_label.add_theme_color_override("font_color", Color("a98ad4"))
+	if _reward_panel != null:
+		_reward_panel.open()
+	_redraw()
+
+
+func _setup_factory_button() -> void:
+	## R794：按当前档位铺「试吃」按钮的文案与可用态。
+	## 代价表 = FACTORY_STAGE_COST；上限付不起（lose_max_hp 至少保留 1 点）→ 置灰。
+	## 档位 0 免费、永远可点；文案与 `_on_main` 的结算共用同一张表。
+	var factory_cost: int = FACTORY_STAGE_COST[_factory_stage]
+	if RunState.max_hp <= factory_cost:
+		rest_btn.text = "最大生命不足（这一块要失去 %d 最大生命）" % factory_cost
+		rest_btn.disabled = true
+		return
+	if _factory_stage == 0:
+		rest_btn.text = "试吃一块（获得 1 巧克力）"
+	elif _factory_stage == 1:
+		rest_btn.text = "再来一块（失去 %d 最大生命，获得 1 巧克力）" % factory_cost
+	elif _factory_stage == 2:
+		rest_btn.text = "停不下来（失去 %d 最大生命，获得 1 巧克力）" % factory_cost
+	else:
+		rest_btn.text = "包下整座工厂（失去 %d 最大生命，获得卡片「巧克力工厂」）" % factory_cost
+	rest_btn.disabled = false
+
+
 func _arcane_taken() -> bool:
 	## R147：本次访问是否已从泉里领走奖励（护符 / 泉水任一份）。
 	## ⚠️ 只看「本次」的两个旗标，**不能**用 `RunState.has_relic(ARCANE_CHARM_ID)` ——
@@ -2873,6 +3278,119 @@ func _core_take_core() -> void:
 	_redraw()
 
 
+func _dragon_targets() -> Array:
+	## 「强力的龙」的候选：**还没附魔**的盟友 / 工事（`enchant_ok()` 是资格唯一口）。
+	## 返回 [{idx: deck 下标, card: 带附魔 / 本局成长的卡实例}]，顺序 = 卡组顺序。
+	var repo := CardRepo.load_json()
+	var out: Array = []
+	for i in RunState.deck_ids.size():
+		var c := RunState.card_with_mod(repo, i)
+		if c == null:
+			continue
+		if not RunState.enchant_ok(DRAGON_ENCHANT_ID, c, i):
+			continue
+		out.append({"idx": i, "card": c})
+	return out
+
+
+func _dragon_take_might() -> void:
+	## 选项 1「强力的龙」：开选卡页挑一张盟友 / 工事 → 附魔「力量 +8」。
+	## ⚠️ 走 `PickOverlay` 而不是跳卡组编辑场景：这里只要**一张**、
+	##    且候选已经按 `enchant_ok()` 筛过，没必要把整套编辑 UI 搬过来（运送委托同款用法）。
+	if _dragon_pick != "":
+		_on_leave()
+		return
+	var elig := _dragon_targets()
+	if elig.is_empty():
+		return
+	_dragon_cards = elig
+	var cards: Array = []
+	for e in elig:
+		cards.append(e["card"])
+	if _dragon_overlay == null:
+		_dragon_overlay = PickOverlay.new()
+		_dragon_overlay.confirmed.connect(_on_dragon_confirmed)
+		_dragon_overlay.cancelled.connect(_on_dragon_cancelled)
+		add_child(_dragon_overlay)
+	_dragon_overlay.open({
+		"kind": "dragon_slab",
+		"title": "龙石板 · 挑选一张盟友或工事",
+		"note": "只能选还没附魔的盟友或工事（每张卡只有一个附魔位）",
+		"cards": cards,
+		"counts": [],
+		"max_sel": 1,
+		"min_sel": 1,
+		"confirm_label": "附上「力量 +8」",
+		"cancel_label": "再想想（收起）",
+		"short": "龙石板",
+	})
+
+
+func _on_dragon_cancelled() -> void:
+	## 收起选卡页 = 什么都没发生（不写 `_dragon_pick`），事件页可以再点一次或直接离开。
+	if _dragon_overlay != null:
+		_dragon_overlay.close()
+
+
+func _on_dragon_confirmed(selected: Array) -> void:
+	## 选卡页确认：附魔**当场**烤进那张卡 —— 与商店走同一条 `enchant_deck_card()`。
+	if _dragon_pick != "" or selected.is_empty():
+		return
+	var grid: int = int(selected[0])
+	if grid < 0 or grid >= _dragon_cards.size():
+		return
+	var idx: int = int((_dragon_cards[grid] as Dictionary)["idx"])
+	var repo := CardRepo.load_json()
+	var before := RunState.card_with_mod(repo, idx)
+	if before == null:
+		return
+	var old_power: int = before.power
+	if not RunState.enchant_deck_card(idx, RunState.enchant_mod(DRAGON_ENCHANT_ID)):
+		return
+	if _dragon_overlay != null:
+		_dragon_overlay.close()
+	var after := RunState.card_with_mod(repo, idx)
+	var new_power: int = (after.power if after != null else old_power + 8)
+	_dragon_pick = "might"
+	_claim_reward(rest_btn)   # R147：一次访问只领一份
+	_collapse_to_leave()
+	desc.text = DRAGON_SLAB_MIGHT_DESC
+	# R807：结果行**不插卡名**（动态中文会让 en / ja / es 永远回落中文）—— 只写数值。
+	_dragon_result = "附魔「力量 +8」已烤进你选的那张卡（力量 %d → %d）" % [old_power, new_power]
+	result_label.text = _dragon_result
+	result_label.add_theme_color_override("font_color", Color("c8a86a"))
+	_redraw()
+
+
+func _dragon_take_noble() -> void:
+	## 选项 2「尊贵的龙」：收道具「稀有价值」→ 同名卡削到 3 张，每因此效果删一张失 5 点生命。
+	## ⚠️ 会致死时**不许选**：按钮已置灰，这里再拦一次（R793 的教训：只拦界面 = 没拦）。
+	if _dragon_pick != "":
+		_on_leave()
+		return
+	var repo := CardRepo.load_json()
+	if RunState.rare_value_lethal(repo):
+		return
+	var res: Dictionary = RunState.rare_value_prune(repo)
+	if not bool(res.get("ok", false)):
+		return
+	RunState.gain_relic(DRAGON_SLAB_RELIC_ID)
+	_dragon_pick = "noble"
+	_claim_reward(alt_btn)   # R147
+	_collapse_to_leave()
+	desc.text = DRAGON_SLAB_NOBLE_DESC
+	var deleted: Array = res.get("deleted", [])
+	var dmg: int = int(res.get("damage", 0))
+	if deleted.is_empty():
+		_dragon_result = "「稀有价值」已收进道具栏：没有超过 3 张的同名卡，一张也没撕"
+	else:
+		_dragon_result = "「稀有价值」已收进道具栏：撕掉 %d 张同名卡，失去 %d 点生命（现 %d / %d）" % [
+				deleted.size(), dmg, RunState.hp, RunState.max_hp]
+	result_label.text = _dragon_result
+	result_label.add_theme_color_override("font_color", Color("b9a06a"))
+	_redraw()
+
+
 func _refresh() -> void:
 	# R178：本次访问的奖励已领完 → 任何刷新都保持「只有一个离开」的收尾态
 	#（_on_main 的休息分支等地方会再调 _refresh，不收住会把按钮文案改回去）。
@@ -2885,7 +3403,9 @@ func _refresh() -> void:
 			or _is_smith() or _is_delivery() or _is_delivery_done() \
 			or _is_card_merchant() or _is_lake_lady() or _is_divination() \
 			or _is_moon() or _is_snow_leopard() or _is_furnace() \
-			or _is_core_contract() or _is_flyer() or _is_statue():
+			or _is_core_contract() or _is_flyer() or _is_statue() or _is_sword() \
+			or _is_dragon_slab() \
+			or _is_choco_factory() or _is_haunted_house():
 		# ⚠️ R167：工匠（smith）**必须**在这张白名单里 —— 否则 _refresh() 会把它当成休息处，
 		#   把上面刚设好的「锻造：…」按钮文案覆盖成「在这里休息（回复 N 生命）」，
 		#   于是「选项文本与实际不符」（点了其实不回复生命）。
@@ -2893,19 +3413,28 @@ func _refresh() -> void:
 		return
 	_refresh_bbq()
 	# R178：休息处办完（烤肉）→ 也只留一个「离开」，结果行照写（收起按钮不影响它）。
+	# R781：「温暖」下还剩一份时不收起 —— 只把「烤肉」锁掉，其余选项留给玩家。
 	if _bbq_taken:
+		result_label.text = "「烤肉」已收进工具栏——战斗里轻点它就能吃，回复 25% 最大生命。"
+		result_label.add_theme_color_override("font_color", Color("d89a2e"))
+		if _rest_pick_left() > 0:
+			_apply_rest_lock()
+			leave_btn.visible = true
+			leave_btn.text = "离开（剩下的不要了）"
+			leave_btn.disabled = false
+			_redraw()
+			return
 		bbq_btn.visible = false
 		rest_btn.visible = false
 		leave_btn.visible = true
 		leave_btn.text = "离开"
 		leave_btn.disabled = false
 		_reward_claimed = true
-		result_label.text = "「烤肉」已收进工具栏——战斗里轻点它就能吃，回复 25% 最大生命。"
-		result_label.add_theme_color_override("font_color", Color("d89a2e"))
 		_redraw()
 		return
 	leave_btn.text = "离开（不烤肉）"
 	result_label.text = ""
+	_apply_rest_lock()
 
 
 func _refresh_bbq() -> void:
@@ -2981,20 +3510,61 @@ func _resolve_divination(first: bool) -> void:
 	_claim_reward(rest_btn if first else bbq_btn)
 	_collapse_to_leave()
 	desc.text = DIVINATION_DONE_DESC
-	result_label.text = _div_result
+	# R819：结果行带动态卡名 / 道具名 → 走模板表（`DIVINATION_CARD_GAINED` /
+	# `DIVINATION_RELIC_GAINED`，含 %s）；不套这一层，en / ja / es 下这行永远是中文。
+	result_label.text = GameI18n.source(_div_result)
 	result_label.add_theme_color_override("font_color", Color("8a9ad8"))
+	_redraw()
+
+
+func _rest_pick_left() -> int:
+	## R781：这一间火堆**还剩几份**可选。普通局 = 1（三选一），「温暖」修饰下 = 2。
+	return maxi(0, RunState.rest_pick_quota() - RunState.rest_pick_used_here())
+
+
+func _apply_rest_lock() -> void:
+	## R781：把本次已经点过的火堆选项置灰。`_refresh*` 每次都会重铺文案与 disabled，
+	## 所以只要还在同一间火堆，每次重绘末尾都得再套一遍。
+	if _rest_used.has("rest") and rest_btn != null:
+		rest_btn.disabled = true
+	if _rest_used.has("bbq") and bbq_btn != null:
+		bbq_btn.disabled = true
+	if _rest_used.has("alt") and alt_btn != null:
+		alt_btn.disabled = true
+
+
+func _rest_after_pick(used_btn: Button, key: String) -> void:
+	## R781：火堆三个选项（休息 / 烤肉 / 添加柴火）的**唯一收尾口**。
+	## 还有剩余份数 → 只锁掉刚点过的那个，其余留给玩家（「温暖」）；
+	## 份数用尽 → 沿用 R178 的「办完只留一个离开」。
+	_rest_used[key] = true
+	var used := RunState.rest_pick_mark()
+	if used >= RunState.rest_pick_quota():
+		_claim_reward(used_btn)
+		_collapse_to_leave()
+		return
+	if used_btn != null:
+		used_btn.disabled = true
+	leave_btn.visible = true
+	leave_btn.disabled = false
+	leave_btn.text = "离开（剩下的不要了）"
+	_apply_rest_lock()
 	_redraw()
 
 
 func _claim_rest_firewood() -> void:
 	## R390 休息处 ·「添加柴火」：从卡组删除一张卡（三选一里的一支）。
 	## 选卡 UI 与遗忘之泉共用 `deck_edit.tscn`（`pending_deck_edit = "delete"`），
-	## 不新造一套；节点在这里就算走完 —— 回地图后不会再被送回同一个休息处。
+	## 不新造一套。
 	## ⚠️ 不在这里调 `_collapse_to_leave()`：马上跳场景了，它只会白闪一帧。
+	## R781：这一支要跳场景（`deck_edit` 选完只会回地图），所以**还剩配额时不完成节点** ——
+	## 从地图再进这间火堆，第二份还在；配额用尽才照旧把节点收掉。
 	if _reward_claimed or RunState.deck_ids.is_empty():
 		return
+	var used := RunState.rest_pick_mark()
 	_claim_reward(alt_btn)
-	RunState.complete_current()
+	if used >= RunState.rest_pick_quota():
+		RunState.complete_current()
 	RunState.pending_deck_edit = "delete"
 	SceneFx.goto("res://scenes/deck_edit.tscn")
 
@@ -3019,6 +3589,12 @@ func _on_alt() -> void:
 	## R305 卡片商人 · **随机折价**（第三选项）：随机失去一张非诅咒卡，换 100 金币。
 	## R351 赏月也用它当「拿硬币」的按钮。
 	sfx.play("click")
+	if _is_dragon_slab():
+		if _dragon_pick != "":
+			_on_leave()
+			return
+		_dragon_take_noble()
+		return
 	if _is_core_contract():
 		_core_take_core()
 		return
@@ -3199,7 +3775,8 @@ func _on_bbq() -> void:
 		_redraw()
 		return
 	_bbq_taken = true
-	_claim_reward(bbq_btn)
+	# R781：收尾统一走火堆的唯一口 —— 普通局立刻收起；「温暖」下只锁「烤肉」，留第二份。
+	_rest_after_pick(bbq_btn, "bbq")
 	_refresh()
 	_redraw()
 

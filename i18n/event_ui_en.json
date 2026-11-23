@@ -42,7 +42,7 @@
       "LEAVE_WITHOUT_INVESTING": "Leave (don't offer anything)"
     },
     "core_contract": {
-      "SIGN_CONTRACT": "Sign the contract (gain the Relic \"Cursebind\")",
+      "SIGN_CONTRACT": "Sign the contract (gain \"Cursebind\" and 1 \"Compensation\")",
       "CONTRACT_SIGNED_DISABLED": "Contract already signed",
       "TAKE_CORE": "Claim the Core (take the Relic \"Core\")",
       "CORE_FORMED_DISABLED": "Core already formed (redeem on the reward screen after battle)",
@@ -64,7 +64,7 @@
       "LEAVE_WITHOUT_ARCANE_REWARD": "Leave (take neither)"
     },
     "divination": {
-      "START_DIVINATION": "Perform a divination (lose 5 Max Health)",
+      "START_DIVINATION": "Perform a divination (lose %d Max Health)",
       "LEAVE_WITHOUT_DIVINATION": "Leave (no divination)",
       "LEAVE_WITHOUT_INTERPRETING": "Leave (skip interpretation)",
       "WHALE_FIGHT": "I will fight for it (gain \"Whale's Wrath\")",
@@ -135,6 +135,27 @@
       "OPEN_CARD_CHEST": "Open the chest (gain a Card Reward)",
       "LEAVE_WITHOUT_OPENING": "Don't open it (turn and leave)"
     },
+    "sword": {
+      "TAKE_SWORD": "Draw the sword (lose %d Max Health and gain \"Holy Sword\")",
+      "MAX_HP_LOW_DISABLED": "Not enough Max Health (drawing costs %d)",
+      "ALREADY_OWNED_DISABLED": "You already carry the \"Holy Sword\" (no need to draw it again)",
+      "LEAVE_THE_SWORD": "Turn and walk away (do not touch the sword)"
+    },
+    "dragon_slab": {
+      "MIGHT": "\"The mighty dragon\": enchant one Ally or Structure with +8 Power",
+      "NOBLE": "\"The noble dragon\": gain \"Rare Value\"",
+      "NO_ALLY_DISABLED": "No Ally or Structure in your deck can be enchanted",
+      "LETHAL_DISABLED": "Not enough Health (this choice would kill you)",
+      "LEAVE": "Leave (do not touch the slab)"
+    },
+    "factory": {
+      "FACTORY_STAGE_1": "Taste one (gain 1 Chocolate)",
+      "FACTORY_STAGE_2": "Have another (lose %d Max Health, gain 1 Chocolate)",
+      "FACTORY_STAGE_3": "Cannot stop (lose %d Max Health, gain 1 Chocolate)",
+      "FACTORY_STAGE_4": "Buy the whole factory (lose %d Max Health, gain the card \"Chocolate Factory\")",
+      "FACTORY_DISABLED": "Not enough Max Health (this piece costs %d Max Health)",
+      "FACTORY_LEAVE": "Leave (it smells so sweet)"
+    },
     "struggle": {
       "ACCEPT_STRUGGLE": "Accept the struggle (lose %d Health and gain \"Metal Dragon\")",
       "LEAVE_UNCHANGED": "Turn and leave (leave things as they are)"
@@ -143,6 +164,10 @@
       "PRAY": "Worship (the next 3 battles are guaranteed to drop a tool)",
       "SMASH": "Smash it (fill your tool bar with Stones)",
       "LEAVE": "Walk past (do nothing)"
+    },
+    "haunted_house": {
+      "EXPLORE": "Push the door open (a Legendary Relic + an Epic card reward; the price is a \"Curse Doll\")",
+      "LEAVE": "Turn around and leave (nobody should be living here)"
     }
   },
   "pickers": {
@@ -152,6 +177,13 @@
       "confirm_label": "Accept the Cargo",
       "cancel_label": "Decline (collapse)",
       "short": "Delivery Request"
+    },
+    "dragon_slab": {
+      "title": "Dragon Slab · Choose an Ally or Structure",
+      "note": "Only Allies or Structures without an enchantment (one enchantment per card)",
+      "confirm_label": "Enchant with \"Power +8\"",
+      "cancel_label": "Think again (collapse)",
+      "short": "Dragon Slab"
     }
   },
   "results": {
@@ -252,6 +284,19 @@
     "treasure": {
       "TREASURE_CARD_REWARD_PENDING": "Found a Card Reward; choose 1 to add to your Deck (pending: see the reward pop-up)"
     },
+    "sword": {
+      "SWORD_GAINED": "Lost %d Max Health (current %d/%d)—the \"Holy Sword\" is yours"
+    },
+    "dragon_slab": {
+      "MIGHT_GAINED": "The enchantment \"Power +8\" is now baked into the card you chose (Power %d → %d)",
+      "NOBLE_GAINED": "\"Rare Value\" goes into your relics: %d duplicate cards torn out, %d Health lost (now %d / %d)",
+      "NOBLE_NONE": "\"Rare Value\" goes into your relics: no name had more than 3 copies, nothing was torn out"
+    },
+    "factory": {
+      "FACTORY_FREE": "Sweet. Chocolate +1 (you have %d now)",
+      "FACTORY_PAID": "Traded %d Max Health for a piece of chocolate (Max Health %d / %d, you have %d)",
+      "FACTORY_CARD": "Lost %d Max Health (current %d / %d)—\"Chocolate Factory\" has been added to your deck"
+    },
     "struggle": {
       "STRUGGLE_CARD_GAINED": "Lost %d Health (current %d/%d)—\"%s\" has been added to your Deck"
     },
@@ -262,10 +307,11 @@
       "FURNACE_REWARDS_PENDING": "\"%s\" was thrown into the furnace, and it spat out %d Relics: %s. Claim them in the reward pop-up."
     },
     "core_contract": {
-      "CORE_CONTRACT_CURSE_GAINED": "\"Cursebind\" has been added to your Relic inventory: %s",
+      "CORE_CONTRACT_CURSE_GAINED": "Gained the Relic \"Cursebind\" and added 1 \"%s\" to your Deck. (Cursebind: %s)",
       "CORE_CONTRACT_CORE_GAINED": "\"Core\" has been added to your Relic inventory: after you have lost a cumulative total of %d Health in battle, it takes shape; an extra exchange becomes available on the reward page when this battle ends—sacrifice 1 damage Skill, permanently Removing it from your Deck, and attach its first instance of damage as an Enchant to another damage Skill with no Enchant. It becomes inactive after use."
     },
     "divination": {
+      "DIVINATION_COST_PAID": "(Divination cost: -%d Max Health -> %d / %d)",
       "DIVINATION_CARD_GAINED": "\"%s\" has been added to your Deck.",
       "DIVINATION_RELIC_GAINED": "\"%s\" has been added to your Relic inventory."
     },
@@ -273,6 +319,10 @@
       "STATUE_PRAY": "Worshipped: the next %d battles each guarantee one tool drop.",
       "STATUE_SMASH": "The statue collapses: %d Stones stuffed into your tool bar (drag one onto an enemy for 15 damage).",
       "STATUE_SMASH_FULL": "The statue collapses, but your tool bar is already full — the rubble stays where it fell."
+    },
+    "haunted_house": {
+      "EXPLORED": "The \"Curse Doll\" has joined your deck; it will not go away. A Legendary Relic and an Epic card reward are waiting for you above.",
+      "EXPLORED_NO_RELIC": "The \"Curse Doll\" has joined your deck; it will not go away. You have already taken every Legendary Relic, so only an Epic card reward is left above."
     }
   },
   "rest_dynamic": {

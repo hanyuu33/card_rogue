@@ -1,0 +1,20 @@
+Call the built-in image_gen tool RIGHT NOW and generate exactly ONE SQUARE image, 1024x1024 if supported (otherwise the most square size available; do NOT generate a wide landscape image). Do NOT read skill files. Do NOT run shell commands. Do NOT ask questions. Generate the image FIRST, then reply with a one-line confirmation.
+
+Generate ONE game FOOD item ICON, isolated on a PURE WHITE (#FFFFFF) FLAT background. This will be cut out into a transparent PNG icon, so a clean uniform white background is CRITICAL.
+
+STYLE: 2D hand-drawn anime game icon, THICK CLEAN BLACK OUTLINE around every shape, flat cel-shaded colour blocks with exactly TWO shading steps per object, hard-edged shadow shapes, cozy light-fantasy storybook look, simple readable silhouette, drawn detail only where the eye lands. Warm palette: rich milk-chocolate brown body, caramel-amber highlights, one cool silver-grey accent for the foil.
+
+SUBJECT: a single rectangular bar of milk chocolate lying HORIZONTALLY (long axis left to right), seen from a slightly tilted three-quarter top view so both the top face and the front side face are visible. The bar is divided into chunky SQUARE SEGMENTS by deep clear grooves, TWO ROWS of segments, each segment slightly domed with a small highlight.
+
+FEATURE 1 — FOIL: the LEFT HALF of the bar is still WRAPPED IN CRINKLED SILVER FOIL. Cool silver-grey sheet, crisp edge highlights, several triangular crease facets; its torn edge is peeled open toward the viewer in a JAGGED zigzag curl, revealing the chocolate segments underneath the opened flap. It must read clearly as metal foil, not paper and not a second chocolate bar.
+
+FEATURE 2 — BITE OUT OF A CORNER (this is the most important thing in the image, get it right): ONE BIG BITE has been taken out of the NEAR-BOTTOM-RIGHT CORNER of the bar (the corner closest to the viewer). That corner is simply GONE. The missing region is the corner itself — a broad concave arc sweeping from the BOTTOM EDGE diagonally up into the RIGHT END of the bar, so the outline of the bar is cut away at the corner and the bite opens down and to the right. The bite rim is SCALLOPED with a few small rounded tooth-mark humps, and the exposed broken face shows a lighter matte inner chocolate cross-section with tiny crumbs.
+CRITICAL: the bite must be at the CORNER where the bottom edge meets the right end. It must NOT be a notch in the middle of a straight edge, NOT a rectangular chunk snapped off, NOT a chip taken out of a flat side. If the bite reads as "a piece broke off the end" rather than "someone bit the corner", the image is WRONG.
+
+COMPOSITION: ONE single object only, centered, the long horizontal bar filling about 78% of the frame WIDTH and about 34% of the frame HEIGHT, leaving generous white space above and below. The whole bar plus the foil flap must stay fully inside the frame with nothing cut off. The object must be COMPLETELY SEPARATED from the frame edges by white space. NO ground, NO pedestal, NO cast shadow, NO scenery, NO background objects, NO decorative border, NO frame, NO plate, NO crumbs lying around on the background, NO sparkles outside the object.
+
+The ENTIRE background MUST be uniform pure white: NO gradient, NO texture, NO pattern, NO vignette, NO coloured backdrop, NO checkerboard.
+
+STRICTLY FORBIDDEN: any text, letters, words, numbers, digits, labels on the foil, brand mark, watermark, logo or signature anywhere in the image; any human figure, human face, human hands, fingers, mouth, lips or teeth (the bite is a shape only, shown purely as a corner notch in the chocolate); any animal; any photorealistic texture, 3D render, PBR material, photo grain, noise, film grain, airbrush, soft glow bloom, volumetric fog, god rays; any second object; any other-game card frame or UI element.
+
+NO readable text. NO numbers. NO watermark. Pure white background only.

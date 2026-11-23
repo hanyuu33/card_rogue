@@ -84,6 +84,13 @@ var board := {}  # Vector2i -> Placement
 ## R464：本场战斗已经**发放**到第几号入场序号（见 `Placement.entry_seq`）。
 ## 只增不减 —— 单位死掉再召唤回来算「新入场」，序号往后排。
 var entry_counter: int = 0
+## R840：**单位落位回调**（唯一口）。`place()` 是所有上板路径的必经之处
+## （手牌打出 / 各种召唤 / 孵化 / 死亡召唤 / 关卡摆位 / 读档重建），所以「新单位踏上
+## 燃烧的横行要挨烧」这件事只能挂在这里 —— 挂在各个召唤函数上，漏一个入口就漏一种怪。
+## 引擎在 `_init()` 里把它接到 `GameEngine._on_unit_placed()`；
+## 没有引擎的场景（纯数据测试 / 读档重建）保持空 Callable = 什么都不做。
+## ⚠️ 回调里**不得**假设调用方已经拿到返回值：只读 `board` 上已经写好的状态。
+var on_unit_placed: Callable = Callable()
 # 场地效果（R74）：Vector2i -> CardData。**与board 完全分开**——场地不是单位，
 # 不能被攻击、不挡路、也不参与碰撞；它只是「这个格子上挂着一个一次性效果」。
 # **每个格子最多 1 个**（这正是「每个格子只能存在一个效果」的数据保证：
@@ -97,6 +104,13 @@ var field_owner := {}
 ## _cards_save / 各类「场地数量」判据当成卡牌扫到；陷阱不是卡牌，独立一张表最干净。
 ## 与 field_effects 并列：同一格最多一个陷阱、且不与场地卡共存（见 trap_legal_cells）。
 var trap_fields := {}
+## R839 大蒜 7017：Vector2i -> 剩余的我方回合数（>0 = 这一格「不可使用」）。
+## 与 `trap_fields` 并列但**语义相反**：那张表是「踩上去触发」，这张是「根本踩不进去」。
+## 唯一写口 `seal_cell()`、唯一读口 `is_cell_sealed()`、唯一推进口 `tick_seals()` ——
+## 移动 BFS / 跳跃 / 召唤落点 / 陷阱与场地落点 / 界面高亮全都读同一个判据。
+## ⚠️ 刻意**不进 `trap_fields`**：混进去会被 `trap_legal_cells()` 当成一件已布置的陷阱，
+##    而 `_trigger_trap()` 又永远等不到人踩（封锁格本身就进不去）。
+var sealed_cells := {}
 # R503 标记（9224）：**同时只存在一个**；R562 起加伤**固定 +1，不再按回合成长**。
 # 存在性由 `mark_cell()` 扫 field_effects 判定（唯一权威），这里只存**数值**：
 # 存进卡面会污染卡库共享实例（set_field 复制的是 CardData，不是附加状态）。
@@ -136,7 +150,8 @@ var haste_pick_turn_self := 0
 var haste_pick_turn_opp := 0
 var card_discount := {}         # CardData -> int：实例级减费（智慧喷涌抽到的那一张效果卡费用 -N）
 var turn_free := {}             # CardData -> true：本回合费用为 0（使魔之夜的乌鸦；回合结束清空）
-## CardData -> true：**在手牌里期间**费用为 0（无限装甲 8038 供能的改造牌）。
+## CardData -> true：**在手牌里期间**费用为 0。
+## 现有用户：无限装甲 8038 供能的改造牌、R773 呼唤 9266「那张盟友本局费用为 0」。
 ## ⚠️ 与 `turn_free` 的关键区别 = **重置时机**：
 ##   * `turn_free` 在**回合结束**清空；
 ##   * 本表**回合结束不清** —— 判据是「这张卡此刻还在不在手牌里」，
@@ -388,6 +403,37 @@ func clear_field(cell: Vector2i) -> CardData:
 	return old
 
 
+func is_cell_sealed(cell: Vector2i) -> bool:
+	## R839：这一格现在「不可使用」吗（大蒜）。**唯一读口** ——
+	## 引擎的移动 / 跳跃 / 落点判据与界面高亮都读它，别各自再摸一次 `sealed_cells`。
+	return int(sealed_cells.get(cell, 0)) > 0
+
+
+func seal_cell(cell: Vector2i, turns: int) -> void:
+	## R839：把一格封住 `turns` 个我方回合（大蒜 block_turns = 3）。
+	## 同一格再封一次 → 取**较大**的剩余回合：既不叠成「六回合」，也不会被更短的一次
+	## 覆盖成 1 回合（玩家并没有做错什么，不该被后来的短封锁「冲掉」）。
+	if turns <= 0:
+		return
+	sealed_cells[cell] = maxi(int(sealed_cells.get(cell, 0)), turns)
+
+
+func tick_seals() -> Array[Vector2i]:
+	## R839：大蒜倒计时**唯一推进口** —— 引擎在每个我方回合开始时调一次。
+	## 返回这一跳后**到期解开**的格子（已排序，界面据此播「这格恢复可用」的提示；
+	## 排序是为了回放 / 同种子下事件顺序稳定）。
+	var expired: Array[Vector2i] = []
+	for cell: Vector2i in sealed_cells.keys():
+		var left := int(sealed_cells[cell]) - 1
+		if left <= 0:
+			sealed_cells.erase(cell)
+			expired.append(cell)
+		else:
+			sealed_cells[cell] = left
+	expired.sort()
+	return expired
+
+
 func haste_turn(side: String) -> bool:
 	## R479：哈气（9024）是不是**该方本回合**的触发回合（第 3 / 5 / 7 个回合）。
 	## 与旧口径的区别：效果卡不再整方生效，只在这三个回合各挑**一个**单位（见 `haste_pick`）。
@@ -456,10 +502,10 @@ func has_enforcer_minion(side: String) -> bool:
 
 
 func has_shield_construct(side: String) -> bool:
-	## 「护盾构状体」（9244）是否在**该方场上** —— 「除自己以外的己方单位受到的伤害减半」
+	## 「护盾构装体」（9244）是否在**该方场上** —— 「除自己以外的己方单位受到的伤害减半」
 	## 这条光环的**唯一开关**，与 `has_mass_helios` / `has_sun_forge` 同范式：
-	## 每回合实时扫场面、绝不烤进 CardData —— 「构状体被打掉 → 光环立刻断」是免费的。
-	## ⚠️ 按 **trait** 判（`GameEngine.SHIELD_TRAIT`），不判卡 id：三种构状体共用「构状体」，
+	## 每回合实时扫场面、绝不烤进 CardData —— 「构装体被打掉 → 光环立刻断」是免费的。
+	## ⚠️ 按 **trait** 判（`GameEngine.SHIELD_TRAIT`），不判卡 id：三种构装体共用「构装体」，
 	##    只有护盾这一支带「护盾」。
 	## ⚠️ 光环**不含光源自己**（卡面是「其他己方单位」），那条判据在 `_unit_damage_taken` 里补。
 	for p: Placement in board.values():
@@ -470,8 +516,11 @@ func has_shield_construct(side: String) -> bool:
 
 func has_sun_forge(side: String) -> bool:
 	## 「太阳熔炉」的太阳装置（赫利俄斯 9130）是否在**该方场上**。
-	## 它是「量产型俄倪厄双动」与「俄倪厄每回合回血」两条光环的**唯一开关**，
+	## 它是「量产型双动」与「量产型受到的技能伤害 -2」两条光环的**唯一开关**，
 	## 所以两条都调这里判 —— 两处各写一遍扫描迟早会漏一处（改了一处忘另一处）。
+	## R856 用户口径：受惠者从「量产型俄倪厄 9131」扩到**整个量产型族**
+	## （判据 `GameEngine.is_mass_produced`），原来的「每回合回血」那条已取消。
+	## 本函数本身不用改 —— 它只管「光源在不在场」，谁受惠是调用方的事。
 	for p: Placement in board.values():
 		if p.owner == side and p.card.id == GameEngine.SUN_FORGE_HELIOS_ID:
 			return true
@@ -482,7 +531,7 @@ func unit_actions(p: Placement, side: String) -> int:
 	## 单位本回合的**行动轮数**（唯一口）。四个来源取最大：
 	##   ① 卡面自带 `actions`（疾行，如鸭子队长）；
 	##   ② 「哈气」9024 选中过它（`haste_double`）—— R479 起是**单点永久**，不再是整方光环；
-	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 量产型俄倪厄（9131）额外行动一次；
+	##   ③ 太阳熔炉：本方场上有赫利俄斯 → 场上所有「量产型」卡额外行动一次（R856 起全族）；
 	##   ④ 行动力成长（R161 赫尔墨斯 9140）：每过 3 回合额外 +1 行动轮数。
 	## ⚠️ 所有写 `acts_left` 的地方（place / reset_units / apply_extra_actions）
 	##   都必须走这个口 —— 漏一处就会出现「上场那回合不动、下回合才双动」的错位。
@@ -494,8 +543,15 @@ func unit_actions(p: Placement, side: String) -> int:
 	# 「取最大」通道，于是 place / reset_units / apply_extra_actions 三处自动一致。
 	if p.boss_phase >= 2:
 		n = maxi(n, GameEngine.REVELATOR_ACTIONS)
-	if p.card.id == GameEngine.SUN_FORGE_FURY_ID and has_sun_forge(side):
+	# R856：判据从 `id == 9131` 换成「是量产型族」—— 9137 量产型赫利俄斯、
+	# 9138 量产型赫菲斯托斯这些在太阳熔炉里也会双动，别再只认俄倪厄。
+	if GameEngine.is_mass_produced(p.card) and has_sun_forge(side):
 		n = maxi(n, GameEngine.SUN_FORGE_ACTIONS)
+	# R792 兵（6071）：本场第一个盟友可以行动两次 —— 与上面几条同一条「取最大」通道，
+	# 于是 place / reset_units / apply_extra_actions 三处自动一致，不会出现
+	# 「上场那回合只动一次、下回合才双动」的错位。
+	if p.first_ally_twice:
+		n = maxi(n, GameEngine.PAWN_ACTIONS)
 	return n
 
 
@@ -563,6 +619,12 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 		push_error("FieldState.place 拒绝：%s 不能站在 %s（owner=%s 的 HP 行）" % [
 				card.card_name, cell, owner])
 		return null
+	# R839 大蒜：被封锁的格子「不可使用」—— 召唤 / 效果直达 / 任何落点都不许落在这儿。
+	# 关卡摆位不受影响（`sealed_cells` 是局内产生的，摆位那一刻还是空的）。
+	if is_cell_sealed(cell):
+		push_error("FieldState.place 拒绝：%s 不能落在 %s（该格被大蒜封着）" % [
+				card.card_name, cell])
+		return null
 	var p := Placement.new()
 	p.card = card
 	p.owner = owner
@@ -621,6 +683,12 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	# 放在 place 里 = 唯一初始化口，关卡摆位 / 效果卡召唤出来的都算。
 	if card.traits.has(SLEEP_TRAIT):
 		p.sleep_left = SLEEP_TURNS
+		# R859：沉睡单位**一上场就带甲壳**（GameEngine.SLEEP_ARMOR，目前 10 点），
+		# 且**不随回合重置**。放在 place 里 = 唯一初始化口，关卡摆位 / 召唤 / 手牌打出
+		# 三条路径一致；醒来时由 `_sleep_shed_armor()` 整个清掉。
+		# ⚠️ 甲还在时挨打不算「挨打」（`_demon_duck_hurt` 的 dealt 判据）——
+		#    这是「自动伤害道具打不醒沉睡单位」的实现方式，别只加甲不改判据。
+		p.armor = GameEngine.SLEEP_ARMOR
 	# 铸造倒计时（量产型赫卡同克瑞斯 9133，R149）：带「铸造」trait 的单位一上场就挂表。
 	# 同样放在 place 里 = **唯一初始化口**（与沉睡 / 护盾同一套路）；回合数取引擎常量
 	# FUSE_TURNS，与卡面 effect_text 写的是同一句话 —— 改一处必须一起改。
@@ -654,6 +722,10 @@ func place(card: CardData, cell: Vector2i, owner := "self",
 	if card.is_ephemeral:
 		card.add_affix(GameEngine.AFFIX_DIMENSION)
 	board[cell] = p
+	# R840：落位回调（火墙的「入场灼烧」挂在这里）。必须在 `board[cell] = p` **之后** ——
+	# 回调要按所在格判「这一行有没有火墙」，格子还没写进去就找不到人。
+	if on_unit_placed.is_valid():
+		on_unit_placed.call(p)
 	return p
 
 
@@ -675,7 +747,8 @@ func reset_units(side: String) -> void:
 				p.tapped = true
 				p.stun_left -= 1
 			elif p.sleep_left > 0:
-				# 沉睡（恶魔鸭 9116，R63）：还在睡 → 本回合**不行动**（复用横置通道，
+				# 沉睡（带「沉睡」trait 的单位，R63；如恶魔鸭 9116 / 激光巨炮 9241）：
+				# 还在睡 → 本回合**不行动**（复用横置通道，
 				# 于是 move / attack / attack_hp / AI 队列全部自然被拦住，不用各写一遍）。
 				p.tapped = true
 			else:
@@ -688,6 +761,8 @@ func reset_units(side: String) -> void:
 			# 「本回合挪过没有」的**唯一复位口** —— 回合开始清零。
 			# ⚠️ R503 起 did_move 没有读取方（陷阱判定已删），保留只为存档兼容。
 			p.did_move = false
+			# R797 龟壳：新回合开始 = 上一回合的「攻击过」作废。
+			p.attacked_prev_turn = false
 			# 哈气 / 太阳熔炉：回合开始时刷新成「行动两次」
 			# （R479 哈气是单点永久标记；原本就双动 → 不叠加，取最大）
 			p.acts_left = unit_actions(p, side)
@@ -743,6 +818,7 @@ func save_dict() -> Dictionary:
 		"board": _board_save(),
 		"fields": _fields_save(),
 		"trap_fields": _trap_fields_save(),
+		"sealed_cells": _sealed_save(),
 		"air_raid_cells": _air_raid_save(),
 		"laser_aim_cols": Array(laser_aim_cols),
 		"air_raid_turns": air_raid_turns,
@@ -819,6 +895,12 @@ func apply_dict(d: Dictionary) -> void:
 		for tf: Variant in tfl:
 			if tf is Dictionary and (tf as Dictionary).has("id"):
 				trap_fields[Vector2i(int(tf["r"]), int(tf["c"]))] = int(tf["id"])
+	sealed_cells.clear()
+	var sfl: Variant = d.get("sealed_cells", [])
+	if sfl is Array:
+		for sf: Variant in sfl:
+			if sf is Dictionary and int(sf.get("turns", 0)) > 0:
+				sealed_cells[Vector2i(int(sf["r"]), int(sf["c"]))] = int(sf["turns"])
 	var fl: Variant = d.get("fields", [])
 	if fl is Array:
 		for item2: Variant in fl:
@@ -887,6 +969,14 @@ func _trap_fields_save() -> Array:
 	var out: Array = []
 	for cell: Vector2i in trap_fields:
 		out.append({"r": cell.x, "c": cell.y, "id": int(trap_fields[cell])})
+	return out
+
+
+func _sealed_save() -> Array:
+	## R839：封锁格的存档形态 —— 坐标 + 剩余回合（形制与 `_trap_fields_save` 同款）。
+	var out: Array = []
+	for cell: Vector2i in sealed_cells:
+		out.append({"r": cell.x, "c": cell.y, "turns": int(sealed_cells[cell])})
 	return out
 
 

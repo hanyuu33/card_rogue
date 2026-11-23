@@ -65,7 +65,7 @@ const AFFIX_DEFS: Dictionary = {
 	# R592d：**恢复卡面图标**（店长口径「交换图标也是有用的，短暂、次元、交换都需要手卡上显示」）。
 	# R592c 曾把它关掉（理由是「放下之前怎么放，图标给不出这个信息」），现按店长口径撤销。
 	"交换": {"label": "交换", "desc": "可放置在已有友方单位的格子上，原本在那个格子上的友方单位返回手卡。", "glyph": "swap", "on_board": false, "bg": "0a2a2e", "fg": "5fe0d0"},
-	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃（保留到下一回合）。", "glyph": "save", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
+	"保存": {"label": "保存", "desc": "回合结束时，手牌里的这张卡不会丢弃。", "glyph": "save", "on_board": false, "bg": "1a2a0a", "fg": "b9e85a"},
 	"共享护盾": {"label": "共享护盾", "desc": "我方 HP 要受到伤害时，改由这张卡承受（每次都能顶，顶到它死亡）。", "glyph": "share", "bg": "33161c", "fg": "ff8fa8"},
 }
 
@@ -115,7 +115,7 @@ static func word_def(name: String) -> Dictionary:
 ## ── 【商店附魔】（R214）`enchant` = 这张卡吃过的商店附魔 id（"" = 没附魔）──
 ##
 ## **为什么不能只靠「数值变了」推断**：附魔本体在 `RunState._apply_mod` 里就被**烤进**了
-## 副本的 cost / power / health / affixes（费用 -1、伤害 +10、次元 +2力+10血、保存），
+## 副本的 cost / power / health / affixes（费用 -1、伤害 +8、次元 +2力+10血、保存），
 ## 烤完之后这张卡和「一张原生就长这样的卡」**完全一样** —— 卡面无从知道「它被附魔过」。
 ## 于是另记一个 id：玩家花了钱，就必须在**任何看到这张卡的地方**都能认出它（用户口径
 ## R214「带有附魔效果的卡片，应该在任何地方，都显示附魔标记」）。
@@ -129,8 +129,8 @@ static func word_def(name: String) -> Dictionary:
 const ENCHANT_DEFS: Dictionary = {
 	"costdown": {"label": "费用 -1", "icon": "shop_icon_costdown", "col": "6db2f0",
 			"desc": "这张卡的打出费用一次性降低 1 点（最低 0），之后一直保持；同一张卡不能重复附魔。"},
-	"damage": {"label": "伤害 +10", "icon": "shop_icon_damage", "col": "f08a5a",
-			"desc": "这张技能卡造成的伤害 +10。"},
+	"damage": {"label": "伤害 +8", "icon": "shop_icon_damage", "col": "f08a5a",
+			"desc": "这张技能卡造成的伤害 +8。"},
 	"dimension": {"label": "次元之力", "icon": "shop_icon_dimension", "col": "c08cf0",
 			"desc": "获得「次元」字段，并 +2 力量 / +10 生命。"},
 	"save": {"label": "保存", "icon": "shop_icon_save", "col": "8fdc9f",
@@ -143,11 +143,17 @@ const ENCHANT_DEFS: Dictionary = {
 	"draw": {"label": "抽牌 +1", "icon": "shop_icon_draw", "col": "5fd8c8",
 			"desc": "打出这张卡后抽一张卡。"},
 	# R458「契约的核心」：把一张伤害技能卡的**第一段伤害**献祭过来，加到另一张上。
-	# 与「伤害 +10」共用同一套消费点（`GameEngine._spell_dmg()` 把 `card.power`
+	# 与「伤害 +8」共用同一套消费点（`GameEngine._spell_dmg()` 把 `card.power`
 	# 并进每一段），区别只在**数值不固定** —— 所以标签不写死在这里，
 	# 由 `enchant_label` 逐卡携带、经 `enchant_title()` 读（见下）。
 	"core": {"label": "契约核心", "icon": "shop_icon_damage", "col": "d06be0",
 			"desc": "这张技能卡的伤害提高，数值等于被献祭的那张技能卡的第一段伤害。"},
+	# R842（店长口径「新增一层事件 龙石板」选项 1）：**事件独有**附魔 —— 给盟友 / 工事
+	# +8 力量。视觉沿用「伤害 +8」那枚标记（同图标、同环色），玩家一眼认得出是「+8」那一类；
+	# 但它不进商店（`shop_scene.ENCHANTS` 里没有）、也不进随机池
+	# （`ENCHANT_RANDOM_EXCLUDE`）—— 只有龙石板发得出来。
+	"brawn": {"label": "力量 +8", "icon": "shop_icon_damage", "col": "f08a5a",
+			"desc": "这张盟友或工事的力量 +8。"},
 }
 
 var id: int = 0
@@ -175,6 +181,12 @@ var effect_text: String = ""
 ## hand_any=选手牌里**任意一张**卡（R198「回收」8064 —— 目标被换成素体，种类不限）。
 var target_mode: String = "none"
 var value: int = 0
+## R862：卡面正文里**首个伤害数字**的显示替换（当前只有初始卡削弱用）。
+##   `{}` = 不替换；`{"from": 5, "to": 4}` = 正文里的 5 画成 4。
+## ⚠️ **只改显示**，绝不改 `effect_text`：i18n 译文按中文原串整句硬编码，
+##    改写原文会让非中文环境直接掉回中文（R702 踩过）。见 `CardText.parse_card()`。
+## ⚠️ 必须随 `to_dict()` 走：复制 / 离场还原 / 联机都会重建卡实例。
+var body_number_swap: Dictionary = {}
 ## 「一回合行动两次」的次数（1 = 普通）。**没有对应 trait**（R91 统一成字段「疾行」）。
 var actions: int = 1
 var rarity: int = 0             # 0普通 1稀有 2史诗 3初始 4怪物 5事件
@@ -251,7 +263,7 @@ var affixes: Array[String] = []
 ## 必须随 `to_dict` 走（复制 / 离场还原 / 联机都是同一条通道），否则标记会静默消失。
 var enchant: String = ""
 ## R458 契约核心：**可变数值**附魔的逐卡显示名（"" = 用 `ENCHANT_DEFS` 的固定名）。
-## 「伤害 +10」那种数值写死的附魔用不到它；契约核心的 +N 每张卡都可能不同，
+## 「伤害 +8」那种数值写死的附魔用不到它；契约核心的 +N 每张卡都可能不同，
 ## 所以名字跟着卡走 —— 显示口统一走 `enchant_title()`，别各处直接读 `enchant_name`。
 var enchant_label: String = ""
 ## **本场战斗内的衍生物**（R82：野兔 9032 复制出来的那些）—— 不进牌库也不进弃牌区。
@@ -286,6 +298,11 @@ var no_remove: bool = false
 ## 不进随机奖励池（`CardRepo.reward_pool()` 唯一判据），免得「专属奖励」变成随处可见的史诗。
 ## 与 `locked` 的区别：那个是「还没解锁」，这个是「本来就不该随机出现」（永远不进池）。
 var event_only: bool = false
+
+## R814：**不进试玩版**（`GameBuild.is_demo()`）—— 试玩切片把每个职业的卡池
+## 裁到 60 张，被裁的卡打这个标记。缺省 false → 老数据一行都不用改；完整版无视它。
+## 判据只在 `CardRepo.obtainable_cards()` 与图鉴的 `demo_allows()` 两处。
+var no_demo: bool = false
 ## R373：**这张卡不能打出**（诅咒「麻痹」9185）。
 ## 判据只认本字段 —— 界面置灰 / 引擎三个出牌入口（play_from_hand / use_spell /
 ## use_curse）全部读它，不许按 id 硬编码。
@@ -363,7 +380,7 @@ const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"draw", "buff", "damage", "heal", "shield", "taunt",
 	"summon", "upgrade", "energy", "knockback", "freeze", "stun", "range",
 	"purge_curse", "add_random_effect", "hand_discount", "hand_upgrade",
-	"buff_per_ally", "buff_per_energy", "heal_per_energy",
+	"buff_per_ally", "buff_per_energy", "damage_per_energy",
 	"draw_random_skill", "hand_cost_raise", "add_copy", "buff_allies_atk",
 	"absorb_linked",
 	# R584：把指定卡加入手卡（机械之心「加入一张升级/聚能炮击」族）。
@@ -375,6 +392,10 @@ const ASSEMBLE_EFFECT_TYPES: Array[String] = [
 	"next_effect_discount", "next_ally_discount", "add_effect_from_deck",
 	"hand_skill_discount", "hp_per_zero_skill",
 	"fetch_cheapest_ally", "recall_ally_from_discard",
+	# R775：三条新动作 —— 堡垒「每层改造 +生命」/ 影子猫·幽灵「从卡组随机技能卡入手」/ 幽灵「自毁」。
+	"bonus_hp_per_upgrade", "fetch_skill", "self_destruct",
+	# R846：影子猫 8006 的下半句改成「其他卡满 3 张 → 抽 N 张」（原来是 fetch_skill + if_third）。
+	"draw_if_third",
 ]
 
 
@@ -399,6 +420,9 @@ static func from_dict(d: Dictionary) -> CardData:
 	c.effect_text = str(d.get("effect_text", ""))
 	c.target_mode = str(d.get("target_mode", "none"))
 	c.value = int(d.get("value", 0))
+	# R862：正文数字替换（深拷贝 —— 别让副本与源卡共用同一个 Dictionary）。
+	var bn: Variant = d.get("body_number_swap", {})
+	c.body_number_swap = (bn as Dictionary).duplicate() if bn is Dictionary else {}
 	c.actions = maxi(1, int(d.get("actions", 1)))
 	c.rarity = clampi(int(d.get("rarity", 0)), 0, 6)
 	c.group = str(d.get("group", "player"))
@@ -418,6 +442,8 @@ static func from_dict(d: Dictionary) -> CardData:
 	# R346：剧情解锁标记（缺省 false = 老数据不用改，一直在池子里）
 	c.locked = bool(d.get("locked", false))
 	c.event_only = bool(d.get("event_only", false))
+	# R814：试玩版裁剪标记（缺省 false → 老卡一行都不用改）
+	c.no_demo = bool(d.get("no_demo", false))
 	# R351：**这张卡不能从卡组删除**（月亮 9180 / 硬币 9181 / 罐子 9157）。
 	# 缺省 false → 老数据一行都不用改；判据只认本字段，界面里不许按 id 硬编码。
 	c.no_remove = bool(d.get("no_remove", false))
@@ -473,6 +499,11 @@ static func from_dict(d: Dictionary) -> CardData:
 		var pv_out: Dictionary = {}
 		if asm_in.get("passive", {}) is Dictionary:
 			pv_out = (asm_in.get("passive", {}) as Dictionary).duplicate(true)
+		# R775：上半的**独立回合开始段**（幽灵「自己回合开始时自毁」）也要一起重建 ——
+		# 漏了它，组合卡一被复制回合开始自毁就凭空消失。
+		var ts_out: Array = []
+		for fx in (asm_in.get("turn_start_effects", []) as Array):
+			ts_out.append((fx as Dictionary).duplicate(true))
 		c.assemble = {
 			"trigger": str(asm_in.get("trigger", "")),
 			"effects": fx_out,
@@ -481,6 +512,7 @@ static func from_dict(d: Dictionary) -> CardData:
 			"passive": pv_out,
 			"extra_affixes": xa_out,
 			"enter_effects": efx_out,
+			"turn_start_effects": ts_out,
 		}
 	# R559 组合：上下半句随复制通道走（深拷贝），漏了它待选卡拖进槽位取不到效果。
 	c.upper_effect = (d.get("upper_effect", {}) as Dictionary).duplicate(true)
@@ -535,6 +567,8 @@ func to_dict() -> Dictionary:
 		# R346：剧情解锁标记随复制通道走（复制出来的卡不该突然变成「已解锁」的普通卡）。
 		"locked": locked,
 		"event_only": event_only,
+		# R814：裁剪标记必须随复制通道走，否则试玩包里复制出来的卡会绕过池过滤
+		"no_demo": no_demo,
 		# R351：不可删除标记同样随复制通道走（复制出来的月亮 / 硬币也不许删）。
 		"no_remove": no_remove,
 		"unplayable": unplayable,
@@ -568,6 +602,8 @@ func to_dict() -> Dictionary:
 		# R572：组合钩子同理（宝石兽 / 拼装工厂）。
 		"combo_trigger": combo_trigger,
 		"combo_scope": combo_scope,
+		# R862：卡面正文数字替换必须随复制 / 离场还原 / 联机通道走，漏了它削弱版又画回 5 伤。
+		"body_number_swap": body_number_swap.duplicate(),
 	}
 
 
@@ -667,12 +703,13 @@ func is_curse() -> bool:
 
 
 func is_damage_spell() -> bool:
-	## 这张技能卡能不能**直接造成伤害**（R226：伤害 +10 附魔的资格判据）。
+	## 这张技能卡能不能**直接造成伤害**（R226：伤害 +8 附魔的资格判据）。
 	## * 为什么不能看 `power`：技能卡的 `power` 在卡面上**恒为 0**，伤害写死在引擎结算里；
 	## * 为什么用文案判据：cards.json 没有「是否造成伤害」字段，而当前 68 张玩家技能卡里，
 	##   能直接造成伤害的 25 张都写成「造成 … 伤害」；提「受到 / 承受伤害」的防御卡
 	##   （森林守护 9037 / 风暴屏障 9060 / 坚固围栏 9071 / 能量屏障 8033）与闪躲 9103
-	##   （R542 起改为全员嘲讽）都不含「造成」二字 → 天然排除（R226 已逐张核对，零误判）。
+	##   （R846 起改为「对一个敌方单位降力」）都不含「造成」二字 → 天然排除（R226 逐张核对）。
+	##   反过来：R846 回转 9089 加了「对一个目标造成 X 点伤害」→ 自动进判据（伤害数 48 → 49）。
 	## ⚠️ 以后新增「造成伤害」的技能卡，effect_text 必须带「造成…伤害」四个字，否则附魔
 	##    选不中它；回归里 `is_damage_spell` 有守卫（engine 计数 + 抽查）。
 	return kind == "技能" and effect_text.contains("造成") and effect_text.contains("伤害")
@@ -789,7 +826,7 @@ static func affix_colors(name: String) -> Array:
 
 ## ── 附魔（R214）：显示口径的唯一入口（未注册 id 回退到 id 本身 / 中性紫，不空白）──
 
-## 附魔的显示名（「费用 -1」/「伤害 +10」/「次元之力」/「保存」/「起手」）。
+## 附魔的显示名（「费用 -1」/「伤害 +8」/「次元之力」/「保存」/「起手」）。
 ## ⚠️ 与**字段**名（`AFFIX_DEFS`，如「次元」）是两个命名空间，别重名（R240）。
 static func enchant_name(id: String) -> String:
 	if id == "":
@@ -837,7 +874,9 @@ static func enchant_title(c: CardData) -> String:
 ## 能被**随机**摇到的附魔（牛奶 6028 / 附魔大师 6034 的唯一来源，R458）。
 ## ⚠️ 契约核心（`core`）**不在**里面：它的数值来自「被献祭的那张技能卡」，
 ##    随机给出来的只会是 +0 —— 那就成了一张空附魔，所以随机池必须把它排除。
-const ENCHANT_RANDOM_EXCLUDE := ["core"]
+## R842：`brawn`（力量 +8）同理 —— 它是事件「龙石板」专属，商店与牛奶 / 附魔大师
+##    都不该摇到它（摇到就等于把事件奖励漏进了随机池）。
+const ENCHANT_RANDOM_EXCLUDE := ["core", "brawn"]
 
 
 static func random_enchant_ids() -> Array[String]:

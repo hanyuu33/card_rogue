@@ -21,7 +21,7 @@
 | 导出预设 | 四个预设均改用 `Quackill*.exe/apk`；产品名 Quackill、厂牌 risusumai、exe 版本资源 1.0.0 | ✅ R763 已收口 |
 | 桌面纹理 | 卡图 `compress/mode=2` + `high_quality=true`，生成 **bptc + astc 双变体** | ⚠️ 纹理 PSNR 仍待重测；R763 已产出真实 260.1MB 包 |
 | 存档 | `run_save.sav`（局内）/ `profile.json`（玩家）/ `run_records.json` / `run_pending.json` / `save_trace.log`（取证，带时间戳、会涨） | ⚠️ 云存档需白名单，`save_trace.log` 不能同步 |
-| 本地化 | 四语界面与卡牌 / 道具翻译并行推进；本轮只清理旧标题页脚键 | ⚠️ 全量卡面排版与旧锚点仍待最终复验 |
+| 本地化 | **英 / 日 / 西数据层已收尾（R784 / R788）**：331 卡 / 64 道具 / 209 特性；日文同形词运行时回落已修，西语 23,043 项校验通过，i18n 专项 39 通过 0 失败 | ✅ 四语卡面排版 0 问题；日文字体字形仍见 E3 |
 | 新手引导 | 教程机制代码在（`battle_scene._tutorial` + 7350+ 行引导条），但 **42 个关卡 `tutorial` 全为 `[]`**；且引导条只剩 36..52 共 16px 高度（源码注释明说必须先改版式） | ❌ 休眠态，恢复成本高于「新做一套」 |
 | 每日挑战 | R762 已接模式选择、UTC 日期种子、固定职业/难度/标准初始卡组、每日一次、续档、本地成绩与 Steam 榜桥 | ⚠️ 本地闭环已完成；自有 AppID 的真实建榜/上传/下载待验 |
 | 组合系统 | 唯一入口 `_open_combo()`；候选池 24 张；`combo_trigger` 卡 **仅 2 张**（9246 / 9247）；机械之心可用候选仅 4 张；R588「产物继承 traits / id」**未修** | ⚠️ 保真 bug + 内容面窄 |
@@ -103,11 +103,76 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 | B1 | 名实一致收尾 | `FOOTER` 去「肉鸽开发版」；`export_path` 改 `dist/Quackill.exe` / `dist/Quackill.apk`；`description` / `copyright` / `company_name=risusumai` / `product_name=Quackill` | ✅ R763 完成；历史文档与旧归档包名保留，活动脚本 / 预设无旧名 |
 | B1′ | `rcedit` 工具链 | Godot 只有配置了 rcedit 才能把版本资源 / 图标写进 exe；本机已放 `C:\Users\Administrator\.workbuddy\binaries\rcedit\rcedit-x64.exe` 并写入编辑器设置 `export/windows/rcedit`。来源 rcedit v2.0.0，SHA-256 `3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a` | 换机必须重配；否则导出只得到 Godot Engine 版本资源 |
 | B2 | **桌面纹理变体重测** | `high_quality=true` → bptc + astc；Windows 走 bptc/S3TC。要重跑 `tools/shot_r596g_tex.gd` + `_psnr_r596g.py`（**关 `content_scale_mode`**） | 桌面 PSNR ≥ 45dB；内存 / 首屏加载不劣化 |
-| B3 | 桌面包体重算 | 桌面不带 v7a/arm64 两份 lib；PCK 走 bptc 体积与 astc 不同 | 🟡 R763 实测嵌入 pck 的 exe **260.1MB**；桌面纹理 PSNR 仍待 B2 |
-| B4 | Windows release 预设核查 | 图标用 `assets/ui/icon.ico`；`config/icon` 现指向 `icon_android_legacy.png`（**桌面也用它**，需确认尺寸观感） | 干净机双击可跑，任务栏图标正确 |
-| B5 | Steam 构建上传 | `steamcmd` + `app_build_<id>.vdf` + `depot_build.vdf`；只一个 depot（exe + pck） | 上传成功、Steam 客户端能下、能启动 |
+| B3 | 桌面包体重算 | 测试版单文件 / 发布版分离（exe + pck）；桌面不带 v7a/arm64 两份 lib；PCK 走 bptc，体积与 astc 不同 | ✅ R791 实测：单文件 **277.1MB**（引擎 80.4 + 内嵌 PCK 196.7）；发布版分离后 **80.31MB + 197.89MB**，且自检直接跑这份真产物；桌面纹理 PSNR 仍待 B2 |
+| B4 | Windows 预设口径 | `preset.0`（测试版）`embed_pck=true` → 单文件；`preset.2`（发布版）`embed_pck=false` → 分离。图标用 `assets/ui/icon.ico`；`config/icon` 现指向 `icon_android_legacy.png`（桌面也用它，需确认尺寸观感） | 干净机双击可跑，任务栏图标正确；发布版 exe 应约 84MB 而非 277MB |
+| B5 | Steam 构建上传 | depot 根目录 = `卡牌肉鸽_独立版/`，**两个 depot**：① `Quackill_release.exe` + `.pck`（+ 玩法说明 / 自检）② `content/` 整目录（见 §2.1）。**不带** `steam_appid.txt` | 上传成功、Steam 客户端能下、能启动 |
 | B6 | 版本号单一来源 | `GameBrand.VERSION=1.0.0`；Windows exe FileVersion / ProductVersion 已实测 1.0.0；Android versionName 1.0.0 | ✅ 代码与包体完成；Steam depot / build 描述待后台填写 |
-| B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」 | 手改一个旧版本 → 更新 → 续档正常 |
+| B7 | 自动更新验证 | Steam 管更新，验证「存档不被覆盖」「更新后旧档可读」，并**记录两次真实下载体积** | 改一句文案 → 只下对应 JSON；改一张卡图 → 只下那张 PNG（均非整包） |
+
+### 2.1 按需更新四层（R789 数据层 + R790 素材层 + R791 形态定稿）
+
+**两种形态（R791 定稿，分目录，不许混在一个文件夹里）**：
+
+| 形态 | 命令 | 输出目录 | 产物 | 用途 |
+|---|---|---|---|---|
+| 测试版 | `python _release.py` | `卡牌肉鸽_测试版/` | **单文件** `Quackill.exe`（pck 内嵌，`preset.0 embed_pck=true`），**不带 `content/`** | 内部 / 试玩；一个文件丢出去就能跑 |
+| 发布版 | `python _release.py --release` | `卡牌肉鸽_独立版/` | `Quackill_release.exe` + `Quackill_release.pck` + `content/`（`preset.2 embed_pck=false`） | Steam depot；改文案 / 换图只下小文件 |
+
+测试版不带 `content/` 是刻意的：完整包只有一个文件，不会出现「他那儿 JSON 改了、我这儿没改」
+的口径分歧；要专门验覆盖层时用 `--with-content` 临时带上。
+发布版反过来——形态由 `--release` 强制决定，不靠人记得再加 `--two-file`，
+并用 `assert_split()` 卡死：exe 超过 120MB 就说明 pck 还嵌着，直接中止。
+
+**问题**：单文件 exe 把数据、美术与引擎捆在一起，改一张卡图也会让整个 277MB 变化，
+Steam 只能近乎全量重下。Steam 的更新粒度是**文件**，所以要么把变更装进独立小文件，
+要么保证它落在不会移动别人偏移的位置。
+
+**实测包体结构**（`dist/Quackill.exe` 277.1MB = 引擎 80.4MB + 内嵌 PCK 196.7MB）：
+
+| PCK 内区段 | 体积 | 物理位置 | 改动它会让多少字节移动 |
+|---|---|---|---|
+| 素材 `ctex` 739 张 | 147.4MB | 前段 | 其后全部（最多 191MB） |
+| 音频 `oggvorbisstr` 11 个 | 28.5MB | 前段 | 同上 |
+| 字体 `fontdata` 2 个 | 15.2MB | 前段 | 同上 |
+| 脚本 `.gdc` 122 个 | 3.5MB | **尾部**（201–206MB） | 仅 3.3MB |
+| 数据 `json` 47 个 | 1.3MB | **尾部** | 仅 0.6MB |
+
+关键结论：**脚本与数据本来就在 PCK 尾部**，改它们只影响尾部几 MB，不会推动前面 191MB 素材。
+真正的痛点是改图——所以素材单独走覆盖层。
+
+**四层分工**：
+
+| 层 | 变更内容 | 通道 | 单次更新下载量 | 状态 |
+|---|---|---|---|---|
+| L0 引擎 | 引擎本体 80.4MB | 正常发版 | 80.4MB | 不热更 |
+| L1 数据 | 卡牌 / 道具 / 剧情 / 陷阱 / 全语种文本 | `content/**.json` 覆盖 | 改一句 ≈ 8–200KB | ✅ R789 |
+| L2 素材 | 卡图 / 图标 / 事件图 / 背景 / BGM | `content/assets/**.png\|.ogg` 覆盖 | **只下那一张**（1MiB 块对齐，最小 1 块） | ✅ R790 |
+| L3 脚本 | 卡片效果 / 关卡 / 事件 / 商店 / 奖励 / 场景 | PCK 尾部 `.gdc` | ≈3.3MB（4 个 1MiB 块），分离后 **exe 完全不动** | 已够小，不拆 |
+
+`scripts/data_paths.gd` 是唯一的覆盖入口，读取顺序
+`CARDROGUE_CONTENT_DIR`（测试）→ **exe 同目录 `content/`** → pck 内 `res://` 基线。
+目录结构与 `res://` 完全一致（`content/assets/pics/8001.png`），贴图与 BGM 的人照原路径丢文件即可。
+
+**素材覆盖的两个特性**（这是「新增也能热更」的关键）：
+- **替换**：同名文件覆盖基线图，改一张只下那一张。
+- **新增**：基线里没有的图（新卡图、新事件图）也直接可用；`CardFace._pic_exists()` 与
+  `UiAssets._path_exists()` 都并上了覆盖层，不会因为 pck 里没有就判缺图。
+- 覆盖图运行时解 PNG 并生成 mipmap；**没被覆盖的图仍走 pck 里的压缩纹理，零额外代价**。
+
+**安全网**（探针 `tools/_probe_content_override.gd`，已并入 `_verify.py` 的 `content` 套件，15 项）：
+- 数据：覆盖生效、数量与基线一致（整份替换，**不是**增量合并）；
+- 数据：语法坏 / 结构空（`{"cards": []}`）→ 打 warning 并回落 pck 基线，不崩；
+- 素材：覆盖生效（尺寸可辨）、新增图可读、**坏图回落基线不变空白**；
+- 清掉 `content/` 后自动回到基线；临时目录故意带空格 + 中文（Steam 默认装在 `Program Files (x86)`）。
+
+**边界（写清楚，免得误期待）**：
+- 引擎本体（80.4MB）不热更，走正常发版。
+- 6 张 `preload()` 的图（奖励面板 5 + 原质特效 3）是编译期绑定，不参与覆盖；
+  要热更得先改成运行时加载。
+- 关卡 / 商店池 / 奖励表是 `game_levels.gd`、`shop_scene.gd` 里的代码，
+  改动走 L3（约 3.3MB）。**R791 定稿：不做数据化** —— 3.3MB 对玩家只是几秒下载，
+  而重构 1579 行关卡 + 商店 / 奖励逻辑的风险远高于收益；将来真需要再单独评估。
+- 安装目录**只读不写**：补丁一律由 Steam 下发，游戏自己不去改安装目录。
 
 ---
 
@@ -227,6 +292,48 @@ $GODOT --headless --path . --script res://tools/steam_selftest.gd -- --unlock --
 
 - 文案还在动：R600 才清过一轮显示层文案、R607 还在改标题页 → 翻早了就是白翻。
 - 只要 E0 四条守住，**延后不会涨价**；反过来，若 E0 不守，延后一个月就是几千条回头账。
+
+### E7 英文版收尾实测（2026-11-18，R784）
+
+店长问「英文本地化还没做完？」——实测主体早已完成，真正缺的是**特性（traits）译名**。
+本轮已补完，英文版可上商店页。
+
+| 层 | 实测结果 | 工具 |
+|---|---|---|
+| 卡牌 | 331/331，`name` 与 `effect_text` 全覆盖、零中文残留 | `tools/_i18n_gap.py` |
+| 道具 / 职业 | 64/64 道具（含新增 6066 猴爪 = Monkey's Paw） | 同上 |
+| 界面 | 源码 629 处 `GameI18n.ui()` 调用全覆盖；7 个「疑似缺」全是动态拼接前缀（`LEVEL_` / `MOD_` 等），en 里完整 key 都在 | 同上 |
+| **特性 traits** | **原本 76 条无英文**（卡面特性栏会露中文）→ 已补 76 条英日译名 | `tools/_probe_traits.gd` |
+| 卡面排版 | 图鉴逐卡四语刷新：**zh/en/ja/es 全部 ISSUES=0**，英文 5 行完整显示不裁切 | `tools/_probe_gallery_text.gd` |
+| 场景排版 | 22 场景仅 1 处溢出 = `Toolbar/StatusLabel`，系 R113 设计好的 `clip_text + 省略号`，非缺陷 | `tools/probe_ui_text.gd -- --lang=en` |
+
+**关键机制**：`GameI18n._lang_chain()` 让 es / ja 都回落到 en，所以**补齐英文即可保证三语都不露中文**。
+日文特性名目前大量走英文回落（日文正文本身含汉字，探针的 CJK 判定对 ja 无效，别拿那个数字当缺口）。
+
+**同步清理的历史欠账**：
+- glossary 补登记 6066 猴爪、statue 奇异雕像（译文早已存在，只是术语表漏登）。
+- 中文底本与三语译文删掉 5 条死 key（`REWARD_TOOL_FULL_*` R755 已换、`GALLERY_SUMMARY_LOCKED` R753 已移除、
+  `STORY_GRANTS_BOTH` / `RECORD_MORE_RELICS` 源码无调用），`expected_counts` 同步为
+  shop72 / reward123 / map244 / battle80 / shell214 / shared92。
+- canonical 术语归一：6027 与 APPLE_DESC 的「最大生命值」→「最大生命」（权威 GDScript / relics.json 原文不动）。
+- 验证脚本锁定数随内容更新：noncard 63→64、narrative 26 事件/64 段→27/68、spanish interface 829→825。
+
+**R784 时尚未完成**：西语既定校验范围 41 项；日文部分特性名实际落到英文。
+以上两项已由 R788 接续完成，见下节。
+
+### E8 日文 / 西语收尾实测（2026-11-18，R788）
+
+| 层 | 修复与实测 |
+|---|---|
+| 西语 | 补 9266–9270 五张诗人卡；331/331 卡、64/64 道具；修 4 处 `mazo`、9262 复用 `Golpe`、6048 数字锚点；特性表补 4 条并移除 3 条冗余映射。`validate_spanish.py` **23,043 checks 全绿** |
+| 日文特性 | 真因不是缺译文，而是 `_collect_pairs()` 把显式 `ja == zh` 当未译跳过，再被 en 回落覆盖。现仅对 ja 放行同形字段：最终逐源复核的 **9 个实际英文特性→0**，27 个中日同形词正确保留；en / es 判定不变 |
+| 共享术语 | 补道具档「稀有」、关卡「计量工坊」、Steam 成就「巅峰之上」及 6 个机制词的英日译名；`validate_glossary.py` 全绿 |
+| 事件 UI | 对齐 R756 真源：契约选项/结果写明「咒缚 + 代偿」，占卜费用改 `%d` 动态模板，英日西同步；87 选项 / 67 结果校验全绿 |
+| 底本 | `zh_canonical` 补回 9265 懊悔；苹果事件别名跟随「最大生命」规范术语修正 |
+
+**验证**：i18n 专项 **39/0**；特性探针以 ja-only 映射核对运行时来源，en 缺译 0 / ja 直接译文缺失与偏离 0 / es 缺译 0；四语卡面排版全部 `ISSUES=0`；
+日文 22 场景 0 溢出，西语仅既有 `StatusLabel` 省略号截断；`TIER_BOSS` 统一为「ボス」；八套回归全绿（engine 6476✓ / smoke 75✓）。
+日文字体仍使用简体字形的问题不因译文完成而消失，E3 的 JP 字体子集化仍是独立待办。
 
 ---
 

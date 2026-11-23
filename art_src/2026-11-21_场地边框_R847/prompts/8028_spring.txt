@@ -1,0 +1,16 @@
+A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on. The canvas is slightly WIDER than tall, about 113 to 100, NOT square — a wide landscape rectangle.
+
+The frame is a closed decorative ring of carved pale sandstone with softly rounded corners.
+Water ripples are carved in low relief along all four inner edges, and two small round lotus-leaf medallions sit at the middle of the left and right edges.
+Every ornament stays strictly INSIDE the outer outline of the frame: nothing protrudes, hangs, drips or dangles below, above or beside the frame, so the frame's outer rectangle stays perfectly tight.
+The frame is tinted pale aqua teal with light cyan glints, and a faint cold glow seeps from the inner lip of the frame.
+The inside of the frame is completely EMPTY pure white, nothing at all drawn inside the ring.
+The border band is SLIM and even: the left and right bands are at most one twelfth of the canvas width, the top and bottom bands are at most one sixteenth of the canvas height. The empty window inside the ring is very large, at least 90% of the canvas height and at least 74% of the canvas width. Ornaments sit at the four corners and along the left and right edges; the top and bottom edges carry only a thin rail with a small corner flourish. It must still read clearly when shrunk to 124 by 110 pixels.
+
+Thick dark brown outline, flat cel shading with two or three tone steps,
+soft hand-drawn cartoon style, centered and symmetrical, whole frame inside the canvas with a small margin,
+single object isolated on a plain pure white background,
+no text, no letters, no numbers, no symbols, no watermark, no drop shadow, no ground shadow.
+
+NOT a card, NOT a panel with a picture inside, NOT fire, NOT lava, NOT ice, NOT snow, NOT blue crystal,
+no mountains, no trees, no characters, no creatures, no items inside the frame, no lettering anywhere.

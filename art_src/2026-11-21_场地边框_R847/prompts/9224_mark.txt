@@ -1,0 +1,17 @@
+A single hand-drawn cartoon game UI asset: an ornamental border FRAME for one square cell of a card battle board, viewed straight on. The canvas is slightly WIDER than tall, about 113 to 100, NOT square — a wide landscape rectangle.
+
+The frame is a closed decorative ring of thin dark arcane metal, with sharply pointed corners.
+Four small rune rings are fixed at the four corners, each a plain circular ring with three tiny notches.
+A small crosshair ornament with four short spikes sits in the middle of the top edge and again in the middle of the bottom edge.
+Slim glowing magenta-violet sigil lines crawl along the outer edge of the frame.
+The frame is tinted dark violet, blackened purple metal and glowing magenta, with a cold pink-violet glow along the inner lip.
+The inside of the frame is completely EMPTY pure white, nothing at all drawn inside the ring.
+The border band is SLIM and even: the left and right bands are at most one twelfth of the canvas width, the top and bottom bands are at most one sixteenth of the canvas height. The empty window inside the ring is very large, at least 90% of the canvas height and at least 74% of the canvas width. Ornaments sit at the four corners and along the left and right edges; the top and bottom edges carry only a thin rail with a small corner flourish. It must still read clearly when shrunk to 124 by 110 pixels.
+
+Thick dark brown outline, flat cel shading with two or three tone steps,
+soft hand-drawn cartoon style, centered and symmetrical, whole frame inside the canvas with a small margin,
+single object isolated on a plain pure white background,
+no text, no letters, no numbers, no symbols, no watermark, no drop shadow, no ground shadow.
+
+NOT a card, NOT a panel with a picture inside, NOT an eye drawn in the empty middle, NOT a pentagram in the middle,
+no skulls, no candles, no letters or runic alphabet anywhere, only plain geometric rings.
