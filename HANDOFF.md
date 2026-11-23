@@ -2549,3 +2549,6 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 
 ## Steam 商店主视觉候选
 已确认 assets/ui/title_art_en.png 英文标题 QUACKILL 存在，结合四位现行角色 CG 以内置 image_gen 生成 art_src/2026-11-23_Steam主视觉/quackill_keyart_v1.png。已视觉检查标题拼写与角色。横向主题原画，尚未按 Steam 各上传槽位适配、未发布。鸭子弓手和赫菲新图尚未在目录发现，本版未使用。提示词同目录 PROMPT.txt；未推送。
+
+## 2026-11-23 本轮生成图归档与应用
+用户授权应用：俄倪厄现代战术服 v2 已复制至 assets/pics/9132.png，沿用现有资源导入配置；SHA256 与源图一致。旧游戏卡图归档为 art_src/2026-11-23_俄倪厄重设计/9132_before_apply.png，v1 保留为历史方案。Steam 主视觉及完整提示词已归档，未接入游戏。未改动并行 class_pick_scene.gd 和 class_pick 素材。未运行游戏，未推送。
