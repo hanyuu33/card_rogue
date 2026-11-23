@@ -313,6 +313,16 @@ static func card_outer_frame(kind: String, compact := false) -> Texture2D:
 	return get_tex("card_outer_frame_" + kind + ("_compact" if compact else ""))
 
 
+static func card_plate(kind: String) -> Texture2D:
+	## R863：**卡名框纸面**的灰度层（与 `card_outer_frame_<kind>` 同尺寸、同坐标系）。
+	## 外框素材里的卡名框纸面已被抠淡（那一圈 alpha 只剩金边的部分），
+	## 这张灰度图补回「可染色的纸面」：`draw_texture_rect(..., modulate = 稀有度色)`。
+	## 于是**稀有度的唯一视觉通道 = 卡名框底色**（R170 的锦旗缎带已停用）。
+	## 灰度值 = 原纸面的明暗（纹理、磨损全保留），乘色后仍能看出是纸。
+	## 缺图返回 null → `CardFace` 回退成纯色卡名底板，不空白也不报错。
+	return get_tex("card_plate_" + kind)
+
+
 static func rarity_ribbon(rarity: int) -> Texture2D:
 	## 稀有度缎带（R170）：挂在卡面**右上角**的锦旗，稀有度的主通道
 	## （取代「底部框线涂稀有度色 + 色块小旗」—— 用户口径：不要粗暴的颜色块/颜色条）。

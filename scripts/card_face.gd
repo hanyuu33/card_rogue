@@ -4,26 +4,27 @@ class_name CardFace
 ##
 ## 全部为静态方法：接收 CanvasItem 与两套字体，无实例状态。
 ##
-## ## 卡面版式（R115：上半卡图 / 下半文字 / 数值「挂在框上」）
+## ## 卡面版式（R863：卡名框在顶 · 卡图铺满 · 卡面无数值）
 ##
-##    ┌───────────────────────┐  ① 费用     = 卡框**左上角**
-##    │ ①      ← 卡图 →       │  ② 力量     = 卡框**左下角**（与 ① 同一条竖线）
-##    ├───────────────────────┤  ③ 攻击距离 = ② 右侧
-##    │         卡名           │  ④ 移动距离 = ⑤ 左侧
-##    │       种类 · 字段       │  ⑤ 生命     = 卡框**右下角**（与 ① 左右反向）
-##    │    效果文字（可折行）…  │
+##    ┌───────────────────────┐  ① 费用 = 卡框**左上角**（圆心压在框线上，一半露在框外）
+##    │   ①   〔 卡 名 框 〕    │     卡名框底色 = **稀有度色**（逐类框的纸面被染色）
+##    │  ┌─────────────────┐  │
+##    │  │                 │  │  ② 卡图 = 卡图窗（框素材给的 bbox，逐类微差）
+##    │  │      卡 图       │  │
+##    │  │                 │  │  ⚠️ 卡面**不画** 力 / 程 / 速 / 生 ——
+##    │  └─────────────────┘  │     它们只在战场**格子底部**（`draw_cell_stats()`）。
 ##    └───────────────────────┘
-##     ②力 ③程         ④速 ⑤
 ##
-## ⚠️ 每个数值的**圆心就落在卡框上** —— 一半在卡内、一半露在卡外。
-##   力量与生命因此**分别向左右探出卡框**（R115 用户口径「攻击力和生命都可以
-##   左右方向超出卡片范围」）—— 这不是装饰偏好：它把「四个数值都得挤进卡宽」
-##   松成「只有中间两个受卡宽限制」，图标于是能画得更大（R 7 → 8.5），
-##   同时卡片内部依然完整让给卡图与文字。代价是容器必须让出 UiTheme.CARD_BLEED。
+## 三条硬约束（R863）：
+##   1. **稀有度只有一条通道** = 卡名框纸面颜色（`rarity_plate_color()`）；
+##      R170 的锦旗缎带 / R843 的中央色签全部停用，卡面也不再写稀有度文字。
+##   2. **逐类框几何必须查表**（`FRAME_PLATE` / `FRAME_ART`）—— 六类框的卡名框高度
+##      差 5% 卡高，写死一组比例必然有一类被切（店长口径「可能有微小的大小不同」）。
+##   3. **卡面不承担数值**：手牌 / 奖励 / 图鉴 / 详情都只读得到「费用 + 卡名 + 卡图」，
+##      要数值就看战场格底条或详情浮层（`stats_line()`）。
 ##
-## 数值 = **图标为底 + 数字压在图标上**，且**不垫圆盘**（R115 用户口径
-## 「并不需要严格的圆盘，直接用图标 + 数字就可以」）。图标素材走 `assets/ui/icon_*.png`：
-##   剑=力量 / 弓=攻击距离 / 鞋=移动距离 / 血=生命 / 水晶=费用
+## 数值徽章仍是**图标为底 + 数字压在图标上**、**不垫圆盘**（R115 口径）。图标素材走
+## `assets/ui/icon_*.png`：剑=力量 / 弓=攻击距离 / 鞋=移动距离 / 血=生命 / 水晶=费用。
 ## 缺图时回退成该数值的**语义色圆盘 + 数字**（永远不空白、不报错）。
 ##
 ## ⚠️ R122：单个数值挂件的绘制口是 `draw_badge()`（**对外公开**）——
@@ -37,6 +38,45 @@ class_name CardFace
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const CARD_H_DESIGN := 70.0   # 缩放基准高（battle 版小卡高）
+
+# ── R863：六类职业一体框的**逐框实测几何** ──
+## 源 `art_src/2026-11-23_frames/title18/*.png`（1254×1254），裁掉透明外边后统一
+## 重采样成 728×878 存进 `assets/ui/card_outer_frame_<kind>.png`；
+## 下面两张表是**在 728×878 上实测的归一化 bbox**（生成脚本同时写出
+## `art_src/2026-11-23_frames/title18/_plate_boxes.json`，两处必须一致）。
+##
+## 为什么要一张表而不是一组常量：六类框并不是同一个模具出来的 —— 卡名框高度
+## 从 0.222（森林）到 0.273（暗影）差 5% 卡高，卡图窗上沿也跟着差。
+## 店长口径「注意这些卡框可能有微小的大小不同」= 允许它们不同，但**绘制必须查表**，
+## 不能假设「六类一样」然后写死一组比例（那样暗影框的卡图会被顶掉一截、
+## 森林框的卡名会压在框线下面）。
+##
+## bbox 统一为 `[x0, y0, x1, y1]`，相对整卡 rect 的 0..1。
+##   · `FRAME_PLATE`：卡名框内的**纸面区**（写卡名 + 染稀有度色的地方，已留出边框安全内距）；
+##   · `FRAME_ART`：卡图窗（图铺满这里，框自带内沿描边）。
+const FRAME_PLATE := {
+	"bard": [0.1607, 0.0080, 0.8475, 0.2642],
+	"enemy": [0.1703, 0.0000, 0.8283, 0.2563],
+	"forest": [0.1882, 0.0114, 0.8324, 0.2221],
+	"mech": [0.1854, 0.0080, 0.8214, 0.2301],
+	"common": [0.1690, 0.0080, 0.8379, 0.2301],
+	"shadow": [0.1607, 0.0068, 0.8475, 0.2733],
+}
+const FRAME_ART := {
+	"bard": [0.0508, 0.2642, 0.9574, 0.9362],
+	"enemy": [0.0714, 0.2563, 0.9258, 0.9100],
+	"forest": [0.0673, 0.2221, 0.9519, 0.9431],
+	"mech": [0.0632, 0.2301, 0.9464, 0.9180],
+	"common": [0.0618, 0.2301, 0.9464, 0.9237],
+	"shadow": [0.0714, 0.2733, 0.9368, 0.9305],
+}
+## 稀有度色上纸面时**向白混多少**。纸面是浅色印刷底，纯色（尤其史诗紫 / 怪物深红）
+## 压上去会把纸压成色块、卡名的浅字也跟着糊 → 统一提亮，只留色相。
+const PLATE_WHITEN := 0.30
+## 卡名墨色：这版框的纸面被染成中深色（史诗紫 / 敌人暗红），深墨字会读不出来；
+## 改**浅米白 + 深描边**，与缎带时代的反差一致（出图验过，见 `_shots/r863_*`）。
+const PLATE_INK := Color(1.0, 0.96, 0.88)
+const PLATE_INK_OUTLINE := Color(0.11, 0.08, 0.05, 0.92)
 
 # R393b：「本局永久成长」角标的最小卡高。低于它（战场 58×70）不画 ——
 # 最窄的 `力+1` 也要三个字符，58px 宽的卡上会横跨整张卡图；而那张卡的数字
@@ -89,7 +129,7 @@ static func fitted_font_size(font: Font, text: String, max_w: float, max_h: floa
 
 
 static func name_layout(card_name: String, rect: Rect2, font_bold: Font,
-		max_h := 0.0, preferred_override := 0) -> Dictionary:
+		max_h := 0.0, preferred_override := 0, maxw_override := 0.0) -> Dictionary:
 	## **卡名单行排版唯一判定口**（绘制与测试共用）。
 	## 返回 {"sz", "maxw", "text_w", "need_scroll", "fits"}；R843d 起恒不滚动。
 	## R843h：详情只留卡名后可用整块文字区，调用方可给更高的首选字号；
@@ -97,8 +137,10 @@ static func name_layout(card_name: String, rect: Rect2, font_bold: Font,
 	var k: float = rect.size.y / CARD_H_DESIGN
 	var kt: float = minf(k, UiTheme.CARD_TEXT_SCALE_CAP)
 	var pad: float = UiTheme.CARD_PAD * k
-	var maxw: float = maxf(12.0, rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
-			- UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0)
+	# R863：`maxw_override` = 卡名框纸面的实际可用宽（新框逐类不同，不能再用
+	# 固定的 `CARD_NAMEPLATE_X0..X1` 估）。不传时仍按旧口径算 —— 回归与老调用方不受影响。
+	var maxw: float = maxf(12.0, maxw_override if maxw_override > 0.0
+			else rect.size.x * (UiTheme.CARD_NAMEPLATE_X1 - UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0)
 	var preferred: int = preferred_override if preferred_override > 0 else maxi(9,
 			roundi(UiTheme.CARD_FS_TEXT * kt * 1.28))
 	var sz: int = fitted_font_size(font_bold, card_name, maxw, max_h, preferred)
@@ -355,8 +397,47 @@ static func badge_font(rect: Rect2) -> int:
 	return maxi(6, roundi(UiTheme.CARD_FS_BADGE * ui_scale_of(rect) * 0.88))
 
 
+static func frame_box(kind: String, for_art := false) -> Array:
+	## 某类框的实测 bbox（`for_art=true` 取卡图窗，否则取卡名框纸面）。
+	## 未知 kind 一律回退**公用框** —— 六张表都齐，回退只是防御（永不返回空数组，
+	## 调用方不必再判一次；空数组会让 Rect2 退化成零面积、静默不画）。
+	var tbl: Dictionary = FRAME_ART if for_art else FRAME_PLATE
+	if tbl.has(kind):
+		return tbl[kind]
+	return tbl["common"]
+
+
+static func _bbox_rect(rect: Rect2, box: Array) -> Rect2:
+	## bbox（0..1 归一化）→ 屏幕矩形。
+	return Rect2(rect.position + Vector2(rect.size.x * float(box[0]),
+			rect.size.y * float(box[1])),
+			Vector2(rect.size.x * (float(box[2]) - float(box[0])),
+			rect.size.y * (float(box[3]) - float(box[1]))))
+
+
+static func plate_rect(rect: Rect2, kind: String) -> Rect2:
+	## **卡名框纸面区**（唯一几何口）：卡名写在这里，稀有度色也染在这里。
+	## 换框只改 `FRAME_PLATE` 表，绘制与测试都读这一个口。
+	return _bbox_rect(rect, frame_box(kind))
+
+
+static func art_window_rect(rect: Rect2, kind: String) -> Rect2:
+	## **卡图窗**（唯一几何口）：卡图等比 cover 铺满这里，顶端锚定（宁可裁脚不裁头）。
+	return _bbox_rect(rect, frame_box(kind, true))
+
+
+static func rarity_plate_color(card: CardData) -> Color:
+	## 卡名框底色 = 稀有度色提亮（R863：稀有度的**唯一**视觉通道）。
+	## 卡片为空（不该发生）→ 中性灰，绝不返回透明色（透明 = 名字底下什么都没有）。
+	if card == null:
+		return Color(0.62, 0.60, 0.56)
+	return card.rarity_color().lerp(Color.WHITE, PLATE_WHITEN)
+
+
 static func stats_bar_rect(rect: Rect2) -> Rect2:
-	## 内嵌属性栏唯一几何口；战斗跳字等叠加层也必须读这里。
+	## ⚠️ R863 停用：卡面不再有内嵌属性栏（数值移到战场格子底部，
+	## 见 `cell_stats_rect()`）。这个函数只剩**历史几何**用途 ——
+	## R843 的版式回归还在量它（「属性栏不越出卡底」），别当死代码删。
 	return Rect2(rect.position + Vector2(rect.size.x * 0.07,
 			rect.size.y * UiTheme.CARD_BODY_BOTTOM),
 			Vector2(rect.size.x * 0.86,
@@ -443,24 +524,19 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		canvas.draw_rect(fallback_rarity, UiTheme.PAGE_PAPER.darkened(0.08))
 		canvas.draw_rect(fallback_rarity, UiTheme.CARD_FRAME, false, maxf(1.0, bw * 0.5))
 		# R843h：详情卡名不再使用带框姓名牌；纸底缺失时也只保留统一底色。
-	# ④ 卡图区（上半）；紧凑卡使用延伸卡图 + 独立紧凑名称带。
+	# ④ 卡图 —— 铺进框素材给的**卡图窗**（逐类不同，见 `FRAME_ART`）。
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping, phase, name_only)
-	if name_only:
-		_draw_compact_name_plate(canvas, card, rect)
-	_draw_outer_frame(canvas, card, rect, name_only)              # R843i：外圈垫在所有文字下层
-	# ④b 稀有度标签（R843c）：独占卡图下第一行；第二行只放卡名。
-	_draw_rarity_ribbon(canvas, card, rect, k, pad, 0.0, name_only)
-	# ④c R592：字段标志（贴卡框右上角，多字段轮播；R592d 起压在缎带上层）
+	# ④b 卡名框纸面 = **稀有度色**（R863 唯一稀有度通道；R170 的锦旗缎带已停用）。
+	_draw_plate(canvas, card, rect)
+	# ④c 整卡外框：卡名框金边 / 角花 / 卡图窗内沿 / 底框都在这一张里。
+	_draw_outer_frame(canvas, card, rect)
+	# ④d R592：字段标志（贴卡框右上角，多字段轮播）
 	#     R656：状态槽位（眩晕 / 冰封 / 沉睡 N / 倒数 N / 可发动 / 临时嘲讽）排进同一条队列，
 	#     状态在前、字段在后 —— 卡面**不再有文字标记**，全靠这个圆槽说话。
 	_draw_affix_badges(canvas, card, rect, k, on_board, -1, state_slots)
-	# ⑤ 卡图与文字区的分隔线
-	# ⚠️ R153：v2 底图**自带金线分隔**（CARD_ART_RATIO 0.745 处的金条），不再手画灰线。
-	# ⚠️ R122：**横置时不画** —— 那时卡图铺满整卡（见 _draw_art），横一道线很突兀。
-	var sep_y: float = rect.position.y + rect.size.y * UiTheme.CARD_ART_RATIO
-	# ⑥ 文字区（下半）—— R843h 起统一只画卡名。
-	#    name_only=true 使用紧凑名称带；false 使用详情完整名称区，两者都不画效果正文。
-	_draw_text_zone(canvas, card, rect, kt, k, pad, sep_y, hp, font, font_bold, on_board, is_tapped, name_only)
+	# ⑤ 卡名 —— 写在**卡名框纸面**里（紧凑 / 详情同一条路径，R863 起不再分两套版式）。
+	# ⚠️ 卡图与文字区之间不再有分隔线：新框的卡名框本身就是分隔（金边 + 纸面）。
+	_draw_text_zone(canvas, card, rect, kt, k, pad, hp, font, font_bold, on_board, is_tapped, name_only)
 	# ⑦ 数值徽章 —— 最后画，压在卡图与文字之上（「额外挂载」的字面意思）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, hp, power_override,
 			speed_override, range_override, armor)
@@ -547,11 +623,11 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 			glow.a = 0.42 - 0.11 * gi
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
 	_draw_art(canvas, card, rect, k, pad, false, font_bold, false, 0, true)
-	_draw_compact_name_plate(canvas, card, rect)
-	_draw_outer_frame(canvas, card, rect, true)                   # R843i：外圈垫在所有文字下层
-	_draw_rarity_ribbon(canvas, card, rect, k, pad, 0.0, true)
-	_draw_affix_badges(canvas, card, rect, k, false)   # R592：字段标志
-	_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold, true)   # 紧凑名称带（只留卡名）
+	_draw_plate(canvas, card, rect)                              # R863：卡名框 = 稀有度色
+	_draw_outer_frame(canvas, card, rect)                        # 整卡外框（与 draw() 同一张）
+	_draw_affix_badges(canvas, card, rect, k, false)             # R592：字段标志
+	_draw_text_zone(canvas, card, rect, kt, k, pad, card.health, font,
+			font_bold, false, false, true)                       # 卡名（只留卡名）
 	_draw_badges(canvas, font_bold, card, rect, k, kc, card.health, -1)
 	_draw_enchant_mark(canvas, card, rect, font_bold)            # R214：选卡页也要看到附魔标记
 	_draw_combine_mark(canvas, card, rect)                       # R565：组合专属印记
@@ -670,44 +746,66 @@ static func _draw_combine_mark(canvas: CanvasItem, card: CardData, rect: Rect2) 
 	preload("res://scripts/card_info_boxes.gd").draw_glyph(canvas, c, r * 0.62, "combine", col)
 
 
-static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
-	k: float, pad: float, font_bold: Font, pin_gold := false) -> void:
-	## R843：名称独占中间名称带；底部属性已经另有自己的栏，不再反过来压缩卡名。
-	## 内距采用比例上限，避免详情大卡放大时 pad 也线性膨胀、把文字挤没。
-	var text_pad: float = minf(pad, rect.size.y * 0.025)
-	var top_ratio: float = UiTheme.CARD_COMPACT_NAME_TOP if pin_gold else UiTheme.CARD_NAMEPLATE_TOP
-	var bottom_ratio: float = UiTheme.CARD_COMPACT_NAME_BOTTOM if pin_gold else UiTheme.CARD_NAMEPLATE_BOTTOM
-	var zone_top: float = rect.position.y + rect.size.y * top_ratio + text_pad * 0.25
-	var zone_bottom: float = rect.position.y + rect.size.y * bottom_ratio - text_pad * 0.25
-	var info := name_layout(_display_name(card), rect, font_bold, zone_bottom - zone_top)
+static func _draw_name_zone(canvas: CanvasItem, card: CardData, rect: Rect2,
+		font_bold: Font, box_override := Rect2()) -> void:
+	## R863：卡名写进**卡名框纸面**（`plate_rect`），居中、单行、按纸面宽高双约束缩字。
+	## `box_override` 给 `text_zone_layout()` 复用（那里已经算过一遍内距，别再缩第二次）。
+	var kind := art_frame_kind(card)
+	var plate := box_override if box_override.size.y > 0.0 else name_box(rect, kind)
+	if plate.size.y < 6.0 or plate.size.x < 12.0:
+		return
+	var name := _display_name(card)
+	# 首选字号：纸面高度是硬上限（金边会吃掉上下各约 10%），宽度再由 `name_layout` 收。
+	var info := name_layout(name, rect, font_bold, plate.size.y,
+			maxi(8, roundi(plate.size.y * 0.80)), plate.size.x)
 	var sz: int = int(info["sz"])
 	var maxw: float = float(info["maxw"])
-	var text_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + text_pad
-	var baseline: float = centered_text_baseline(font_bold, sz,
-			Rect2(Vector2(text_x, zone_top), Vector2(maxw, zone_bottom - zone_top)))
-	canvas.draw_string(font_bold, Vector2(text_x, baseline), _display_name(card),
-			HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, UiTheme.INK_900)
+	var baseline := centered_text_baseline(font_bold, sz, plate)
+	var tx := plate.position.x + (plate.size.x - maxw) * 0.5
+	# 浅米白 + 深描边：纸面被染成中深色（史诗紫 / 敌人暗红），深墨字会读不出来。
+	var ow: int = maxi(1, roundi(float(sz) * 0.13))
+	canvas.draw_string_outline(font_bold, Vector2(tx, baseline), name,
+			HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, ow, PLATE_INK_OUTLINE)
+	canvas.draw_string(font_bold, Vector2(tx, baseline), name,
+			HORIZONTAL_ALIGNMENT_CENTER, maxw, sz, PLATE_INK)
 
 
-static func _draw_compact_name_plate(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
-	## 手牌 / 选卡没有正文：完整黑底向上扩展，第一行稀有度、第二行卡名。
-	var plate := Rect2(rect.position + Vector2(rect.size.x * 0.05,
-			rect.size.y * UiTheme.CARD_COMPACT_ART_RATIO),
-			Vector2(rect.size.x * 0.90, rect.size.y * (UiTheme.CARD_COMPACT_NAME_BOTTOM
-			- UiTheme.CARD_COMPACT_ART_RATIO)))
-	var col: Color = UiTheme.PAGE_PAPER.darkened(0.08) * paper_tint(card)
-	canvas.draw_rect(plate, col)
-	# R843d：只去掉用户指名的上下横向金线；左右竖边仍保留。
-	var edge_w: float = maxf(1.0, rect.size.y * 0.008)
-	canvas.draw_line(plate.position, Vector2(plate.position.x, plate.end.y),
-			UiTheme.ADVENTURE_BRASS, edge_w, true)
-	canvas.draw_line(Vector2(plate.end.x, plate.position.y), plate.end,
-			UiTheme.ADVENTURE_BRASS, edge_w, true)
+static func name_box(rect: Rect2, kind: String) -> Rect2:
+	## 卡名框纸面再内缩一圈 = **卡名的真实可写区**（唯一口）。
+	## 为什么还要缩：`FRAME_PLATE` 是「纸面外沿」的 bbox，金边、雕花与纸面的撕裂边
+	## 会吃掉边上几个像素 —— 直接把文字画到 bbox 边上，小卡上会压到金线。
+	## 内距按纸面高度取比例（不是按卡高）：卡名框越高的框，字也越大，留白同步放大。
+	var plate := plate_rect(rect, kind)
+	var ix: float = plate.size.x * 0.06
+	var iy: float = plate.size.y * 0.10
+	return Rect2(plate.position + Vector2(ix, iy),
+			Vector2(maxf(0.0, plate.size.x - ix * 2.0), maxf(0.0, plate.size.y - iy * 2.0)))
 
 
-static func _draw_outer_frame(canvas: CanvasItem, card: CardData, rect: Rect2, compact: bool) -> void:
-	## R843i 预览：外圈垫在文字与符号下层；安全区保证它们不会骑压框体。
-	var tex: Texture2D = UiAssets.card_outer_frame(art_frame_kind(card), compact)
+static func _draw_plate(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
+	## R863：**卡名框纸面 = 稀有度色**（稀有度的唯一视觉通道）。
+	## `card_plate_<kind>.png` 是与外框同尺寸、同坐标系的灰度层（框外全透明）——
+	## 乘上稀有度色后叠在卡图上、外框下：纸纹 / 磨损 / 明暗全是原图，
+	## 只有色相换成稀有度（不是一块平涂色块）。
+	## 缺图回退：直接在卡名框 bbox 上铺同色，稀有度照样读得出来（不空白、不报错）。
+	var kind := art_frame_kind(card)
+	var col := rarity_plate_color(card)
+	var tex: Texture2D = UiAssets.card_plate(kind)
+	if tex != null:
+		canvas.draw_texture_rect(UiAssets.filtered(tex, ceili(maxf(rect.size.x, rect.size.y)
+				* maxf(1.5, canvas.get_viewport_transform().get_scale().x))), rect, false, col)
+		return
+	canvas.draw_rect(name_box(rect, kind), col)
+
+
+static func _draw_outer_frame(canvas: CanvasItem, card: CardData, rect: Rect2) -> void:
+	## R863：整卡外框（唯一取图口 `UiAssets.card_outer_frame`）。
+	## 一张 728×878 的素材铺满整卡：卡名框金边 + 角花 + 卡图窗内沿 + 底框都在里面，
+	## 所以**不再有紧凑 / 详情两套** —— 同一个框等比缩放，比例永远对得上。
+	## 缺图 → 什么都不画，卡面回退成「纸底 + 卡图 + 卡名 + 费用」，不至于空白。
+	var tex: Texture2D = UiAssets.card_outer_frame(art_frame_kind(card), false)
+	if tex == null:
+		tex = UiAssets.card_outer_frame(art_frame_kind(card), true)
 	if tex == null:
 		return
 	canvas.draw_texture_rect(UiAssets.filtered(tex, ceili(maxf(rect.size.x,
@@ -721,11 +819,10 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 	## sleeping=true → 取沉睡专用图（`<id>_sleep.png`，缺失回退普通卡图）。
 	# R843：卡图收进独立窗口，四边不再与费用 / 字段徽章争抢卡框边缘。
 	# cover_region 仍保证等比裁切，不拉伸卡图。
-	var art_bottom: float = UiTheme.CARD_COMPACT_ART_RATIO if compact else UiTheme.CARD_ART_RATIO
-	var box := Rect2(rect.position + Vector2(rect.size.x * UiTheme.CARD_ART_INSET_X,
-			rect.size.y * UiTheme.CARD_ART_INSET_TOP),
-			Vector2(rect.size.x * (1.0 - 2.0 * UiTheme.CARD_ART_INSET_X),
-			rect.size.y * (art_bottom - UiTheme.CARD_ART_INSET_TOP)))
+	# R863：卡图窗改由**框素材**给出（`FRAME_ART` 表，逐类不同）——
+	# 不再用「卡高的某个比例」估算：新框的卡名框高度本身就因职业而异，
+	# 按比例切必然有一类被卡名框压住或被框线切断。
+	var box := art_window_rect(rect, art_frame_kind(card))
 	if box.size.x < 6.0 or box.size.y < 6.0:
 		return
 	var tex := art_for(card.pic_id(), sleeping, phase)
@@ -748,9 +845,11 @@ static func _draw_art(canvas: CanvasItem, card: CardData, rect: Rect2, k: float,
 		glyph.a = 0.40
 		_draw_center(canvas, font_bold, int(minf(box.size.x, box.size.y) * 0.9),
 				_display_name(card).substr(0, 1), box.get_center(), glyph)
-	# R498：卡图区窄边框（按归属分色）—— 卡图之后、待确认角标之前（角标要压在最上层）。
-	# R843e：有一体素材时由稀有度绘制口一次铺完图框 + 底托，避免双层框线互压。
-	if UiAssets.art_rarity_frame(art_frame_kind(card), compact) == null:
+	# R863：整卡外圈（`card_outer_frame_<kind>`）已经把**卡图窗的内沿描边**一起画了，
+	# 这里只在**外框素材缺失**时补一条同色细线（没图也得看得出卡图边界在哪）。
+	# ⚠️ 别再用 `art_rarity_frame` 当判据：那套 R843e 素材在 R863 已被整卡外框取代，
+	#    留着会让缺外框时反而什么都不画。
+	if UiAssets.card_outer_frame(art_frame_kind(card), compact) == null:
 		_draw_art_frame(canvas, card, box, k)
 	# R478：未确认卡图打角标（AI 生成、待人工确认）。
 	if tex != null and is_pending_art(card.pic_id()):
@@ -1102,6 +1201,13 @@ static func _draw_one_affix_badge(canvas: CanvasItem, name: String, box: Rect2,
 			"count": 0, "affix": true}, box, k, alpha)
 
 
+## ⚠️ R863 停用：稀有度旗子 / 缎带 / 色签这套通道**已废弃**（店长口径
+## 「原本的稀有度旗子丢弃，改用卡名框的颜色来决定稀有度」）。
+## 下面的实现整块保留，是因为 `rarity_row_rect / rarity_tag_layout /
+## integrated_frame_rect` 还挂在 R843 的版式回归上（量尺寸用，不画），
+## 而且以后要换个位置复刻这套锦旗时不必从头写。
+## **卡面绘制链里不要再调 `_draw_rarity_ribbon()`** —— `draw()` / `draw_pick()`
+## 都已摘掉调用点，回归另有断言守着（`test_engine` R863 段）。
 static func _draw_rarity_ribbon(canvas: CanvasItem, card: CardData, rect: Rect2,
 		k: float, pad: float, h_override := 0.0, compact := false) -> void:
 	## 稀有度缎带（R170）：挂在卡面**右上角**的锦旗 —— 稀有度的**主通道**。
@@ -1284,53 +1390,37 @@ static func _draw_vgradient(canvas: CanvasItem, rect: Rect2, top: Color, bot: Co
 
 static func text_zone_layout(card: CardData, rect: Rect2, font: Font, font_bold: Font,
 		pad: float) -> Dictionary:
-	## R843h：详情 / 图鉴共享卡面与缩略图同口径——只写卡名，不写卡种或效果正文。
-	## 完整效果仍由详情浮层、左栏信息或奖励下方详情条承担，卡面不再缩成微字。
-	## 卡名使用稀有度下沿至属性栏上沿的整个区域；首选字号故意给高，再由
-	## `name_layout()` 按实际字宽与 ascent + descent 收敛到能完整显示的最大值。
-	## 旧正文返回字段保留为空，避免既有只读探针失效，但绘制层不再消费它们。
+	## R863：卡名区 = **卡名框纸面的可写区**（`name_box()`），绘制与回归共用这一个口。
+	## 老字段（`meta_sz` / `eff_*` / `base_meta`）保留为常量空值 ——
+	## R843h 起卡面就不写种类行与效果正文，但既有只读探针仍在读它们，别删。
+	## `pad` 参数保留给调用方兼容：新版的留白已经写死在 `name_box()` 的比例里
+	## （按纸面高度取，而不是按卡高乘 pad —— 详情大卡与手牌小卡的观感才一致）。
 	var out := {"ok": false, "eff_truncated": false, "eff_n": 0, "eff_lines": []}
-	pad = minf(pad, rect.size.y * 0.025)
-	var top: float = rect.position.y + rect.size.y * UiTheme.CARD_NAMEPLATE_TOP + pad * 0.25
-	var bottom: float = rect.position.y + rect.size.y * UiTheme.CARD_BODY_BOTTOM - pad * 0.25
-	bottom = minf(bottom, text_zone_bottom(rect))
-	if bottom - top < 6.0:
+	var box := name_box(rect, art_frame_kind(card))
+	if box.size.y < 6.0 or box.size.x < 12.0:
 		return out
-	var maxw: float = rect.size.x * (UiTheme.CARD_NAMEPLATE_X1
-			- UiTheme.CARD_NAMEPLATE_X0) - pad * 2.0
-	var preferred: int = maxi(9, ceili((bottom - top) * 2.0))
-	var ninfo := name_layout(_display_name(card), rect, font_bold, bottom - top, preferred)
-	var nsz: int = int(ninfo["sz"])
-	var base_name: float = centered_text_baseline(font_bold, nsz,
-			Rect2(Vector2(rect.position.x, top), Vector2(rect.size.x, bottom - top)))
+	var info := name_layout(_display_name(card), rect, font_bold, box.size.y,
+			maxi(8, roundi(box.size.y * 0.80)), box.size.x)
+	var nsz: int = int(info["sz"])
 	return {
-		"ok": true, "top": top, "bottom": bottom, "maxw": maxw,
-		"name_sz": nsz, "ninfo": ninfo, "base_name": base_name,
-		"meta_sz": 0, "base_meta": bottom, "has_meta": false,
+		"ok": true, "top": box.position.y, "bottom": box.end.y,
+		"maxw": float(info["maxw"]), "box": box,
+		"name_sz": nsz, "ninfo": info,
+		"base_name": centered_text_baseline(font_bold, nsz, box),
+		"meta_sz": 0, "base_meta": box.end.y, "has_meta": false,
 		"eff_text": "", "eff_sz": 0, "eff_lines": [],
-		"line_h": 0.0, "eff_base0": bottom, "eff_n": 0,
+		"line_h": 0.0, "eff_base0": box.end.y, "eff_n": 0,
 		"eff_truncated": false,
 	}
 
 
 static func _draw_text_zone(canvas: CanvasItem, card: CardData, rect: Rect2, kt: float,
-		k: float, pad: float, sep_y: float, hp: int, font: Font, font_bold: Font,
+		k: float, pad: float, hp: int, font: Font, font_bold: Font,
 		on_board: bool, is_tapped := false, name_only := false) -> void:
-	## 所有卡面都只画卡名。紧凑卡沿用既有名称带；详情 / 图鉴使用完整文字区居中。
-	## R843i：文字限制在整卡外圈的内侧安全区，绘制层不再叠任何名称框线。
-	if name_only:
-		_draw_name_zone(canvas, card, rect, kt, k, pad, font_bold, true)
-		return
-	pad = minf(pad, rect.size.y * 0.025)
-	var L := text_zone_layout(card, rect, font, font_bold, pad)
-	if not bool(L["ok"]):
-		return
-	var maxw: float = float(L["maxw"])
-	var nsz: int = int(L["name_sz"])
-	var base_name: float = float(L["base_name"])
-	var text_x: float = rect.position.x + rect.size.x * UiTheme.CARD_NAMEPLATE_X0 + pad
-	canvas.draw_string(font_bold, Vector2(text_x, base_name), _display_name(card),
-			HORIZONTAL_ALIGNMENT_CENTER, maxw, nsz, UiTheme.INK_900)
+	## R863：**所有卡面只有一条路径** —— 卡名写进卡名框纸面。
+	## `name_only` / `on_board` / `hp` / `kt` / `k` / `pad` 全部只为签名兼容保留：
+	## 新框的卡名框是固定的一块纸面，紧凑与详情只差整体缩放，不存在两套版式。
+	_draw_name_zone(canvas, card, rect, font_bold)
 
 
 static func stat_icon_side(cell: Rect2) -> float:
@@ -1378,18 +1468,110 @@ static func _draw_stat_cell(canvas: CanvasItem, font_bold: Font, key: String,
 			Vector2(icon_box.end.x + gap + text_w * 0.5, cell.get_center().y), value_col)
 
 
+# ── R863：战场「格底数值条」──
+## 店长口径：盟友 / 工事的 力量·射程·速度·生命 **不再挂在卡图下面**，
+## 而是「用到格子上之后，在格子底部显示」。于是：
+##   · 卡面（手牌 / 奖励 / 图鉴 / 详情）**一格数值都不画**，整张卡让给卡图；
+##   · 战场单位卡同样不画，数值由 `battle_scene._draw_cell_stats()` 画在**格子**上。
+## 条本身仍写在卡面文件里：力 / 程 / 速 / 生 的**取数口径与染色规则**
+## （`base_stats()` 原型对比、受伤红、上限被削黄、X 费写 X）原本就在这里，
+## 搬到别处必然分叉成两套（R301 / R387 都是这么踩过的）。
+##
+## 几何：贴着格子下沿、左右各留 3px —— 与 `_cell_rect()` 同一坐标系，
+## 因此滚动 / 缩放 / 开场巡场全都自动跟随，不需要特效层另外补坐标。
+static func cell_stats_rect(cell: Rect2, strip_h := 12.0) -> Rect2:
+	## 格底数值条的**唯一几何口**（绘制 / 跳字 / 回归共用）。
+	return Rect2(cell.position + Vector2(3.0, cell.size.y - strip_h),
+			Vector2(cell.size.x - 6.0, strip_h))
+
+
+static func cell_stat_cell_rect(cell: Rect2, index: int, count: int,
+		strip_h := 12.0) -> Rect2:
+	## 条内第 index 格。**跳字（力量 +N）也读这里** —— R863 起卡面没有属性栏了，
+	## `stat_cell_rect()` 指向的位置在卡外，跳字会飞到格子外面去。
+	var bar := cell_stats_rect(cell, strip_h)
+	var n: int = maxi(1, count)
+	var w: float = bar.size.x / float(n)
+	return Rect2(bar.position + Vector2(w * float(index), 0.0), Vector2(w, bar.size.y))
+
+
+static func cell_stats_values(card: CardData, hp: int, power := -1,
+		speed := -1, range := -1) -> Array:
+	## 格底条要写的四格 `[{key, text, disc, col}]`（**纯函数**，绘制与回归共用）。
+	## 顺序固定 **力 / 程 / 速 / 生** —— 与旧卡内属性栏同一读序，玩家不用重学。
+	## 非单位（技能 / 效果 / 诅咒）→ 空数组：它们本来就没有这四项，
+	## 以前卡面会补一条「卡种」底栏，那正是 R863 要清掉的空框。
+	var out: Array = []
+	if card == null:
+		return out
+	var is_unit: bool = card.kind == "盟友"
+	if not is_unit and card.kind != "工事":
+		return out
+	var bv := base_stats(card)
+	var x_unit: bool = card.x_cost and card.kind == "盟友"
+	var shown_power: int = power if power >= 0 else card.power
+	var shown_range: int = badge_shown(card.attack_range, range)
+	out.append({"key": "power", "text": "X" if x_unit else str(shown_power),
+			"disc": UiTheme.BADGE_POWER,
+			"col": UiTheme.BADGE_VALUE if x_unit else _delta_col(shown_power, bv.get("power"))})
+	out.append({"key": "range", "text": str(shown_range), "disc": UiTheme.BADGE_RANGE,
+			"col": _delta_col(shown_range, bv.get("range"))})
+	if is_unit:
+		var shown_speed: int = badge_shown(card.move_speed, speed)
+		out.append({"key": "speed", "text": str(shown_speed), "disc": UiTheme.BADGE_SPEED,
+				"col": _delta_col(shown_speed, bv.get("speed"))})
+	out.append({"key": "health", "text": "9X" if x_unit else str(hp),
+			"disc": UiTheme.BADGE_HEALTH,
+			"col": UiTheme.BADGE_VALUE if x_unit else _health_col(card, hp, bv.get("health"))})
+	return out
+
+
+static func draw_cell_stats(canvas: CanvasItem, card: CardData, cell: Rect2,
+		font_bold: Font, hp: int, power := -1, speed := -1, range := -1,
+		armor := 0, accent := Color(0, 0, 0, 0), strip_h := 12.0) -> void:
+	## 在**格子**底部画这条数值：半透明深墨底 + 语义色顶线 + 图标/数字。
+	## `accent` 给棋盘用敌我两色（扫场景时一眼分得出两半场）。
+	## 数值一律取**当前生效值**（`effective_power()` 等），染色对卡库原型 ——
+	## 与 R387「显示值 == 实际生效值」同一硬约束。
+	var vals := cell_stats_values(card, hp, power, speed, range)
+	if vals.is_empty():
+		return
+	var bar := cell_stats_rect(cell, strip_h)
+	if bar.size.y < 8.0 or bar.size.x < 16.0:
+		return
+	canvas.draw_rect(bar, Color(0.055, 0.048, 0.052, 0.82), true)
+	if accent.a > 0.0:
+		canvas.draw_line(bar.position, Vector2(bar.end.x, bar.position.y),
+				Color(accent.r, accent.g, accent.b, 0.60), maxf(1.0, strip_h * 0.09))
+	var n: int = vals.size()
+	var cw: float = bar.size.x / float(n)
+	var texts: Array[String] = []
+	for v: Dictionary in vals:
+		texts.append(String(v["text"]))
+	# 全行统一字号（任何一格缩，四格一起缩）—— 旧属性栏的老口径，视觉重心才一致。
+	var fs: int = stats_font_size(font_bold,
+			Rect2(bar.position, Vector2(cw, bar.size.y)), texts)
+	for i in n:
+		var v: Dictionary = vals[i]
+		var cr := Rect2(bar.position + Vector2(cw * float(i), 0.0),
+				Vector2(cw, bar.size.y))
+		_draw_stat_cell(canvas, font_bold, String(v["key"]), String(v["text"]),
+				v["disc"], v["col"], cr, fs)
+	if armor > 0:
+		# 护甲仍贴着**生命那一格**：与旧卡面「甲在血上方」的读法一致，只是搬到格子右下角。
+		var hc := Rect2(bar.position + Vector2(cw * float(n - 1), 0.0),
+				Vector2(cw, bar.size.y))
+		_draw_value_pip(canvas, hc, 1.0, armor, 1.0, true)
+
+
+@warning_ignore("unused_parameter")
 static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, rect: Rect2,
 		k: float, kc: float, hp: int, power_override: int,
 		speed_override := -1, range_override := -1, armor := 0) -> void:
-	## 数值「额外挂载」。位置是**固定槽位**，与卡的种类无关 ——
-	## 玩家的眼睛只需要记一次坐标：
-	##   ① 费用 = 卡框左上角 · ② 力量 = 卡框左下角（与 ① 同一条竖线）
-	##   ③ 攻击距离 = ② 右侧 · ④ 移动距离 = ⑤ 左侧 · ⑤ 生命 = 卡框右下角
-	## ⚠️ 于是 ② 与 ⑤ **分别向左右探出卡框**（R115 用户口径）—— 容器必须让出
-	##    `UiTheme.CARD_BLEED`，少让一点这两张就会骑到邻卡身上。
-	# R387（用户口径「启示者 2 阶段减 1 速度的显示正常吗？」）：程 / 速 与力量同一口径 ——
-	# 战场单位传 `effective_range()` / `effective_speed()`，徽章写**真正生效的数**，
-	# 并按卡库原型染色（2 → 1 = 红）。手牌 / 图鉴 / 选卡页不传，保持卡面粉数值。
+	## R863：卡面**只挂费用**（圆心压在卡框左上角，一半露在框外 —— 与缩略图同一手感）。
+	## 力 / 程 / 速 / 生 已全部移到战场格子底部（`draw_cell_stats()`），
+	## 旧版「底部一排四格 + 向左右出血」的排版随新框一起停用。
+	## 这几个参数是为了不动十几处调用方而保留的，别在里面偷偷画数值。
 	var r: float = badge_radius(rect)
 	var fs: int = badge_font(rect)
 	# ── ① 左上角：费用（水晶）—— 圆心压在卡框左上角上 ──
@@ -1401,57 +1583,13 @@ static func _draw_badges(canvas: CanvasItem, font_bold: Font, card: CardData, re
 		cost_txt = "×"
 	draw_badge(canvas, font_bold, cost_badge_center(rect), r, fs, "cost",
 			cost_txt, UiTheme.BADGE_COST)
-	# 技能 / 效果卡没有攻防数值，只有费用
-	var is_unit: bool = card.kind == "盟友"
-	if not is_unit and card.kind != "工事":
-		# 技能 / 效果 / 诅咒没有四属性，底栏改显示卡种，避免手牌下方留一条无意义空框。
-		var kind_rect := stats_bar_rect(rect)
-		canvas.draw_rect(kind_rect, Color(0.075, 0.065, 0.055, 0.95))
-		var kind_text: String = GameI18n.source(card.kind)
-		var kind_fs: int = fitted_font_size(font_bold, kind_text,
-				kind_rect.size.x - 4.0, kind_rect.size.y - 2.0,
-				maxi(8, roundi(8.0 * minf(kc, UiTheme.CARD_TEXT_SCALE_CAP))))
-		_draw_center(canvas, font_bold, kind_fs, kind_text, kind_rect.get_center(), UiTheme.ADVENTURE_LIGHT)
-		return
-	# ── R843：四项属性收进卡内底栏，等距单排；不再向左右出血或挤压名称带 ──
-	var bv := base_stats(card)
-	var base_power: Variant = bv.get("power")
-	var base_health: Variant = bv.get("health")
-	var shown_power: int = power_override if power_override >= 0 else card.power
-	var x_unit := card.x_cost and card.kind == "盟友"
-	var shown_range: int = badge_shown(card.attack_range, range_override)
-	var keys: Array[String] = ["power", "range"]
-	var values: Array[String] = ["X" if x_unit else str(shown_power), str(shown_range)]
-	var discs: Array[Color] = [UiTheme.BADGE_POWER, UiTheme.BADGE_RANGE]
-	var value_cols: Array[Color] = [
-		UiTheme.BADGE_VALUE if x_unit else _delta_col(shown_power, base_power),
-		_delta_col(shown_range, bv.get("range"))]
-	if is_unit:
-		var shown_speed: int = badge_shown(card.move_speed, speed_override)
-		keys.append("speed")
-		values.append(str(shown_speed))
-		discs.append(UiTheme.BADGE_SPEED)
-		value_cols.append(_delta_col(shown_speed, bv.get("speed")))
-	keys.append("health")
-	values.append("9X" if x_unit else str(hp))
-	discs.append(UiTheme.BADGE_HEALTH)
-	value_cols.append(UiTheme.BADGE_VALUE if x_unit else _health_col(card, hp, base_health))
-	var stats_rect := stats_bar_rect(rect)
-	canvas.draw_rect(stats_rect, Color(0.075, 0.065, 0.055, 0.95))
-	var cell_w: float = stats_rect.size.x / float(keys.size())
-	var sr: float = minf(badge_radius(rect) * 0.64,
-			minf(cell_w * 0.36, stats_rect.size.y * 0.48))
-	var stat_y: float = stats_rect.get_center().y
-	var shared_fs: int = stats_font_size(font_bold,
-			stat_cell_rect(rect, 0, keys.size()), values)
-	for i in keys.size():
-		var cell := stat_cell_rect(rect, i, keys.size())
-		_draw_stat_cell(canvas, font_bold, keys[i], values[i], discs[i], value_cols[i], cell, shared_fs)
-	# 护甲仍与生命同轴，常驻显示；尺寸不随紧凑属性栏一起缩成不可读的小点。
-	if armor > 0:
-		var health_center := Vector2(stats_rect.position.x + cell_w * (float(keys.size()) - 0.5), stat_y)
-		_draw_armor_badge(canvas, health_center,
-				maxf(sr, badge_radius(rect) * 0.72), kc, armor)
+	# ⚠️ R863：**这个函数只剩费用徽章**。
+	#   店长口径「盟友和工事的下方数值不再绑在卡图下，而是在用到格子上后，
+	#   在格子底部显示」→ 卡面一律不画 力 / 程 / 速 / 生，也不再有底部深色属性条
+	#   （那条本来就是为「卡面下方一条空框」兜底的，新框没有那条边，留着只会压住卡图）。
+	#   数值改由 `draw_cell_stats()` 画在**战场格子**底部；取数与染色逻辑都搬过去了，
+	#   函数签名保留 `hp / power_override / ... / armor` 只为调用方兼容。
+	#   旧实现（含非单位卡种底栏）见 git 历史 R843 / R863 之交。
 
 
 static func badge_shown(cur: int, override: int) -> int:

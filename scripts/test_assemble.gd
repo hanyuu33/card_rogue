@@ -1108,8 +1108,9 @@ func _test_r569_pool_forms() -> void:
 			"R602 源码锁：框内缩字号公共口（Label 版）")
 	check(ut.find("static func fit_font_size") >= 0,
 			"R602 源码锁：框内缩字号公共口（draw_string 版）")
-	check(cf.find("bottom = minf(bottom, text_zone_bottom(rect))") >= 0,
-			"R602 源码锁：卡面文字区让开底部数值徽章")
+	check(cf.find("art_window_rect(rect, art_frame_kind(card))") >= 0
+			and cf.find("name_box(rect, art_frame_kind(card))") >= 0,
+			"R863 源码锁：卡图窗与卡名框都读逐类框几何（底部数值已搬到格子，不再需要让位）")
 	var gs := FileAccess.get_file_as_string("res://scripts/gallery_scene.gd")
 	check(gs.find("UiTheme.autoshrink_label(detail_name") >= 0,
 			"R602 源码锁：图鉴详情卡名走自适应（长名不再顶穿右框）")

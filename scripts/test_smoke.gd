@@ -3806,6 +3806,7 @@ func _check_battle(scene: Variant) -> void:
 	_check_r729_drop_out_of_board(scene)
 	_check_speech_bubble(scene)
 	_check_foe_speed(scene)
+	_check_r863_board(scene)
 
 
 func _check_r729_drop_out_of_board(scene: Variant) -> void:
@@ -3852,6 +3853,50 @@ func _check_r729_drop_out_of_board(scene: Variant) -> void:
 		return
 	print("SMOKE OK R730：拖回手牌区松手 = 取消（不再误吸自己后排），棋盘内吸附照旧")
 
+
+func _check_r863_board(scene: Variant) -> void:
+	## R863：格子缩到 124×86 -> 6 行 = 516 装进 540 可视窗，滚轮 / 拖动 / 巡场收场全部退化成 0。
+	## 同时钉住三件配套：战场卡固定 80 高不撞格线、四属性搬到格底数值条、格子上不再画 ↑/→。
+	var cmap: Dictionary = (scene.get_script() as GDScript).get_script_constant_map()
+	if not is_equal_approx(float(cmap.get("CELL", 0.0)), 86.0):
+		_smoke_fail("R863 格子：CELL 应为 86，实际 %s" % str(cmap.get("CELL")))
+		return
+	if not is_equal_approx(float(cmap.get("CELL_W", 0.0)), 124.0):
+		_smoke_fail("R863 格子：CELL_W 应为 124，实际 %s" % str(cmap.get("CELL_W")))
+		return
+	var content_h: float = float(cmap.get("GRID_CONTENT_H", 0.0))
+	if content_h > scene.GRID_H + 0.01:
+		_smoke_fail("R863 免滚动：内容高 %.1f 超过可视窗 %.1f" % [content_h, scene.GRID_H])
+		return
+	if scene._grid_scrollable():
+		_smoke_fail("R863 免滚动：6 行装得下却仍可滚（min=%.1f max=%.1f）"
+				% [scene._grid_scroll_min(), scene._grid_scroll_max()])
+		return
+	var card_h: float = float(cmap.get("BOARD_CARD_H", 0.0))
+	var card_w: float = float(cmap.get("BOARD_CARD_W", 0.0))
+	if card_h > float(cmap.get("CELL", 0.0)) + 0.01 or card_w > scene.CELL_W + 0.01:
+		_smoke_fail("R863 卡面：战场卡 %.1f×%.1f 超出格子 %.1f×%.1f"
+				% [card_w, card_h, scene.CELL_W, float(cmap.get("CELL", 0.0))])
+		return
+	var last := Vector2i(FieldState.BOARD_ROWS - 1, FieldState.BOARD_COLS - 1)
+	var last_rect: Rect2 = scene._cell_rect(last)
+	if not scene._cell_in_view(scene._cell_center(last)):
+		_smoke_fail("R863 免滚动：最后一行最后一格 %s 不在可视窗内" % str(last))
+		return
+	if last_rect.end.y > scene.GRID_Y + scene.GRID_H + 0.51:
+		_smoke_fail("R863 免滚动：最后一行下沿 %.1f 越出棋盘下沿 %.1f"
+				% [last_rect.end.y, scene.GRID_Y + scene.GRID_H])
+		return
+	var src := FileAccess.get_file_as_string("res://scripts/battle_scene.gd")
+	if src.find("CardFace.draw_cell_stats(") < 0:
+		_smoke_fail("R863 格底数值：_draw_board_unit 没有接 draw_cell_stats")
+		return
+	if src.find("\"→\"") >= 0 or src.find("\"↑\"") >= 0:
+		_smoke_fail("R863 方向标记：格子上仍有 ↑ / → 字符绘制")
+		return
+	print("SMOKE OK R863：格子 %.0f×%.0f / 6 行 %d <= %.0f 一屏装下 / 战场卡 %.1f×%.1f / 格底数值已接"
+			% [scene.CELL_W, float(cmap.get("CELL", 0.0)), roundi(content_h), scene.GRID_H,
+					card_w, card_h])
 func _check_foe_speed(scene: Variant) -> void:
 	## R388：顶栏倍速按钮 —— 点一次 1.5×、点两次 2×、第三次回 1×，并落盘；
 	## 演出时钟只在敌方窗口（`_foe_phase`）按倍速走，我方回合仍是 1×。

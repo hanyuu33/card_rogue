@@ -16531,15 +16531,18 @@ func _init() -> void:
 
 	var r146_mid_b: Dictionary = r146bs.intro_pose(r146_dur - r146_back * 0.5)
 
-	check(is_equal_approx(float(r146_mid_a["zoom"]), (1.0 + r146_zoom) * 0.5)
-
-			and float(r146_mid_a["scroll"]) < r146_smax - 1.0
-
-			and float(r146_mid_a["scroll"]) > r146_smin + 1.0,
-
-			"R146 去程中点：位置离开我方半场、大小已在放大途中（%.1f / %.3f）"
-
-			% [float(r146_mid_a["scroll"]), float(r146_mid_a["zoom"])])
+	if absf(r146_smax - r146_smin) > 1.0:
+		check(is_equal_approx(float(r146_mid_a["zoom"]), (1.0 + r146_zoom) * 0.5)
+				and float(r146_mid_a["scroll"]) < r146_smax - 1.0
+				and float(r146_mid_a["scroll"]) > r146_smin + 1.0,
+				"R146 去程中点：位置离开我方半场、大小已在放大途中（%.1f / %.3f）"
+				% [float(r146_mid_a["scroll"]), float(r146_mid_a["zoom"])])
+	else:
+		# R863：6 行 = 516 装进 540 → 滚动范围退化成一个点，横向没有「半场」可拖。
+		check(is_equal_approx(float(r146_mid_a["scroll"]), r146_smin)
+				and is_equal_approx(float(r146_mid_a["zoom"]), (1.0 + r146_zoom) * 0.5),
+				"R863 巡场：整屏可见 → 横向钉住（%.1f），只保留放大演出（%.3f）"
+				% [float(r146_mid_a["scroll"]), float(r146_mid_a["zoom"])])
 
 	check(is_equal_approx(float(r146_mid_b["zoom"]), (1.0 + r146_zoom) * 0.5)
 
@@ -23640,27 +23643,53 @@ func _init() -> void:
 
 
 
-	# ---- R173 源码守卫：稀有度缎带的「接线 + 尺寸」不能断 ----
+	# ---- R863 源码守卫：稀有度只走卡名框染色，锦旗缎带不得回到卡面 ----
 
-	# R170 第一版旗高只有 13k → 192px 高的燕尾锦旗被压成 ~6px 细线，
+	# 店长口径（R863）：「原本的稀有度旗子丢弃，改用卡名框的颜色来决定稀有度」。
 
-	# 肉眼观感 = 「banner 素材没应用」（用户实测）。几何靠出图核验，这里锁死两件事：
+	# 锁五件事：draw() / draw_pick() 都不再调缎带与色签、卡名框染色取自 rarity_color()、
+
+	# 卡名框纸面确实有绘制调用、六类框几何表齐全、外框与纸面素材都在。
 
 	if r122_in_dev:
 
-		var r173_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
+		var r863_src := FileAccess.get_file_as_string("res://scripts/card_face.gd")
 
-		var r173_i_art := r173_src.find("\t_draw_art(canvas, card, rect,")
+		check(r863_src.find("\t_draw_rarity_ribbon(") < 0,
 
-		var r173_i_ribbon := r173_src.find("\t_draw_rarity_ribbon(canvas, card, rect,")
+				"R863 卡面不再调用锦旗缎带（稀有度唯一通道 = 卡名框底色）")
 
-		check(r173_i_art >= 0 and r173_i_ribbon > r173_i_art,
+		check(r863_src.find("\t_draw_rarity_ribbon(") < 0,
 
-				"R173 缎带必须画在卡图**之后**（开放式卡图会盖住先画的东西，R170 教训）")
+				"R863 锦旗缎带只剩函数定义 —— draw / draw_pick 都不再调用（稀有度唯一通道 = 卡名框）")
 
-		check(r173_src.find("var rh: float = 27.0 * k") >= 0,
+		check(r863_src.find("\t_draw_plate(canvas, card, rect)") >= 0,
 
-				"R173 缎带旗高 27k（≈卡高 39%）—— 不许缩回 13k 细线")
+				"R863 卡名框纸面必须有绘制调用（否则稀有度无色可读）")
+
+		check(r863_src.find("var col := rarity_plate_color(card)") >= 0,
+
+				"R863 卡名框染色必须取自 rarity_plate_color()（= card.rarity_color()）")
+
+		var r863_miss := ""
+
+		for r863_k in ["bard", "enemy", "forest", "mech", "common", "shadow"]:
+
+			if not CardFace.FRAME_PLATE.has(r863_k) or not CardFace.FRAME_ART.has(r863_k):
+
+				r863_miss += (" geom:" + r863_k)
+
+			if UiAssets.card_outer_frame(r863_k, false) == null:
+
+				r863_miss += (" frame:" + r863_k)
+
+			if UiAssets.card_plate(r863_k) == null:
+
+				r863_miss += (" plate:" + r863_k)
+
+		check(r863_miss == "",
+
+				"R863 六类框的几何表 / 外框 / 卡名框纸面必须齐全（缺：%s）" % r863_miss)
 
 	# ---- R643 源码守卫：缎带款式**只能由 rarity 决定** ----
 	# 奖励三选一曾自己写死「史诗→紫缎带 / 其它→金缎带」（`"14" if card.rarity == 2 else "13"`），
@@ -48350,8 +48379,9 @@ func _init() -> void:
 		"R843d 卡名：卡面**不再对卡名折行**（单行 + 自适应缩放，防回退）")
 	check_src(r281_cf_src.contains("cover_region_anchored(tex.get_size(), box, 0.0)"),
 			"R843i-3 卡图：顶部零裁切锚点，纵向余量全让底部（宁可裁脚，不裁头）")
-	check_src(r281_cf_src.contains("var kind_text: String = GameI18n.source(card.kind)"),
-			"R843g 底部黑框：非单位卡种必须走多语译文，不留中文原文")
+	check_src(not r281_cf_src.contains("kind_text"),
+
+			"R863 卡面：卡种行彻底下线（卡种只由外框配色区分，不再占卡面文字）")
 	check(not r281_cf_src.contains("fallback_plate")
 			and not r281_cf_src.contains("for i in eff_n"),
 			"R843h 源码：详情效果绘制循环与带框姓名牌回退均已移除")
@@ -48372,6 +48402,55 @@ func _init() -> void:
 				-1, r843_kind_fs).x <= 160.5,
 				"R843g 卡种译文：%s 完整缩放落在底部黑框" % r843_lang)
 	GameSettings.language = r843_old_lang
+
+
+	# ---- R863：六类框几何（逐类不同）· 卡名框 = 稀有度 · 格底数值条 ----
+	var r863_kinds: Array[String] = ["bard", "enemy", "forest", "mech", "common", "shadow"]
+	check(CardFace.FRAME_PLATE.size() == 6 and CardFace.FRAME_ART.size() == 6,
+			"R863 六类框几何表：卡名框 %d 条 / 卡图窗 %d 条"
+			% [CardFace.FRAME_PLATE.size(), CardFace.FRAME_ART.size()])
+	var r863_card_rect := Rect2(Vector2.ZERO, Vector2(99, 119))
+	var r863_geo := {}
+	for r863_k in r863_kinds:
+		var r863_pl := CardFace.plate_rect(r863_card_rect, r863_k)
+		var r863_aw := CardFace.art_window_rect(r863_card_rect, r863_k)
+		check(r863_card_rect.encloses(r863_pl) and r863_card_rect.encloses(r863_aw),
+				"R863 %s：卡名框 %s / 卡图窗 %s 都落在卡内"
+				% [r863_k, str(r863_pl), str(r863_aw)])
+		check(r863_pl.end.y <= r863_aw.position.y + 0.6,
+				"R863 %s：卡图窗不压卡名框（板底 %.2f / 窗顶 %.2f）"
+				% [r863_k, r863_pl.end.y, r863_aw.position.y])
+		r863_geo["%s|%s" % [str(r863_pl), str(r863_aw)]] = true
+	check(r863_geo.size() >= 5,
+			"R863 六类框尺寸确实不同（几何组合 %d 种），不许再假设完全一致"
+			% r863_geo.size())
+	var r863_ref: CardData = CardRepo.load_json().get_card(9040)
+	var r863_spell: CardData = CardRepo.load_json().get_card(9003)   # 火焰箭 = 技能，不是场上单位
+	check(CardFace.rarity_plate_color(r863_ref).is_equal_approx(
+			r863_ref.rarity_color().lerp(Color.WHITE, CardFace.PLATE_WHITEN)),
+			"R863 稀有度：卡名框色 = rarity_color() 提亮 %.2f" % CardFace.PLATE_WHITEN)
+	var r863_palette := {}
+	for r863_c in CardRepo.load_json().all_cards():
+		r863_palette[CardFace.rarity_plate_color(r863_c).to_html(false)] = true
+	check(r863_palette.size() >= 5,
+			"R863 稀有度：卡名框底色至少覆盖 5 档（实际 %d 档）" % r863_palette.size())
+	var r863_cell := Rect2(Vector2(412.0, 100.0), Vector2(124.0, 86.0))
+	var r863_bar := CardFace.cell_stats_rect(r863_cell, 12.0)
+	check(r863_cell.encloses(r863_bar) and is_equal_approx(r863_bar.size.y, 12.0),
+			"R863 格底数值条：整条落在格子内且高 12（%s）" % str(r863_bar))
+	var r863_last := CardFace.cell_stat_cell_rect(r863_cell, 3, 4, 12.0)
+	check(r863_cell.encloses(r863_last)
+			and is_equal_approx(r863_last.end.x, r863_bar.end.x),
+			"R863 格底数值条：第 4 格右沿与条右沿对齐（%s）" % str(r863_last))
+	var r863_ally: CardData = CardRepo.load_json().get_card(8003)
+	var r863_vals := CardFace.cell_stats_values(r863_ally, 30, 7, 2, 1)
+	var r863_keys: Array[String] = []
+	for r863_v: Dictionary in r863_vals:
+		r863_keys.append(String(r863_v["key"]))
+	check(str(r863_keys) == str(["power", "range", "speed", "health"]),
+			"R863 格底数值：盟友读序固定 力/程/速/生（%s）" % str(r863_keys))
+	check(CardFace.cell_stats_values(r863_spell, 0).is_empty(),
+			"R863 格底数值：技能 / 效果没有四属性（返回空，不补空框）")
 
 
 
@@ -49197,13 +49276,16 @@ func _init() -> void:
 
 			"R288 镜头段：相邻两行能同屏 → 只切 1 段（实际 %d 段）" % r288_near.size())
 
-	check(r288_far.size() == 2 and (r288_far[0] as Array).size() == 1
-
-			and (r288_far[1] as Array).size() == 1,
-
-			"R288 镜头段：跨 6 行塞不进一屏 → 切成 2 段轮流演（实际 %d 段）"
-
-			% r288_far.size())
+	if float(r288_bs._grid_scroll_max()) - float(r288_bs._grid_scroll_min()) > 0.5:
+		check(r288_far.size() == 2 and (r288_far[0] as Array).size() == 1
+				and (r288_far[1] as Array).size() == 1,
+				"R288 镜头段：跨 6 行塞不进一屏 → 切成 2 段轮流演（实际 %d 段）"
+				% r288_far.size())
+	else:
+		# R863：6 行整屏可见 → 最远的两行也在同一屏里，一刀都不用切。
+		check(r288_far.size() == 1 and (r288_far[0] as Array).size() == 2,
+				"R863 镜头段：整屏可见 → 跨全场也只切 1 段（实际 %d 段）"
+				% r288_far.size())
 
 	check(r288_bs.cue_shot_rows([]).is_empty(),
 
@@ -49249,19 +49331,21 @@ func _init() -> void:
 
 			"R321 镜头：没有发动者 → 第 5 行在屏幕外也不挪（反方向同样成立）")
 
-	check(not bool(r321_bs.cue_should_pan(true, [5], float(r321_bs.cue_scroll_for([5])))),
-
-			"R321 镜头：有发动者但该行**已经完整在画面里** → 不挪（居中不是目的）")
-
-	check(bool(r321_bs.cue_should_pan(true, [5], r321_min)),
-
-			"R321 镜头：有发动者且该行在屏幕外 → 才挪（虚骨龙吐息要看得见发动者）")
-
-	check(bool(r321_bs.cue_rows_visible([2, 4], float(r321_bs.cue_scroll_for([2, 4]))))
-
-			and not bool(r321_bs.cue_rows_visible([0, 5], r321_min)),
-
-			"R321 镜头：相邻两行同屏算「已可见」，跨 6 行算「看不见」")
+	if r321_max - r321_min > 1.0:
+		check(not bool(r321_bs.cue_should_pan(true, [5], float(r321_bs.cue_scroll_for([5])))),
+				"R321 镜头：有发动者但该行**已经完整在画面里** → 不挪（居中不是目的）")
+		check(bool(r321_bs.cue_should_pan(true, [5], r321_min)),
+				"R321 镜头：有发动者且该行在屏幕外 → 才挪（虚骨龙吐息要看得见发动者）")
+		check(bool(r321_bs.cue_rows_visible([2, 4], float(r321_bs.cue_scroll_for([2, 4]))))
+				and not bool(r321_bs.cue_rows_visible([0, 5], r321_min)),
+				"R321 镜头：相邻两行同屏算「已可见」，跨 6 行算「看不见」")
+	else:
+		# R863：6 行整屏可见 → 任何一行都已在画面里，镜头一次都不该挪。
+		check(not bool(r321_bs.cue_should_pan(true, [5], r321_min)),
+				"R863 镜头：整屏可见 → 有发动者也不挪（恒 false）")
+		check(bool(r321_bs.cue_rows_visible([2, 4], float(r321_bs.cue_scroll_for([2, 4]))))
+				and bool(r321_bs.cue_rows_visible([0, 5], r321_min)),
+				"R863 镜头：整屏可见 → 任意行组合都算「已可见」")
 
 
 

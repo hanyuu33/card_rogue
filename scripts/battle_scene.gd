@@ -36,21 +36,20 @@ const WINDOW_W := 1280.0
 const WINDOW_H := 720.0
 const CARD_W := 63.0
 const CARD_H := 76.0
-## R117：格子**不再是正方形**。
-##   · 横边 `CELL_W` 的约束是「横置卡牌 + 左右各一个数值徽章半径」——
-##     卡横置时盒宽 = CARD_H、徽章又一左一右骑在框上，横边不够就会让**相邻两列的
-##     横置卡数字互相压住**（用户实测反馈）。102 对 76 + 2×8.3 = 92.6 留 9px 余量。
-##   · 纵边就是历史名 `CELL`，受「6 行要塞进工具栏(36)与手牌(619)之间」的硬约束，
-##     只能到 90（GRID_H = 540，棋盘下沿仍是 592，手牌不变量因此完全不动）。
-## R123：格子整体放大 —— 棋盘格子区改成**可上下滚动**（滚轮 / 空格左键拖动），
-## 6 行内容不再受「必须塞进 540px」的约束：
-##   · 横向占满「效果区(398) → 右栏(776)」：左沿 404（效果区右沿 398 + 6px 间隙），
-##     右沿 404 + 372 = 776 —— 右栏（敌方效果区 / 敌方 HP / 道具栏 / 牌库）一像素不动；
-##   · 格子 102×90 → 124×110，战场卡随格子等比放大（BOARD_SCALE ≈ 1.216）；
-##   · 内容总高 6×110 = 660 超出可视窗 540 → 需要滚动；R139 起边框贴着战场本体、
-##     跟着一起滚，所以滚动范围把上下边框带也算进去（见 _grid_scroll_min/_max）。
+## R863：**格子高度收回可视窗内 —— 战场不再需要滚动**。
+##   店长口径「格子上也不再需要显示 ↑/→ 标记（现在有可行动效果了）……可否减小格子，
+##   减小到不需要滚动就可以显示完整战场」。
+##   · 纵边 `CELL` 86 → 6 行 = 516，加外框上下带（12 + 8）= 536 ≤ 可视窗 540
+##     → `_grid_scrollable()` 恒假；滚轮 / 拖动 / 收场停在半场的旧行为全部退化成 0；
+##   · 横边 `CELL_W` **保持 124**：左沿 404（效果区右沿 398 + 6px）、右沿 776
+##     —— 右栏（敌方效果区 / 敌方 HP / 道具栏 / 牌库）一像素不动；
+##     卡宽 66 居中，左右各约 29px 是战场底纹，读起来是「格位」而不是「卡片挨着贴」；
+##   · 战场卡不再与格子等比：卡高 = `BOARD_CARD_H`（80），比格高小 6px，
+##     空出的下沿正好给**格底数值条**（`CardFace.draw_cell_stats()`）。
+##   · ⚠️ 上下边框带同步收窄（16/10 → 12/8）：带宽也计入滚动范围，
+##     带宽不收就会「内容塞得下、但差值 > 0.5px」→ 又变成可滚 2px 的假滚动。
 const CELL_W := 124.0
-const CELL := 110.0
+const CELL := 86.0
 const TAP_W := CARD_H
 const TAP_H := CARD_W
 const PANEL_LIFT := 44.0
@@ -70,13 +69,20 @@ const GRID_X := 404.0
 const GRID_Y := 52.0
 const GRID_W := 3.0 * CELL_W
 const GRID_H := 540.0               # **可视窗**高度（下沿 592 不变；内容总高见下）
-const GRID_CONTENT_H := 6.0 * CELL  # 6 行内容的总高（超出可视窗 → 需要滚动）
-## 战场卡随格子等比放大（102 → 124 的比例）。
-const BOARD_SCALE := CELL_W / 102.0
-const BOARD_CARD_W := CARD_W * BOARD_SCALE
-const BOARD_CARD_H := CARD_H * BOARD_SCALE
+const GRID_CONTENT_H := 6.0 * CELL  # R863：516 ≤ 540 → 整块战场一屏可见，不滚动
+## R863：战场卡的尺寸改由**格高**决定（不再是「格宽 ÷ 102」的等比放大）——
+## 新卡框的卡名框在顶部、卡图铺满整卡，高度才是它最要紧的一维：
+##   · 卡高 80 = 格高 86 − 上下各 3px，相邻格之间留出可辨认的缝；
+##   · 卡宽 = 80 × 63/76 ≈ 66.3（**锁死卡面比例**，不随格子变形）；
+##   · 卡底 3px + 格底 12px 数值条在 `_cell_rect()` 里画，不吃卡高。
+const BOARD_CARD_H := 80.0
+const BOARD_CARD_W := BOARD_CARD_H * (CARD_W / CARD_H)
+## 兼容口：老调用方（`HAND_CARD_H / BOARD_CARD_H` 之类）仍读它。
+const BOARD_SCALE := BOARD_CARD_H / CARD_H
 const BOARD_TAP_W := TAP_W * BOARD_SCALE
 const BOARD_TAP_H := TAP_H * BOARD_SCALE
+## 格底数值条高度（与 `CardFace.cell_stats_rect()` 的默认值同源）。
+const CELL_STATS_H := 12.0
 const GRID_SCROLL_STEP := 56.0      # 滚轮一步
 ## R137：棋盘边框（日漫西幻风）。四只角花来自 AI 生成素材 assets/ui/grid_frame.png
 ## （2x 分辨率）；四条直边用程序画的「暗石底 + 双金线」衔接 —— AI 原框接近方形，
@@ -90,9 +96,9 @@ const GRID_SCROLL_STEP := 56.0      # 滚轮一步
 ##   下 10（滚到底时下沿 592 = 可视窗下沿）。角花向内容区伸 PROTRUDE(14px)，
 ## 只盖角格的空白边距（战场卡距格沿 23.7/8.8px，四个角都碰不到卡面）。
 const GRID_FRAME_BAND_L := 12.0
-const GRID_FRAME_BAND_T := 16.0
+const GRID_FRAME_BAND_T := 12.0   # R863：16 → 12（见 CELL 注释：带宽计入滚动范围）
 const GRID_FRAME_BAND_R := 16.0
-const GRID_FRAME_BAND_B := 10.0
+const GRID_FRAME_BAND_B := 8.0    # R863：10 → 8（同上）
 const GRID_FRAME_PROTRUDE := 14.0
 ## R146：遮罩（`_draw_grid_mask`）横向范围的**额外余量**。边框的金色描边（1.5px 线宽）与
 ## 外圈投影（`outer.grow(2.0)` + 3px 线宽）还会再往外探出几个像素 —— 开场放大时棋盘外溢，
@@ -4951,6 +4957,11 @@ func load_level(lvl: Dictionary) -> void:
 		_grid_zoom = 1.0
 		_grid_intro_t = 0.0
 	else:
+		# R863：整块战场一屏可容（CELL 86）→ 不巡场、不滚动。但 `_grid_scroll` 必须
+		# 钉在 `_grid_scroll_min()`（= −GRID_FRAME_BAND_T）：留在 0 的话外框上带会被
+		# 画在 GRID_Y 之上、被遮罩裁掉，边框顶部就缺一条。min 与 max 此时相等，
+		# 直接取 max 也行，这里写 min 是为了让「顶带贴住可视窗上沿」这层意图可读。
+		_grid_scroll = _grid_scroll_min()
 		_grid_intro_t = -1.0
 		_grid_zoom = 1.0
 	queue_redraw()
@@ -10252,13 +10263,12 @@ func _draw_grid() -> void:
 		_draw_string_box_center(_font_bold, UI_FS_MICRO, "火墙",
 				Vector2(GRID_X + GRID_W - 18, GRID_Y + fw_row * CELL + 11 - _grid_scroll),
 				Color("ff9a3c"))
-	# 敌我框 + 单位标记
-	for cell: Vector2i in engine.state.board:
-		var p: Placement = engine.state.board[cell]
-		var rect := _cell_rect(cell)
-		draw_line(rect.position + Vector2(22, CELL - 3), rect.end - Vector2(22, 3), COL_OWN_FRAME if p.owner == GameEngine.SIDE_SELF else COL_ENEMY_FRAME, 3.0)
-		if p.tapped:
-			_draw_string_box_nw(_font_bold, UI_FS_MICRO, "→", rect.position + Vector2(CELL_W - 18, 16), TXT_LIGHT)
+	# ⚠️ R863：这里原本有「敌我下框线 + 横置『→』角标」，两项都已删除：
+	#   · 横置标记：店长口径「格子上也不再需要显示 ↑/→ 标记（现在有可行动效果了）」——
+	#     「还能不能动」由青色就绪光环（`_draw_ready_aura`）表达，方向箭头是重复信息，
+	#     而且在 66px 宽的卡上它会直接压住卡名框右端；
+	#   · 敌我下框线：格底数值条（`_draw_cell_stats`）的顶线已经按敌我分色，
+	#     旧线现在正好落在条底下，留着只是被盖住。
 
 
 func _board_has_pulsing_field() -> bool:
@@ -10663,9 +10673,14 @@ func _draw_trap_markers() -> void:
 			continue
 		var r := _cell_rect(cell)
 		var col := TrapArt.color_of(id)
-		draw_rect(r.grow(-3.0), Color(col.r, col.g, col.b, 0.10 + 0.06 * pulse), true)
-		draw_rect(r.grow(-3.0), Color(col.r, col.g, col.b, 0.45 + 0.35 * pulse), false, 2.0)
-		var s := 30.0
+		draw_rect(r.grow(-3.0), Color(col.r, col.g, col.b, 0.09 + 0.05 * pulse), true)
+		# R863：描边先铺一道深墨再叠彩色 —— 冰冻 / 毒瓶这类**浅色**陷阱直接压在
+		# 浅水面 / 草地上时，纯彩色 2px 边几乎看不见（缩小格子后出图实测）。
+		draw_rect(r.grow(-3.0), Color(0.05, 0.05, 0.07, 0.55), false, 3.5)
+		draw_rect(r.grow(-3.0), Color(col.r, col.g, col.b, 0.70 + 0.25 * pulse), false, 2.0)
+		# R863：图标尺寸**跟格子走**（原来写死 30 —— 格子从 110 缩到 86 之后，
+		# 30px 相对变大反而糊住格底数值条，且不同分辨率下比例不一致）。
+		var s := minf(CELL_W, CELL) * 0.40
 		TrapArt.draw(self, Rect2(r.get_center() - Vector2(s * 0.5, s * 0.5), Vector2(s, s)),
 				id, false)
 
@@ -10696,8 +10711,9 @@ func _draw_seal_markers() -> void:
 		draw_line(Vector2(r.end.x - pad, r.position.y + pad),
 				Vector2(r.position.x + pad, r.end.y - pad), seal_col, 3.0)
 		# 中央蒜图标：**只画图案、不画底框**（暗格上再叠一个深色方块就认不出是蒜了），
-		# 尺寸按格子走（0.5 格宽）—— 固定 34px 在 128px 的格子里太小。
-		var gs := CELL_W * 0.50
+		# 尺寸按格子走 —— R863 起取**短边**的 0.55：只按 CELL_W 算的话，格子变矮后
+		# 图标会顶到上下边框、把右上角的回合数挤得没地方站。
+		var gs := minf(CELL_W, CELL) * 0.55
 		TrapArt.draw_glyph(self, Rect2(r.get_center() - Vector2(gs * 0.5, gs * 0.5),
 				Vector2(gs, gs)), 7017)
 		# 右上角剩余我方回合数（「3」= 还能封 3 个我方回合）。不带底条 ——
@@ -10882,6 +10898,14 @@ func _draw_board_unit(cell: Vector2i, p: Placement) -> void:
 	if p.owner == GameEngine.SIDE_SELF and engine.can_activate(cell, GameEngine.SIDE_SELF):
 		_draw_activatable_aura(center, w, h)
 		_draw_activate_callout(center, w, h, selected, cell)
+	# R863：**格底数值条** —— 画在格子上（`_cell_rect`），不跟卡的位移动画走：
+	# 单位被打飞 / 落下时卡会位移，数字却应该钉在格位上（挪动的数字读起来像掉血）。
+	# 数值取**生效值**（effective_*），染色对比卡库原型 —— 与 R387 同一口径。
+	CardFace.draw_cell_stats(self, p.card, _cell_rect(cell), _font_bold,
+			_show_hp(p, p.health), p.effective_power(), p.effective_speed(),
+			p.effective_range(), p.armor,
+			COL_OWN_FRAME if p.owner == GameEngine.SIDE_SELF else COL_ENEMY_FRAME,
+			CELL_STATS_H)
 	# ⚠️ R613b（店长口径）：战场单位卡**不再叠文字徽标条**。
 	#   · 字段（次元 / 护盾 / 疾行 …）已由卡面右上角 glyph 承载（CardFace._draw_affix_badges，on_board 过滤），
 	#     早年那版同名文字条在此重复绘制，已删（次元回归 glyph）。
@@ -18579,12 +18603,10 @@ func _draw_pow_fx() -> void:
 		var p: Placement = engine.state.unit_at(f["cell"])
 		if p == null:
 			continue
-		var ctr := _display_center(p, f["cell"])
-		var w := BOARD_CARD_W
-		var h := BOARD_CARD_H
-		var card_rect := Rect2(ctr - Vector2(w, h) * 0.5, Vector2(w, h))
-		var cell := CardFace.stat_cell_rect(card_rect, 0, 4 if p.card.kind == "盟友" else 3)
-		# R843：力量已进底部属性栏第一格，跳字跟随该格，不再找旧版左下外溢徽章。
+		# R863：力量落在**格底数值条的第一格**，跳字跟着它走（卡面已无数值可跳）。
+		var cnt: int = 4 if p.card.kind == "盟友" else 3
+		var cell := CardFace.cell_stat_cell_rect(_cell_rect(f["cell"]), 0, cnt,
+				CELL_STATS_H)
 		var bc := cell.get_center()
 		var br: float = minf(cell.size.y * 0.46, cell.size.x * 0.30)
 		var bfs: int = maxi(8, roundi(cell.size.y * 0.76))
