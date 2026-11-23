@@ -6,7 +6,7 @@
 
 ---
 
-## 一、风格底（两套通用，直接贴首句）
+## 一、风格底（四套专用，按题材选一套，**不许混用**）
 
 ### A. 通用「日式动漫赛璐璐」风格底
 
@@ -98,6 +98,37 @@ NEVER a solid rectangle of one colour, NEVER a hard edge, NEVER a wall.
 > 而 fade 的 alpha 从 74% 才收，正好露出一条竖缝。
 > **「留白 / 留空 / keep it clean」这几个词在背景提示词里一律不许用。**
 > 参考产物：`assets/ui/side_lake_lady.png`（742×742）、`assets/ui/side_martial.png`。
+
+
+### D. **选人界面职业 CG 风格底（R864 现行）** —— 出 `class_cg_*` 只用这个
+
+> ⚠️ 和上面三套**不是一回事**，别混：
+> A 是硬边赛璐璐（`HARD-EDGED shadows`），C 是事件背景（`THICK CLEAN BLACK OUTLINE`）。
+> R864 用户口径要的是**柔和水彩层叠**，并点名禁 `hard cel-shaded TV anime blocks`。
+> 完整口径（四职业角色块 / 年龄约束 / 出图自查 / 迭代史）见
+> **`art_src/2026-11-23_选人CG重绘R864/PROMPTS.md`**。
+
+```
+Create a completely redesigned playable protagonist CG for the SAME Japanese western medieval fantasy game as the style reference. Delicate anime painterly linework, softly layered watercolor and opaque paint, luminous ivory highlights, subtle paper texture, atmospheric hand-painted environments, expressive natural face, carefully painted fabric and metal, storybook finish. No hard cel-shaded TV anime blocks, no photorealistic 3D, no UI, no text, no card frame, no watermark. Wide landscape 16:9, character right 60 percent, readable quieter scene left, full figure or knees-up with head fully inside image.
+```
+
+三条**几何契约**（不是审美，是选人界面决定的）：
+
+1. **16:9 横向** —— 落点 1280×720，别出方形或超宽。
+2. **人物在右 60%，左侧是安静的环境** —— 左侧要压 416px 详情面板，压上去不能挡脸。
+3. **头部完整在画面内** —— 头顶距源图上沿 ≥8%。上方还有 30px 标题栏，落图时再加 40px 延伸带。
+
+**年龄写死**（用户明确纠正过，被画老过一次）：
+
+| 职业 | 年龄 | 反面点名 |
+|---|---|---|
+| 森林精魄 | **8~9 岁** | `Avoid tall slender teen/adult silhouette, fitted corset, ornate heavy gear` |
+| 吟游诗人 | **11~12 岁** | 同上 |
+
+落图**不要手工 resize**（直接等比缩放会把头顶切进标题栏）：
+```bash
+python art_src/2026-11-23_选人CG重绘R864/_apply_cg.py
+```
 
 
 ---

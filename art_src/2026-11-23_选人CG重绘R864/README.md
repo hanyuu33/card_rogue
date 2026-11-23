@@ -5,6 +5,7 @@
 
 - 来源目录：`C:\Users\Administrator\.codex\generated_images\01a20765-70d8-71f3-bfca-7ae7e51074f4`
 - 逐张来源映射见 `_manifest.json`（`from` = codex 原始文件名，`mtime` = 生成时间）
+- **出图提示词全文见 [`PROMPTS.md`](PROMPTS.md)** —— 现役风格底、四职业角色块、年龄约束、出图自查都在那里，换 CG 先读它
 
 ## 一、选人 CG（`raw/cg/`，7 张 1672×941）
 
