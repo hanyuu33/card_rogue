@@ -792,7 +792,7 @@
   },
   "9116": {
    "name": "Pato Demoníaco",
-   "effect_text": "Comienza con dormir 2: no actúa, y empieza con 10 de Armadura (la Armadura nunca se restablece). Mientras la Armadura aguante, los golpes no reducen dormir. Dormir disminuye en 1 después de cada uno de sus turnos y en 1 cada vez que recibe daño una vez rota la Armadura; vuelve a actuar en cuanto dormir llega a cero, perdiendo toda la Armadura. Mientras esté despierto, obtiene +1 de Poder cada vez que recibe daño (permanente)."
+   "effect_text": "Comienza con dormir 2: no actúa, y empieza con 10 de Armadura (la Armadura nunca se restablece). Mientras la Armadura aguante, recibir daño no reduce dormir. Dormir disminuye en 1 después de cada uno de sus turnos y en 1 cada vez que recibe daño una vez rota la Armadura; vuelve a actuar en cuanto dormir llega a cero, perdiendo toda la Armadura. Mientras esté despierto, obtiene +1 de Poder cada vez que recibe daño (permanente)."
   },
   "9117": {
    "name": "Familiar Demoníaco",
@@ -1240,7 +1240,7 @@
   },
   "9241": {
    "name": "Cañón Láser",
-   "effect_text": "No puede realizar ataques normales. Duerme durante 2 turnos y empieza con 10 de Armadura (nunca se restablece; mientras la Armadura aguante, los golpes no reducen dormir). Cada turno elige dos columnas al azar y las anuncia; cuando actúa, inflige daño igual a su Poder a la primera unidad enemiga de cada una de esas dos columnas; si no hay ningún objetivo en esa columna, golpea directamente los HP del oponente. +1 de Poder cada turno."
+   "effect_text": "No puede realizar ataques normales. Duerme durante 2 turnos y empieza con 10 de Armadura (nunca se restablece; mientras la Armadura aguante, recibir daño no reduce dormir). Cada turno elige dos columnas al azar y las anuncia; cuando actúa, inflige daño igual a su Poder a la primera unidad enemiga de cada una de esas dos columnas; si no hay ningún objetivo en esa columna, golpea directamente los HP del oponente. +1 de Poder cada turno."
   },
   "9242": {
    "name": "Sombra de Pronoia",

@@ -1,0 +1,17 @@
+R860：沉睡文案「被攻击 / 挨打」→「受到伤害」
+
+R859 的判据是 `_demon_duck_hurt(p, cell, dealt)` 里 dealt > 0（真扣到血），
+旧文案写「挨打 / 被攻击」会让玩家以为攻击落空也算，与新口径不符。
+
+- 卡面 9116 恶魔鸭 / 9241 激光巨炮：中（cards.json + zh_canonical）英日西
+  五份同步，「护甲未破时受到伤害不减少沉睡」
+  · en  hits do not reduce Sleep → taking damage does not reduce Sleep
+  · ja  攻撃を受けても → ダメージを受けても
+  · es  los golpes no reducen → recibir daño no reduce
+- 战斗内可见文本：悬停提示「沉睡（还剩 N：自己的回合结束 -1，受到伤害也 -1）」、
+  沉睡日志同句；徽章注释「还差 N 点伤害就醒」
+- game_levels / test_engine 的同句注释与用例标签一并统一
+
+验证：_audit_text_sources A/B/C/D/E/F/G 全 0；i18n 四校验器 OK
+（spanish 24634 checks / interface 835）；十套回归全绿
+（engine 7313✓ / smoke 77✓ / 其余同基线）；存档 md5 全等还原。

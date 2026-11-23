@@ -1736,7 +1736,7 @@ const OWLBEAR_FOE_ID:= 9214
 #   * 行动 = **一轮打满三列**：每列对**该列第一个**敌方单位造成等同于力量的伤害（R540 三合一）；
 #   * 某一列一个目标都没有 → 该列直击对方 HP（走 `_damage_player`，与 attack_hp 同口径）；
 #   * 沉睡 / 力量成长都不写进这里：沉睡沿用 `FieldState.SLEEP_TRAIT`（恶魔鸭同一套，
-#     回合结束 -1、挨打也 -1），成长用关卡 `enemy_growth`（每回合 +1）——都是现成机制的复用。
+#     回合结束 -1、受到伤害也 -1），成长用关卡 `enemy_growth`（每回合 +1）——都是现成机制的复用。
 const LASER_TRAIT:= "激光炮"
 # R722（店长口径）：一轮**随机选两列**，不是三列全打 —— 「只站一两列就安全」仍然不成立，
 # 但也不再是每回合固定漏一次 HP。选列在**玩家回合开始**就定下来（`_laser_aim_mark`），
@@ -19384,7 +19384,7 @@ func _sleep_tick(side: String) -> void :
 			action.emit("wake", {"cell": cell, "card": p.card, "side": side,
 					"hurt": false, "awake": true})
 		else:
-			_log("%s 仍在沉睡（还剩 %d 点：回合结束 -1，挨打也 -1）" % [
+			_log("%s 仍在沉睡（还剩 %d 点：回合结束 -1，受到伤害也 -1）" % [
 					p.card.card_name, p.sleep_left])
 
 

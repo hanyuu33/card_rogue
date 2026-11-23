@@ -71604,7 +71604,7 @@ func _init() -> void:
 
 
 
-	# ④ 沉睡：走 place 的唯一初始化口，2 点；挨打也 -1（与恶魔鸭 9116 完全同一套语义）
+	# ④ 沉睡：走 place 的唯一初始化口，2 点；受到伤害也 -1（与恶魔鸭 9116 完全同一套语义）
 
 	var r539_e := _new_engine([], 40, 40)
 
@@ -71623,7 +71623,7 @@ func _init() -> void:
 
 	check(r539_p1.sleep_left == FieldState.SLEEP_TURNS - 1,
 
-			"R539 激光炮：挨打也 -1（与「沉睡」同语义，没有独立机制）")
+			"R539 激光炮：受到伤害也 -1（与「沉睡」同语义，没有独立机制）")
 
 	var r539_duck := r539_e.state.place(CardData.from_dict(repo.get_card(9116).to_dict()),
 

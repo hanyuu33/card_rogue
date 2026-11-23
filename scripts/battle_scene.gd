@@ -200,7 +200,7 @@ const LP_MS := 500              # R186：触屏长按判定时长（毫秒）—
 const LP_SLOP := 18.0           # R186：长按允许的最大位移（px，超过视为拖拽）
 const COL_TAUNT := UiTheme.STATE_TAUNT              # 嘲讽：战场单位的橙色脉冲光环（必须优先打它）
 const COL_FROZEN := UiTheme.STATE_FROZEN             # 冰封（寒冰箭/冻结陷阱/冰冻战吼）：冷蓝脉冲环 + 寒霜（这回合动不了）
-const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（带「沉睡」trait 的单位：恶魔鸭 9116 / 激光巨炮 9241）：紫脉冲环 + Zzz（还差 N 下挨打就醒）
+const COL_SLEEP := UiTheme.STATE_SLEEP              # 沉睡（带「沉睡」trait 的单位：恶魔鸭 9116 / 激光巨炮 9241）：紫脉冲环 + Zzz（还差 N 点伤害就醒）
 const COL_FUSE := UiTheme.STATE_FUSE                # 铸造倒计时（R149）：橙红脉冲环 +「倒数 N」徽标
 const COL_STUN := UiTheme.STATE_STUN                # 眩晕（R341 惊奇盒子 / 摇篮曲 / 组合）：金色虚线环 + 绕头星点
 const COL_FIELD_SELF := Color("ffb03a")         # 场地效果（R74）：我方放的 —— 琥珀色斜纹 + 名字角标
@@ -8027,7 +8027,7 @@ func _on_hover(pos: Vector2) -> void:
 			# R122：沉睡有**两个**递减口 —— 自己的回合结束 -1（回合口）、每次受伤 -1
 			#（受伤口）。写清「还剩几点」，玩家才知道该不该现在就打。
 			if p.sleep_left > 0:
-				tip += "　💤 沉睡（还剩 %d：自己的回合结束 -1，挨打也 -1）" % p.sleep_left
+				tip += "　💤 沉睡（还剩 %d：自己的回合结束 -1，受到伤害也 -1）" % p.sleep_left
 			# R87：护盾 / 自我修复都是隐藏状态，悬停必须写明「为什么它没掉血」。
 			if p.first_hit_shield:
 				tip += "　🛡 能量屏障（**第一次受到的伤害为 0**，用完消失）"
