@@ -135,18 +135,8 @@ func _av_row_w() -> float:
 
 
 func _av_row_x0() -> float:
-	## R519c：头像行**不能按窗口居中**。
-	## 加「随机」之后整组变宽、居中点左移 53px，第一枚头像连同名牌就压进了左侧详情面板
-	## （实测重叠 43×66，用户报的「人物图标重叠在左侧详情上」就是这个）。
-	## 改成在「详情面板右缘 → 右列（禁卡表 / 随机种子）左缘」这段**空档**里居中 ——
-	## 空档是按面板矩形算出来的，将来面板变宽变窄也不会再撞。
-	var l := _panel_rect().end.x + ROW_PAD
-	var r := _seed_panel_rect().position.x - ROW_PAD
-	var w := _av_row_w()
-	if r - l <= w:
-		# 空档塞不下（更窄的屏 / 将来加职业）→ 贴左界，宁可右侧紧一点也不压面板
-		return l
-	return l + (r - l - w) * 0.5
+	# 所有角色与随机入口排在左下，右侧留给 CG 人物。
+	return 28.0
 
 
 func _av_rect(i: int) -> Rect2:
@@ -155,10 +145,10 @@ func _av_rect(i: int) -> Rect2:
 
 
 func _bard_rect() -> Rect2:
-	## R761：吟游诗人的槽位 = **森林精魄头像正上方**，同尺寸同名牌。
-	## 纵向：槽底与 firstName 的名字条之间留 4px；横向：与 av0 严格同 x。
+	## 吟游诗人与其他角色同排，位于随机入口之后。
+	## 绘制与点击均使用此矩形。
 	var r := _av_rect(0)
-	return Rect2(r.position.x, r.position.y - AV - 56.0, AV, AV)
+	return Rect2(_rand_rect().end.x + AV_GAP, r.position.y, AV, AV)
 
 
 func _current_cid() -> String:
@@ -177,7 +167,7 @@ func _rand_rect() -> Rect2:
 func _panel_rect() -> Rect2:
 	# R223：底边从 size.y-214 改为 -190（给难度档位块让出空间）；
 	# 头像行顶边 = size.y-160，靠这 30px 缝隙分开。
-	return Rect2(40.0, 96.0, PANEL_W, size.y - 190.0)
+	return Rect2(24.0, 76.0, PANEL_W, size.y - 266.0)
 
 
 # 难度档位行：左箭头 / 档位盒 / 右箭头（R223，原来是三按钮 _diff_rect(i)）。
@@ -219,18 +209,18 @@ func _confirm_rect() -> Rect2:
 func _seed_panel_rect() -> Rect2:
 	## R261：种子面板摆在右下角 —— CG 人物一般在中左、头像行在底部居中，
 	## 这一块既不挡角色也不压头像（右上角是道具 / 牌库查看器）。
-	return Rect2(size.x - 356.0, size.y - 236.0, 316.0, 150.0)
+	return Rect2(24.0, 0.0, 480.0, 44.0)
 
 
 func _seed_edit_rect() -> Rect2:
 	var p := _seed_panel_rect()
-	return Rect2(p.position.x + 18.0, p.position.y + 40.0, p.size.x - 36.0, 34.0)
+	return Rect2(p.position.x + 112.0, p.position.y + 5.0, p.size.x - 124.0, 34.0)
 
 
 func _ban_rect() -> Rect2:
 	## R346：禁卡表入口 —— 摆在种子面板正上方（同一列、同宽），不挡 CG 也不压头像行。
 	var p := _seed_panel_rect()
-	return Rect2(p.position.x, p.position.y - 48.0, p.size.x, 36.0)
+	return Rect2(_panel_rect().position.x + 40.0, _confirm_rect().position.y - 48.0, PANEL_W - 80.0, 34.0)
 
 
 func _build_seed_edit() -> void:
@@ -290,6 +280,12 @@ func _sync_seed_edit() -> void:
 	var r := _seed_edit_rect()
 	_seed_edit.position = r.position
 	_seed_edit.size = r.size
+	var label := $TopBar/TitleLabel as Label
+	label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	label.position = Vector2(40.0 + UiTheme.win_dx(self), 0.0)
+	label.size = Vector2(92.0, 44.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.add_theme_font_size_override("font_size", UiTheme.FS_LABEL)
 
 
 func _on_seed_changed(txt: String) -> void:
@@ -312,21 +308,13 @@ func _on_seed_changed(txt: String) -> void:
 
 func _draw_seed_panel() -> void:
 	_draw_ban_button()
-	var p := _seed_panel_rect()
-	UiTheme.draw_info_card(self, p)
-	draw_rect(p, Color("b4523f") if _seed_bad else Color(1, 1, 1, 0.22), false, 1.6)
-	draw_string(_font_bold, p.position + Vector2(18, 26), GameI18n.ui("shell", "CLASS_PICK_SEED_TITLE", "随机种子"),
-			HORIZONTAL_ALIGNMENT_LEFT, 200, UiTheme.FS_BODY, UiTheme.PAGE_INK)
-	draw_string(_font, p.position + Vector2(18, 96), "留空 = 每局随机",
-			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 36.0, UiTheme.FS_CAPTION, Color("9a968c"))
-	var hint2 := GameI18n.ui("shell", "CLASS_PICK_SEED_FORMAT_HINT", "或填 10 位（A-Z / 0-9）复现同一局")
-	var hint_col := Color("7d8590")
-	if _seed_bad:
-		hint2 = GameI18n.ui("shell", "CLASS_PICK_SEED_INVALID", "种子需 10 位：大写字母 / 数字")
-		hint_col = Color("e07a6a")
-	draw_string(_font, p.position + Vector2(18, 116), hint2,
-			HORIZONTAL_ALIGNMENT_LEFT, p.size.x - 36.0, UiTheme.FS_CAPTION, hint_col)
-
+	if _seed_edit != null:
+		_seed_edit.tooltip_text = "留空 = 每局随机\n或填 10 位（A-Z / 0-9）复现同一局"
+		if _seed_bad:
+			_seed_edit.tooltip_text = "种子需 10 位：大写字母 / 数字"
+	var label := $TopBar/TitleLabel as Label
+	label.text = "种子格式错误" if _seed_bad else "随机种子"
+	label.add_theme_color_override("font_color", Color("ffb39d") if _seed_bad else UiTheme.ADVENTURE_LIGHT)
 
 # ──────────────────────────────────────────────────────────────
 

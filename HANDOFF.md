@@ -2564,3 +2564,6 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 - 应用赫菲斯托斯 v2、启示者、舰炮、电磁屏障、紧急呼叫和三层背景；阶段 p2/p3 复用新版屏障/援军图，已有 pending 副本同步。
 - Godot 4.3 --headless --editor --import --quit 通过；map.tscn --layer 3 与 battle.tscn --level 40 截图目视通过，无 stderr，截图随归档保存。未改玩法代码，未跑全量玩法回归。
 - 外部 scripts/class_pick_scene.gd 与 art_src/2026-11-23_class_pick/ 保持不动。未推送；本阶段提交见 git log。
+
+## 2026-11-23 选人界面暂停
+用户要求停手，仅记录交接。当前 class_pick_scene.gd 为未验收草稿，种子已迁移顶栏并替代标题；未提交、未推送、未打包。完整状态、截图限制与后续步骤见 CLASS_PICK_NEXT_STEPS.md。不要将中间截图视为最终验收。
