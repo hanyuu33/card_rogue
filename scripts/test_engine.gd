@@ -78990,7 +78990,7 @@ func _test_r792() -> void:
 
 	RunState.current_layer = r792_layer_save
 
-	# ③ 兵：第一个盟友当回合就有 2 轮行动；第二个只 1 轮
+	# ③ 兵（R860）：第 3 个盟友当回合就有 2 轮行动；前两个只 1 轮
 	var r792_pawn_relics: Array[int] = [6071]
 
 	RunState.relics = r792_pawn_relics
@@ -79005,15 +79005,21 @@ func _test_r792() -> void:
 
 	r792_pawn.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))
 
+	r792_pawn.state.hand.append(CardData.from_dict(r792_cards.get_card(9028).to_dict()))
+
 	var r792_n1 := r792_pawn.play_from_hand(0, Vector2i(5, 1))
 
 	var r792_n2 := r792_pawn.play_from_hand(0, Vector2i(4, 1))
+	var r792_n3 := r792_pawn.play_from_hand(0, Vector2i(5, 0))
 
-	check(r792_n1 != null and r792_n1.acts_left == 2 and r792_pawn.state.unit_actions(r792_n1, "self") == 2,
-			"R792 兵：第一个盟友本回合就有 2 轮行动（acts_left=%d）" % (r792_n1.acts_left if r792_n1 != null else -1))
+	check(r792_n1 != null and r792_n1.acts_left == 1 and not r792_n1.pawn_ally_twice,
+			"R860 兵：第一个盟友只行动一次（acts_left=%d）" % (r792_n1.acts_left if r792_n1 != null else -1))
 
-	check(r792_n2 != null and r792_n2.acts_left == 1 and not r792_n2.first_ally_twice,
-			"R792 兵：第二个盟友只行动一次")
+	check(r792_n2 != null and r792_n2.acts_left == 1 and not r792_n2.pawn_ally_twice,
+			"R860 兵：第二个盟友只行动一次")
+
+	check(r792_n3 != null and r792_n3.acts_left == 2 and r792_pawn.state.unit_actions(r792_n3, "self") == 2,
+			"R860 兵：第三个盟友本回合就有 2 轮行动（acts_left=%d）" % (r792_n3.acts_left if r792_n3 != null else -1))
 
 	# ④ 墙砖：工事 6+4=10；离场还原成 6（同一张回手再上场不会叠成 +8）
 	var r792_brick_relics: Array[int] = [6072]
@@ -79038,11 +79044,11 @@ func _test_r792() -> void:
 	check(r792_back != null and r792_back.health == 8,
 			"R792 墙砖：离场还原成 8 血（实得 %d）" % (r792_back.health if r792_back != null else -1))
 
-	# ⑤ 源码守卫：「第一个盟友」两个额度各只发一次，重置点在 start_game
+	# ⑤ 源码守卫：板甲「第一个盟友」只发一次；R860 兵按计数第 3 个才发，重置点在 start_game
 	var r792_ge_src := FileAccess.get_file_as_string("res://scripts/game_engine.gd")
 
-	check_src(r792_ge_src.contains("_plate_first_ally_done = false") and r792_ge_src.contains("_pawn_first_ally_done = false") and r792_ge_src.contains("state.grant_actions(p, state.unit_actions(p, SIDE_SELF))"),
-			"R792 源码守卫：兵的双动走 grant_actions 补发，两个额度在 start_game 重置")
+	check_src(r792_ge_src.contains("_plate_first_ally_done = false") and r792_ge_src.contains("_pawn_ally_used = 0") and r792_ge_src.contains("if _pawn_ally_used == PAWN_AT:") and r792_ge_src.contains("state.grant_actions(p, state.unit_actions(p, SIDE_SELF))"),
+			"R860 源码守卫：兵按计数第 3 个才发双动、走 grant_actions 补发，start_game 归零")
 
 	RunState.relics = r792_sv_relics
 
@@ -79074,7 +79080,7 @@ func _test_r796() -> void:
 			and r796_trap_repo.get_trap(7014).is_usable(),
 			"R796 数据层：卡牌包 7013（fill_hand）/ 智慧药剂 7014（draw_cards 3）都是使用型")
 
-	# ② 刺墙扩面：敌人**直击我方 HP** → 攻击者 -5（原来只管工事，这条永远不触发）
+	# ② 刺墙扩面：敌人**直击我方 HP** → 攻击者 -4（原来只管工事，这条永远不触发）
 	var r796_sw_relics: Array[int] = [6073]
 	RunState.relics = r796_sw_relics
 	var r796_sw := _new_engine([], 40, 40)
@@ -79084,8 +79090,8 @@ func _test_r796() -> void:
 	check(r796_foe != null, "R796 刺墙扩面：攻击者就位")
 	var r796_foe_hp0: int = r796_foe.health
 	r796_sw.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
-	check(r796_foe.health == r796_foe_hp0 - 5,
-			"R796 刺墙扩面：直击 HP → 攻击者 -5（%d → %d）" % [r796_foe_hp0, r796_foe.health])
+	check(r796_foe.health == r796_foe_hp0 - 4,
+			"R860 刺墙：直击 HP → 攻击者 -4（%d → %d）" % [r796_foe_hp0, r796_foe.health])
 
 	# ②b 刺墙一回合一次（R827）：工事反过之后，同回合直击 HP 不再反（共享额度）
 	RunState.relics = [6073]
@@ -79104,7 +79110,7 @@ func _test_r796() -> void:
 	var r827_she2hp0: int = r827_she2.health
 	r827_sh.attack(Vector2i(4, 0), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
 	r827_sh.attack_hp(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
-	check(r827_she1.health == r827_she1hp0 - 5 and r827_she2.health == r827_she2hp0,
+	check(r827_she1.health == r827_she1hp0 - 4 and r827_she2.health == r827_she2hp0,
 			"R827 刺墙一回合一次：工事反过后同回合 HP 直击不反（共享额度 %d/%d）" % [
 				r827_she1.health, r827_she2.health])
 	# ③ 不持道具时直击 HP 不反伤
@@ -79518,7 +79524,7 @@ func _test_r800() -> void:
 
 
 func _test_r793() -> void:
-	## R793（用户口径）：刺墙 6073（己方工事被攻击 → 攻击者受 5 伤）/
+	## R860：刺墙 6073 伤害由 5 下调为 4（工事 / HP 被攻击 → 攻击者受 4 伤）/
 	## 应急装甲 6074（玩家 HP 每回合最多受 20 伤）。
 	var r793_cards := CardRepo.load_json()
 	var r793_sv_relics: Array[int] = RunState.relics.duplicate()
@@ -79532,7 +79538,7 @@ func _test_r793() -> void:
 	check(r793_repo.normal_reward_ids().has(6073) and r793_repo.normal_reward_ids().has(6074),
 			"R793 两件都在「一般」档（normal_reward_ids 含）")
 
-	# ② 刺墙：敌方普攻打我方工事 → 攻击者 -5
+	# ② 刺墙：敌方普攻打我方工事 → 攻击者 -4
 	# 木栅栏 8001 是 2 费 6 血工事；铁壁卫兵 1011 是 4 攻近战 —— 各打一下都活得下来，
 	# 所以这里量的是「反伤有没有落地」，不是「谁先死」。
 	var r793_sw_relics: Array[int] = [6073]
@@ -79549,8 +79555,8 @@ func _test_r793() -> void:
 			"R793 刺墙：工事与攻击者都就位")
 	var r793_foe_hp0: int = r793_foe.health
 	r793_sw.attack(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
-	check(r793_foe.health == r793_foe_hp0 - 5,
-			"R793 刺墙：攻击工事 → 攻击者 -5（%d → %d）" % [r793_foe_hp0, r793_foe.health])
+	check(r793_foe.health == r793_foe_hp0 - 4,
+			"R860 刺墙：攻击工事 → 攻击者 -4（%d → %d）" % [r793_foe_hp0, r793_foe.health])
 
 	# ②b 刺墙一回合一次（R827）：同回合第二刀不反；换回合恢复额度
 	var r827_w_relics: Array[int] = [6073]
@@ -79574,7 +79580,7 @@ func _test_r793() -> void:
 	var r827_e2hp0: int = r827_e2.health
 	r827_w.attack(Vector2i(4, 0), Vector2i(5, 0), GameEngine.SIDE_OPPONENT)
 	r827_w.attack(Vector2i(4, 1), Vector2i(5, 1), GameEngine.SIDE_OPPONENT)
-	check(r827_e1.health == r827_e1hp0 - 5 and r827_e2.health == r827_e2hp0,
+	check(r827_e1.health == r827_e1hp0 - 4 and r827_e2.health == r827_e2hp0,
 			"R827 刺墙一回合一次：同回合两刀只反第一刀（%d/%d）" % [
 				r827_e1.health, r827_e2.health])
 	r827_w.turn_number += 1
@@ -79586,7 +79592,7 @@ func _test_r793() -> void:
 			Vector2i(4, 2), GameEngine.SIDE_OPPONENT)
 	var r827_e3hp0: int = r827_e3.health
 	r827_w.attack(Vector2i(4, 2), Vector2i(5, 2), GameEngine.SIDE_OPPONENT)
-	check(r827_e3.health == r827_e3hp0 - 5,
+	check(r827_e3.health == r827_e3hp0 - 4,
 			"R827 刺墙一回合一次：换回合后额度恢复（%d → %d）" % [r827_e3hp0, r827_e3.health])
 	# ③ 刺墙只认工事：同样的位置换成盟友，攻击者不掉血
 	RunState.relics = r793_sw_relics

@@ -2625,3 +2625,10 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 
 第三批追加 8045_自主升级.png（多臂机械自行换齿轮），完整提示 8045_prompt.txt。累计13张候选，第三批现为6张。下一批优先 8034 堡垒、8038 无限装甲、8043 模仿者、8044 加厚装甲，先读取 cards.json 效果再独立设计。所有候选未接入游戏。
 
+
+## 2026-11-24 R860 道具平衡调整
+- 刺墙 6073：反伤由 5 下调为 4（`SPIKE_WALL_DMG`），工事 / 玩家 HP 两条触发共用；relics.json 与 zh/en/ja/es 四语 desc、R793 图标 README 同步。
+- 兵 6071：由「本场第一个盟友双动」改为「第三个盟友双动」。引擎 `_pawn_first_ally_done` 布尔换成 `_pawn_ally_used` 计数（`PAWN_AT:= 3`），`Placement.first_ally_twice` 更名 `pawn_ally_twice`，`start_game` 归零；板甲 / 圣剑注释同步说明判据差异。
+- 测试：`_test_r792` 放 3 张龙裔验证「1、2 单动，3 双动」；`_test_r793` / `_test_r796` 的 -5 断言全部改为 -4。
+- 验证：四个改动 .gd 的 `--check-only` 全过；`python _verify.py` 十套全绿（engine 7350✓ / 0✗，reward 26✓，smoke 77✓）。
+- 仅纳入相关源文件与 HANDOFF.md；工作区原有未跟踪素材、草稿与本次补丁脚本未提交。

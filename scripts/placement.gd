@@ -159,9 +159,10 @@ var speed_cap: int = 0
 ## ⚠️ 判据在 `_relic_on_enter_buffs()` 里：`owner == SIDE_SELF and kind == "盟友"` ——
 ##    工事是 0 速建筑，被 +1 的话栅栏会自己走起来。
 var honey_spd: int = 0
-## R792 兵（6071）：本场第一个盟友可以行动两次。读在 `FieldState.unit_actions()` ——
+## R860 兵（6071）：本场第三个盟友可以行动两次。读在 `FieldState.unit_actions()` ——
 ## 与疾行 / 哈气 / 赫利俄斯同一条「取最大」通道，落地与回合重置自动一致。
-var first_ally_twice: bool = false
+## 「第几个」由引擎计数判定（`_pawn_ally_used == PAWN_AT`），这里只标记已授予。
+var pawn_ally_twice: bool = false
 ## R761 诗（6069，吟游诗人初始道具）：「**其他职业**的盟友 +2 力量」——
 ## 与竖琴 / 野性图腾**逐字同构**的持续 buff（赋值不累加、绝不写回 `card.power`）。
 ## 与竖琴唯一的差别是判据：只看「这张盟友不是吟游诗人自己的」（杜鹃不算）。
@@ -437,7 +438,7 @@ func status_entries() -> Array[Dictionary]:
 	if honey_spd > 0:
 		out.append({"label": "蜂蜜：移动速度 +%d（本场）" % honey_spd,
 				"col": COL_B, "kind": "buff"})
-	if first_ally_twice:
+	if pawn_ally_twice:
 		out.append({"label": "兵：本场可行动两次",
 				"col": COL_B, "kind": "buff"})
 	if sword_atk > 0:

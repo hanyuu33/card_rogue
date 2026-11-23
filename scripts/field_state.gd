@@ -547,10 +547,10 @@ func unit_actions(p: Placement, side: String) -> int:
 	# 9138 量产型赫菲斯托斯这些在太阳熔炉里也会双动，别再只认俄倪厄。
 	if GameEngine.is_mass_produced(p.card) and has_sun_forge(side):
 		n = maxi(n, GameEngine.SUN_FORGE_ACTIONS)
-	# R792 兵（6071）：本场第一个盟友可以行动两次 —— 与上面几条同一条「取最大」通道，
+	# R860 兵（6071）：本场第三个盟友可以行动两次 —— 与上面几条同一条「取最大」通道，
 	# 于是 place / reset_units / apply_extra_actions 三处自动一致，不会出现
 	# 「上场那回合只动一次、下回合才双动」的错位。
-	if p.first_ally_twice:
+	if p.pawn_ally_twice:
 		n = maxi(n, GameEngine.PAWN_ACTIONS)
 	return n
 

@@ -260,9 +260,9 @@
       "desc": "La primera vez cada turno que uses un Aliado de otra clase, ganas 1 de Coste. Los Aliados de otras clases tienen +2 de Poder (efecto persistente; no se acumula)."
     },
     "6070": {"name": "Armadura de Placas", "desc": "El primer Aliado que juegas en cada combate obtiene +3 de Vida por Nivel actual (no se acumula), pero su Velocidad de Movimiento pasa a ser 1."},
-    "6071": {"name": "Peón", "desc": "El primer Aliado que juegas en cada combate puede actuar dos veces (no se acumula)."},
+    "6071": {"name": "Peón", "desc": "El tercer Aliado que juegas en cada combate puede actuar dos veces (no se acumula)."},
     "6072": {"name": "Ladrillo", "desc": "Tus Estructuras tienen +4 de Vida (efecto persistente; no se acumula)."},
-    "6073": {"name": "Muro de Púas", "desc": "Una vez por turno: cuando una de tus Estructuras o tu Vida es atacada, inflige 5 de daño al atacante."},
+    "6073": {"name": "Muro de Púas", "desc": "Una vez por turno: cuando una de tus Estructuras o tu Vida es atacada, inflige 4 de daño al atacante."},
     "6074": {"name": "Armadura de Emergencia", "desc": "No puedes recibir más de 20 de daño por turno."},
     "6075": {"name": "Espada Sagrada", "desc": "El primer Aliado que juegas en cada combate obtiene +10 de Poder (no se acumula)."},
     "6076": {"name": "Pata de conejo", "desc": "Ganas 10 de oro extra al vencer en combate y la probabilidad de que caiga una herramienta tras el combate aumenta un 10% (aditivo)."},

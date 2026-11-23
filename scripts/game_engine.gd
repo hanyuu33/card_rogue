@@ -929,10 +929,11 @@ const HARPOON_DMG:= 4
 #      真正的切换在三个公共出牌入口的返回处，见 `_clock_maybe_switch()`。
 const DEFECT_CLOCK_ID:= 6084
 const DEFECT_CLOCK_AT:= 12
-# R792 兵（6071，一般档）：每场战斗**第一个盟友**可以行动两次。
+# R860 兵（6071，一般档）：每场战斗**第三个盟友**可以行动两次。
 #   读在 `FieldState.unit_actions()`（唯一口），落地时还要补发一次行动轮数。
 const PAWN_RELIC_ID:= 6071
 const PAWN_ACTIONS:= 2
+const PAWN_AT:= 3     # R860 兵：本场第 3 个落地的己方盟友才获得双动
 # R792 墙砖（6072，一般档）：所有己方工事生命 +4（持续生效，不叠加）。
 #   与竖琴逐字同构 —— 只写 Placement 字段 + 出口，绝不写回 `card.power` 那种共享基数。
 const BRICK_RELIC_ID:= 6072
@@ -946,7 +947,7 @@ const BRICK_HP:= 4
 const SHELL_RELIC_ID:= 6078
 const SHELL_REDUCE:= 2
 const SPIKE_WALL_RELIC_ID:= 6073
-const SPIKE_WALL_DMG:= 5
+const SPIKE_WALL_DMG:= 4
 # R796 刺墙**扩面**（用户口径「工事和 HP 被攻击时」）：反伤触发面从「工事」加到
 #   「工事 + 玩家 HP」。常量不变，只多挂一处 —— 见 `attack_hp()` 里那一段。
 # R827 刺墙**一回合一次**：反伤每回合（turn_number 口径）至多触发一次 ——
@@ -2645,7 +2646,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	_poem_used = false          # R761 诗：每场战斗从「这回合还没回费」开始
 	_master_sword_first_ally_done = false   # R793 圣剑：第一个盟友的额度每场重置
 	_plate_first_ally_done = false   # R792 板甲：第一个盟友的额度每场重置
-	_pawn_first_ally_done = false    # R792 兵：同上
+	_pawn_ally_used = 0              # R860 兵：本场计数归零（第 3 个盟友双动）
 	_armor_turn_key = -1             # R793 应急装甲：额度每场战斗从零开始
 	_armor_turn_taken = 0
 	_steel_stamp_used = false   # R307：思想钢印每场战斗一次
@@ -4639,10 +4640,10 @@ var earring_pending := false      # 是否处于「自动出牌中」
 var _poem_used := false
 # R793 圣剑（6075）：本场「第一个盟友」的额度是否已经发过（每场战斗一次，start_game 重置）。
 var _master_sword_first_ally_done := false
-# R792 板甲 / 兵：本场「第一个盟友」的额度是否已经发过（每场战斗各一次）。
+# R792 板甲：本场「第一个盟友」的额度是否已经发过；R860 兵：计本场已落地几个盟友。
 # 两件道具分开记 —— 只持有一件时另一个标记永远不动，将来加第二件同型道具也不打架。
 var _plate_first_ally_done := false
-var _pawn_first_ally_done := false
+var _pawn_ally_used := 0
 # R793 应急装甲：本回合玩家 HP **已实际受到**的伤害（额度 = EMERGENCY_ARMOR_CAP - 它）。
 # 与赫尔墨斯 `Placement.turn_dmg_key / turn_dmg_taken` 同一套「换回合 key 失配即归零」写法，
 # 只是玩家没有 Placement 可挂，额度记在引擎上；`start_game()` 一并清零。
@@ -14401,15 +14402,16 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		p.speed_cap = PLATE_SPEED
 		_log("板甲：第一个盟友 %s 获得 +%d 生命（%d），移动速度降为 %d"
 				% [card.card_name, plate_hp, p.health, p.effective_speed()])
-	# ── R792 兵（6071）──────────────────────────────────────────────
-	# 同一个「第一个盟友」可以行动两次。`first_ally_twice` 只为 `unit_actions()` 提供判据，
-	# 但**落地这一刻**行动轮数已经发过了（`place()` 里按老的 unit_actions 发的），
+	# ── R860 兵（6071）──────────────────────────────────────────────
+	# 本场**第 3 个**落地的己方盟友可以行动两次（原为第 1 个）。`pawn_ally_twice` 只为
+	# `unit_actions()` 提供判据，落地这一刻行动轮数已按老口径发过，
 	# 所以这里必须按差额补发一次 —— 走 `grant_actions` 唯一口，别直接写 `acts_left`。
-	if RunState.has_relic(PAWN_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友" and not _pawn_first_ally_done:
-		_pawn_first_ally_done = true
-		p.first_ally_twice = true
-		state.grant_actions(p, state.unit_actions(p, SIDE_SELF))
-		_log("兵：第一个盟友 %s 本场可以行动两次" % card.card_name)
+	if RunState.has_relic(PAWN_RELIC_ID) and p.owner == SIDE_SELF and card.kind == "盟友":
+		_pawn_ally_used += 1
+		if _pawn_ally_used == PAWN_AT:
+			p.pawn_ally_twice = true
+			state.grant_actions(p, state.unit_actions(p, SIDE_SELF))
+			_log("兵：第 %d 个盟友 %s 本场可以行动两次" % [_pawn_ally_used, card.card_name])
 	# ── R792 墙砖（6072）────────────────────────────────────────────
 	# 所有己方工事 +4 生命（持续生效，不叠加）：同一张工事回手再上场也只 +4，
 	# 因为离场时 `_card_leaving_field()` 已经把这一份减掉了。
@@ -14420,7 +14422,7 @@ func _relic_on_enter_buffs(p: Placement) -> void :
 		_log("墙砖：%s 获得 +%d 生命（%d）" % [card.card_name, BRICK_HP, p.health])
 	# ── R793 圣剑（6075）────────────────────────────────────────────
 	# 每场战斗**使用的第一个盟友** +10 力量（本场一次）。「第一个」= 本场第一个落地的
-	# 己方盟友 —— 与板甲 6070 / 兵 6071 同一条判据：手牌打出与涂装机器人 8080「变成」
+	# 己方盟友 —— 与板甲 6070 同一条判据（兵 6071 自 R860 起改为第 3 个）：手牌打出与涂装机器人 8080「变成」
 	# 出来的单位共用本函数，两条来路必须给同一个结论（竖琴 6052 的老约定）。
 	# 只写 Placement 字段（`effective_power()` 出口）—— `place()` 接管的是卡库共享实例，
 	# 烤进 `card.power` 的话同一张卡再上场会叠成 +20。
