@@ -194,9 +194,6 @@
       "APPLE_DOCTOR_ALREADY_HAVE": "苹果你已经收下过了——医生不再理你。",
       "APPLE_DOCTOR_RELIC_GAINED": "「苹果」已收进道具栏：%s"
     },
-    "bluefish": {
-      "BLUEFISH_EVENT_REMOVED": "这个事件已经从游戏里移除了。"
-    },
     "moon": {
       "MOON_ALREADY_TAKEN": "石台上已经空了——两样东西只剩一样，而你只拿得走一样。",
       "MOON_CARD_GAINED": "「%s」已加入卡组，%d 金币留在了石台上。",

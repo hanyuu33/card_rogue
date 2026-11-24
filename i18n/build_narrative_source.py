@@ -14,7 +14,7 @@ EVENT_NAMES = {
     "whisper": "鸭鸭低语", "gaze": "鸭之凝视", "pear": "鸭梨山大",
     "apple_doctor": "苹果与医生", "snow_leopard": "雪豹出现",
     "adventurer": "冒险家的遗物", "martial": "武术大师", "flyer": "飞行器",
-    "bluefish": "蓝色大肥鱼", "moon": "赏月", "relic_chest": "宝箱层",
+    "moon": "赏月", "relic_chest": "宝箱层",
     "hero": "绝赞五换一", "arcane": "奥秘之泉", "oblivion": "遗忘之泉",
     "smith": "鸭鸭工匠", "struggle": "挣扎", "delivery": "运送委托",
     "delivery_done": "委托完成", "cave": "洞穴", "card_merchant": "卡片商人",
@@ -33,7 +33,7 @@ CONSTANT_EVENTS = {
     "MARTIAL_DESC": "martial", "MARTIAL_BRAWL_DESC": "martial",
     "MARTIAL_KICK_DESC": "martial", "MARTIAL_PUNCH_DESC": "martial",
     "FLYER_DESC": "flyer", "FLYER_TAKEN_DESC": "flyer",
-    "RETIRED_EVENT_DESC": "bluefish", "MOON_DESC": "moon",
+    "MOON_DESC": "moon",
     "MOON_TAKEN_DESC": "moon", "COIN_TAKEN_DESC": "moon",
     "CHEST_LAYER_DESC": "relic_chest", "HERO_DESC": "hero",
     "HERO_TAKEN_DESC": "hero", "ARCANE_DESC": "arcane",
@@ -99,7 +99,7 @@ def main():
         row = events.setdefault(event_key, {"name": EVENT_NAMES[event_key], "texts": {}})
         row["texts"].update(texts)
     assert set(events) == set(EVENT_NAMES)
-    assert sum(len(row["texts"]) for row in events.values()) == 64
+    assert sum(len(row["texts"]) for row in events.values()) == 63
 
     story_source = json.loads(STORY_PATH.read_text(encoding="utf-8-sig"))
     stories = {}

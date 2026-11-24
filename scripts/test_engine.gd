@@ -14812,6 +14812,30 @@ func _init() -> void:
 
 			"R573 源码锁：事件场景不再有蓝色大肥鱼的文案 / 状态 / 演示入口")
 
+
+	# R866：翻译资源层也不得把已删除的事件重新注册为正式事件。
+	for r866_code in ["zh_canonical", "en", "ja", "es"]:
+
+		var r866_nar := FileAccess.get_file_as_string(
+
+				"res://i18n/narrative_%s.json" % r866_code)
+
+		var r866_ui := FileAccess.get_file_as_string(
+
+				"res://i18n/event_ui_%s.json" % r866_code)
+
+		check(not r866_nar.contains("bluefish") and not r866_ui.contains("bluefish"),
+
+				"R866：narrative/event_ui_%s 不再注册蓝色大肥鱼" % r866_code)
+
+	var r866_builder := FileAccess.get_file_as_string(
+
+			"res://i18n/build_narrative_source.py")
+
+	check(not r866_builder.contains("bluefish"),
+
+			"R866：i18n 生成脚本不会重新生成蓝色大肥鱼事件")
+
 	var pear_ev_w := GameLayers.event_weights(GameLayers.LAYER_TWO)
 
 	check(int(pear_ev_w.get("pear", 0)) > 0,

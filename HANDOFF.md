@@ -2652,3 +2652,25 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 
 ## Steam 主视觉手臂修复（2026-11-24）
 用森林精魄屈肘扶膝版替换主视觉，已验证原路径 PNG 与修复稿 SHA-256 一致。
+
+## 2026-11-24 R866 已删除事件的翻译资源残留清理（蓝色大肥鱼 bluefish）
+- 用户口径：「蓝色大肥鱼不是从事件池移除了吗？但是游戏内依然注册为事件？确保这些过去被移除的不会被打包到游戏里」。
+- 判定：R573 只删了事件池 / EVENT_NAMES / 场景主分支，**翻译资源层没删** —— `bluefish` 仍作为第 31 个正式事件
+  留在四份 `narrative_*.json`（带 name「蓝色大肥鱼」+ 正文 `RETIRED_EVENT_DESC`），四份 `event_ui_*.json`
+  还有 `results.bluefish`。这些 JSON 不在导出排除表里，会被 `GameI18n._build_source_map()` 收集进 source map
+  并打进包；`build_narrative_source.py` 每次重跑还会把它生成回来 —— 这就是「游戏内依然注册为事件」。
+- 落地：
+  - `i18n/narrative_{zh_canonical,en,ja,es}.json`：删 `events.bluefish`（31→30 组 / 77→76 段）。
+  - `i18n/event_ui_{zh_canonical,en,ja,es}.json`：删 `results.bluefish`（77→76 条）。
+  - `i18n/build_narrative_source.py`：`EVENT_NAMES` / `CONSTANT_EVENTS` 去掉 bluefish 映射，正文断言 64→63。
+  - `i18n/validate_narrative.py` / `validate_event_ui.py`：计数同步（30 / 76），删 `event_terms["bluefish"]` 硬编码。
+  - `tools/probe_all_assets.gd`：事件种类清单 26→25，去掉 bluefish。
+  - `scripts/event_scene.gd`：`RETIRED_EVENT_DESC` 由三引号常量改为单行字符串，不再被 i18n 生成脚本当作
+    正式事件正文收集；**保留** `_is_bluefish()` 判据与「已移除」兜底页 —— R573 的旧存档 / 脏数据安全阀，
+    删掉会让旧档的 bluefish 事件掉进 `_is_treasure()` 误开宝箱发奖励。
+  - `scripts/test_engine.gd`：新增 5 条源码锁 —— 四语 `narrative` / `event_ui` 不得再注册 bluefish、
+    i18n 生成脚本不得重新生成。
+- 验证：i18n 双校验绿（30 events / 76 texts、104 options / 76 results）；engine 新增 5 条断言全过。
+  `git log --all --oneline --grep` 查重：R864/R865 均被占用（含在途工作），本轮改用 **R866**。
+- 遗留（与本轮无关）：engine 唯一失败是 R354 背景尺寸断言（三层底图被在途工作换成 1672×941，
+  断言仍要求 1280×720）；工作树里还有在途的 R863 卡框 / R864 背景改动，本轮一律未碰、未纳入提交。

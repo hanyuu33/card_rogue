@@ -203,9 +203,6 @@
       "APPLE_DOCTOR_ALREADY_HAVE": "You have already accepted the Apple—the doctor will pay you no more attention.",
       "APPLE_DOCTOR_RELIC_GAINED": "\"Apple\" has been added to your Relic inventory: %s"
     },
-    "bluefish": {
-      "BLUEFISH_EVENT_REMOVED": "This event has been removed from the game."
-    },
     "moon": {
       "MOON_ALREADY_TAKEN": "The stone pedestal is already empty—only one of the two items remains, and you can take only one.",
       "MOON_CARD_GAINED": "\"%s\" has been added to your Deck; %d Gold remains on the stone pedestal.",

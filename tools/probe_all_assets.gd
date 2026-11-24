@@ -55,8 +55,8 @@ func _init() -> void:
 	_chk("map_fog", "-", UI.map_fog())
 	_chk("bridge_icon", "-", UI.bridge_icon())
 
-	# ── 事件三类（26 个 kind）────────────────────────────────────────
-	var kinds := ["adventurer", "apple_doctor", "arcane", "bluefish", "card_merchant", "cave",
+	# ── 事件三类（25 个 kind；R866 删除已下线的 bluefish）─────────────
+	var kinds := ["adventurer", "apple_doctor", "arcane", "card_merchant", "cave",
 			"core_contract", "delivery", "delivery_done", "divination", "flyer", "furnace",
 			"gaze", "hero", "lake_lady", "martial", "moon", "oblivion", "pear", "relic_chest",
 			"rest", "smith", "snow_leopard", "struggle", "treasure", "whisper"]

@@ -80,12 +80,6 @@
         "FLYER_TAKEN_DESC": "喷口已经热起来了，暖橙色的火苗轻轻跳着。\n回到地图后挑一个没去过的房间，它就把你送过去。"
       }
     },
-    "bluefish": {
-      "name": "蓝色大肥鱼",
-      "texts": {
-        "RETIRED_EVENT_DESC": "这里原本有一条蓝色大肥鱼。它已经游走了。"
-      }
-    },
     "moon": {
       "name": "赏月",
       "texts": {
