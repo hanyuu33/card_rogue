@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>R858 地图路线冗余度 · 效果图</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin:0; padding:28px 32px 48px; background:#f6ecd8;
+         font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+         color:#3a2c17; }
+  h1 { font-size:20px; margin:0 0 6px; letter-spacing:.5px; }
+  p.lead { margin:0 0 22px; font-size:13.5px; color:#6b5637; line-height:1.7; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(430px,1fr)); gap:20px; }
+  .card { background:#fdf8ec; border:1px solid #ddc79b; border-radius:14px;
+          padding:12px 14px 10px; box-shadow:0 2px 10px rgba(120,90,40,.08); }
+  .card header { display:flex; justify-content:space-between; align-items:baseline;
+                 font-size:12.5px; color:#7a6440; margin-bottom:8px; }
+  .card header b { font-size:13px; color:#4a3720; }
+  svg.map { width:100%; height:auto; display:block; }
+</style></head><body>
+<h1>R858 · 地图生成：路线冗余度优化后</h1>
+<p class="lead">
+每张图 7×5 格、从下中起点出发，门 = 格子之间的连线。<br>
+改前实测：平均门数 2.33、每行平均被切成 1.96 段、22.5% 的图到宝箱只有唯一一条路。<br>
+改后：平均门数 2.53、每行 1.19 段、单行图 0%，到宝箱的走法均值 16.8 条。
+</p>
+<div class="grid">
+<section class="card"><header><b>种子 857100</b><span>重摇 1 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="405.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="493.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="351.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="608.0" cy="220.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+</svg></section>
+<section class="card"><header><b>种子 857137</b><span>重摇 1 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="493.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="351.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="256.0" cy="68.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+</svg></section>
+<section class="card"><header><b>种子 857174</b><span>重摇 1 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="405.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="493.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="432.0" cy="68.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+</svg></section>
+<section class="card"><header><b>种子 857211</b><span>重摇 1 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="493.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="351.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="256.0" cy="220.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+</svg></section>
+<section class="card"><header><b>种子 857248</b><span>重摇 4 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="405.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="493.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="351.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="520.0" cy="372.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+</svg></section>
+<section class="card"><header><b>种子 857285</b><span>重摇 1 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="405.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="493.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="351.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="168.0" cy="68.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+</svg></section>
+<section class="card"><header><b>种子 857322</b><span>重摇 1 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="405.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="351.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="168.0" cy="296.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+</svg></section>
+<section class="card"><header><b>种子 857359</b><span>重摇 2 次</span></header><svg viewBox="0 0 634 398" class="map" xmlns="http://www.w3.org/2000/svg">
+<g class="doors">
+<line x1="53.0" y1="47.0" x2="141.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="229.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="47.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="47.0" x2="317.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="405.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="47.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="47.0" x2="493.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="581.0" y2="47.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="47.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="141.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="123.0" x2="53.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="123.0" x2="229.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="123.0" x2="317.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="123.0" x2="405.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="493.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="123.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="581.0" y2="123.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="123.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="123.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="141.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="199.0" x2="53.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="199.0" x2="229.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="199.0" x2="317.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="199.0" x2="405.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="493.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="199.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="199.0" x2="581.0" y2="199.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="581.0" y1="199.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="275.0" x2="141.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="229.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="275.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="317.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="275.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="405.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="275.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="493.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="275.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="581.0" y2="275.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="275.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="53.0" y1="351.0" x2="141.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="141.0" y1="351.0" x2="229.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="229.0" y1="351.0" x2="317.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="317.0" y1="351.0" x2="405.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="405.0" y1="351.0" x2="493.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+<line x1="493.0" y1="351.0" x2="581.0" y2="351.0" stroke="#c8a973" stroke-width="9" stroke-linecap="round"/>
+</g>
+<g class="cell">
+<rect x="14.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="53.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="229.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="317.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+<circle cx="344.0" cy="68.0" r="5" fill="#2f6f3a"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="493.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="14.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 16.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#b8860b" opacity="0.9"/>
+<text x="581.0" y="56.0" text-anchor="middle" font-size="15" fill="#3a2c17">大宝箱</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="53.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="141.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="317.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="493.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="90.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 92.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="581.0" y="132.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="53.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="141.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="229.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="317.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#d9832e" opacity="0.9"/>
+<text x="405.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">休息</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="493.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="166.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 168.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="208.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="53.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="141.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="229.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="317.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="366.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="405.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#8c3d9e" opacity="0.9"/>
+<text x="493.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">精英</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="242.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 244.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="581.0" y="284.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="14.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M16.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="53.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+<g class="cell">
+<rect x="102.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M104.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#4a8f4f" opacity="0.9"/>
+<text x="141.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">商店</text>
+</g>
+<g class="cell">
+<rect x="190.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M192.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="229.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="278.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M280.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#2f9e8f" opacity="0.9"/>
+<text x="317.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">起点</text>
+<circle cx="317.0" cy="331.0" r="6" fill="#2f9e8f"/>
+</g>
+<g class="cell">
+<rect x="366.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M368.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#3d6fa8" opacity="0.9"/>
+<text x="405.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">事件</text>
+</g>
+<g class="cell">
+<rect x="454.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M456.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#c2453a" opacity="0.9"/>
+<text x="493.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">战斗</text>
+</g>
+<g class="cell">
+<rect x="542.0" y="318.0" width="78" height="66" rx="7" fill="#fdf6e6" stroke="#a8874e" stroke-width="2"/>
+<path d="M544.0 320.0 h74 a7,7 0 0 1 7,7 v7 h-74 z" fill="#6b7a8f" opacity="0.9"/>
+<text x="581.0" y="360.0" text-anchor="middle" font-size="15" fill="#3a2c17">未知</text>
+</g>
+</svg></section>
+</div>
+</body></html>

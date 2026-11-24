@@ -1,0 +1,12 @@
+R847：场地卡边框素材（六张各一张，codex 出图）
+
+- 新增 assets/ui/field_frame_<id>.png ×6（248×220 RGBA，**中心全透**）：清泉 / 维修间 /
+  改造工厂 / 漩涡 / 毒沼 / 标记。店长口径：敌我不分色，但「漩涡和清泉不该一样」——
+  场地辨识度靠每张自己的图案，不再靠「持续型一律冷青」。
+- 新增 scripts/field_art.gd（class_name FieldArt）：唯一取图口 frame_of / has_frame / draw_frame。
+- battle_scene._draw_field_markers()：有素材贴素材（内缩 2px 分格），缺图回退原「45° 斜纹 +
+  冷色描边」；有素材时**不再画名字角标**（原来那行字有一半压在卡面数值行上）。
+- _test_r847()：六张「有图 / 248×220 / 取得到 Image / 中心全透」+ 未知 id 必须回退（engine +25 条）。
+- art_src/2026-11-21_场地边框_R847/：六段 prompt、codex 出图驱动、抠图脚本（四边 + 中心两道泛洪）、README。
+- 回归十套全绿：engine 7218✓ / 0✗，reward 26 / bgm 39 / traps 247 / trapinput 77 / content 15 /
+  mod 37 / smoke 77 全 0 失败；assemble 0、mana PASS。

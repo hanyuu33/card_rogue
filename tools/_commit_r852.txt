@@ -1,0 +1,11 @@
+R852：难度 10 起「?」房恢复刷商店，代价从战斗/事件/宝箱扣
+
+- 撤销 R380「10 档把 shop 从「?」权重表里裁掉」的裁剪：「?」房照旧刷商店。
+- `_weighted_far()` 的扣减池 `pool_w` 排除 elite / shop 两类 → 精英 +30% 多出来的权重
+  只从 battle / event / chest 按比例扣，总权重守恒：精英占比精确 ×1.3，
+  商店占比与低难度逐位相同（同种子逐格一致）。
+- 删掉 `RogueMap._unknown_table()` / `RunState.unknown_shop_allowed()`（只为那次裁剪存在），
+  生成期与水晶骰子重摇统一直接读 `WEIGHTS_UNKNOWN`。
+- 测试：R380 段改写（难度 9/10 取值、12 万次采样权重对拍、480 张图实测对拍、源码锁）。
+  十套回归全绿：engine 7245 / reward 26 / bgm 39 / traps 247 / trapinput 77 /
+  content 15 / mod 37 / smoke 77 / assemble 0 / mana PASS。

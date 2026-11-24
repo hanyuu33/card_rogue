@@ -1,0 +1,3566 @@
+{
+  "maps": [
+    {
+      "attempts": 1,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            2,
+            8
+          ],
+          "hidden": false,
+          "id": 1,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            1,
+            3
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            4,
+            10
+          ],
+          "hidden": true,
+          "id": 3,
+          "row": 0,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 4,
+          "doors": [
+            3,
+            5,
+            11
+          ],
+          "hidden": false,
+          "id": 4,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            4,
+            6
+          ],
+          "hidden": true,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": false,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            9,
+            1,
+            15
+          ],
+          "hidden": false,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            8,
+            10
+          ],
+          "hidden": true,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11,
+            3
+          ],
+          "hidden": true,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            4
+          ],
+          "hidden": false,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13,
+            19
+          ],
+          "hidden": true,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": false,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            7,
+            21
+          ],
+          "hidden": false,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16,
+            22,
+            8
+          ],
+          "hidden": false,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18
+          ],
+          "hidden": false,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19,
+            25
+          ],
+          "hidden": true,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20,
+            12
+          ],
+          "hidden": false,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            13,
+            27
+          ],
+          "hidden": false,
+          "id": 20,
+          "row": 2,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": false,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23,
+            15,
+            29
+          ],
+          "hidden": false,
+          "id": 22,
+          "row": 3,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24
+          ],
+          "hidden": false,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25,
+            31
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26,
+            18
+          ],
+          "hidden": true,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27,
+            33
+          ],
+          "hidden": false,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": false,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": false,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30,
+            22
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            29,
+            31
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32,
+            24
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            33
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            32,
+            34,
+            26
+          ],
+          "hidden": false,
+          "id": 33,
+          "row": 4,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": false,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "rest"
+        }
+      ],
+      "seed": 857100
+    },
+    {
+      "attempts": 1,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            8,
+            2
+          ],
+          "hidden": false,
+          "id": 1,
+          "row": 0,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            3,
+            1
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            10
+          ],
+          "hidden": true,
+          "id": 3,
+          "row": 0,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 4,
+          "doors": [
+            5,
+            11
+          ],
+          "hidden": false,
+          "id": 4,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            4,
+            6,
+            12
+          ],
+          "hidden": true,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": false,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            9,
+            1,
+            15
+          ],
+          "hidden": true,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            8,
+            10
+          ],
+          "hidden": false,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11,
+            3
+          ],
+          "hidden": true,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            4
+          ],
+          "hidden": false,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13,
+            5
+          ],
+          "hidden": true,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": false,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            7,
+            21
+          ],
+          "hidden": false,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16,
+            8
+          ],
+          "hidden": false,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18
+          ],
+          "hidden": false,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19
+          ],
+          "hidden": false,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20,
+            26
+          ],
+          "hidden": true,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            27,
+            13
+          ],
+          "hidden": false,
+          "id": 20,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": false,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23
+          ],
+          "hidden": false,
+          "id": 22,
+          "row": 3,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24,
+            30
+          ],
+          "hidden": false,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25,
+            31
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26
+          ],
+          "hidden": false,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27,
+            19,
+            33
+          ],
+          "hidden": false,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": false,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": false,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            29,
+            31,
+            23
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32,
+            24
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            33
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            32,
+            34,
+            26
+          ],
+          "hidden": false,
+          "id": 33,
+          "row": 4,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": false,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "shop"
+        }
+      ],
+      "seed": 857137
+    },
+    {
+      "attempts": 1,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            2,
+            8
+          ],
+          "hidden": false,
+          "id": 1,
+          "row": 0,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            1,
+            3,
+            9
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            4,
+            10
+          ],
+          "hidden": true,
+          "id": 3,
+          "row": 0,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 4,
+          "doors": [
+            3,
+            5,
+            11
+          ],
+          "hidden": false,
+          "id": 4,
+          "row": 0,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 5,
+          "doors": [
+            4,
+            6,
+            12
+          ],
+          "hidden": false,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": true,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            9,
+            15,
+            1
+          ],
+          "hidden": false,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 2,
+          "doors": [
+            8,
+            10,
+            2,
+            16
+          ],
+          "hidden": false,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11,
+            3,
+            17
+          ],
+          "hidden": false,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            4
+          ],
+          "hidden": true,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13,
+            5,
+            19
+          ],
+          "hidden": true,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": true,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            21,
+            7
+          ],
+          "hidden": false,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16,
+            8,
+            22
+          ],
+          "hidden": false,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17,
+            9
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18,
+            24,
+            10
+          ],
+          "hidden": false,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19
+          ],
+          "hidden": false,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20,
+            12,
+            26
+          ],
+          "hidden": false,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            13,
+            27
+          ],
+          "hidden": false,
+          "id": 20,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": false,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23,
+            15
+          ],
+          "hidden": false,
+          "id": 22,
+          "row": 3,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24,
+            30
+          ],
+          "hidden": true,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25,
+            17
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26,
+            32
+          ],
+          "hidden": true,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27,
+            19,
+            33
+          ],
+          "hidden": false,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": true,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": true,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            31,
+            23,
+            29
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            25
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            34,
+            26
+          ],
+          "hidden": true,
+          "id": 33,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": false,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        }
+      ],
+      "seed": 857174
+    },
+    {
+      "attempts": 1,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            2,
+            8
+          ],
+          "hidden": false,
+          "id": 1,
+          "row": 0,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            1,
+            3
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            10
+          ],
+          "hidden": false,
+          "id": 3,
+          "row": 0,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 4,
+          "doors": [
+            5,
+            11
+          ],
+          "hidden": true,
+          "id": 4,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            4,
+            6
+          ],
+          "hidden": false,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": false,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            9,
+            1,
+            15
+          ],
+          "hidden": false,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 2,
+          "doors": [
+            8,
+            10
+          ],
+          "hidden": true,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11,
+            3,
+            17
+          ],
+          "hidden": false,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            4,
+            18
+          ],
+          "hidden": true,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13
+          ],
+          "hidden": false,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": true,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            7,
+            21
+          ],
+          "hidden": false,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16,
+            8
+          ],
+          "hidden": false,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18,
+            10,
+            24
+          ],
+          "hidden": false,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19,
+            25,
+            11
+          ],
+          "hidden": false,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20,
+            26
+          ],
+          "hidden": false,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            13,
+            27
+          ],
+          "hidden": false,
+          "id": 20,
+          "row": 2,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": false,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23
+          ],
+          "hidden": false,
+          "id": 22,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24,
+            30
+          ],
+          "hidden": true,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25,
+            31,
+            17
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26,
+            18,
+            32
+          ],
+          "hidden": false,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27,
+            19
+          ],
+          "hidden": false,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": false,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": true,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            29,
+            31,
+            23
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32,
+            24
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            33,
+            25
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            32,
+            34
+          ],
+          "hidden": true,
+          "id": 33,
+          "row": 4,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": true,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        }
+      ],
+      "seed": 857211
+    },
+    {
+      "attempts": 4,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            2
+          ],
+          "hidden": false,
+          "id": 1,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            1,
+            3
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            4
+          ],
+          "hidden": false,
+          "id": 3,
+          "row": 0,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 4,
+          "doors": [
+            3,
+            5,
+            11
+          ],
+          "hidden": false,
+          "id": 4,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            4,
+            6,
+            12
+          ],
+          "hidden": false,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": false,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            9
+          ],
+          "hidden": false,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            8,
+            10,
+            16
+          ],
+          "hidden": true,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11,
+            17
+          ],
+          "hidden": false,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            4,
+            18
+          ],
+          "hidden": false,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13,
+            19,
+            5
+          ],
+          "hidden": false,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": false,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            7,
+            21
+          ],
+          "hidden": false,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16,
+            22
+          ],
+          "hidden": false,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17,
+            9,
+            23
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18,
+            10
+          ],
+          "hidden": false,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19,
+            11
+          ],
+          "hidden": false,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20,
+            12
+          ],
+          "hidden": false,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            27,
+            13
+          ],
+          "hidden": false,
+          "id": 20,
+          "row": 2,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": true,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23,
+            15,
+            29
+          ],
+          "hidden": true,
+          "id": 22,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24,
+            30,
+            16
+          ],
+          "hidden": true,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25,
+            31
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26,
+            32
+          ],
+          "hidden": false,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27
+          ],
+          "hidden": true,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": false,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": false,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30,
+            22
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            29,
+            31,
+            23
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32,
+            24
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            33,
+            25
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            32,
+            34
+          ],
+          "hidden": false,
+          "id": 33,
+          "row": 4,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": false,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        }
+      ],
+      "seed": 857248
+    },
+    {
+      "attempts": 1,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            2
+          ],
+          "hidden": false,
+          "id": 1,
+          "row": 0,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 2,
+          "doors": [
+            1,
+            3,
+            9
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            4
+          ],
+          "hidden": false,
+          "id": 3,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            3,
+            5,
+            11
+          ],
+          "hidden": true,
+          "id": 4,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            4,
+            6,
+            12
+          ],
+          "hidden": true,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": true,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            9,
+            15
+          ],
+          "hidden": false,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 2,
+          "doors": [
+            8,
+            10,
+            2
+          ],
+          "hidden": false,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11
+          ],
+          "hidden": false,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            4
+          ],
+          "hidden": false,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13,
+            5
+          ],
+          "hidden": true,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": false,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            7,
+            21
+          ],
+          "hidden": true,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16,
+            8,
+            22
+          ],
+          "hidden": true,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17,
+            23
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18
+          ],
+          "hidden": false,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19
+          ],
+          "hidden": false,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20,
+            26
+          ],
+          "hidden": true,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            13,
+            27
+          ],
+          "hidden": true,
+          "id": 20,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": true,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23,
+            15,
+            29
+          ],
+          "hidden": false,
+          "id": 22,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24,
+            16
+          ],
+          "hidden": false,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26,
+            32
+          ],
+          "hidden": false,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27,
+            19,
+            33
+          ],
+          "hidden": false,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": false,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": false,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30,
+            22
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 2,
+          "doors": [
+            29,
+            31
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            33,
+            25
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            32,
+            34,
+            26
+          ],
+          "hidden": true,
+          "id": 33,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": false,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        }
+      ],
+      "seed": 857285
+    },
+    {
+      "attempts": 1,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            2,
+            8
+          ],
+          "hidden": true,
+          "id": 1,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 2,
+          "doors": [
+            1,
+            3,
+            9
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            4
+          ],
+          "hidden": false,
+          "id": 3,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            3,
+            11
+          ],
+          "hidden": true,
+          "id": 4,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            6,
+            12
+          ],
+          "hidden": false,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": false,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            1,
+            15
+          ],
+          "hidden": false,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 2,
+          "doors": [
+            10,
+            2
+          ],
+          "hidden": true,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11
+          ],
+          "hidden": false,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            4
+          ],
+          "hidden": true,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13,
+            5
+          ],
+          "hidden": false,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": false,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            7,
+            21
+          ],
+          "hidden": false,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16,
+            8,
+            22
+          ],
+          "hidden": true,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17,
+            23
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18
+          ],
+          "hidden": true,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19,
+            25
+          ],
+          "hidden": true,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20
+          ],
+          "hidden": false,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            27,
+            13
+          ],
+          "hidden": true,
+          "id": 20,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": false,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23,
+            15
+          ],
+          "hidden": false,
+          "id": 22,
+          "row": 3,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24,
+            30,
+            16
+          ],
+          "hidden": true,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25,
+            31
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26,
+            18
+          ],
+          "hidden": false,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27,
+            33
+          ],
+          "hidden": false,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": true,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": false,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 2,
+          "doors": [
+            29,
+            31,
+            23
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32,
+            24
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            33
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            32,
+            34,
+            26
+          ],
+          "hidden": true,
+          "id": 33,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": false,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "shop"
+        }
+      ],
+      "seed": 857322
+    },
+    {
+      "attempts": 2,
+      "cells": [
+        {
+          "col": 0,
+          "doors": [
+            1
+          ],
+          "hidden": false,
+          "id": 0,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            0,
+            2,
+            8
+          ],
+          "hidden": false,
+          "id": 1,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            1,
+            3
+          ],
+          "hidden": false,
+          "id": 2,
+          "row": 0,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 3,
+          "doors": [
+            2,
+            4,
+            10
+          ],
+          "hidden": false,
+          "id": 3,
+          "row": 0,
+          "shop_mark": true,
+          "type": "shop"
+        },
+        {
+          "col": 4,
+          "doors": [
+            3,
+            5
+          ],
+          "hidden": false,
+          "id": 4,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            4,
+            6,
+            12
+          ],
+          "hidden": false,
+          "id": 5,
+          "row": 0,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            5
+          ],
+          "hidden": false,
+          "id": 6,
+          "row": 0,
+          "shop_mark": false,
+          "type": "bigchest"
+        },
+        {
+          "col": 0,
+          "doors": [
+            8,
+            14
+          ],
+          "hidden": false,
+          "id": 7,
+          "row": 1,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 1,
+          "doors": [
+            7,
+            9,
+            1
+          ],
+          "hidden": false,
+          "id": 8,
+          "row": 1,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 2,
+          "doors": [
+            8,
+            10
+          ],
+          "hidden": false,
+          "id": 9,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            9,
+            11,
+            3
+          ],
+          "hidden": false,
+          "id": 10,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 4,
+          "doors": [
+            10,
+            12,
+            18
+          ],
+          "hidden": false,
+          "id": 11,
+          "row": 1,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            11,
+            13,
+            5,
+            19
+          ],
+          "hidden": true,
+          "id": 12,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 6,
+          "doors": [
+            12,
+            20
+          ],
+          "hidden": false,
+          "id": 13,
+          "row": 1,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 0,
+          "doors": [
+            15,
+            21,
+            7
+          ],
+          "hidden": false,
+          "id": 14,
+          "row": 2,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 1,
+          "doors": [
+            14,
+            16
+          ],
+          "hidden": false,
+          "id": 15,
+          "row": 2,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 2,
+          "doors": [
+            15,
+            17
+          ],
+          "hidden": false,
+          "id": 16,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 3,
+          "doors": [
+            16,
+            18
+          ],
+          "hidden": true,
+          "id": 17,
+          "row": 2,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 4,
+          "doors": [
+            17,
+            19,
+            11,
+            25
+          ],
+          "hidden": false,
+          "id": 18,
+          "row": 2,
+          "shop_mark": false,
+          "type": "rest"
+        },
+        {
+          "col": 5,
+          "doors": [
+            18,
+            20,
+            12
+          ],
+          "hidden": false,
+          "id": 19,
+          "row": 2,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 6,
+          "doors": [
+            19,
+            13,
+            27
+          ],
+          "hidden": false,
+          "id": 20,
+          "row": 2,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            22,
+            14
+          ],
+          "hidden": false,
+          "id": 21,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 1,
+          "doors": [
+            21,
+            23,
+            29
+          ],
+          "hidden": false,
+          "id": 22,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 2,
+          "doors": [
+            22,
+            24,
+            30
+          ],
+          "hidden": true,
+          "id": 23,
+          "row": 3,
+          "shop_mark": false,
+          "type": "chest"
+        },
+        {
+          "col": 3,
+          "doors": [
+            23,
+            25,
+            31
+          ],
+          "hidden": false,
+          "id": 24,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 4,
+          "doors": [
+            24,
+            26,
+            18,
+            32
+          ],
+          "hidden": false,
+          "id": 25,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 5,
+          "doors": [
+            25,
+            27,
+            33
+          ],
+          "hidden": false,
+          "id": 26,
+          "row": 3,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 6,
+          "doors": [
+            26,
+            20
+          ],
+          "hidden": false,
+          "id": 27,
+          "row": 3,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 0,
+          "doors": [
+            29
+          ],
+          "hidden": true,
+          "id": 28,
+          "row": 4,
+          "shop_mark": false,
+          "type": "elite"
+        },
+        {
+          "col": 1,
+          "doors": [
+            28,
+            30,
+            22
+          ],
+          "hidden": false,
+          "id": 29,
+          "row": 4,
+          "shop_mark": false,
+          "type": "shop"
+        },
+        {
+          "col": 2,
+          "doors": [
+            29,
+            31,
+            23
+          ],
+          "hidden": false,
+          "id": 30,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 3,
+          "doors": [
+            30,
+            32,
+            24
+          ],
+          "hidden": false,
+          "id": 31,
+          "row": 4,
+          "shop_mark": false,
+          "type": "start"
+        },
+        {
+          "col": 4,
+          "doors": [
+            31,
+            33,
+            25
+          ],
+          "hidden": false,
+          "id": 32,
+          "row": 4,
+          "shop_mark": false,
+          "type": "event"
+        },
+        {
+          "col": 5,
+          "doors": [
+            32,
+            34,
+            26
+          ],
+          "hidden": false,
+          "id": 33,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        },
+        {
+          "col": 6,
+          "doors": [
+            33
+          ],
+          "hidden": true,
+          "id": 34,
+          "row": 4,
+          "shop_mark": false,
+          "type": "battle"
+        }
+      ],
+      "seed": 857359
+    }
+  ]
+}
