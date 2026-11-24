@@ -18879,6 +18879,31 @@ func _init() -> void:
 
 			% bgkeys.size())
 
+	# ①b R868：43 关专属背景全量入库 —— 每关都要命中自己的 battle_bg_<key>.png，
+	#    不许静默回退到当层底图（图齐了还回退 = 接图漏了，肉眼不易发现）。
+
+	var bg_all_own := true
+
+	var bg_missing := ""
+
+	for bk in bgkeys:
+
+		if not UiAssets.battle_bg_path(bk, 1).ends_with("battle_bg_%s.png" % bk):
+
+			bg_all_own = false
+
+			bg_missing += str(bk) + " "
+
+	check(bg_all_own, "战斗背景：每关都有专属图（%d 关，缺：%s）"
+
+			% [bgkeys.size(), bg_missing if bg_missing != "" else "无"])
+
+	#    事件专属关 cave_owlbear 不在 builtin_levels，单独守住它的专属图。
+
+	check(UiAssets.battle_bg_path("cave_owlbear", 2).ends_with("battle_bg_cave_owlbear.png"),
+
+			"战斗背景：事件专属关 cave_owlbear 也有专属图")
+
 	# ② 没有关卡专属图时 → 退到**当层**底图（这就是「战斗中也用当层背景」）。
 
 	check(UiAssets.battle_bg_path("", 1) == "res://assets/ui/map_bg_1.png",

@@ -2646,3 +2646,12 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
 
 ## 2026-11-24 第五批卡图续作
 新增9038老虎，原图与完整提示词见 art_src/2026-11-24_卡图风格修复_batch05。内置image_gen，参考最新山猫水彩风格，目视检查通过，未接入游戏。下一张9039乌鸦、9040猎犬。未运行游戏测试，未推送。
+
+## 2026-11-24 全关卡专属战斗背景接入（R868）
+- 校验三类图覆盖：战斗背景 main 原本仅 `cave_owlbear` 一张（43 关缺 42）；地图背景 `map_bg_1/2/3` 齐全且与批次哈希一致；事件图 29 在册 kind 全有归属（side 5/5、bg 26 张，bluefish 已删 / delivery_done 共用 / relic_chest 走宝箱层，均按设计不出图）。
+- 图源在并行 worktree `card_art_continue` 的 `art_src/2026-11-24_battle_backgrounds/`（41 张）+ 工作区既有 `cave_owlbear`、`boss_revelator` = 43 张，与 `GameLevels.all_keys()` 43 个 key 一一对应，无漏无多。
+- 落地：复制 42 张新图到主目录 `assets/ui/battle_bg_<key>.png`（`cave_owlbear` 已存在且哈希一致，跳过），逐张 sha256 校验通过；Godot 4.3 `--headless --editor --import --quit` 退出 0，43 张 `.import` 齐全。
+- 取图链路无需改代码：`battle_scene._refresh_bg_texture()` → `UiAssets.battle_bg(bg_key, layer)` 本就是「专属图优先，缺图才退当层/全局」。逐关模拟 `battle_bg_path()` 校验：43 关全命中专属图，回退 0 关。
+- 回归：`scripts/test_engine.gd` 增补两条断言（每关命中专属图 + cave_owlbear 专属图），`--check-only` 退出 0；`python _verify.py` 十套全绿，engine 7352✓/0✗（较接入前 +2，即新增断言）。
+- 实机截图：第一关（鸭子骑士来袭）背景为森林石桥专属图，非纯色兜底，存 `_shots/r868_*.png`。⚠️ `battle.tscn -- --level N` 出图机制存在历史问题：截图里关卡名仍是第一关（参数似被后续流程覆盖），故 5 张截图实为同一关，不作为多关验收依据；逐关覆盖以引擎断言为准。
+- 未改玩法代码 / 未改地图与事件图 / 未推送。回归日志 `mana_headless.log` 已被还原，不纳入提交。
