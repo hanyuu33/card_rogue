@@ -203,9 +203,6 @@
       "APPLE_DOCTOR_ALREADY_HAVE": "Ya has aceptado la Manzana; el médico no volverá a prestarte atención.",
       "APPLE_DOCTOR_RELIC_GAINED": "«Manzana» se ha añadido a tu inventario de Reliquias: %s"
     },
-    "bluefish": {
-      "BLUEFISH_EVENT_REMOVED": "Este evento se ha eliminado del juego."
-    },
     "moon": {
       "MOON_ALREADY_TAKEN": "El pedestal de piedra ya está vacío: solo queda uno de los dos objetos y solo puedes llevarte uno.",
       "MOON_CARD_GAINED": "«%s» se ha añadido a tu mazo y has dejado %d de Oro en el pedestal de piedra.",

@@ -21,7 +21,7 @@ SECTIONS = ("options", "results", "pickers", "rest_dynamic")
 # R793：林中的剑 +4 选项（拔剑 / 上限不足 / 已持有 / 离开）、+1 结果。
 # R794：巧克力工厂 +6 选项（四档试吃 / 上限不足 / 离开）、+3 结果（免费 / 换血 / 得卡）。
 # R842：龙石板 +5 选项（强力 / 尊贵 / 无目标置灰 / 致死置灰 / 离开）、+3 结果、+5 选货页。
-EXPECTED_COUNTS = {"options": 104, "results": 77, "pickers": 10, "rest_dynamic": 3}
+EXPECTED_COUNTS = {"options": 104, "results": 76, "pickers": 10, "rest_dynamic": 3}
 errors = []
 
 

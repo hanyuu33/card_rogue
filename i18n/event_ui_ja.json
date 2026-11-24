@@ -203,9 +203,6 @@
       "APPLE_DOCTOR_ALREADY_HAVE": "リンゴは既に受け取っている——医者はもう相手にしない。",
       "APPLE_DOCTOR_RELIC_GAINED": "「リンゴ」をレリック欄に収めた：%s"
     },
-    "bluefish": {
-      "BLUEFISH_EVENT_REMOVED": "このイベントはゲームから削除された。"
-    },
     "moon": {
       "MOON_ALREADY_TAKEN": "石台は既に空になっている——2つの品は1つしか残らず、あなたが持ち帰れるのも1つだけだ。",
       "MOON_CARD_GAINED": "「%s」をデッキに追加し、%dゴールドは石台に残した。",

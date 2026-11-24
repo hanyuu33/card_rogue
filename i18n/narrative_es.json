@@ -63,12 +63,6 @@
         "FLYER_TAKEN_DESC": "Las toberas ya están calientes y pequeñas llamas de un cálido tono naranja danzan en su interior.\nCuando vuelvas al mapa, elige una sala sin explorar y te llevará hasta allí."
       }
     },
-    "bluefish": {
-      "name": "El gran pez azul",
-      "texts": {
-        "RETIRED_EVENT_DESC": "El gran pez azul solía estar aquí. Ya se ha ido nadando."
-      }
-    },
     "moon": {
       "name": "Contemplación de la luna",
       "texts": {

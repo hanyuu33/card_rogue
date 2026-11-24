@@ -63,12 +63,6 @@
         "FLYER_TAKEN_DESC": "The nozzles are hot now, little warm-orange flames dancing within.\nOnce you're back on the map, choose an unexplored room, and it will take you there."
       }
     },
-    "bluefish": {
-      "name": "The Big Blue Fish",
-      "texts": {
-        "RETIRED_EVENT_DESC": "The Big Blue Fish used to be here. It has already swum away."
-      }
-    },
     "moon": {
       "name": "Moon Viewing",
       "texts": {
