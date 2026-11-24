@@ -1,0 +1,52 @@
+Generate ONE image: an ULTRA-WIDE STEAM STORE BANNER (panoramic, aspect ratio about 2:1, wide landscape).
+
+ART STYLE — read first, it outranks everything else:
+FLAT ANIME CEL-SHADED ILLUSTRATION, thick clean black line art, exactly 2-3 tone steps per surface, HARD-EDGED shadows, crisp and readable at small size.
+NO painterly rendering, NO airbrush, NO soft gradients on characters, NO photorealistic metal / fur / skin texture, NO pores or wrinkles, NO cinematic 3D render, NO depth-of-field bokeh, NO western cartoon style.
+The four characters are CHIBI (about 3 heads tall): big rounded cute heads, small bodies, thick limbs, big expressive eyes — but each one must still be instantly recognizable by costume colour and silhouette.
+
+===============================================================
+COMPOSITION — the canvas is read as horizontal bands by height percentage.
+===============================================================
+
+BAND 0% to 8% (top edge): empty sky only. Keep it plain, it may be cropped off.
+
+BAND 8% to 36% (THE TITLE ZONE): this region MUST BE EMPTY AND CALM. It is reserved for a logo that will be added later on top of it. It may contain ONLY soft dusk sky with a warm glow and a few soft warm-lit clouds. NOTHING ELSE may enter this region: no character's head, no hat, no weapon, no tower, no spire, no tree branch, no bird, no moon. Keep the middle 15%-85% of the width especially clean and low-contrast, slightly darker in the centre so a bright golden logo reads clearly on top. Do not paint any letters, no signage, no letters of any kind anywhere in the image.
+
+BAND 36% to 44% (horizon): distant valley landscape, far castle silhouette and treeline, seen from far away, small and low-contrast.
+
+BAND 44% to 88% (THE CHARACTER ROW): four chibi characters standing in a single row on the ground, all the same size, feet planted on the ground line at about 86% height, heads topping out at about 45% height. They are evenly spaced, full body visible head to foot, none of them overlapping another, all facing the viewer in friendly store-art poses.
+Horizontal centres of the four characters: about 15%, 38%, 62%, and 85% of the width.
+
+BAND 88% to 100% (bottom edge): EMPTY ground only — packed earth and worn stone paving. NOTHING stands here. No feet, no tail, no weapon tip, no shadow crossing into this band.
+
+===============================================================
+THE FOUR CHIBI CHARACTERS, LEFT TO RIGHT — match each reference exactly.
+===============================================================
+
+(1) LEFTMOST — FOREST SPIRIT. Chibi girl. Very long pale cream-white hair with two thin braids, golden-amber eyes, BLACK cat ears on top of the head with small green leaves tucked at their base, small white daisy flowers in her hair, a short dress made of overlapping green leaves, one thick fluffy BLACK cat tail, barefoot. Warm friendly smile, one hand lifted in a small wave.
+
+(2) SECOND — SHADOW ASSASSIN. Chibi girl. Short silver-white hair with a few violet streaks, sharp RED eyes, a dark purple near-black hooded cloak with a high collar, black fitted bodysuit with a belt and wrapped forearms, holding one short dagger low at her side. A confident sly half-smile.
+
+(3) THIRD — DUCK ARCHER. Chibi white duck with a big round head, large dark eyes, ORANGE beak, wearing a green hood and a green cloak with a white feathered mantle over the shoulders, a brown leather vest and belt, small white feathered wing-tufts at the sides of the head, a wooden longbow held in one hand and a quiver of arrows on the back. Cheerful open expression.
+
+(4) RIGHTMOST — HEPHAESTUS. Chibi woman. Long silver hair, glowing CYAN eyes, a black and gold steampunk armoured suit with rivets, brass joints and thin glowing cyan energy lines along the armour, holding a very large golden wrench over one shoulder. Proud confident smirk.
+
+All four share the SAME chibi proportions, the SAME line weight, the SAME cel shading and the SAME single dusk light source coming from the upper left. Each casts one soft short shadow on the ground directly under the feet.
+
+===============================================================
+BACKGROUND — one continuous panoramic fantasy world, no seams.
+===============================================================
+Left third (0% to 32%): edge of an ancient green forest — thick mossy trunks, ferns, warm light filtering through leaves.
+Middle third (32% to 62%): open valley at dusk, a small distant castle silhouette on a far hill, warm amber sky low on the horizon.
+Right third (62% to 100%): a steampunk workshop yard — brick smokestacks, big brass gears, copper pipes, faint cyan steam and a warm orange furnace glow.
+Ground across the whole width: a continuous worn stone-and-earth path, painted edge to edge.
+Colour story: warm amber dusk light on the left and centre, cooler violet shadows, a few cyan accents on the right.
+
+===============================================================
+HARD RULES
+===============================================================
+The painting covers the canvas EDGE TO EDGE. NO white margin, NO white border, NO inset frame, NO poster-on-white, NO checkerboard transparency pattern.
+ZERO TEXT anywhere: NO letters, NO words, NO title, NO logo, NO signature, NO watermark, NO UI, NO typography of any kind. The sky band is completely blank.
+NO extra characters, NO crowd, NO animals besides the duck archer, NO fifth figure, NO floating UI frames.
+Do not crop any character: every character is fully inside the frame with clear empty space above the top of the head and below the feet.

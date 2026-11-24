@@ -1,0 +1,42 @@
+[20:35:03] 代理预检失败 http://127.0.0.1:7897：URLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1032)'))
+[20:35:03] === 代理不可用，中止
+[20:40:56] 代理预检失败 http://127.0.0.1:7897：URLError(TimeoutError('_ssl.c:1015: The handshake operation timed out'))
+[20:40:56] === 代理不可用，中止
+[20:41:57] 代理预检(curl) 第1次 HTTP 200
+[20:41:57] RUN icon_6086.png 纯文生图 第1次
+[20:45:54] OK icon_6086.png 237s 1290 KB
+[20:45:54] RUN card_9277.png 纯文生图 第1次
+[20:49:18] OK card_9277.png 204s 1153 KB
+[20:49:18] RUN card_9278.png 纯文生图 第1次
+[20:52:03] OK card_9278.png 165s 1063 KB
+[20:52:03] RUN card_9279.png 纯文生图 第1次
+[20:54:43] OK card_9279.png 160s 878 KB
+[20:54:43] RUN card_9280.png 纯文生图 第1次
+[21:00:27] OK card_9280.png 344s 1118 KB
+[21:00:27] RUN card_9281.png 纯文生图 第1次
+[21:03:34] OK card_9281.png 187s 770 KB
+[21:03:34] RUN card_9282.png 纯文生图 第1次
+[21:05:33] FAIL card_9282.png 第1次没拿到图
+[21:05:36] RUN card_9282.png 纯文生图 第2次
+[21:07:34] FAIL card_9282.png 第2次没拿到图
+[21:07:37] RUN card_9283.png 纯文生图 第1次
+[21:09:34] FAIL card_9283.png 第1次没拿到图
+[21:09:37] RUN card_9283.png 纯文生图 第2次
+[21:11:36] FAIL card_9283.png 第2次没拿到图
+[21:11:39] === 结束 成功6 / 失败2 ['la', 'si']
+[21:11:48] 代理预检(curl) 第1次 HTTP 000
+[21:11:48] RUN card_9282.png 纯文生图 第1次
+[21:13:31] FAIL card_9282.png 第1次没拿到图
+[21:13:34] RUN card_9282.png 纯文生图 第2次
+[21:15:33] FAIL card_9282.png 第2次没拿到图
+[21:15:36] RUN card_9283.png 纯文生图 第1次
+[21:16:45] FAIL card_9283.png 第1次没拿到图
+[21:16:48] RUN card_9283.png 纯文生图 第2次
+[21:17:42] FAIL card_9283.png 第2次没拿到图
+[21:17:45] === 结束 成功0 / 失败2 ['la', 'si']
+[22:01:49] 代理预检(curl) 第1次 HTTP 200
+[22:01:49] RUN card_9282.png 纯文生图 第1次
+[22:04:03] OK card_9282.png 133s 1174 KB
+[22:04:03] RUN card_9283.png 纯文生图 第1次
+[22:06:12] OK card_9283.png 129s 641 KB
+[22:06:12] === 结束 成功2 / 失败0 []

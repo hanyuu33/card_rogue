@@ -1,0 +1,15 @@
+[12:16:06] RUN  event_dragon_slab（纯文生图，无参考图）
+[12:21:23] EXIT 0  用时 317s
+[12:21:23] OK   C:\Users\Administrator\.codex\generated_images\01a1f72b-3659-7882-a612-9660e5378dac\exec-50a76a47-334e-4434-9867-af67054f7a7f.png -> E:\work\card_rogue\art_src\2026-11-20_龙石板_R842\raw\event_dragon_slab.png
+[12:23:01] RUN  relic_icon_6090（纯文生图，无参考图）
+[12:29:59] EXIT 0  用时 418s
+[12:29:59] OK   C:\Users\Administrator\.codex\generated_images\01a1f731-8beb-7fe2-8943-bb5afde30bf4\exec-411f4f1f-c646-4b66-b53f-27d558cf2d8a.png -> E:\work\card_rogue\art_src\2026-11-20_龙石板_R842\raw\relic_icon_6090.png
+[12:30:53] RUN  bg_dragon_slab（纯文生图，无参考图）
+[12:32:22] EXIT 0  用时 89s
+[12:32:22] OK   C:\Users\Administrator\.codex\generated_images\01a1f738-bd77-7871-9b83-d28018a38692\exec-44d08b2c-0fa3-4cd7-8f7e-f40fda7fcbc1.png -> E:\work\card_rogue\art_src\2026-11-20_龙石板_R842\raw\bg_dragon_slab.png
+[13:08:31] RUN  bg_dragon_slab（参考图：bg_sword.png）
+[13:10:22] EXIT 0  用时 111s
+[13:10:22] OK   C:\Users\Administrator\.codex\generated_images\01a1f75b-32b7-7cb0-b5b5-685f5b32d1f5\exec-75c29bc0-0006-4e26-9eef-c4167c7c77a0.png -> E:\work\card_rogue\art_src\2026-11-20_龙石板_R842\raw\bg_dragon_slab.png
+[13:12:06] RUN  event_dragon_slab（参考图：event_sword.png）
+[13:15:07] EXIT 0  用时 181s
+[13:15:07] OK   C:\Users\Administrator\.codex\generated_images\01a1f75e-79a1-7452-bfcb-88bc245cb852\exec-d19f1cf4-d42c-4479-a6f8-b160162bf991.png -> E:\work\card_rogue\art_src\2026-11-20_龙石板_R842\raw\event_dragon_slab.png

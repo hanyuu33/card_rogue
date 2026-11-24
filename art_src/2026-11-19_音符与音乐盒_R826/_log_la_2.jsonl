@@ -1,0 +1,24 @@
+Reading prompt from stdin...
+2026-11-19T13:13:39.513323Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+2026-11-19T13:13:39.560199Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+{"type":"thread.started","thread_id":"01a1f3f0-ea4f-7273-aeab-6754e1990ffd"}
+2026-11-19T13:13:41.889807Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+2026-11-19T13:13:43.411733Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+2026-11-19T13:13:44.659507Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+2026-11-19T13:13:44.917213Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+{"type":"turn.started"}
+2026-11-19T13:13:45.737678Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+2026-11-19T13:13:50.266133Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+2026-11-19T13:13:55.057849Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/ps/mcp)")))
+{"type":"error","message":"Reconnecting... 2/5 (workspace routing discovery failed)"}
+{"type":"error","message":"Reconnecting... 3/5 (workspace routing discovery failed)"}
+{"type":"error","message":"Reconnecting... 4/5 (workspace routing discovery timed out)"}
+{"type":"error","message":"Reconnecting... 5/5 (workspace routing discovery timed out)"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Falling back from WebSockets to HTTPS transport. workspace routing discovery timed out"}}
+{"type":"error","message":"Reconnecting... 1/5 (workspace routing discovery timed out)"}
+{"type":"error","message":"Reconnecting... 2/5 (workspace routing discovery failed)"}
+{"type":"error","message":"Reconnecting... 3/5 (workspace routing discovery failed)"}
+{"type":"error","message":"Reconnecting... 4/5 (workspace routing discovery failed)"}
+{"type":"error","message":"Reconnecting... 5/5 (workspace routing discovery failed)"}
+{"type":"error","message":"workspace routing discovery failed"}
+{"type":"turn.failed","error":{"message":"workspace routing discovery failed"}}
