@@ -20603,16 +20603,18 @@ func _init() -> void:
 
 
 
-	# ---- R223：难度档位 0~10（继承制：高难度继承低难度全部 debuff）----
+	# ---- R223：难度档位 0~13（继承制；R869 重排顺序）----
 
 	# 0 = 金钱 150 / 工具掉落 33%（R853）；1 = 工具掉落降到 10%（R853，篝火数值不动）；
 
 	# 2 = 战斗胜利不回血（R224 起全档位同此，文本保留）；3 = 敌血 +10%；4 = 稀有率 ×0.5；
 
-	# 5 = 疲惫诅咒；6 = 敌攻 +1；7 = 金钱 100；8 = 巧克力 11；9 = 最大生命 80%；
+	# 5 = 初始卡削弱（R869 从 11 提前）；6 = 疲惫诅咒；7 = 敌攻 +1；8 = 金钱 100；
 
-	# 10 = 精英出现增多（R380 / R852：明房 / 「?」房精英出现概率 ×1.3；R852 起「?」房照旧刷商店，
-	#      加权代价只从战斗 / 事件 / 宝箱扣，商店占比不变）。
+	# 9 = 巧克力 11；10 = 第三层上锁（R869 从 12 提前）；11 = 最大生命 80%；
+
+	# 12 = 精英出现增多（R380 / R852：明房 / 「?」房精英出现概率 ×1.3；R852 起「?」房照旧刷商店，
+	#      加权代价只从战斗 / 事件 / 宝箱扣，商店占比不变）；13 = 商店 +40%。
 
 	# R853（店长口径）：难度 2 只关「战斗胜利默认回血」这一条，其他途径正常；
 
@@ -20679,31 +20681,31 @@ func _init() -> void:
 
 	check(RunState.rare_weight_mul() == 0.5, "难度 4：稀有权重 ×0.5")
 
-	RunState.set_difficulty(5)
-
-	check(RunState.fatigue_active(), "难度 5：疲惫诅咒生效（巧克力 <6 入卡组）")
-
 	RunState.set_difficulty(6)
 
-	check(RunState.enemy_power_bonus() == 1, "难度 6：敌人攻击 +1（0 攻工事除外）")
+	check(RunState.fatigue_active(), "难度 6：疲惫诅咒生效（巧克力 <6 入卡组，R869 从 5 顺延）")
 
 	RunState.set_difficulty(7)
 
-	check(RunState.start_gold() == 100, "难度 7：初始金钱降为 100")
+	check(RunState.enemy_power_bonus() == 1, "难度 7：敌人攻击 +1（0 攻工事除外，R869 从 6 顺延）")
 
 	RunState.set_difficulty(8)
 
-	check(RunState.chocolate_per_layer() == 11, "难度 8：每层初始巧克力 12 → 11")
+	check(RunState.start_gold() == 100, "难度 8：初始金钱降为 100（R869 从 7 顺延）")
 
 	RunState.set_difficulty(9)
 
-	check(RunState.max_hp_mul() == 0.8, "难度 9：最大生命 ×80%")
+	check(RunState.chocolate_per_layer() == 11, "难度 9：每层初始巧克力 12 → 11（R869 从 8 顺延）")
 
-	RunState.set_difficulty(10)
+	RunState.set_difficulty(11)
+
+	check(RunState.max_hp_mul() == 0.8, "难度 11：最大生命 ×80%（R869 从 9 顺延）")
+
+	RunState.set_difficulty(12)
 
 	check(RunState.difficulty_note() == "精英出现增多",
 
-			"难度 10：新增「精英出现增多」（R380，%s）" % RunState.difficulty_note())
+			"难度 12：新增「精英出现增多」（R380，R869 从 10 顺延，%s）" % RunState.difficulty_note())
 
 	check(RunState.difficulty_summary().contains("初始金钱 100")
 
@@ -20713,7 +20715,7 @@ func _init() -> void:
 
 			and not RunState.difficulty_summary().contains("篝火"),
 
-			"难度 10：数值摘要列出全部生效项、不再列「篝火」（%s）" % RunState.difficulty_summary())
+			"难度 12：数值摘要列出全部生效项、不再列「篝火」（%s）" % RunState.difficulty_summary())
 
 	RunState.set_difficulty(3)
 
@@ -20727,20 +20729,22 @@ func _init() -> void:
 
 	check(RunState.difficulty_note() == "无", "R224：0 档文本 = 「无」")
 
-	RunState.set_difficulty(10)
+	RunState.set_difficulty(12)
 
 	check(RunState.difficulty_name() == "噩梦" and RunState.DIFFICULTY_NAMES.size() == 14,
 
-			"难度 10 = 噩梦；档位名共 14 个（%s）" % str(RunState.DIFFICULTY_NAMES))
+			"难度 12 = 噩梦；档位名共 14 个（%s）" % str(RunState.DIFFICULTY_NAMES))
 
-	# ---- R862：初始卡数值 —— 0~10 档 攻击 5 / 木栅栏 8；11 档起削到 4 / 6（图鉴恒基础值）----
+	# ---- R862/R869：初始卡数值 —— 0~4 档 攻击 5 / 木栅栏 8；5 档起削到 4 / 6（图鉴恒基础值）----
+	RunState.set_difficulty(4)
+
 	check(RunState.starter_attack_dmg() == 5 and RunState.starter_fence_hp() == 8
 			and not RunState.starter_card_weak(),
-			"R862 难度 10：初始卡是上调后的 攻击 5 / 木栅栏 8")
+			"R862/R869 难度 4：初始卡是上调后的 攻击 5 / 木栅栏 8")
 
 	var r862_repo := CardRepo.load_json()
 
-	# 这条只看「难度 10 的卡组实例」→ 显式摆一副最小卡组，别依赖此前测试留下的 deck_ids。
+	# 这条只看「难度 4 的卡组实例」→ 显式摆一副最小卡组，别依赖此前测试留下的 deck_ids。
 	var r862_bak10 := RunState.deck_ids.duplicate()
 
 	RunState.deck_ids = [8001, 8002]
@@ -20760,7 +20764,7 @@ func _init() -> void:
 	check(r862_n_attack != null and r862_n_attack.value == 5
 			and r862_n_fence != null and r862_n_fence.health == 8
 			and CardText.naturalize_card(r862_n_attack).contains("5 点伤害"),
-			"R862 难度 10 卡组实例：攻击 5 伤 / 木栅栏 8 血，卡面正文也是 5")
+			"R862/R869 难度 4 卡组实例：攻击 5 伤 / 木栅栏 8 血，卡面正文也是 5")
 
 	# 图鉴 / 卡库原型永远是上调后的基础值（削弱只发生在卡组实例上）
 	check(r862_repo.get_card(8002).value == 5 and r862_repo.get_card(8001).health == 8,
@@ -20768,14 +20772,14 @@ func _init() -> void:
 
 	RunState.deck_ids = r862_bak10
 
-	RunState.set_difficulty(11)
+	RunState.set_difficulty(5)
 
 	check(RunState.starter_card_weak() and RunState.starter_attack_dmg() == 4
 			and RunState.starter_fence_hp() == 6
 			and RunState.difficulty_name() == "初始卡削弱",
-			"R862 难度 11 = 初始卡削弱：攻击 4 / 木栅栏 6（%s）" % RunState.difficulty_note())
+			"R869 难度 5 = 初始卡削弱（原 11）：攻击 4 / 木栅栏 6（%s）" % RunState.difficulty_note())
 
-	# 卡组实例层：难度 11 下 deck 里的木栅栏 / 攻击被改写，卡面正文数字同步（不改 effect_text）
+	# 卡组实例层：难度 5 下 deck 里的木栅栏 / 攻击被改写，卡面正文数字同步（不改 effect_text）
 	var r862_bak_deck := RunState.deck_ids.duplicate()
 
 	RunState.deck_ids = [8001, 8002]
@@ -20786,27 +20790,27 @@ func _init() -> void:
 			and int(r862_weak[1].body_number_swap.get("to", 0)) == 4
 			and CardText.naturalize_card(r862_weak[1]).contains("4 点伤害")
 			and not CardText.naturalize_card(r862_weak[1]).contains("5 点伤害"),
-			"R862 难度 11 卡组实例：木栅栏 6 血 / 攻击 4 伤，卡面正文同步换 4（%s）"
+			"R869 难度 5 卡组实例：木栅栏 6 血 / 攻击 4 伤，卡面正文同步换 4（%s）"
 			% CardText.naturalize_card(r862_weak[1]))
 
 	RunState.deck_ids = r862_bak_deck
 
 	check(RunState.difficulty_name() == "初始卡削弱" and not RunState.third_layer_locked(),
 
-			"R862 难度 11 不再上锁（上锁已挪到 12 档，%s）" % RunState.difficulty_note())
+			"R869 难度 5 不上锁（上锁在 10 档，%s）" % RunState.difficulty_note())
 
-	RunState.set_difficulty(12)
+	RunState.set_difficulty(10)
 
 	check(RunState.difficulty_name() == "上锁" and RunState.third_layer_locked()
 			and RunState.difficulty_note().contains("获取三个信物以解锁第三层"),
 
-			"难度 12 = 上锁；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
+			"难度 10 = 上锁（R869 从 12 提前）；第三层进入需信物，文案写明解锁条件（%s）" % RunState.difficulty_note())
 
-	# ---- R794b：难度 12「昂贵」—— 商店商品售价 +40%（信物除外）----
+	# ---- R794b：难度 13「昂贵」—— 商店商品售价 +40%（信物除外）----
 	var r794_shop := FileAccess.get_file_as_string("res://scripts/shop_scene.gd").replace("\r\n", "\n")
 
 	check(RunState.DIFF_SHOP_PRICE_FROM == 13 and RunState.DIFF_SHOP_PRICE_MUL == 1.4,
-			"R794b 商店涨价的档位与倍率口径（R862 插档后 13 档起 ×1.4）")
+			"R794b 商店涨价的档位与倍率口径（R869 重排后仍 13 档起 ×1.4）")
 
 	RunState.set_difficulty(12)
 
@@ -20856,11 +20860,14 @@ func _init() -> void:
 
 	# ---- R795：难度显示「数字 + 名称」（结算副标题 / 对战记录）----
 	check(RunState.difficulty_label(0) == "0 轻松" and RunState.difficulty_label(13) == "13 昂贵"
-			and RunState.difficulty_name_at(12) == "上锁"
-			and RunState.difficulty_name_at(11) == "初始卡削弱",
-			"R795/R862 难度标签＝数字 + 名称（0 → %s / 13 → %s / 12 名 %s / 11 名 %s）" % [
+			and RunState.difficulty_name_at(5) == "初始卡削弱"
+			and RunState.difficulty_name_at(10) == "上锁"
+			and RunState.difficulty_name_at(11) == "虚弱"
+			and RunState.difficulty_name_at(12) == "噩梦",
+			"R795/R869 难度标签＝数字 + 名称（0 → %s / 13 → %s / 5 名 %s / 10 名 %s / 11 名 %s / 12 名 %s）" % [
 			RunState.difficulty_label(0), RunState.difficulty_label(13),
-			RunState.difficulty_name_at(12), RunState.difficulty_name_at(11)])
+			RunState.difficulty_name_at(5), RunState.difficulty_name_at(10),
+			RunState.difficulty_name_at(11), RunState.difficulty_name_at(12)])
 
 	# 旧版本记录文件兼容：档位只存了数字，名称现推；越界 / 负数一律钳住，不许越界取数组。
 	check(RunState.difficulty_label(99) == "13 昂贵" and RunState.difficulty_label(-5) == "0 轻松"
@@ -20870,7 +20877,7 @@ func _init() -> void:
 
 	RunState.set_difficulty(7)
 
-	check(RunState.difficulty_label() == "7 贫瘠" and RunState.difficulty_label(-1) == "7 贫瘠",
+	check(RunState.difficulty_label() == "7 凶暴" and RunState.difficulty_label(-1) == "7 凶暴",
 			"R795 不带参数＝当前档（%s）" % RunState.difficulty_label())
 
 	var r795_sum := FileAccess.get_file_as_string("res://scripts/run_summary_scene.gd").replace("\r\n", "\n")
@@ -20888,6 +20895,34 @@ func _init() -> void:
 	check_src(r795_state.find("func difficulty_label(d: int = -1)") >= 0
 			and r795_state.find("DIFFICULTY_NAMES[clampi(d, 0, DIFFICULTY_COUNT - 1)]") >= 0,
 			"R795 难度标签唯一口在 RunState，越界由 clampi 兜住")
+
+	# ---- R869：难度档位重排 + 三级配色 —— 削弱 5 / 橙 6 起 / 上锁 10 = 红 ----
+	check(RunState.DIFF_STARTER_WEAK_FROM == 5
+			and RunState.DIFF_FATIGUE_FROM == 6
+			and RunState.DIFF_ENEMY_POWER_FROM == 7
+			and RunState.DIFF_GOLD_FROM == 8
+			and RunState.DIFF_CHOCO_FROM == 9
+			and RunState.DIFF_LOCK_FROM == 10
+			and RunState.DIFF_MAX_HP_FROM == 11
+			and RunState.DIFF_ELITE_FROM == 12
+			and RunState.DIFF_SHOP_PRICE_FROM == 13,
+			"R869 九档 FROM 阈值：削弱5 / 疲惫6 / 敌攻7 / 金钱8 / 巧克力9 / 上锁10 / 虚弱11 / 精英12 / 昂贵13")
+
+	check(RunState.DIFF_ORANGE_FROM == 6 and RunState.DIFF_RED_FROM == 10,
+			"R869 配色阈值：6 档起橙色（原 11）、10 档起红色")
+
+	check(RunState.DIFFICULTY_NAMES[5] == "初始卡削弱" and RunState.DIFFICULTY_NAMES[6] == "疲惫"
+			and RunState.DIFFICULTY_NAMES[10] == "上锁" and RunState.DIFFICULTY_NAMES[11] == "虚弱"
+			and RunState.DIFFICULTY_NAMES[12] == "噩梦",
+			"R869 档位名顺序：5 削弱 / 6 疲惫 / 10 上锁 / 11 虚弱 / 12 噩梦")
+
+	var r869_cp := FileAccess.get_file_as_string("res://scripts/class_pick_scene.gd").replace("\r\n", "\n")
+
+	check_src(r869_cp.find("RunState.DIFF_ORANGE_FROM") >= 0
+			and r869_cp.find("RunState.DIFF_RED_FROM") >= 0
+			and r869_cp.find("b23c2e") >= 0 and r869_cp.find("8f2d24") >= 0
+			and r869_cp.find("d9604a") >= 0 and r869_cp.find("9d2f22") >= 0,
+			"R869 角色界面：橙/红双阈值 + 砖红系配色都在，不会被回退成单档橙色")
 
 	RunState.set_difficulty(0)
 
@@ -42230,13 +42265,13 @@ func _init() -> void:
 
 			"R223 难度 3：3/40 敌人 → 生命 ceil(40×10%)=+4 → 3/44（原卡不动）")
 
-	RunState.set_difficulty(6)
+	RunState.set_difficulty(7)
 
 	var r223_scaled2: CardData = RunState.scaled_enemy_card(r223_foe)
 
 	check(r223_scaled2.health == 44 and r223_scaled2.power == 4,
 
-			"R223 难度 6：敌血 +10% 与敌攻 +1 同时生效 → 4/44")
+			"R223 难度 7：敌血 +10% 与敌攻 +1 同时生效 → 4/44")
 
 	var r223_fort0: CardData = CardData.from_dict(r223_repo.get_card(8001).to_dict())  # 木栅栏 0/8 工事
 
@@ -42244,7 +42279,7 @@ func _init() -> void:
 
 	check(r223_fort_s.power == 0 and r223_fort_s.health == 9,
 
-			"R223 难度 6：原本 0 攻工事不吃攻击加成（0/8 → 0/9，只吃生命）")
+			"R223 难度 7：原本 0 攻工事不吃攻击加成（0/8 → 0/9，只吃生命）")
 
 	RunState.set_difficulty(0)
 
@@ -42258,13 +42293,13 @@ func _init() -> void:
 
 	# 卡面染色把它算进基准，于是难度加成**仍显示白字**（用户口径「视为没有增加过」）。
 
-	RunState.set_difficulty(6)
+	RunState.set_difficulty(7)
 
 	var r325_scaled: CardData = RunState.scaled_enemy_card(r223_foe)
 
 	check(r325_scaled.diff_health == 4 and r325_scaled.diff_power == 1,
 
-			"R325 难度 6：+4 血 / +1 攻单独记账（diff_health=4 / diff_power=1）")
+			"R325 难度 7：+4 血 / +1 攻单独记账（diff_health=4 / diff_power=1）")
 
 	check(r325_scaled.health == 44 and r325_scaled.power == 4,
 
@@ -42314,23 +42349,23 @@ func _init() -> void:
 
 			"R223 难度 0 开局：金钱 150 / 巧克力 12 / 森林精魄最大生命 70")
 
-	RunState.set_difficulty(9)
+	RunState.set_difficulty(11)
 
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 
-	check(RunState.max_hp == 56, "R223 难度 9 开局：森林精魄 70×80% → 最大生命 56")
-
-	RunState.set_difficulty(7)
-
-	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
-
-	check_test_only(RunState.gold == 100, "R223 难度 7 开局：金钱 100")
+	check(RunState.max_hp == 56, "R223 难度 11 开局：森林精魄 70×80% → 最大生命 56")
 
 	RunState.set_difficulty(8)
 
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 
-	check_test_only(RunState.chocolate == 11, "R223 难度 8 开局：巧克力 11")
+	check_test_only(RunState.gold == 100, "R223 难度 8 开局：金钱 100")
+
+	RunState.set_difficulty(9)
+
+	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
+
+	check_test_only(RunState.chocolate == 11, "R223 难度 9 开局：巧克力 11")
 
 	RunState.end_run()
 
@@ -42338,13 +42373,13 @@ func _init() -> void:
 
 	# 疲惫入/出卡组：sync_fatigue 从 deck_ids 推导（不加布尔 flag）
 
-	RunState.set_difficulty(5)
+	RunState.set_difficulty(6)
 
 	RunState.start_run([], GameLayers.LAYER_DEFAULT, PlayerClass.DRUID)
 
 	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
 
-			"R223 难度 5 + 巧克力 12：开局不进疲惫（≥6）")
+			"R223 难度 6 + 巧克力 12：开局不进疲惫（≥6）")
 
 	RunState.chocolate = 5
 
@@ -42354,7 +42389,7 @@ func _init() -> void:
 
 			and RunState.deck_ids.count(RunState.FATIGUE_CARD_ID) == 1,
 
-			"R223 难度 5 + 巧克力 5：卡组加入一张疲惫 9149")
+			"R223 难度 6 + 巧克力 5：卡组加入一张疲惫 9149")
 
 	RunState.sync_fatigue()
 
@@ -42388,7 +42423,7 @@ func _init() -> void:
 
 	check(not RunState.deck_ids.has(RunState.FATIGUE_CARD_ID),
 
-			"R223 难度 4（未到 5 档）：即使巧克力 0 也不进疲惫")
+			"R223 难度 4（未到 6 档）：即使巧克力 0 也不进疲惫")
 
 	RunState.end_run()
 
@@ -42610,7 +42645,7 @@ func _init() -> void:
 
 	# 使魔 _demon_summon 等）都直接取卡库原卡，不过缩放 —— 这里把该口径钉成断言。
 
-	RunState.set_difficulty(6)
+	RunState.set_difficulty(7)
 
 	var r260_repo := CardRepo.load_json()
 
@@ -42618,7 +42653,7 @@ func _init() -> void:
 
 	check(r260_open.power == 4 and r260_open.health == 44,
 
-			"R260 开场口径：难度 6 下 1011 铁壁卫兵 → 4/44（敌攻 +1 且敌血 +10%）")
+			"R260 开场口径：难度 7 下 1011 铁壁卫兵 → 4/44（敌攻 +1 且敌血 +10%）")
 
 	var r260_late_e := _new_engine([], 40, 40, -1, false)
 
@@ -60882,21 +60917,21 @@ func _init() -> void:
 	#     扣，**shop 一分不扣**（商店占比与低难度逐位相同）。
 
 	# ① 常量 + 取值函数（界面 / 地图生成 / 测试唯一口）
-	check(RunState.DIFF_ELITE_FROM == 10 and is_equal_approx(RunState.DIFF_ELITE_MUL, 1.3),
-			"R380 常量：10 档起精英出现概率 ×1.3（约 +30%）")
+	check(RunState.DIFF_ELITE_FROM == 12 and is_equal_approx(RunState.DIFF_ELITE_MUL, 1.3),
+			"R380/R869 常量：12 档起精英出现概率 ×1.3（约 +30%）")
 	RunState.set_difficulty(9)
 	check(RunState.elite_weight_mul() == 1.0,
-			"R380 难度 9：精英概率不动（只 10 档变）")
-	RunState.set_difficulty(10)
+			"R380/R869 难度 9：精英概率不动（只 12 档变）")
+	RunState.set_difficulty(12)
 	check(is_equal_approx(RunState.elite_weight_mul(), 1.3),
-			"R380 难度 10：精英概率 ×1.3")
+			"R380/R869 难度 12：精英概率 ×1.3")
 	check(RogueMap.WEIGHTS_UNKNOWN.has("shop"),
-			"R852 「?」房权重表：商店键恒在（10 档不再裁 shop）")
+			"R852 「?」房权重表：商店键恒在（12 档不再裁 shop）")
 
 	# ② 权重占比对拍：直接采 `_weighted_far`（col 3 / row 2 + norm 1.0 → 距离系数恰为 1）
 	var r852_shares := {}
 	for r852_d in 2:
-		RunState.set_difficulty(0 if r852_d == 0 else 10)
+		RunState.set_difficulty(0 if r852_d == 0 else 12)
 		var r852_rng := RandomNumberGenerator.new()
 		r852_rng.seed = 852000 + r852_d
 		var r852_cnt := {"battle": 0, "event": 0, "elite": 0, "chest": 0, "shop": 0}
@@ -60930,7 +60965,7 @@ func _init() -> void:
 	for r380_layer: int in [GameLayers.LAYER_DEFAULT, GameLayers.LAYER_TWO]:
 		for r380_k in 120:
 			for r380_d in 2:
-				RunState.set_difficulty(0 if r380_d == 0 else 10)
+				RunState.set_difficulty(0 if r380_d == 0 else 12)
 				var r380_rng := RandomNumberGenerator.new()
 				r380_rng.seed = 380000 + r380_k * 17 + r380_layer
 				var r380_map: Array = RogueMap.generate(r380_rng, r380_layer)
@@ -72658,7 +72693,7 @@ func _init() -> void:
 
 	# ================================================================
 
-	# R543：难度 11「上锁」+ 三样信物（完美螺钉 / 生命之种 / 屠戮匕首）
+	# R543/R869：难度 10「上锁」+ 三样信物（完美螺钉 / 生命之种 / 屠戮匕首）
 
 	# ================================================================
 
@@ -72700,25 +72735,25 @@ func _init() -> void:
 
 			"R543 信物：三样齐 → has_all_keys；信物不计入道具（has_relic 仍 false）")
 
-	# ② 分档判定：难度 < 11 恒开放；难度 ≥ 11 需要信物
+	# ② 分档判定：难度 < 10 恒开放；难度 ≥ 10 需要信物
 
-	RunState.set_difficulty(10)
+	RunState.set_difficulty(9)
 
 	check(not RunState.third_layer_locked() and RunState.can_enter_third_layer(),
 
-			"R543 上锁：难度 10 不锁、恒可进第三层")
+			"R543/R869 上锁：难度 9 不锁、恒可进第三层")
 
-	RunState.set_difficulty(12)
+	RunState.set_difficulty(10)
 
 	check(RunState.third_layer_locked() and RunState.can_enter_third_layer(),
 
-			"R543/R862 上锁：难度 12 上锁、信物齐了才放行")
+			"R543/R869 上锁：难度 10 上锁、信物齐了才放行")
 
 	RunState.key_relics = []
 
 	check(not RunState.can_enter_third_layer(),
 
-			"R543/R862 上锁：难度 12 无信物 → 不能进第三层")
+			"R543/R869 上锁：难度 10 无信物 → 不能进第三层")
 
 	# ③ 大宝箱二选一：难度 ≥ 上锁档且没种子 → relic_or_key 条目；两条领取路 + 放弃
 
@@ -72726,7 +72761,7 @@ func _init() -> void:
 
 	RunState.pending_rewards = []
 
-	RunState.set_difficulty(12)
+	RunState.set_difficulty(10)
 
 	var r543_bak_gold := RunState.gold
 
@@ -72742,7 +72777,7 @@ func _init() -> void:
 
 			and int(r543_last.get("relic_id", -1)) > 0,
 
-			"R543/R862 大宝箱：难度 12 没种子 → 道具那格变成「道具/生命之种」二选一条目")
+			"R543/R869 大宝箱：难度 10 没种子 → 道具那格变成「道具/生命之种」二选一条目")
 
 	var r543_idx := RunState.pending_rewards.find(r543_last)
 

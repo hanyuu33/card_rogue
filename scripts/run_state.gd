@@ -212,38 +212,39 @@ static var revenge_pending := false
 const REVENGE_TRIGGER_CHANCE := 0.5         # 50%
 const DEMON_DUCK_BOSS_NAME := "恶魔鸭"       # 第一层触发条件：摇中的 boss 名必须是它
 
-# ---- 难度档位（R47 三档 → R223 重做成 0~10 → R862 插入「初始卡削弱」→ 共 14 档）----
-# R223 起：角色选择界面用**左右箭头**调档（0~10），**高难度继承低难度全部 debuff**。
+# ---- 难度档位（R47 三档 → R223 重做成 0~10 → R862 插档 → R869 重排顺序，共 14 档）----
+# R223 起：角色选择界面用**左右箭头**调档（现为 0~13 共 14 档），**高难度继承低难度全部 debuff**。
 # 用户口径逐档新增内容（数值口径见下方各 const 与取值函数）：
 # R224 起新增全局规则：**除到达新的一层外不能回复 HP**（用户口径）——
 # 战斗胜利回血、休息处篝火回血两类「自动回复」全部作废（两表归零，见下）。
+# R869（用户口径）重排：初始卡削弱提前到 5 档、第三层上锁提前到 10 档，其余按原相对顺序顺延。
 #   0 = 初始金钱 +50（R224 前还带战斗胜利回 3 血、休息 40%，现已归零）
 #   1 = 工具掉落率下降（R853：文本由「篝火回复生命值降低」换过来；篝火数值表不动，
 #       1 档起仍是 25% —— 用户口径「全部难度篝火不动」）
 #   2 = 战斗胜利不再回复生命值（R224：全档位战斗胜利均不回血，文本保留待换新 debuff）
 #   3 = 开场时敌人生命值 +10%（向上取整）
 #   4 = 稀有卡牌获取概率降低（稀有权重 ×0.5）
-#   5 = 行动力低时疲惫（巧克力 <6 → 一张诅咒「疲惫」9149 加入卡组；≥6 移除）
+#   5 = 初始卡削弱（R862，用户口径）：初始卡组里的木栅栏 / 攻击退回旧数值
+#       （木栅栏 6 血、攻击 4 伤）；0~4 档是上调后的 8 血 / 5 伤。
+#       数值唯一口 = `starter_fence_hp()` / `starter_attack_dmg()`；卡面正文数字由
+#       `card_with_mod()` 写进实例 `body_number_swap`，**不改 effect_text**（i18n 会掉)。
+#   6 = 行动力低时疲惫（巧克力 <6 → 一张诅咒「疲惫」9149 加入卡组；≥6 移除）
 #       R358：**每层最多发一次**（`fatigue_granted_layer` 记账），删掉 / 洗掉后同层不再补。
-#   6 = 敌人更加凶猛（除原本 0 攻工事外，所有敌人攻击 +1）
-#   7 = 金钱减少（初始金钱 150 → 100，后续每层也都是 100）
-#   8 = 行动力降低（每层初始巧克力 12 → 11）
-#   9 = 虚弱（最大生命 ×80%，截断取整）
-#   10 = 精英出现增多（R380 / R852）：继承 0~9 全部 debuff，明房与「?」房两条途径的
+#   7 = 敌人更加凶猛（除原本 0 攻工事外，所有敌人攻击 +1）
+#   8 = 金钱减少（初始金钱 150 → 100，后续每层也都是 100）
+#   9 = 行动力降低（每层初始巧克力 12 → 11）
+#   10 = 第三层上锁（R543）：要凑齐完美螺钉 / 生命之种 / 屠戮匕首三样信物才开门。
+#   11 = 虚弱（最大生命 ×80%，截断取整）
+#   12 = 精英出现增多（R380 / R852）：继承 0~11 全部 debuff，明房与「?」房两条途径的
 #        精英出现概率统一 ×1.3（约 +30%）。R852：「?」房**照旧刷商店**（原「10 档裁掉
 #        shop」已撤销），加权代价只从战斗 / 事件 / 宝箱里扣，商店占比与低难度一致。
-#   11 = 初始卡削弱（R862，用户口径）：初始卡组里的木栅栏 / 攻击退回旧数值
-#        （木栅栏 6 血、攻击 4 伤）；0~10 档是上调后的 8 血 / 5 伤。
-#        数值唯一口 = `starter_fence_hp()` / `starter_attack_dmg()`；卡面正文数字由
-#        `card_with_mod()` 写进实例 `body_number_swap`，**不改 effect_text**（i18n 会掉)。
-#   12 = 第三层上锁（R543）：要凑齐完美螺钉 / 生命之种 / 屠戮匕首三样信物才开门。
 #   13 = 昂贵（R794b）：商店商品售价 +40%，**信物除外**（信物 = 上面那三把钥匙）。
 # 档位只在角色选择界面改，不属于 run 状态（end_run / start_run 都不动它）。
 static var difficulty: int = 0
 const DIFFICULTY_COUNT := 14
 const DIFFICULTY_NAMES: Array[String] = ["轻松", "微恙", "严酷", "顽强", "稀缺",
-		"疲惫", "凶暴", "贫瘠", "匆忙", "虚弱", "噩梦", "初始卡削弱", "上锁", "昂贵"]
-## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」；第 10 档无新增（空串）。
+		"初始卡削弱", "疲惫", "凶暴", "贫瘠", "匆忙", "上锁", "虚弱", "噩梦", "昂贵"]
+## 各档位**新增** debuff 的文本（用户口径原话）。0 档 = 「无」，其余逐档一条。
 ## R224：`difficulty_note()` 只返回**当前档**这一条（用户口径「难度文本没有必要写所有，
 ## 只需要写当前难度新增就行了」）—— 高档继承低档的全部 debuff 由 `difficulty_summary()`
 ## 的数值摘要承载（那里列的都是「实际生效」的数值）。
@@ -253,14 +254,14 @@ const DIFFICULTY_TEXTS: Array[String] = [
 	"战斗胜利不再回复生命值",
 	"敌人更加顽强",
 	"稀有卡牌获取概率降低",
+	"初始卡削弱：攻击伤害 4，木栅栏生命 6",
 	"行动力低时疲惫",
 	"敌人更加凶猛",
 	"金钱减少",
 	"行动力降低",
+	"第三层上锁，获取三个信物以解锁第三层",
 	"虚弱",
 	"精英出现增多",
-	"初始卡削弱：攻击伤害 4，木栅栏生命 6",
-	"第三层上锁，获取三个信物以解锁第三层",
 	"商店商品售价 +40%（信物除外）",
 ]
 ## R224：全局规则（R853 重做）—— 战斗胜利**默认**回血只有 0/1 档 = 3，难度 2 起关掉；
@@ -273,31 +274,39 @@ const DIFFICULTY_REST_PCT: Array[float] = [0.40, 0.25, 0.25, 0.25, 0.25, 0.25,
 		0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]                      # 休息回复百分比
 
 ## 各 debuff 的数值口径（**唯一口** —— 界面 / 引擎 / 测试都读这里，别在各处写死数字）
-const DIFF_GOLD_LOW := 150         # 0~6 档初始金钱（原 100 + 难度 0 的 +50）
-const DIFF_GOLD_HIGH := 100        # 7 档起「金钱减少」
-const DIFF_RARE_WEIGHT_MUL := 0.5  # 4 档起「稀有卡牌获取概率降低」：稀有权重 ×0.5
-const DIFF_FATIGUE_FROM := 5       # 5 档起「行动力低时疲惫」
+## R869：档位重排后「从哪档起」统一收进 *_FROM 常量；界面 / 引擎 / 测试只认常量，别再写字面量。
+const DIFF_ENEMY_HP_FROM := 3      # 3 档起「敌血 +10%」（R869 未动）
+const DIFF_ENEMY_HP_PCT := 0.10    # 敌人生命 +10%（向上取整）
+const DIFF_RARE_FROM := 4          # 4 档起「稀有率 ×0.5」（R869 未动）
+const DIFF_RARE_WEIGHT_MUL := 0.5  # 稀有权重 ×0.5
+const DIFF_STARTER_WEAK_FROM := 5  # 5 档起「初始卡削弱」（R869 从 11 提前）
+const DIFF_FATIGUE_FROM := 6       # 6 档起「行动力低时疲惫」（R869 从 5 顺延）
 const DIFF_FATIGUE_LIMIT := 6      # 巧克力 < 6 → 疲惫入卡组；≥ 6 → 移除
-const DIFF_ENEMY_HP_PCT := 0.10    # 3 档起「敌人更加顽强」：敌人生命 +10%（向上取整）
-const DIFF_ENEMY_POWER := 1        # 6 档起「敌人更加凶猛」：敌人攻击 +1
-const DIFF_CHOCO_HIGH := 11        # 8 档起「行动力降低」：每层初始巧克力 11（原 12）
-const DIFF_MAX_HP_MUL := 0.8       # 9 档起「虚弱」：最大生命 ×80%（截断取整）
-## R380（用户口径）：「当前难度 10 还没有新增效果，做成精英出现增多 —— 各种途径出现
+const DIFF_ENEMY_POWER_FROM := 7   # 7 档起「敌攻 +1」（R869 从 6 顺延）
+const DIFF_ENEMY_POWER := 1        # 敌人攻击 +1
+const DIFF_GOLD_FROM := 8          # 8 档起「金钱减少」（R869 从 7 顺延）
+const DIFF_GOLD_LOW := 150         # 0~7 档初始金钱（原 100 + 难度 0 的 +50）
+const DIFF_GOLD_HIGH := 100        # 金钱减少后的初始金钱
+const DIFF_CHOCO_FROM := 9         # 9 档起「行动力降低」（R869 从 8 顺延）
+const DIFF_CHOCO_HIGH := 11        # 每层初始巧克力 11（原 12）
+const DIFF_MAX_HP_FROM := 11       # 11 档起「虚弱」（R869 从 9 顺延）
+const DIFF_MAX_HP_MUL := 0.8       # 最大生命 ×80%（截断取整）
+## R380（用户口径）：「当时难度 10 还没有新增效果，做成精英出现增多 —— 各种途径出现
 ## 精英的概率上调约 30%」。
 ## R852（用户口径）：「10 难度起，? 依旧需要刷新商店，概率从事件、普通战斗、宝箱里面扣」
 ##   * 原「10 档「?」房裁掉 shop」的裁剪**撤销** —— 「?」房照旧能刷商店；
 ##   * 精英 +30% 多出来的权重只从 **battle / event / chest** 里按比例扣，**shop 不扣**
 ##     → 商店占比与低难度逐位相同（见 `RogueMap._weighted_far()` 的 `pool_w`）。
 ## ⚠️ 唯一消费点 = `RogueMap._weighted_far()` —— 别在地图生成之外再乘一次。
-const DIFF_ELITE_FROM := 10        # 10 档起「精英出现增多」
+const DIFF_ELITE_FROM := 12        # 12 档起「精英出现增多」（R869 从 10 顺延）
 const DIFF_ELITE_MUL := 1.3        # 精英出现概率乘数（≈ +30%，扣除法见 _weighted_far）
 ## R778：强弱精英判据 —— 当前巧克力 <= 5 一定进强精英，否则一定进弱精英。
 ## 三层精英不参与（第三层固定抽第二层精英困难池，见 next_level）。
 const ELITE_STRONG_CHOCO_MAX := 5
-## R543（用户口径）：难度 12「上锁」—— 第三层需要凑齐三样信物才能进入。
-## ⚠️ 只有难度 ≥ 12 才需要信物；难度 ≤ 11 下第三层照常开放（用户明确「任何难度都开放第三层」）。
-## R862 插档前这一档是 11（「初始卡削弱」占了 11）。
-const DIFF_LOCK_FROM := 12         # 12 档起「第三层上锁」（R862 插档前是 11）
+## R543（用户口径）：难度 10「上锁」—— 第三层需要凑齐三样信物才能进入。
+## ⚠️ 只有难度 ≥ 10 才需要信物；难度 ≤ 9 下第三层照常开放（用户明确「任何难度都开放第三层」）。
+## R862 插档前这一档是 11；R869 把它从 12 提前到 10。
+const DIFF_LOCK_FROM := 10         # 10 档起「第三层上锁」（R869 从 12 提前）
 ## 三样信物（解锁第三层所需的信物）：完美螺钉 / 生命之种 / 屠戮匕首。
 const SCREW_RELIC_ID := 6061       # 完美螺钉（第二层 Boss 掉落，替代一份普通卡牌奖励）
 const SEED_RELIC_ID := 6062        # 生命之种（大宝箱二选一）
@@ -309,7 +318,7 @@ const KEY_RELIC_IDS: Array[int] = [SCREW_RELIC_ID, SEED_RELIC_ID, DAGGER_RELIC_I
 ##    四个口共用一个倍率，谁都不许自己乘 1.4。
 ##    信物目前只有第三行那条「屠戮匕首」—— 由调用方传 `key_relic = true` 跳过加价。
 const DIFF_SHOP_PRICE_FROM := 13   # 13 档起「商店涨价」（R862 插档前是 12）
-## R862（用户口径）：初始卡的**基础数值**（0~10 档）与**削弱后数值**（11 档起）。
+## R862（用户口径）：初始卡的**基础数值**（0~4 档）与**削弱后数值**（5 档起，R869 从 11 提前）。
 ##   * 木栅栏 8001：8 血 → 6 血；攻击 8002：5 伤 → 4 伤；
 ##   * 图鉴 / 卡库原型永远是基础值，削弱只发生在**卡组实例**上（`card_with_mod()`）；
 ##   * 唯一口 = `starter_fence_hp()` / `starter_attack_dmg()`，别在别处写字面量。
@@ -317,11 +326,14 @@ const STARTER_FENCE_HP := 8
 const STARTER_ATTACK_DMG := 5
 const STARTER_WEAK_FENCE_HP := 6
 const STARTER_WEAK_ATTACK_DMG := 4
-## 11 档起「初始卡削弱」，同时也是角色选择界面**橙色档位**的起点（用户口径）。
-const DIFF_STARTER_WEAK_FROM := 11
 const STARTER_FENCE_ID := 8001
 const STARTER_ATTACK_ID := 8002
 const DIFF_SHOP_PRICE_MUL := 1.4   # +40%
+## R869（用户口径）：角色选择界面的难度数字配色 —— 6 档起橙色、10 档起红色（0~5 常规）。
+## 橙色此前挂在初始卡削弱档（R862 起 = 11 档），现在拆成两级警示色；色值走暖棕 / 砖红系，
+## 与现有森林绿底 + 焦糖橙框保持同一套复古奇幻调性，不用刺眼的纯红。
+const DIFF_ORANGE_FROM := 6
+const DIFF_RED_FROM := 10
 ## 诅咒卡「疲惫」（9149）：1 费诅咒，打出无效果；**在手里时**所有技能卡费用 +1。
 const FATIGUE_CARD_ID := 9149
 ## R358：疲惫卡的**发放记账** —— 最近一次发放在哪一层（-1 = 本局还没发过）。
@@ -680,7 +692,7 @@ static func _diff() -> int:
 
 
 static func starter_card_weak() -> bool:
-	## R862：当前档位是否削弱**初始卡**（11 档起）。唯一判据。
+	## R862：当前档位是否削弱**初始卡**（5 档起，R869 从 11 提前）。唯一判据。
 	return _diff() >= DIFF_STARTER_WEAK_FROM
 
 
@@ -752,13 +764,13 @@ static func difficulty_summary() -> String:
 	## R853：回血类只列战斗胜利默认 +3（0/1 档）；篝火不受难度 2 影响。
 	var d := _diff()
 	var bits: Array[String] = ["初始金钱 %d" % start_gold(), "巧克力 %d" % chocolate_per_layer()]
-	if d >= 3:
+	if d >= DIFF_ENEMY_HP_FROM:
 		bits.append("敌血 +%d%%" % int(round(enemy_hp_bonus_pct() * 100.0)))
-	if d >= 4:
+	if d >= DIFF_RARE_FROM:
 		bits.append("稀有率 ×%.1f" % rare_weight_mul())
-	if d >= 6:
+	if d >= DIFF_ENEMY_POWER_FROM:
 		bits.append("敌攻 +%d" % enemy_power_bonus())
-	if d >= 9:
+	if d >= DIFF_MAX_HP_FROM:
 		bits.append("最大生命 %d%%" % int(round(max_hp_mul() * 100.0)))
 	if d >= DIFF_ELITE_FROM:
 		bits.append("精英 ×%.1f" % elite_weight_mul())
@@ -773,7 +785,7 @@ static func shop_price_mul(is_key_relic := false) -> float:
 	## R794b：商店成交价的难度倍率（**唯一判据**）。
 	## 信物（`KEY_RELIC_IDS`）恒不打折也不加价 → 跟「+40%」这条 debuff 无关；
 	## 其余商品在难度 ≥13 时 ×1.4，低难度恒 1.0。
-	## ⚠️ 别在 `shop_scene` 里另写一份 `if difficulty >= 12` —— 档位口径只许有这一处。
+	## ⚠️ 别在 `shop_scene` 里另写一份写死档号的判断 —— 档位口径只许有这一处。
 	if is_key_relic:
 		return 1.0
 	return DIFF_SHOP_PRICE_MUL if _diff() >= DIFF_SHOP_PRICE_FROM else 1.0
@@ -1228,21 +1240,21 @@ static func consume_bandage_heal() -> int:
 # ---- R223：0~10 各 debuff 的取值函数（界面 / 引擎 / 测试的唯一口）----
 
 static func start_gold() -> int:
-	## 新开一局（与换层）的初始金钱：0~6 档 = 150（含难度 0 的 +50），7 档起 = 100。
+	## 新开一局（与换层）的初始金钱：0~7 档 = 150（含难度 0 的 +50），8 档起 = 100。
 	## R767：每日修饰的 `gold` 叠在这上面（「贫瘠」−50 也该能开盘，所以夹 0 下限）。
-	var base := DIFF_GOLD_HIGH if _diff() >= 7 else DIFF_GOLD_LOW
+	var base := DIFF_GOLD_HIGH if _diff() >= DIFF_GOLD_FROM else DIFF_GOLD_LOW
 	return maxi(0, base + int(daily_fx.get("gold", 0)))
 
 
 static func chocolate_per_layer() -> int:
-	## 每层初始巧克力：8 档起「行动力降低」= 11，其余 = RogueMap.MAX_STEPS(12)。
+	## 每层初始巧克力：9 档起「行动力降低」= 11，其余 = RogueMap.MAX_STEPS(12)。
 	## R399（用户口径「第三层应该不再提供巧克力」）：第三层是 5 格直道，每格 `cost` 恒为 0，
 	## 巧克力在那儿一块也用不掉 —— 直接给 0，不再显示一个永远花不掉的数字。
 	## ⚠️ 读的是**当前层**（`advance_layer` 里先赋 `current_layer` 再调本函数）。
 	## R767：每日修饰的 `choco`（旅粮 +3 / 饥饿 −3）叠在这里；第三层仍然恒 0。
 	if current_layer == GameLayers.LAYER_THREE:
 		return 0
-	var base := DIFF_CHOCO_HIGH if _diff() >= 8 else RogueMap.MAX_STEPS
+	var base := DIFF_CHOCO_HIGH if _diff() >= DIFF_CHOCO_FROM else RogueMap.MAX_STEPS
 	return maxi(0, base + int(daily_fx.get("choco", 0)))
 
 
@@ -1259,36 +1271,36 @@ static func add_chocolate(n: int) -> void:
 
 
 static func max_hp_mul() -> float:
-	## 初始最大生命系数：9 档起「虚弱」= 0.8，其余 = 1.0。
+	## 初始最大生命系数：11 档起「虚弱」= 0.8，其余 = 1.0。
 	## R767：每日修饰的 `hp_mul`（强健 ×1.15 / 贫血 ×0.88）**相乘**叠在难度系数上。
-	return (DIFF_MAX_HP_MUL if _diff() >= 9 else 1.0) * float(daily_fx.get("hp_mul", 1.0))
+	return (DIFF_MAX_HP_MUL if _diff() >= DIFF_MAX_HP_FROM else 1.0) * float(daily_fx.get("hp_mul", 1.0))
 
 
 static func enemy_hp_bonus_pct() -> float:
 	## 3 档起「敌人更加顽强」：敌方开场生命 +10%（向上取整）。
 	## R767：每日修饰的 `enemy_hp`（敌之孱弱 −15% / 敌之顽强 +20%）加法叠加。
-	return (DIFF_ENEMY_HP_PCT if _diff() >= 3 else 0.0) + float(daily_fx.get("enemy_hp", 0.0))
+	return (DIFF_ENEMY_HP_PCT if _diff() >= DIFF_ENEMY_HP_FROM else 0.0) + float(daily_fx.get("enemy_hp", 0.0))
 
 
 static func enemy_power_bonus() -> int:
-	## 6 档起「敌人更加凶猛」：敌方开场攻击 +1（原本 0 攻工事除外，见 scaled_enemy_card）。
+	## 7 档起「敌人更加凶猛」：敌方开场攻击 +1（原本 0 攻工事除外，见 scaled_enemy_card）。
 	## R767：每日修饰的 `enemy_power` 加法叠加，但**不叠成负数**（敌人攻击不能被抹到 0 以下）。
-	return maxi(0, (DIFF_ENEMY_POWER if _diff() >= 6 else 0) + int(daily_fx.get("enemy_power", 0)))
+	return maxi(0, (DIFF_ENEMY_POWER if _diff() >= DIFF_ENEMY_POWER_FROM else 0) + int(daily_fx.get("enemy_power", 0)))
 
 
 static func rare_weight_mul() -> float:
 	## 4 档起「稀有卡牌获取概率降低」：卡牌奖励里稀有权重的乘数（×0.5）。
 	## R767：每日修饰的 `rare_mul`（幸运 ×1.6 / 倒霉 ×0.5）相乘。
-	return (DIFF_RARE_WEIGHT_MUL if _diff() >= 4 else 1.0) * float(daily_fx.get("rare_mul", 1.0))
+	return (DIFF_RARE_WEIGHT_MUL if _diff() >= DIFF_RARE_FROM else 1.0) * float(daily_fx.get("rare_mul", 1.0))
 
 
 static func fatigue_active() -> bool:
-	## 5 档起「行动力低时疲惫」是否生效。R767：每日减益也会强制开启它。
+	## 6 档起「行动力低时疲惫」是否生效。R767：每日减益也会强制开启它。
 	return _diff() >= DIFF_FATIGUE_FROM or bool(daily_fx.get("fatigue", false))
 
 
 static func elite_weight_mul() -> float:
-	## 10 档起「精英出现增多」：地图生成时**精英出现概率**的统一乘数。
+	## 12 档起「精英出现增多」：地图生成时**精英出现概率**的统一乘数。
 	## 注意这是「概率」不是「权重」：`RogueMap._weighted_far()` 会把多出来的权重从
 	## 其他类型里扣掉，所以精英占比恰好涨 ×1.3，而不是权重 ×1.3 后只涨两成。
 	## 明房（`RogueMap.WEIGHTS`）与「?」房（`RogueMap.WEIGHTS_UNKNOWN`）两条途径都乘它，
@@ -2218,13 +2230,13 @@ static func has_all_keys() -> bool:
 
 
 static func third_layer_locked() -> bool:
-	## 第三层是否被「上锁」约束：难度 ≥ 12 时，需要凑齐三样信物才能进入。
-	## ⚠️ 难度 0~10 下第三层照常开放（用户明确「任何难度都开放第三层」）。
+	## 第三层是否被「上锁」约束：难度 ≥ 10 时，需要凑齐三样信物才能进入。
+	## ⚠️ 难度 0~9 下第三层照常开放（用户明确「任何难度都开放第三层」）。
 	return _diff() >= DIFF_LOCK_FROM
 
 
 static func can_enter_third_layer() -> bool:
-	## 能否进入第三层：难度 < 12 恒可进；难度 ≥ 12 需要凑齐三样信物。
+	## 能否进入第三层：难度 < 10 恒可进；难度 ≥ 10 需要凑齐三样信物。
 	if not third_layer_locked():
 		return true
 	return has_all_keys()

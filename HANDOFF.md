@@ -2686,3 +2686,27 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
   `git log --all --oneline --grep` 查重：R864/R865 均被占用（含在途工作），本轮改用 **R866**。
 - 遗留（与本轮无关）：engine 唯一失败是 R354 背景尺寸断言（三层底图被在途工作换成 1672×941，
   断言仍要求 1280×720）；工作树里还有在途的 R863 卡框 / R864 背景改动，本轮一律未碰、未纳入提交。
+## 2026-11-25 R869 难度档位重排 + 三级配色（绿/橙/红）
+
+- 用户口径：基础卡削弱从 11 档提前到 **5 档**、第三层上锁从 12 档提前到 **10 档**，其余按原相对顺序顺延；
+  难度数字框配色从「11 档起橙色」改为 **6 档起橙色、10 档起红色**（0~5 保持森林绿）。
+- 最终 14 档：0 轻松 / 1 微恙 / 2 严酷 / 3 顽强 / 4 稀缺 / 5 初始卡削弱 / 6 疲惫 / 7 凶暴 /
+  8 贫瘠 / 9 匆忙 / 10 上锁 / 11 虚弱 / 12 噩梦 / 13 昂贵。
+- `scripts/run_state.gd`：
+  - `DIFFICULTY_NAMES` / `DIFFICULTY_TEXTS` 按新顺序重排，`DIFFICULTY_COUNT` 仍 14。
+  - 所有「从哪档起」收进唯一口 `*_FROM` 常量：ENEMY_HP 3 / RARE 4 / STARTER_WEAK 5 /
+    FATIGUE 6 / ENEMY_POWER 7 / GOLD 8 / CHOCO 9 / LOCK 10 / MAX_HP 11 / ELITE 12 / SHOP_PRICE 13；
+    原先散落在 `difficulty_summary()` / `start_gold()` / `chocolate_per_layer()` / `max_hp_mul()` /
+    `enemy_hp_bonus_pct()` / `enemy_power_bonus()` / `rare_weight_mul()` 的字面档号全部改读常量。
+  - 新增 `DIFF_ORANGE_FROM := 6` / `DIFF_RED_FROM := 10`。
+- `scripts/class_pick_scene.gd`：难度数字框三级绘制 —— 0~5 森林绿、6~9 焦糖橙
+  （沿用 e08a20 / c96a14 / f0a336 / c9700f）、10~13 砖红（b23c2e / 8f2d24 / d9604a / 9d2f22，
+  与暖棕调性同系、不用刺眼纯红）；数字字 fff3d5 三态共用。
+- 注释同步：`profile_data.gd`（R862 历史迁移保留；R869 不改总档数，class_diff 存最高解锁档，无需再迁移）、
+  `steam_achievements.gd`、`map_scene.gd`、`shop_scene.gd`、`battle_scene.gd` 里的旧档号。
+- 回归：`test_engine.gd` 全部难度测试按新档号重锚，新增 4 条 R869 断言（九档 FROM 阈值 /
+  配色阈值 / 档位名顺序 / 界面源码锁）。全套 10 套件 9 绿；engine 唯一失败是 R354 背景尺寸
+  （底图 1672×941、断言仍要 1280×720，在途 R868 改动导致，与本轮无关）。
+- 截图验收：`tools/_shot_r869_diff.gd` 在真实 ClassPickScene 上截 4/6/10 三档，
+  `art_src/2026-11-25_frames/r869_diff_{green,orange,red}.png` —— 绿/橙/红三态清晰、风格一致。
+- 轮次号查重：R868 已被占用（背景接入），R869/R870 空闲 → 本轮用 **R869**。

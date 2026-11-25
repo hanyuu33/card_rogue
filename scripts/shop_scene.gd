@@ -521,8 +521,8 @@ func _row3_template(for_restore := false) -> Array:
 		out.append({"key": "choco", "name": "巧克力", "desc": GameI18n.ui("shop", "SHOP_SERVICE_CHOCOLATE_DESC", "获得一块巧克力（行动力 +1）"),
 			"price": PRICE_CHOCO, "icon": "chocolate", "sold": false})
 	# R543（用户口径「商店第三排额外售卖屠戮匕首，3 格变 4 格」）：
-	# 难度 ≥11 且玩家不持有屠戮匕首（6063）时，第三排追加一个「屠戮匕首」商品。
-	# ⚠️ 只在难度 ≥11 生效 —— 低难度不出现（信物只在第三层上锁难度下才有意义）。
+	# 难度 ≥10 且玩家不持有屠戮匕首（6063）时，第三排追加一个「屠戮匕首」商品。
+	# ⚠️ 只在难度 ≥10 生效 —— 低难度不出现（信物只在第三层上锁难度下才有意义）。
 	# R825：for_restore 只供读档反查。已持有不代表存档里的已售罄货位可以消失；
 	# 若这里仍按「持有就删定义」，_restore_shop 会整店回退重摇，把其他成交位也抹掉。
 	if RunState.third_layer_locked() and (for_restore or not RunState.has_key(RunState.DAGGER_RELIC_ID)):

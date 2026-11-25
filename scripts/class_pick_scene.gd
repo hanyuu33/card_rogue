@@ -558,22 +558,33 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 			arrow_on if d < cap else arrow_off)
 	var br := _diff_box_rect()
 	UiTheme.draw_info_card(self, br, true)
-	# R862（用户口径）：橙色从 **11 档（初始卡削弱）** 起 —— 以前这一圈橙色挂在
-	# 「第三层上锁」上（R543，那时上锁正好是 11 档）；插档后上锁挪到 12，橙色提前一档。
-	var locked := d >= RunState.DIFF_STARTER_WEAK_FROM
-	if locked:
+	# R869（用户口径）：难度数字框改三级 —— 0~5 常规森林绿、6~9 橙色、10 起红色。
+	# 橙色原来挂在初始卡削弱档（R862 起 = 11 档），现在独立阈值；红色是最高档警示色。
+	# 色值沿用同一套暖棕 / 砖红复古调性（不用刺眼纯红），与森林绿底 + 焦糖橙框协调。
+	var is_orange := d >= RunState.DIFF_ORANGE_FROM
+	var is_red := d >= RunState.DIFF_RED_FROM
+	var tinted := is_orange or is_red
+	var frame_border := Color("e08a20")
+	var box_bg := Color("c96a14")
+	var box_border := Color("f0a336")
+	var name_color := Color("c9700f")
+	if is_red:
+		frame_border = Color("b23c2e")
+		box_bg = Color("8f2d24")
+		box_border = Color("d9604a")
+		name_color = Color("9d2f22")
+	if tinted:
 		var ob := StyleBoxFlat.new()
 		ob.bg_color = Color(1, 0.5, 0.1, 0.0)
-		ob.border_color = Color("e08a20")
+		ob.border_color = frame_border
 		ob.set_border_width_all(2)
 		ob.set_corner_radius_all(10)
 		draw_style_box(ob, br)
 	var number_box := Rect2(br.position + Vector2(4, 3), Vector2(42, br.size.y - 6))
-	if locked:
-		# R862：难度 ≥ 11 时数字框底整个换成橙色（原 `draw_action` 是森林绿底）。
+	if tinted:
 		var nb := StyleBoxFlat.new()
-		nb.bg_color = Color("c96a14")
-		nb.border_color = Color("f0a336")
+		nb.bg_color = box_bg
+		nb.border_color = box_border
 		nb.set_border_width_all(1)
 		nb.set_corner_radius_all(6)
 		draw_style_box(nb, number_box)
@@ -584,7 +595,7 @@ func _draw_difficulty_block(x: float, w: float) -> void:
 			UiTheme.FS_HEADING, Color("fff3d5"))
 	draw_string(_font_bold, Vector2(br.position.x + 52, br.position.y + 26.0),
 			RunState.DIFFICULTY_NAMES[d], HORIZONTAL_ALIGNMENT_CENTER, br.size.x - 58,
-			UiTheme.FS_SUBHEAD, Color("c9700f") if locked else UiTheme.PAGE_INK)
+			UiTheme.FS_SUBHEAD, name_color if tinted else UiTheme.PAGE_INK)
 	# 当前档新增 debuff 文本（R224：只写当前档这一条）
 	# R650：原来下面还有一行「数值摘要」（初始金钱 / 巧克力 / 敌血 / 稀有率 / 敌攻 /
 	# 最大生命 / 精英），店长口径「只删掉更下面的数值摘要」→ 整行删除。数值细节

@@ -8879,7 +8879,7 @@ func _show_over(win: bool) -> void:
 				# Boss 通关：本层打完了 —— 有下一层就推进（满血 + 新地图 + 起始道具
 				# 三选一），没有下一层才结束整局 run。
 				_run_next_layer = GameLayers.next_layer(RunState.current_layer)
-				# R543（用户口径「任何难度都开放第三层，但难度 11 及以上需要凑齐三样信物」）：
+				# R543（用户口径「任何难度都开放第三层，但难度 10 及以上需要凑齐三样信物」）：
 				# 下一层是第三层、且当前难度上锁、且信物没凑齐 → 不进第三层，直接结算。
 				# 结算标题据此显示「胜利？」（见 run_summary_scene）。
 				if _run_next_layer == GameLayers.LAYER_THREE \
