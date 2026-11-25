@@ -1,0 +1,13 @@
+Japanese western medieval fantasy card illustration, delicate anime painterly linework, softly layered watercolor and opaque paint, luminous ivory and cream highlights, subtle paper texture, carefully painted antique metal, warm diffused lighting, gentle atmospheric depth, expressive readable silhouette, refined storybook finish, coherent anatomy, restrained ornament.
+
+Reference image A is the current artwork. Change ONE thing only — the barrel's muzzle end. Keep everything else identical: the same stone rampart, the same two blue fleur-de-lis banners, the same sunlit green valley and stone bridge, the same castle on the wooded hill, the same burning wooden siege engine on the right, the same single blue-white lightning beam hitting it, the same camera angle, framing, palette and watercolour rendering.
+
+DELETE THE MUZZLE-FACE DESIGN COMPLETELY. In reference A the barrel ends in a large visible circular end-plate with a glowing lens, and because this cannon is seen from the side that plate reads as if a second muzzle had been stuck onto the side of the barrel. Remove it entirely: no end-plate, no disc, no lens, no glowing circle, no ring, no rune plate, no ornament whatsoever at the barrel's end.
+
+AT THIS ANGLE THE MUZZLE MUST NOT BE VISIBLE AT ALL. The barrel crosses the frame from the lower left toward the middle right and is seen almost from the side, so its bore faces away to the right and is foreshortened into nothing. Paint the barrel simply ENDING: a plain heavy brass band wrapping the very tip, the bore turned away and not shown — no dark oval, no opening, no hole, no visible interior, no rim ellipse. A viewer must not be able to point at a 'muzzle' anywhere on this cannon.
+
+THE BEAM stays exactly as it is in reference A: one straight blue-white lightning shaft leaving the barrel's tip at the outer face of that brass band and running along the barrel's axis into the burning siege engine. Same length, same brightness, same target, no bend, no second beam.
+
+ALSO REMOVE any round ornament, porthole, gear-shaped disc, medallion or wheel on the visible side of the barrel and carriage, so that no circular shape on the machine can be mistaken for a muzzle or for a hole. The cannon's side reads as plain banded iron with rivets only. Do not add any new decoration, any new mechanism, any new glowing part — keep it simple.
+
+Square card art safe for 448:403 crop with key parts central 80%. No text, numbers, UI, frame, watermark, cyberpunk, modern electronics, holograms, neon, photorealism or 3D.
