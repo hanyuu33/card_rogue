@@ -396,9 +396,9 @@ const GHOST_CARD_MARGIN := 0.23
 
 # ── 稀有度（对映 CardData.RARITY_COLORS / RARITY_NAMES 的下标）──
 const RARITY_COMMON := Color("2c2c2a")   ## 0 普通
-const RARITY_RARE := Color("1f5fbf")     ## 1 稀有
+const RARITY_RARE := Color("2f80dd")     ## 1 稀有（R872：1f5fbf → 提亮，店长口径「蓝色亮一点」）
 const RARITY_EPIC := Color("8a30b8")     ## 2 史诗
-const RARITY_STARTER := Color("1d7a4f")  ## 3 初始
+const RARITY_STARTER := Color("22a267")  ## 3 初始（R872：1d7a4f → 提亮，店长口径「绿色亮一点」）
 const RARITY_MONSTER := Color("7a1f1f")  ## 4 怪物
 const RARITY_EVENT := Color("a44ad0")    ## 5 事件
 const RARITY_CURSE := Color("4e4560")    ## 6 诅咒（R223「疲惫」）

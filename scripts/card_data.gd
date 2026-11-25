@@ -9,8 +9,10 @@ extends RefCounted
 
 const RARITY_NAMES: Array[String] = ["普通", "稀有", "史诗", "初始", "怪物", "事件", "诅咒"]
 ## 卡面边框色：普通=黑 稀有=蓝 史诗=紫 初始=绿 怪物=暗红 事件=亮紫 诅咒=暗紫灰（R223）
-const RARITY_COLORS: Array[Color] = [Color("2c2c2a"), Color("1f5fbf"),
-		Color("8a30b8"), Color("1d7a4f"), Color("7a1f1f"), Color("a44ad0"),
+## R872（店长口径「稀有度的绿色和蓝色都可以亮一点」）：稀有蓝 1f5fbf → 2f80dd、
+## 初始绿 1d7a4f → 22a267。两个都是**提亮同一色相**，不换色位 —— 蓝仍是蓝、绿仍是绿。
+const RARITY_COLORS: Array[Color] = [Color("2c2c2a"), Color("2f80dd"),
+		Color("8a30b8"), Color("22a267"), Color("7a1f1f"), Color("a44ad0"),
 		Color("4e4560")]
 
 ## ── 【字段系统】（R91）`affixes` = 这张卡当前带有的**字段名**列表 ──

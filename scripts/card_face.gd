@@ -526,10 +526,13 @@ static func draw(canvas: CanvasItem, card: CardData, rect: Rect2, hp: int,
 		# R843h：详情卡名不再使用带框姓名牌；纸底缺失时也只保留统一底色。
 	# ④ 卡图 —— 铺进框素材给的**卡图窗**（逐类不同，见 `FRAME_ART`）。
 	_draw_art(canvas, card, rect, k, pad, is_tapped, font_bold, sleeping, phase, name_only)
-	# ④b 卡名框纸面 = **稀有度色**（R863 唯一稀有度通道；R170 的锦旗缎带已停用）。
-	_draw_plate(canvas, card, rect)
-	# ④c 整卡外框：卡名框金边 / 角花 / 卡图窗内沿 / 底框都在这一张里。
+	# ④b 整卡外框：卡名框金边 / 角花 / 卡图窗内沿 / 底框都在这一张里。
 	_draw_outer_frame(canvas, card, rect)
+	# ④c 卡名框纸面 = **稀有度色**（R863 唯一稀有度通道；R170 的锦旗缎带已停用）。
+	# ⚠️ R872：**必须排在整卡外框之后**。外框素材的牌匾纸面里带着一块不规则透明洞，
+	#    色块若垫在框下面，就只能从洞里透出来 —— 那就是店长报的「卡框上方黑色空区域」
+	#    （深色稀有度 + 锯齿边缘）。现在 plate 本身是一块规整的圆角四边形，盖在牌匾里。
+	_draw_plate(canvas, card, rect)
 	# ④d R592：字段标志（贴卡框右上角，多字段轮播）
 	#     R656：状态槽位（眩晕 / 冰封 / 沉睡 N / 倒数 N / 可发动 / 临时嘲讽）排进同一条队列，
 	#     状态在前、字段在后 —— 卡面**不再有文字标记**，全靠这个圆槽说话。
@@ -623,8 +626,8 @@ static func draw_pick(canvas: CanvasItem, card: CardData, rect: Rect2,
 			glow.a = 0.42 - 0.11 * gi
 			canvas.draw_rect(rect.grow(1.0 + gi), glow, false, 1.0)
 	_draw_art(canvas, card, rect, k, pad, false, font_bold, false, 0, true)
-	_draw_plate(canvas, card, rect)                              # R863：卡名框 = 稀有度色
 	_draw_outer_frame(canvas, card, rect)                        # 整卡外框（与 draw() 同一张）
+	_draw_plate(canvas, card, rect)                              # R872：色块压在框之上（顺序同 draw()）
 	_draw_affix_badges(canvas, card, rect, k, false)             # R592：字段标志
 	_draw_text_zone(canvas, card, rect, kt, k, pad, card.health, font,
 			font_bold, false, false, true)                       # 卡名（只留卡名）
@@ -787,6 +790,10 @@ static func _draw_plate(canvas: CanvasItem, card: CardData, rect: Rect2) -> void
 	## `card_plate_<kind>.png` 是与外框同尺寸、同坐标系的灰度层（框外全透明）——
 	## 乘上稀有度色后叠在卡图上、外框下：纸纹 / 磨损 / 明暗全是原图，
 	## 只有色相换成稀有度（不是一块平涂色块）。
+	## ⚠️ R872：原素材的着色区是一块**不规则斑块**（边缘锯齿 + 局部挖空），
+	##    乘上深色稀有度就是卡名条中间那团「黑色空区域」；而且它垫在外框下面，
+	##    只能从框的透明洞里透出来，形状永远毛糙。现在素材换成**规整圆角四边形**，
+	##    调用点也改到外框之后（见 `draw()` ④c）—— 两处必须成对，单改一处会退回旧观感。
 	## 缺图回退：直接在卡名框 bbox 上铺同色，稀有度照样读得出来（不空白、不报错）。
 	var kind := art_frame_kind(card)
 	var col := rarity_plate_color(card)
