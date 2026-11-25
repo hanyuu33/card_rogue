@@ -4795,6 +4795,9 @@ func _autoplay_play(hand_index: int) -> bool:
 		var oh_auto := overhaul_options()
 		if not oh_auto.is_empty():
 			overhaul_recall(oh_auto[0])
+	# R870：自动出牌（鸭语耳环）与失控要塞同一条纪律 —— 这张牌顺手拉出来的**所有**待选
+	# 都替玩家随机点完。原来只收乌鸦 / 返修两个，抽到淘汰 / 组合 / 合体就留个面板在屏幕上。
+	auto_resolve_choices()
 	return true
 
 
@@ -6809,19 +6812,13 @@ func _fort_play(card: CardData) -> bool:
 	if overhaul_pending:
 		overhaul_remaining = 0
 		overhaul_pending = false
-	# 淘汰 9174（R317）：`target_mode = none`，走上面的通用分支就会挂起 `eliminate_pending`
-	# 等玩家从**卡组**挑一张盟友 / 工事。它比 R288 晚出，一直漏在这份「就地收掉」的清单外 ——
-	# 结果是随机释放到它时，立卡演完、界面上还杵着一个选卡页，玩家必须自己点掉。
-	# 处理与返修（overhaul）完全同口径：替玩家随机挑一张，效果照常结算（抽 4 张也照走）。
-	if eliminate_pending:
-		var el_opts := eliminate_options()
-		# ⚠️ 这里**刻意不抽签**：多消耗一次 `rng.randi()` 会把之后整局的随机序列推后一位，
-		#    连带把毫不相关的回归（R769 的开局手牌）撞歪。淘汰具体选哪张对玩家没有可见过程，
-		#    取卡组里第一张合法卡即可 —— 与「就地收掉、不留交互」的意图一致。
-		if el_opts.is_empty():
-			eliminate_pending = false
-		else:
-			eliminate_pick(el_opts[0])
+	# R870：把这一张顺手拉出来的**所有**待选（淘汰 / 组合 / 合体 / 报废 / 预判 / 弃牌区取牌……
+	# 见 `_auto_resolve_one()`）替玩家**随机**点完。
+	# 口径（店长）：「所有要玩家选择的操作都要检查一下，改为随机选，包括选目标选格子选卡组
+	# 选弃牌区选组合等等，你要确保玩家不进行操作它自动进行」。
+	# ⚠️ 必须在**这里**（本章结算完之后）做：组合页 / 选卡页都是 `_sync_pick` 按引擎状态画的，
+	#    同一帧内收干净，界面就一帧都不会闪出来。漏一条 = 玩家卡在面板上出不了牌。
+	auto_resolve_choices()
 	if ok:
 		_log("失控要塞：随机释放「%s」" % card.card_name)
 	# R869：成败的唯一判据给界面 —— 只有 `ok == true` 的那一张才立卡。
@@ -6830,6 +6827,238 @@ func _fort_play(card: CardData) -> bool:
 	#    `cast_swap_units`），它们**不发 `spell`**，那样判会把真放出来的卡当成落空丢掉。
 	action.emit("fort_cast_result", {"name": card.card_name, "ok": ok})
 	return ok
+
+
+## ── R870：失控要塞「玩家全程不操作」的自动选择器 ──────────────────────
+## 店长口径：「所有要玩家选择的操作都要检查一下，改为随机选，包括选目标选格子选卡组
+## 选弃牌区选组合等等，你要确保玩家不进行操作它自动进行」。
+## 逐条 pending 走 `_auto_resolve_one()`，一次只解决**一步**（「选 N 张」的分步面板
+## 分 N 次点完），由 `auto_resolve_choices()` 循环到没有待办为止。
+##
+## ⚠️ 这里**刻意不共用主 `rng`**：多消耗一次 `rng.randi()` 会把之后整局的随机序列推后
+##    一位 —— R869 替玩家选「淘汰」时多抽了一次，就把毫不相干的 R769 开局手牌撞歪了。
+##    改用按 `rng.seed` + 调用序号派生的**独立**随机源：同一 seed 回放照样可复现
+##    （`rng_seed` 已进存档），但主序列一动没动，别处的回归不受牵连。
+var _auto_rng := RandomNumberGenerator.new()
+var _auto_seq := 0
+
+
+func _auto_pick_index(n: int) -> int:
+	## 在 n 个候选里随机取一个下标；n <= 0 → -1（调用方据此把 pending 收掉）。
+	if n <= 0:
+		return -1
+	_auto_seq += 1
+	_auto_rng.seed = hash("%d:%d" % [rng.seed, _auto_seq])
+	return _auto_rng.randi() % n
+
+
+func has_pending_player_choice() -> bool:
+	## 「是不是还有等玩家点的东西」—— 界面 / 探针 / 回归共用的**唯一判据口**。
+	## ⚠️ 只列「不点就卡住」的那些：`_clock_pending`（缺陷时钟自动换回合）、
+	##    `primal_*`（演出段）、`_pending_fire_enter`（内部链）都是自动推进的，不算。
+	return assemble_combo_pending or foresight_mode or foresight_pick \
+			or eliminate_pending or overhaul_pending or revive_pending \
+			or crow_pending or whale_pending or regret_pending or shadow_step_pending \
+			or focus_pending or merge_pending or wish_pending or recruit_pending \
+			or creation_pending or cannonize_pending or surprise_pending \
+			or endless_pending or rebirth_pending or paint_pending
+
+
+func auto_resolve_choices(max_rounds := 64) -> int:
+	## 替玩家把所有待办**随机**点完，返回处理步数。
+	## 上限是防呆（组合排队 / 某条 pending 自愈失败会空转），不是业务上限。
+	var steps := 0
+	while steps < max_rounds and has_pending_player_choice():
+		if not _auto_resolve_one():
+			break
+		steps += 1
+	return steps
+
+
+func _auto_resolve_one() -> bool:
+	## 解决**一个**选择，返回 true = 这一步动过（哪怕只是把无效待办收掉）。
+	## 顺序：组合 → 预判 → 选牌族（手牌 / 卡组 / 弃牌区）→ 棋盘格子。
+	## 每条分支在「候选为空 / 选取失败」时都**就地收掉 pending** —— 漏一条就是
+	## 玩家卡在面板上出不了牌（`use_spell` 开头有 pending 闸门）。
+	if assemble_combo_pending:
+		return _auto_pick_combo()
+	if foresight_mode:
+		# 预判①/②：原本等玩家点按钮。随机挑一个（①弃牌区的 0 费技能 / ②卡组随机取）。
+		foresight_choose(1 if _auto_pick_index(2) == 0 else 2)
+		return true
+	if foresight_pick:
+		var fs_o := foresight_options()
+		var fs_i := _auto_pick_index(fs_o.size())
+		if fs_i < 0 or not foresight_pick_card(fs_o[fs_i]):
+			foresight_pick = false
+		return true
+	if eliminate_pending:
+		var el_o := eliminate_options()
+		var el_i := _auto_pick_index(el_o.size())
+		if el_i < 0 or not eliminate_pick(el_o[el_i]):
+			eliminate_pending = false
+		return true
+	if overhaul_pending:
+		var oh_o := overhaul_options()
+		var oh_i := _auto_pick_index(oh_o.size())
+		if oh_i < 0 or not overhaul_recall(oh_o[oh_i]):
+			overhaul_pending = false
+			overhaul_remaining = 0
+		return true
+	if revive_pending:
+		var rv_o := revive_options()
+		var rv_i := _auto_pick_index(rv_o.size())
+		if rv_i < 0 or not revive_recall(rv_o[rv_i]):
+			revive_pending = false
+			revive_remaining = 0
+		return true
+	if shadow_step_pending:
+		var ss_o := shadow_step_options()
+		var ss_i := _auto_pick_index(ss_o.size())
+		if ss_i < 0 or not shadow_step_recall(ss_o[ss_i]):
+			shadow_step_pending = false
+			shadow_step_remaining = 0
+		return true
+	if crow_pending:
+		var cr_o := crow_options()
+		var cr_i := _auto_pick_index(cr_o.size())
+		if cr_i < 0 or not crow_recall(cr_o[cr_i]):
+			crow_pending = false
+		return true
+	if whale_pending:
+		var wh_o := whale_options()
+		var wh_i := _auto_pick_index(wh_o.size())
+		if wh_i < 0 or not whale_pick(wh_o[wh_i]):
+			whale_pending = false
+			whale_remaining = 0
+		return true
+	if regret_pending:
+		var rg_o := regret_options()
+		var rg_i := _auto_pick_index(rg_o.size())
+		if rg_i < 0 or not regret_pick(rg_o[rg_i]):
+			regret_pending = false
+		return true
+	if focus_pending:
+		var fc_o := focus_options()
+		var fc_i := _auto_pick_index(fc_o.size())
+		if fc_i < 0 or not focus_pick(fc_o[fc_i]):
+			focus_cancel()
+		return true
+	if wish_pending:
+		var ws_o := wish_options()
+		var ws_i := _auto_pick_index(ws_o.size())
+		if ws_i < 0 or not wish_pick(ws_o[ws_i]):
+			wish_pending = false
+		return true
+	if merge_pending:
+		var mg_o := merge_deck_options()
+		var mg_i := _auto_pick_index(mg_o.size())
+		if mg_i < 0 or not merge_pick(mg_o[mg_i]):
+			merge_cancel()
+		return true
+	if recruit_pending:
+		var rc_c := recruit_cards()
+		var rc_i := _auto_pick_index(rc_c.size())
+		if rc_i < 0 or not recruit_pick(rc_i):
+			recruit_cancel()
+		return true
+	if creation_pending:
+		var cn_o := creation_options()
+		var cn_i := _auto_pick_index(cn_o.size())
+		if cn_i < 0 or not creation_pick(cn_o[cn_i]):
+			creation_pending = false
+			creation_remaining = 0
+		return true
+	if cannonize_pending:
+		var cz_o := cannonize_options()
+		var cz_i := _auto_pick_index(cz_o.size())
+		if cz_i < 0 or not cannonize_pick(cz_o[cz_i]):
+			cannonize_pending = false
+			cannonize_remaining = 0
+		return true
+	if surprise_pending:
+		var sp_o := surprise_options()
+		var sp_i := _auto_pick_index(sp_o.size())
+		if sp_i < 0 or not surprise_pick(sp_o[sp_i]):
+			surprise_pending = false
+			surprise_remaining = 0
+		return true
+	if endless_pending:
+		var en_o := endless_options()
+		var en_i := _auto_pick_index(en_o.size())
+		if en_i < 0 or not endless_pick(en_o[en_i]):
+			endless_abort()
+		return true
+	if rebirth_pending:
+		var rb_o := rebirth_options()
+		var rb_i := _auto_pick_index(rb_o.size())
+		if rb_i < 0 or not rebirth_pick(rb_o[rb_i]):
+			rebirth_pending = false
+			rebirth_remaining = 0
+		return true
+	if paint_pending:
+		var pt_o := paint_options()
+		var pt_i := _auto_pick_index(pt_o.size())
+		if pt_i < 0 or not paint_pick(pt_o[pt_i]):
+			paint_cancel()
+		return true
+	return false
+
+
+func _auto_pick_combo() -> bool:
+	## 替玩家把组合页点完：随机填三个槽 → 提交。
+	## * 强制底座（技术结合 9193 的构装体）→ ①槽已被引擎锁定，只随机挑 ②③；
+	## * ②③ 只能放**接得住**的卡（`AssembleRules.valid_upper/lower`，与 UI / build 同一判据），
+	##   否则 `assemble_combo_set_slot` 会当场拒收，三槽永远填不满；
+	## * 填完仍拼不出产物（build 返回 null）→ 换一组再试；试满上限就收掉这次组合机会。
+	##   ⚠️ 绝不能留一个「填不满 / 拼不出」的组合页给玩家 —— 那正是这一轮要消灭的死锁。
+	const COMBO_AUTO_TRIES := 12
+	if not assemble_combo_pending:
+		return false
+	var cards := assemble_combo_cards()
+	var n := cards.size()
+	if n <= 0:
+		assemble_combo_cancel()
+		return true
+	var locked := assemble_combo_locked_attr()
+	for _attempt in COMBO_AUTO_TRIES:
+		var ai := locked
+		if ai < 0:
+			ai = _auto_pick_index(n)
+			if ai < 0:
+				break
+		var uppers: Array[int] = []
+		var lowers: Array[int] = []
+		for i in n:
+			if i == ai:
+				continue
+			var c: CardData = cards[i]
+			if AssembleRules.valid_upper(c.upper_effect):
+				uppers.append(i)
+			if AssembleRules.valid_lower(c.lower_effect):
+				lowers.append(i)
+		if uppers.is_empty() or lowers.is_empty():
+			break
+		var ui := uppers[_auto_pick_index(uppers.size())]
+		# ②③ 尽量用不同的两张卡（同一张卡同时当上下半在组合页里拖不出来）
+		var lowers2: Array[int] = []
+		for li in lowers:
+			if li != ui:
+				lowers2.append(li)
+		if lowers2.is_empty():
+			lowers2 = lowers
+		var li2 := lowers2[_auto_pick_index(lowers2.size())]
+		if locked < 0:
+			assemble_combo_set_slot("attr", ai)
+		assemble_combo_set_slot("upper", ui)
+		assemble_combo_set_slot("lower", li2)
+		if assemble_combo_preview() != null:
+			# commit 内部会自己 cancel（手牌满 → 落空），失败也算这一步处理完了。
+			assemble_combo_commit()
+			return true
+	# 兜底：拼不出来就收掉这次组合机会（排队中的会由 cancel 自动开下一次）
+	assemble_combo_cancel()
+	return true
 
 
 func _fort_hand_target(card: CardData, own_index: int) -> int:
@@ -6999,6 +7228,22 @@ func _fort_board_targets(card: CardData) -> Array[Vector2i]:
 			if du != null and du.owner == SIDE_SELF \
 					and (du.card.kind == "盟友" or du.card.is_fort()):
 				out.append(dc)
+		return out
+	if card.id == AID_FIRE_ID:
+		# 援护炮击 9192（R582）：8 伤 + 目标本回合力量 -8 → 与聚能炮击同口径，只打敌方单位。
+		# ⚠️ 与下面那两条一样，漏了就会落进 `_:` → 返回空池 → 抽到它当场白跳。
+		for c in _side_cells(SIDE_OPPONENT):
+			if state.unit_at(c) != null:
+				out.append(c)
+		return out
+	if card.id == MERGE_ID:
+		# 合体 9167（R298）：目标 = 己方**盟友或工事**（与拆解 / 重组同口径）。
+		# 素体由 `_merge_spell()` 从卡组随机取一张（本卡不在这里选第二段）。
+		for mc in _side_cells(SIDE_SELF):
+			var mu: Placement = state.unit_at(mc)
+			if mu != null and mu.owner == SIDE_SELF \
+					and (mu.card.kind == "盟友" or mu.card.is_fort()):
+				out.append(mc)
 		return out
 	if card.id == BREAKTHROUGH_ID or card.id == IMPACT_CANNON_ID:
 		# 集中突破 9162 / 冲击炮 9163（R290）：与聚能炮击同口径，只打**敌方**单位。
@@ -7983,6 +8228,15 @@ func _inspire_tick() -> int:
 			"targets": INSPIRE_TARGETS, "cells": hit_cells})
 	return n
 
+func _random_proto_index() -> int:
+	## 卡组里**随机**一张「素体」的下标；没有 → -1。
+	## 失控要塞（9161）的「选卡组」口径 = 随机；这里只用独立随机源（`_auto_pick_index`），
+	## 不动主 `rng` —— 蓄力叠第二次合体也走这里，若消耗主 rng 会推后整局随机序列。
+	var opts := merge_deck_options()
+	var i := _auto_pick_index(opts.size())
+	return -1 if i < 0 else opts[i]
+
+
 func _first_proto_index() -> int:
 	## 卡组里第一张「素体」8025 的下标（-1 = 没有）。
 	## 判据用 id 比对 PROTO_ID —— 与 R221「拆素体不触发回收者」同口径（全库仅 8025 是素体）。
@@ -8154,7 +8408,7 @@ func _merge_spell(target, side: String) -> String:
 	var hp := merge_body_hp
 	var src_name := merge_body_name
 	if atk < 0 or hp < 0:
-		var di := _first_proto_index()
+		var di := _random_proto_index()
 		if di < 0:
 			_clear_merge_pick()
 			_log("合体：卡组里没有「素体」，效果落空")

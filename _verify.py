@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""十套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput；R789 增补 content；R816 增补 mod）。
+"""十一套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput；R789 增补 content；R816 增补 mod；R870 增补 fortauto）。
 
 用法：python _verify.py
-逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / content / mod / smoke，统计 ✓/✗，
+逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / content / mod / fortauto / smoke，统计 ✓/✗，
 任一失败则进程退出码 1。输出落盘 _*.txt 便于事后检查。
 """
 import os
@@ -69,6 +69,9 @@ SUITES = [
     #       坏清单与坏 JSON 只伤自己 / 素材覆盖与压制 / 编辑器默认不扫）。
     # 与 content 套是两条链：那条测官方热更的「整份替换」，这条测 mod 的「增量合并」。
     ("mod", ["--headless", "--path", ROOT, "--script", "res://tools/_probe_mod_loader.gd"], "_mod.txt"),
+    # R870：失控要塞（9161）「玩家不操作也能跑完」——把随机池里每张技能卡凭空释放一遍，
+    # 断言不留任何待选面板；池子是动态捞的，新加会弹面板的技能卡这里立刻红。
+    ("fortauto", ["--headless", "--path", ROOT, "--script", "res://scripts/test_fort_auto.gd"], "_fortauto.txt"),
     ("smoke", ["--headless", "--path", ROOT, "--script", "res://scripts/test_smoke.gd"], "_s.txt"),
 ]
 
