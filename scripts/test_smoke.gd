@@ -3499,23 +3499,23 @@ func _check_hand_fan(scene: Variant) -> void:
 	if scene.HAND_CARD_H <= scene.CARD_H * 1.4:
 		_smoke_fail("手牌尺寸：应比战场卡大 1.4 倍以上，实际 %.1f / %.1f（×%.2f）"
 				% [scene.HAND_CARD_H, scene.CARD_H, scene.HAND_CARD_H / scene.CARD_H])
-	# R843：属性栏是常驻决策信息，卡底不再沉出窗口；扇形两端下沉也不许裁到属性栏。
+	# R872：店长口径「下移，底边看不到无所谓」—— 卡底**允许**沉出窗口，但沉出量锁在
+	# 「≈ 10% 卡高」这一档：少了等于白沉、多了连卡名与卡图都会被切。
+	# 原 R843 的两条断言（卡底正好贴窗口下沿 / 属性栏完整可见）随本次口径一并作废。
+	var crop: float = scene.HAND_CROP_BOTTOM
 	var bottom: float = scene.OWN_HAND_Y + scene.HAND_CARD_H
-	if scene.HAND_CROP_BOTTOM != 0.0:
-		_smoke_fail("手牌位置：R843 起卡底不再沉出窗口（HAND_CROP_BOTTOM=%.1f）"
-				% scene.HAND_CROP_BOTTOM)
-	if absf(bottom - scene.WINDOW_H) > 0.5:
-		_smoke_fail("手牌位置：卡底应落在窗口下沿，实际 %.1f / 期望 %.1f"
-				% [bottom, scene.WINDOW_H])
-	# 沉出量不能吃掉半张卡（否则手牌看着只剩一条边）
+	if absf(bottom - (scene.WINDOW_H + crop)) > 0.5:
+		_smoke_fail("手牌位置：卡底应沉出窗口下沿 %.1fpx，实际 %.1fpx"
+				% [crop, bottom - scene.WINDOW_H])
+	if crop < scene.HAND_CARD_H * 0.08 or crop > scene.HAND_CARD_H * 0.12:
+		_smoke_fail("手牌位置：下沉量 %.1f 不在「约 10%% 卡高」区间（%.1f ~ %.1f）"
+				% [crop, scene.HAND_CARD_H * 0.08, scene.HAND_CARD_H * 0.12])
 	var vis_min := 99999.0
 	for i in n:
 		vis_min = minf(vis_min, scene._hand_vis_h(i))
-	if vis_min + 0.01 < scene.HAND_CARD_H * UiTheme.CARD_STATS_BOTTOM:
-		_smoke_fail("手牌位置：扇形端点裁到了属性栏（露出 %.1f，需要 %.1f）"
-				% [vis_min, scene.HAND_CARD_H * UiTheme.CARD_STATS_BOTTOM])
-	if vis_min < scene.HAND_CARD_H * 0.5:
-		_smoke_fail("手牌位置：露出高度只有 %.1f（卡高 %.1f 的一半以下），沉得太狠"
+	# 属性栏下沿被裁是已知取舍，但卡名 / 卡图 / 数值主体必须留着 —— 露出不到 85% 就是沉狠了。
+	if vis_min + 0.01 < scene.HAND_CARD_H * 0.85:
+		_smoke_fail("手牌位置：露出高度只有 %.1f（卡高 %.1f 的 85%% 以下），沉得太狠"
 				% [vis_min, scene.HAND_CARD_H])
 	# 卡顶不能顶进战场（否则会盖住棋盘单位）
 	if scene.OWN_HAND_Y - scene.HAND_FAN_HOVER_LIFT < scene.GRID_Y + scene.GRID_H - 2.0:
@@ -3547,8 +3547,8 @@ func _check_hand_fan(scene: Variant) -> void:
 		var msg := "SMOKE OK 扇形手牌：满手 %d 张，%.0f×%.0f（战场卡 %.0f×%.0f 的 %.2f 倍，" % [
 				n, scene.HAND_CARD_W, scene.HAND_CARD_H, scene.CARD_W, scene.CARD_H,
 				scene.HAND_CARD_H / scene.CARD_H]
-		msg += "卡底留边 %.0f，端点露出 %.0f）" % [
-				scene.WINDOW_H - bottom, vis_min]
+		msg += "卡底出窗 %.0f，端点露出 %.0f）" % [
+				bottom - scene.WINDOW_H, vis_min]
 		msg += " / 倾角 左 %.1f° 右 %.1f° / 横向 %.0f~%.0f（不越界）" % [
 				left_deg, right_deg, el.x, er.y]
 		print(msg)
@@ -3855,16 +3855,25 @@ func _check_r729_drop_out_of_board(scene: Variant) -> void:
 
 
 func _check_r863_board(scene: Variant) -> void:
-	## R863：格子缩到 124×86 -> 6 行 = 516 装进 540 可视窗，滚轮 / 拖动 / 巡场收场全部退化成 0。
+	## R863/R872：格子 124×88 -> 6 行 = 528 装进 552 可视窗，滚轮 / 拖动 / 巡场收场全部退化成 0。
 	## 同时钉住三件配套：战场卡固定 80 高不撞格线、四属性搬到格底数值条、格子上不再画 ↑/→。
 	var cmap: Dictionary = (scene.get_script() as GDScript).get_script_constant_map()
-	if not is_equal_approx(float(cmap.get("CELL", 0.0)), 86.0):
-		_smoke_fail("R863 格子：CELL 应为 86，实际 %s" % str(cmap.get("CELL")))
+	if not is_equal_approx(float(cmap.get("CELL", 0.0)), 88.0):
+		_smoke_fail("R872 格子：CELL 应为 88，实际 %s" % str(cmap.get("CELL")))
 		return
 	if not is_equal_approx(float(cmap.get("CELL_W", 0.0)), 124.0):
 		_smoke_fail("R863 格子：CELL_W 应为 124，实际 %s" % str(cmap.get("CELL_W")))
 		return
 	var content_h: float = float(cmap.get("GRID_CONTENT_H", 0.0))
+	# R872：手牌下沉腾出的高度必须被格子吃干净 —— 「内容（6 行）+ 上下边框带」与可视窗的余量
+	# 超过 6px，就说明只是把窗口拉高了、格子没长，底下会留出一条空白带（那就不叫扩充战场）。
+	var band_y: float = (float(cmap.get("GRID_FRAME_BAND_T", 0.0))
+			+ float(cmap.get("GRID_FRAME_BAND_B", 0.0)))
+	var slack: float = scene.GRID_H - (content_h + band_y)
+	if slack < -0.01 or slack > 6.0:
+		_smoke_fail("R872 战场扩充：可视窗 %.1f − 内容 %.1f − 边框带 %.1f = 余量 %.1f（应为 0~6px）"
+				% [scene.GRID_H, content_h, band_y, slack])
+		return
 	if content_h > scene.GRID_H + 0.01:
 		_smoke_fail("R863 免滚动：内容高 %.1f 超过可视窗 %.1f" % [content_h, scene.GRID_H])
 		return
