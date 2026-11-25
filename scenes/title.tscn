@@ -29,27 +29,15 @@ theme_override_constants/outline_size = 4
 text = ""
 horizontal_alignment = 1
 
-[node name="Buttons" type="VBoxContainer" parent="."]
+[node name="Buttons" type="HBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -455.0
-offset_top = -100.0
-offset_right = 455.0
-offset_bottom = -100.0
-grow_horizontal = 2
-grow_vertical = 0
-alignment = 1
+offset_left = 28.0
+offset_top = 285.0
 theme_override_constants/separation = 10
 
-; R609：两行按键（上 4 下 3 / 无存档时 3＋3）。行是 HBox，按钮最小宽 220 = 原来竖排
-; 时的容器宽，风格不变；容器高 0 靠 grow_vertical=0 向上撑，别写死高度。
-[node name="Row1" type="HBoxContainer" parent="Buttons"]
+[node name="Row1" type="VBoxContainer" parent="Buttons"]
 layout_mode = 2
-alignment = 1
+alignment = 0
 theme_override_constants/separation = 10
 
 [node name="StartBtn" type="Button" parent="Buttons/Row1"]
@@ -64,9 +52,9 @@ theme_override_fonts/font = SubResource("SysFont_cjk")
 theme_override_font_sizes/font_size = 20
 text = "百科"
 
-[node name="Row2" type="HBoxContainer" parent="Buttons"]
+[node name="Row2" type="VBoxContainer" parent="Buttons"]
 layout_mode = 2
-alignment = 1
+alignment = 0
 theme_override_constants/separation = 10
 
 [node name="QuitBtn" type="Button" parent="Buttons/Row2"]

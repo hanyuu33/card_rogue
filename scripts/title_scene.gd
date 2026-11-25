@@ -100,11 +100,7 @@ func _ready() -> void:
 	for b: Button in [$Buttons/Row1/StartBtn, $Buttons/Row1/CodexBtn,
 			$Buttons/Row2/QuitBtn, cont_btn, rec_btn, set_btn, credit_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
-		# R609：只给宽度、不给高度 —— 宽度 220 = R608 之前竖排时容器宽（VBox 会把子节点
-		# 拉满，所以旧版每个按钮都是 220 宽），高度交回 Button 自身，字号 / 内边距 /
-		# 圆角全由 UiTheme.apply_button 决定，风格与旧版完全一致。
-		# HBox 默认会把子节点拉满，所以必须 SHRINK_CENTER：按钮保持 220，成组居中。
-		b.custom_minimum_size = Vector2(220, 0)
+		b.custom_minimum_size = Vector2(144, 40)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# R113 按钮主次：**一屏只有一个主按钮**（开始对战）。规格全部来自 UiTheme.apply_button，
 	# 这里不写任何字号 / 圆角 / 颜色 —— 以后新界面照抄这几行即可。
