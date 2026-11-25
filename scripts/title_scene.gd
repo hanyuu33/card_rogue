@@ -100,7 +100,7 @@ func _ready() -> void:
 	for b: Button in [$Buttons/Row1/StartBtn, $Buttons/Row1/CodexBtn,
 			$Buttons/Row2/QuitBtn, cont_btn, rec_btn, set_btn, credit_btn]:
 		b.pressed.connect(func(): sfx.play("click"))
-		b.custom_minimum_size = Vector2(144, 40)
+		b.custom_minimum_size = Vector2(220, 0)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# R113 按钮主次：**一屏只有一个主按钮**（开始对战）。规格全部来自 UiTheme.apply_button，
 	# 这里不写任何字号 / 圆角 / 颜色 —— 以后新界面照抄这几行即可。

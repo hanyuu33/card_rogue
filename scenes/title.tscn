@@ -29,10 +29,10 @@ theme_override_constants/outline_size = 4
 text = ""
 horizontal_alignment = 1
 
-[node name="Buttons" type="HBoxContainer" parent="."]
+[node name="Buttons" type="VBoxContainer" parent="."]
 layout_mode = 1
 offset_left = 28.0
-offset_top = 285.0
+offset_top = 225.0
 theme_override_constants/separation = 10
 
 [node name="Row1" type="VBoxContainer" parent="Buttons"]
