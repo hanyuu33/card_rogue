@@ -1,0 +1,112 @@
+[
+ {
+  "card": 9087,
+  "name": "连刺",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9087_连刺_v4.png",
+  "sha256": "c7306b505d10b34c37c53b2f866b38636913b9737e4f48294ac00b50be7802f9",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9100,
+  "name": "潜入",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9100_潜入_v4.png",
+  "sha256": "17cb460142728d0a5e37d02aa6a86a4522170f6f62049b50d76bb6d458dbc4ec",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9113,
+  "name": "黑暗扩散",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9113_黑暗扩散_v4.png",
+  "sha256": "df649aff7205f08c26f7f2cf027dfb48c364775f74777c7ce82b4a0f111493ee",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9119,
+  "name": "起手式",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9119_起手式_v4.png",
+  "sha256": "3b796baa6a037d0176b901a494a474ea557dba05c8e36cee75299e8ac37efde2",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9120,
+  "name": "影袭",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9120_影袭_v4.png",
+  "sha256": "454d7fbcd58b168bcd22e45071e4867ac83ed6cb9bac80be546953b9aaa691c7",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9156,
+  "name": "蓄势",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9156_蓄势_v4.png",
+  "sha256": "82c055d0c8ef485c79e42efff3cfcdb235d9280fc095f503454e6218c3d9873b",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9272,
+  "name": "连斩",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9272_连斩_v4.png",
+  "sha256": "b522133aa7f6e218f70b0f3a3d44e31059c82a81e8b07f89d8195d5556a335b1",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9041,
+  "name": "快速出击",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9041_快速出击_v3.png",
+  "sha256": "6ab118a5d13e20181e04b2fd5e8bf5507f552f86a48930cbb88df63c7a3d9745",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9016,
+  "name": "犀牛",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9016_犀牛_v3.png",
+  "sha256": "0329ca30cf80d45c1584dc9f451cc2e2c0169b3050c05fce6a4306522ea021fe",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9139,
+  "name": "充能巨炮",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9139_充能巨炮_v4.png",
+  "sha256": "c8b5cd64dbd4b3c69946dac9647a8c59ca21f4454279d33574ab1afc63e6b9e2",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9193,
+  "name": "技术结合",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_刺客CG对齐_R872\\raw\\9193_技术结合_v4.png",
+  "sha256": "e6c4d08e021df41d0046c50447cfb0d1556cf514a000f145852ff1234e87810c",
+  "size": [
+   448,
+   404
+  ]
+ }
+]

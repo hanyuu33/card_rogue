@@ -1,0 +1,1252 @@
+[
+ {
+  "card": 1011,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌人卡画风统一\\1011_铁壁卫兵_v5.png",
+  "ver": 5
+ },
+ {
+  "card": 1013,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1013_灰烬龙_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1014,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1014_幼龙_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1031,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌人卡画风统一\\1031_冰冻术士_v4.png",
+  "ver": 4
+ },
+ {
+  "card": 1050,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1050_腐化尸鬼_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1051,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1051_亡灵领主_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1053,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1053_骷髅兵_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1054,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1054_骷髅兵_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1055,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1055_骷髅兵_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1061,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1061_爆裂机甲_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 1071,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\1071_熔岩巨人_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8001,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_卡图修复_batch19\\8001_木栅栏_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 8003,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch11\\8003_树人_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8004,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\8004_熊_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8005,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_暗影卡图修订\\8005_幽影_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 8006,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8006_影子猫_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8007,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_暗影卡图修订\\8007_影魔_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 8008,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8008_幽灵_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8009,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8009_潜影者_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8010,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8010_荧光草_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8018,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8018_活体栅栏_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8019,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_暗影卡图修订\\8019_地狱猫_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 8020,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8020_鲜血堡垒_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8021,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8021_黑暗领主_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8022,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8022_地狱咏唱者_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8023,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8023_黑暗祭坛_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8024,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8024_契约签订者_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8025,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-23_卡图风格修复_batch01\\8025_素体.png",
+  "ver": 1
+ },
+ {
+  "card": 8026,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-23_卡图风格修复_batch01\\8026_构装体_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8028,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8028_清泉_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8029,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8029_战斗骨骼.png",
+  "ver": 1
+ },
+ {
+  "card": 8031,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch02\\8031_集体改造.png",
+  "ver": 1
+ },
+ {
+  "card": 8032,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch05\\8032_侦察塔_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8033,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch02\\8033_能量屏障.png",
+  "ver": 1
+ },
+ {
+  "card": 8034,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8034_堡垒.png",
+  "ver": 1
+ },
+ {
+  "card": 8035,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch05\\8035_自我修复_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8036,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch03\\8036_维修间.png",
+  "ver": 1
+ },
+ {
+  "card": 8037,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch03\\8037_改造工厂.png",
+  "ver": 1
+ },
+ {
+  "card": 8038,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8038_无限装甲_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8039,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch03\\8039_系统升级.png",
+  "ver": 1
+ },
+ {
+  "card": 8040,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8040_批量传输.png",
+  "ver": 1
+ },
+ {
+  "card": 8041,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch03\\8041_充电装置.png",
+  "ver": 1
+ },
+ {
+  "card": 8042,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8042_护盾生成器_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8043,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8043_模仿者_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8044,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8044_加厚装甲.png",
+  "ver": 1
+ },
+ {
+  "card": 8045,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch03\\8045_自主升级.png",
+  "ver": 1
+ },
+ {
+  "card": 8046,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8046_零件回收者.png",
+  "ver": 1
+ },
+ {
+  "card": 8047,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8047_嵌合暴君.png",
+  "ver": 1
+ },
+ {
+  "card": 8048,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_卡图修复_batch19\\8048_生产订单_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8049,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8049_拆解.png",
+  "ver": 1
+ },
+ {
+  "card": 8050,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8050_旧式机兵.png",
+  "ver": 1
+ },
+ {
+  "card": 8051,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8051_重组.png",
+  "ver": 1
+ },
+ {
+  "card": 8052,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8052_城墙_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8053,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8053_超越极限.png",
+  "ver": 1
+ },
+ {
+  "card": 8054,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8054_重启.png",
+  "ver": 1
+ },
+ {
+  "card": 8055,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8055_钢铁卫士_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8056,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8056_救援构装体.png",
+  "ver": 1
+ },
+ {
+  "card": 8058,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8058_重甲战车_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 8059,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8059_机器鸟_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8061,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8061_双向传送.png",
+  "ver": 1
+ },
+ {
+  "card": 8062,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8062_夜蚀_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8064,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8064_回收.png",
+  "ver": 1
+ },
+ {
+  "card": 8065,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\8065_货物_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8066,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8066_负重减轻_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8067,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8067_分裂之影_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8068,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8068_轻量化.png",
+  "ver": 1
+ },
+ {
+  "card": 8069,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\8069_共享护盾_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8070,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8070_创意.png",
+  "ver": 1
+ },
+ {
+  "card": 8076,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8076_改装者_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8077,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8077_激发.png",
+  "ver": 1
+ },
+ {
+  "card": 8078,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8078_隐藏能源_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 8080,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\8080_涂装机器人.png",
+  "ver": 1
+ },
+ {
+  "card": 8081,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\8081_雪豹_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8082,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch07\\8082_毒沼_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8084,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch16\\8084_传授_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 8085,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\8085_影缚_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9001,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9001_鸭子骑士_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9002,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9002_幽深回响_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9003,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_三张语义修复\\9003_火焰箭_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9004,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_三张语义修复\\9004_击退_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9005,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch13\\9005_智慧_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9006,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9006_闪电链_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9007,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9007_火球术_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9008,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9008_鸭子巫师_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9009,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9009_使魔鸭子_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9010,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9010_削弱_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9011,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch07\\9011_寒冰箭_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9013,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9013_鸭子之力_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9015,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9015_鸭子号角_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9016,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9016_犀牛_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9017,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9017_鸭子弓手_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9019,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9019_箭塔_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9020,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9020_爆炎鸭_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9021,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9021_白魔法鸭_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9022,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9022_鸭蛋_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9024,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_三张语义修复\\9024_哈气_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9025,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9025_鸭子窑_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9026,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9026_陶瓷鸭_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9027,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌鸭新画风\\9027_夜鸭_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9031,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9031_白狼_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9032,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch04\\9032_野兔.png",
+  "ver": 1
+ },
+ {
+  "card": 9033,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch04\\9033_山猫.png",
+  "ver": 1
+ },
+ {
+  "card": 9034,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch04\\9034_赤狐.png",
+  "ver": 1
+ },
+ {
+  "card": 9035,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9035_协同攻击_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9036,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9036_野兽之心_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9037,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9037_森林守护_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9038,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch05\\9038_老虎_水彩候选.png",
+  "ver": 1
+ },
+ {
+  "card": 9039,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch05\\9039_乌鸦.png",
+  "ver": 1
+ },
+ {
+  "card": 9040,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch05\\9040_猎犬.png",
+  "ver": 1
+ },
+ {
+  "card": 9041,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9041_快速出击_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9042,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9042_撕咬_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9043,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch07\\9043_冰墙术_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9044,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch07\\9044_冰墙_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9045,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9045_疾风之力_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9046,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9046_巨鼠_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9049,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9049_齿轮升腾_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9050,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9050_鲸鱼之怒_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9051,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9051_自然之力_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9052,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9052_斑鸠_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9053,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9053_坚韧_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9054,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9054_龙息_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9055,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9055_狂暴_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9056,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9056_镜像_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9057,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9057_威慑_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9058,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch13\\9058_奥秘精通_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9059,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch13\\9059_智慧喷涌_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9060,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch09\\9060_风暴屏障_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9061,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch13\\9061_无尽加护_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9062,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch10\\9062_使魔之夜_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9063,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch09\\9063_飓风咆哮_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9064,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9064_和风守护_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9065,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch09\\9065_自愈_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9066,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch09\\9066_石肤_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9067,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch11\\9067_大树守卫_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9068,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9068_水元素_v5.png",
+  "ver": 5
+ },
+ {
+  "card": 9069,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9069_鸭窝_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9070,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_指名重绘_20张\\raw\\9070_群起攻之_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9071,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch10\\9071_坚固围栏_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9072,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9072_铁栅栏_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9073,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9073_猫头鹰_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9075,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch09\\9075_魔法塔_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9076,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch13\\9076_魔力核心_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9078,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch10\\9078_传承记忆_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9079,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch10\\9079_魔像术_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9080,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch11\\9080_魔像_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9082,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9082_风元素_v5.png",
+  "ver": 5
+ },
+ {
+  "card": 9083,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9083_流星雨_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9084,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9084_火墙术_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9085,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch10\\9085_蓄力_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9086,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9086_终结_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9088,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9088_敲晕_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9089,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9089_回转_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9091,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9091_疾风_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9092,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9092_潜伏_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9094,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9094_准备_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9096,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9096_回旋斩_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9097,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9097_预判_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9098,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9098_拒绝命运_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9099,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9099_幽光_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9101,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9101_不眠_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9102,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9102_回响_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9103,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_卡图修复_batch19\\9103_闪躲_v8.png",
+  "ver": 8
+ },
+ {
+  "card": 9104,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_卡图修复_batch19\\9104_收尾_v4.png",
+  "ver": 4
+ },
+ {
+  "card": 9110,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9110_活力转移_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9111,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9111_暗影之刃_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9112,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9112_暗影锁链_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9114,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9114_无尽黑暗_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9115,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9115_使魔之力_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9117,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9117_恶魔使魔_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9121,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9121_暗影步_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9122,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9122_专注_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9125,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9125_暗影召唤_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9127,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9127_返修.png",
+  "ver": 1
+ },
+ {
+  "card": 9134,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9134_钢铁要塞_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9135,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_敌人卡画风统一\\9135_赫菲斯托斯_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9137,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9137_量产型赫利俄斯_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9144,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9144_随心组装.png",
+  "ver": 1
+ },
+ {
+  "card": 9147,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9147_流水线装配_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9148,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch11\\9148_新生_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9150,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch11\\9150_生命循环_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9155,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9155_夜行_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9157,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9157_罐子_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9161,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9161_失控要塞.png",
+  "ver": 1
+ },
+ {
+  "card": 9165,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9165_复制术.png",
+  "ver": 1
+ },
+ {
+  "card": 9167,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9167_合体.png",
+  "ver": 1
+ },
+ {
+  "card": 9168,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9168_许愿_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9169,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-25_卡图修复_batch19\\9169_烈火之剑_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9170,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9170_应急电源.png",
+  "ver": 1
+ },
+ {
+  "card": 9171,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9171_极速_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9173,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9173_身法_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9174,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9174_淘汰.png",
+  "ver": 1
+ },
+ {
+  "card": 9176,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9176_本能_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9178,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9178_永夜_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9179,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9179_惊奇盒子_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9180,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9180_月亮_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9181,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9181_硬币_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9182,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9182_摇篮曲_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9184,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9184_库存整理.png",
+  "ver": 1
+ },
+ {
+  "card": 9186,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch08\\9186_漩涡_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9187,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9187_鹅_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9189,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9189_独行_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9190,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch20\\9190_猫鼠游戏_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9191,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9191_黑暗嵌合_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9200,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_revelator\\9200_启示者_p3.png",
+  "ver": 3
+ },
+ {
+  "card": 9201,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_revelator\\9201_舰炮.png",
+  "ver": 1
+ },
+ {
+  "card": 9202,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_revelator\\9202_电磁屏障.png",
+  "ver": 1
+ },
+ {
+  "card": 9203,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_revelator\\9203_紧急呼叫.png",
+  "ver": 1
+ },
+ {
+  "card": 9204,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch20\\9204_赏金猎人_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9205,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9205_猎杀_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9206,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9206_秃鹰_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9209,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9209_空袭_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9210,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9210_寒霜结界_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9211,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9211_折射炮.png",
+  "ver": 1
+ },
+ {
+  "card": 9212,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9212_枭熊之怒_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9215,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9215_乱打_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9216,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9216_飞踢_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9217,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9217_冲拳_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9221,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9221_结合者.png",
+  "ver": 1
+ },
+ {
+  "card": 9222,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图风格修复_batch06\\9222_忒修斯奇械_v4.png",
+  "ver": 4
+ },
+ {
+  "card": 9224,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch20\\9224_标记_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9225,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9225_死亡预告_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9226,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9226_致命_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9227,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9227_死神降临_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9228,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch20\\9228_恐惧之影_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9229,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9229_恐惧投射_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9230,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9230_恐惧化身_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9232,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch20\\9232_厄运的使者_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9233,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch17\\9233_灵魂收割者_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9234,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch18\\9234_恐惧收割_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9235,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9235_土元素_v5.png",
+  "ver": 5
+ },
+ {
+  "card": 9236,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9236_火元素_v5.png",
+  "ver": 5
+ },
+ {
+  "card": 9246,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9246_宝石兽_v3.png",
+  "ver": 3
+ },
+ {
+  "card": 9247,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch06\\9247_拼装工厂.png",
+  "ver": 1
+ },
+ {
+  "card": 9248,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_卡图风格修复_batch11\\9248_种子_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9249,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9249_被眷顾者_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9250,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9250_鸭妈妈_v4.png",
+  "ver": 4
+ },
+ {
+  "card": 9251,
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-24_四元素与动物卡归档\\最新版\\9251_小鸭_v4.png",
+  "ver": 4
+ },
+ {
+  "card": 9266,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9266_呼唤_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9267,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9267_激励乐章_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9269,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9269_彩虹诗_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9270,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9270_疾风乐章_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9274,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9274_余音_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9275,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9275_音符_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9277,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9277_Do_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9278,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9278_Re_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9279,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9279_Mi_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9280,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9280_Fa_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9281,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9281_Sol_v1.png",
+  "ver": 1
+ },
+ {
+  "card": 9282,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-25_武器使用者与卡片修复\\9282_La_v2.png",
+  "ver": 2
+ },
+ {
+  "card": 9283,
+  "src": "E:\\work\\card_art_continue\\art_src\\2026-11-24_卡图续作_batch19\\9283_Si_v1.png",
+  "ver": 1
+ }
+]

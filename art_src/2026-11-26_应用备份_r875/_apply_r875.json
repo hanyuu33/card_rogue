@@ -1,0 +1,22 @@
+[
+ {
+  "card": 9139,
+  "name": "充能巨炮",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_巨炮与犀牛重绘_R875\\raw\\9139_充能巨炮_v8.png",
+  "sha256": "570c477785ee036f2c46c46bb81f2adc9fb47056c2b5b5c7259faba1290f06ea",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9016,
+  "name": "犀牛",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_巨炮与犀牛重绘_R875\\raw\\9016_犀牛_v6.png",
+  "sha256": "69c0302b1ef4fc960a28b29dbb25f7e5b43c5e4d25011cc84d53eff3297d778b",
+  "size": [
+   448,
+   404
+  ]
+ }
+]

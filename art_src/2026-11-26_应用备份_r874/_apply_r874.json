@@ -1,0 +1,52 @@
+[
+ {
+  "card": 9139,
+  "name": "充能巨炮",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_角色与衣甲修正_R874\\raw\\9139_充能巨炮_v6.png",
+  "sha256": "a92d19eb9e6a20de3d12785538a31bb5d7fd642bf503d098246ff1c60282f01c",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9156,
+  "name": "蓄势",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_角色与衣甲修正_R874\\raw\\9156_蓄势_v5.png",
+  "sha256": "af5929d3990565e9b3bae25e2242be7389d4e44158ee4dfc856bea809bd95625",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9272,
+  "name": "连斩",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_角色与衣甲修正_R874\\raw\\9272_连斩_v5.png",
+  "sha256": "55b2a0c090808f3590a4eb12b01f1bbba65bae1e89ffcc3e7d200c97008ebe02",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9041,
+  "name": "快速出击",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_角色与衣甲修正_R874\\raw\\9041_快速出击_v4.png",
+  "sha256": "e3e5adbdf3fab5dccfb54fcb22f8bfb83591b619800a202a796a52dc2e847ff1",
+  "size": [
+   448,
+   404
+  ]
+ },
+ {
+  "card": 9016,
+  "name": "犀牛",
+  "src": "E:\\work\\card_rogue\\art_src\\2026-11-26_角色与衣甲修正_R874\\raw\\9016_犀牛_v4.png",
+  "sha256": "776eda8763fee591f8f2cc206cabd6e5e6b4ef43544736f375486f32c816575e",
+  "size": [
+   448,
+   404
+  ]
+ }
+]
