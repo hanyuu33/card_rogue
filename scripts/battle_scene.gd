@@ -4807,8 +4807,11 @@ func load_level(lvl: Dictionary) -> void:
 			else GameLevels.deck_for(str(lvl["deck_key"]), repo)
 	# 玩家生命来自肉鸽 run 状态（最大/当前，跨战斗保留）；关卡里的 player_hp 仅作兜底
 	var p_hp: int = RunState.hp if RunState.hp > 0 else int(lvl["player_hp"])
-	# 战斗种子 = 本局随机链（run_rng）的下一环 —— 战斗内全部随机（含 AI）由它复现。
-	var battle_seed: int = RunState.run_rng.randi() if RunState.run_active else 0
+	# R871：战斗种子来自**战斗链**（`RunState.next_battle_seed()`），不再从 `run_rng` 摘一颗。
+	# 旧写法两个方向都在互相污染：开几场战斗会改之后地图 / 掉落的随机；地图上多抽一次
+	# （买件东西、水晶骰子重摇）会改这场战斗的技能序列。现在两条链各自从 `run_seed` 派生 ——
+	# 同一条种子仍逐场可复现，但谁抽多少颗都不影响对方。
+	var battle_seed: int = RunState.next_battle_seed() if RunState.run_active else 0
 	var brng := RandomNumberGenerator.new()
 	brng.seed = battle_seed
 	var state := FieldState.new(

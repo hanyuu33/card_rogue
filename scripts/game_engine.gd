@@ -739,8 +739,9 @@ const DUCK_BILL_STEP_REDUCE:= 2
 # 水晶骰子（6040）：「?」房里的**任意种**战斗开始时掷一颗骰子（1~6），
 #   **前 X 回合每回合额外 +1 费**（X = 点数）。
 #   ⚠️ 「是不是 ? 房」由 battle_scene 写在 `dice_battle` 上（引擎不读地图）；
-#   ⚠️ 点数在本文件用**战斗种子**（`rng`）掷 —— 回放同一 seed 必然同点数，
-#      放到 battle_scene 用 run_rng 掷会让「重放一局」点出不同的数。
+#   ⚠️ 点数在本文件用**战斗种子**（`rng`，R871 起由战斗链 `next_battle_seed()` 播种）掷 ——
+#      回放同一 seed 必然同点数。放到 battle_scene 用非战斗链（`run_rng`）掷会让
+#      「重放一局」点出不同的数，也会让「买没买东西」影响到这颗骰子。
 # 不锈钢盆（6041）：10 点计数**代替玩家承受等量伤害**，归零即失去道具（跨战斗累计）。
 #   部分吸收：伤害 15 / 剩 10 → 盆吃 10、玩家只吃 5（**溢出部分还给玩家**，不吞）。
 const DICE_RELIC_ID:= 6040
@@ -19238,7 +19239,9 @@ func use_tool(id: int, slot := -1) -> bool:
 		# 顺序反了就是「3 格里有 1 格永远填不上」——玩家看到的工具栏是 2/3。
 		if slot >= 0:
 			RunState.consume_trap(slot)
-		filled = RunState.fill_toolbar_with_shop_tools()
+		# R871：吃**战斗链**（`battle_rng`）—— 战斗内使用工具产出的随机属于战斗随机，
+		# 与地图 / 掉落那条非战斗链彻底分开（快送鸭刷出哪三件，只由这场战斗的种子决定）。
+		filled = RunState.fill_toolbar_with_shop_tools(RunState.battle_rng)
 	_log(("使用工具：「%s」（回血 %d / 回费 %d / 盟友力量 +%d / 补工具 %d / 抽卡 %d / 填手牌 %d"
 			+ " → HP %d/%d，费用 %d）") % [
 			t.trap_name, healed, t.energy, _wild_totem_atk, filled, drawn, hand_added,

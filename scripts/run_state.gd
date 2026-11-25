@@ -330,9 +330,50 @@ const FATIGUE_CARD_ID := 9149
 ## ⚠️ 必须进存档（run_save）：否则「删疲惫 → 存档 → 读档」会被 sync_fatigue 立刻补回来。
 static var fatigue_granted_layer := -1
 
-# ---- 本局种子：run 层唯一随机源 ----
+# ---- 本局种子：run 层随机源 ----
 static var run_seed: int = 0                 # 本局种子（run 层全部随机由它派生；同一种子重跑必然一致）
-static var run_rng := RandomNumberGenerator.new()   # 本局随机源（地图/道具/关卡/掉落/五换一）
+## **非战斗**随机链（地图 / 房间 / 商店 / 事件 / 奖励 / 掉落 / 五换一）。
+## R871 起它**不再**负责给战斗播种 —— 战斗有自己的一条链，见下面的 battle_*。
+static var run_rng := RandomNumberGenerator.new()
+
+# ---- R871：战斗随机链（与上面那条互为**独立**的两条链）-----------------------------
+## 店长口径：「需要专门有一个战斗随机数，依然来自种子，但是和非战斗随机数不通用。
+## 战斗随机数需要决定包括工具使用，卡牌随机的随机数。确保这两个都能被种子确定
+## 但是不互相干涉。」
+##
+## 旧口径的病灶：战斗种子原来是 `run_rng.randi()` —— 「每开一场战斗就从非战斗链上摘一颗」。
+## 于是两条链在**同一条种子**下互相污染：
+##   * 战斗 → 非战斗：打了多少场、什么时候打，会改变之后地图 / 掉落 / 商店的随机；
+##   * 非战斗 → 战斗：前面多抽一次（买个东西、水晶骰子重摇地图），下一场战斗的技能序列就全变。
+## 这与「同一条种子重跑必然一致」的承诺是矛盾的 —— 一致要靠「每条链自己确定」，
+## 不是靠「全局只有一个链所以顺序刚好对上」。
+##
+## 现在的分工：
+##   * `run_rng`（非战斗链）：地图 / 房间 / 商店 / 事件 / 奖励 / 掉落 —— 抽取点一个没动；
+##   * `battle_rng`（战斗链）：**战斗内一切随机**的唯一上游 —— 每场战斗按
+##     `seed_of("battle_tools", seq)` 重播；卡牌子流（`engine.rng`）由 `next_battle_seed()`
+##     返回的 `seed_of("battle", seq)` 播种；工具使用（快送鸭填栏等）直接吃这条。
+## 两条链都源出 `run_seed` → 同种子重跑每条链的每一颗都相同；但谁抽多少颗都
+## **不会**改变对方 —— 「可被种子确定」与「互不干涉」这才同时成立。
+## ⚠️ 序号 `battle_seq` 进存档（见 run_save）：续档重打这一场必须还是同一个种子。
+static var battle_seq: int = 0                  # 本局第几场战斗（战斗链序号，第一场 = 1）
+static var battle_seed: int = 0                 # 当前这场战斗的种子（卡牌子流 = 它）
+static var battle_rng := RandomNumberGenerator.new()   # 战斗专用随机流（工具使用等）
+
+
+static func next_battle_seed() -> int:
+	## 开一场新战斗：推进战斗序号、重播战斗链，返回**这场**的卡牌种子。
+	##
+	## ⚠️ 不读不写 `run_rng` —— 这是 R871 的全部要点，动它就退回「两条链互相拖」的老路。
+	## 卡牌种子与工具流用**不同分类名**派生（`battle` / `battle_tools`），免得两条子流的
+	## 第一颗撞成同一个数（同 seed 的 RNG 序列相同，那样「工具随机」就等于「卡牌第一抽」）。
+	## ⚠️ 只在**真的开打**时调（`battle_scene.load_level` 的 run 分支）：演示 / 单关 /
+	##    截图验证走 `run_active == false`，不该让序号白白 +1。
+	battle_seq += 1
+	battle_seed = seed_of("battle", battle_seq)
+	battle_rng = RandomNumberGenerator.new()
+	battle_rng.seed = seed_of("battle_tools", battle_seq)
+	return battle_seed
 
 
 static func seed_of(category: String, index := 0) -> int:
@@ -352,7 +393,8 @@ static func seed_of(category: String, index := 0) -> int:
 	## 实现：FNV-1a 打分类名 → 折进 run_seed → 线性同余 + xorshift 混洗。
 	## ⚠️ 全程用 `& 0x7FFFFFFF` 压在 31 位：GDScript 的 int 是 64 位有符号，
 	##    不夹住的话乘法会溢出成负数（种子不要求符号，但负数让断言/日志难对）。
-	## 消费点：`dice_map_rng()`（水晶骰子的重摇流）；后续新子系统请**一律走这里**，
+	## 消费点：`dice_map_rng()`（水晶骰子的重摇流）、`next_battle_seed()`（R871：战斗链
+	##          的每场种子与工具子流）；后续新子系统请**一律走这里**，
 	##          不要再往 `run_rng` 上加新的抽取点。
 	var h := 2166136261 & 0x7FFFFFFF
 	h = (h ^ (run_seed & 0x7FFFFFFF)) & 0x7FFFFFFF
@@ -1436,8 +1478,10 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 	if max_hp_mul() < 1.0:
 		base_hp = int(base_hp * max_hp_mul())
 	reset(base_hp)
-	# run 种子（R241 / R261）：**全局唯一随机源**的根 —— 地图 / 掉落 / 摇卡 / 商店库存 / 战斗种子
-	# 全部从它派生；同一种子重开、以及「继续游戏」读档（seed + rng.state）都走这条链。
+	# run 种子（R241 / R261）：本局**唯一根种子** —— 非战斗链（地图 / 掉落 / 摇卡 / 商店库存）
+	# 与战斗链（R871：`battle_seq` → 每场战斗的种子 / 工具流）全部由它派生，
+	# 但两条链各自独立推进，互不消耗对方的流（见上面的 battle_* 段）。
+	# 同一种子重开、以及「继续游戏」读档（seed + rng.state / battle_seq）都走这里。
 	# R261：优先吃玩家输入的 10 位种子码；其次旧的 int 覆盖（测试与旧调用点）；
 	# 都没有 → 现摇一个 10 位码（整局唯一碰全局随机源的地方，见 random_seed_text）。
 	# R762：每日配置本身拥有根种子。调用方不必再重复传一次，否则漏传会静默退成随机局。
@@ -1452,6 +1496,10 @@ static func start_run(map: Array, layer := GameLayers.LAYER_DEFAULT,
 		run_seed = seed_value_of(random_seed_text())
 	run_rng = RandomNumberGenerator.new()
 	run_rng.seed = run_seed
+	# R871：战斗链也必须**跟着这条种子重新起步** —— 上一局的序号 / 流状态不能漏进新局。
+	battle_seq = 0
+	battle_seed = 0
+	battle_rng = RandomNumberGenerator.new()
 	run_active = true
 	player_class = cid if cid != "" else PlayerClass.default_id()
 	# R550（发布版解锁）：防御性钳制 —— 难度不得超过当前职业已解锁的上限。
@@ -1958,8 +2006,12 @@ static func grant_random_tool(tag: String) -> int:
 	return id
 
 
-static func fill_toolbar_with_shop_tools() -> int:
+static func fill_toolbar_with_shop_tools(rng_override: RandomNumberGenerator = null) -> int:
 	## R752 快送鸭 7010：「用随机商店工具填满你的工具栏」的**唯一口**。
+	##
+	## R871：`rng_override` = 战斗链（`battle_rng`）。战斗内使用工具属于**战斗随机**，
+	## 必须由战斗链决定；非战斗调用不传，仍旧走 `seed_of("tool_deliver", n)` 派生流 ——
+	## 那条路一个字没改，既有测试与既有档的表现不变。
 	## 池子 = `TrapRepo.shop_traps()`（= 有售价的、货架上真买得到的那些）——
 	## 用户口径「也就是仅商店可以买到的工具」：万能牌 / 快送鸭 / 神秘牌自己不在池里，
 	## 否则会出现「快送鸭刷出快送鸭」的自指连锁。
@@ -1977,9 +2029,14 @@ static func fill_toolbar_with_shop_tools() -> int:
 	for i in traps.size():
 		if int(traps[i]) >= 0:
 			continue
-		rng.seed = seed_of("tool_deliver", tool_deliver_seq)
-		tool_deliver_seq += 1
-		traps[i] = int(pool[rng.randi() % pool.size()].id)
+		if rng_override != null:
+			# 战斗内：吃战斗链。**不推进** `tool_deliver_seq` —— 那个序号是「非战斗派生流
+			# 摇过几次」的记账，战斗没走那条流，推进它只会让之后的非战斗快送鸭空跳一格。
+			traps[i] = int(pool[rng_override.randi() % pool.size()].id)
+		else:
+			rng.seed = seed_of("tool_deliver", tool_deliver_seq)
+			tool_deliver_seq += 1
+			traps[i] = int(pool[rng.randi() % pool.size()].id)
 		filled += 1
 	return filled
 
