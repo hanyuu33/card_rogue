@@ -29,6 +29,8 @@ _trapinput.txt
 _rp.txt
 _b.txt
 _assemble_test.txt
+_fortauto.txt
+_rngsplit.txt
 *.tmp
 
 # 调试截图（可重建）

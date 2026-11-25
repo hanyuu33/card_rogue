@@ -259,8 +259,10 @@ static func snapshot() -> Dictionary:
 	## 当前 run 的**全部持久字段**（存档 = 它直接落盘）。
 	## R241 抽出来单独一个函数，是为了让「确定性」能被**测试**验证：
 	## 测试可以 snapshot() → 改乱内存 → apply(snapshot) → 再摇随机，完全不用碰磁盘。
-	## ⚠️ 随机源只存 `seed + state` 两个整数：地图 / 掉落 / 摇卡 / 商店库存 / 战斗种子
+	## ⚠️ **非战斗链**只存 `seed + state` 两个整数：地图 / 掉落 / 摇卡 / 商店库存
 	## 全部从这条链派生，续上这两个数 = 续上整条链。
+	## R871 起「战斗种子」**不再**出自这条链（战斗有自己的 `battle_seq` + 分类种子派生）；
+	## 战斗内没有中途存档（见文件头「续档只恢复到地图层」），所以只存序号即可。
 	var rng: RandomNumberGenerator = RunState.run_rng
 	return {
 		# R486：这份档是**哪个内容口径**写的。缺了它（R486 之前的档）= 0，照样读，
@@ -318,6 +320,10 @@ static func snapshot() -> Dictionary:
 		"skipped_relics": RunState.skipped_relics,
 		"duck_revive_chance": RunState.duck_revive_chance,
 		"run_seed": RunState.run_seed,
+		# R871：战斗链序号。存档只恢复到**地图检查点**（战斗中关掉 → 那场重打），所以
+		# 只存序号就能让「重打这一场」拿回同一个战斗种子；`battle_rng` 的瞬时状态
+		# 不进存档（战斗内没有中途存档，见文件头「续档只恢复到地图层」）。
+		"battle_seq": RunState.battle_seq,
 		"rng_seed": rng.seed if rng != null else 0,
 		"rng_state": rng.state if rng != null else 0,
 		"pending_rewards": RunState.pending_rewards,
@@ -639,6 +645,8 @@ static func apply(d: Dictionary) -> bool:
 	RunState.skipped_relics = _int_array(d.get("skipped_relics", []))
 	RunState.duck_revive_chance = int(d.get("duck_revive_chance", 100))
 	RunState.run_seed = int(d.get("run_seed", 0))
+	# R871：老档没有这个键 → 0 = 还没打过战斗，下一场从 seq 1 起，行为与旧档一致。
+	RunState.battle_seq = int(d.get("battle_seq", 0))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(d.get("rng_seed", 0))
 	rng.state = int(d.get("rng_state", 0))

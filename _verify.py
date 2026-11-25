@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""十套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput；R789 增补 content；R816 增补 mod）。
+"""十二套回归一键跑（2026-10-01 重建；R663 增补 assemble / mana / traps；R667 增补 trapinput；R789 增补 content；R816 增补 mod；R870 增补 fortauto；R871 增补 rngsplit）。
 
 用法：python _verify.py
-逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / content / mod / smoke，统计 ✓/✗，
+逐套跑 assemble / mana / engine / reward / bgm / traps / trapinput / content / mod / fortauto / rngsplit / smoke，统计 ✓/✗，
 任一失败则进程退出码 1。输出落盘 _*.txt 便于事后检查。
 """
 import os
@@ -69,6 +69,13 @@ SUITES = [
     #       坏清单与坏 JSON 只伤自己 / 素材覆盖与压制 / 编辑器默认不扫）。
     # 与 content 套是两条链：那条测官方热更的「整份替换」，这条测 mod 的「增量合并」。
     ("mod", ["--headless", "--path", ROOT, "--script", "res://tools/_probe_mod_loader.gd"], "_mod.txt"),
+    # R870：失控要塞（9161）「玩家不操作也能跑完」——把随机池里每张技能卡凭空释放一遍，
+    # 断言不留任何待选面板；池子是动态捞的，新加会弹面板的技能卡这里立刻红。
+    ("fortauto", ["--headless", "--path", ROOT, "--script", "res://scripts/test_fort_auto.gd"], "_fortauto.txt"),
+    # R871：战斗随机链与非战斗随机链「各自被种子确定、彼此不干涉」——
+    # 只钉关系不钉数值：非战斗多抽不改变战斗种子、战斗内抽多少不推进非战斗链、
+    # 同 (种子, 场次) 可复现、存档带战斗序号。谁把战斗种子接回 run_rng 这里立刻红。
+    ("rngsplit", ["--headless", "--path", ROOT, "--script", "res://scripts/test_rng_split.gd"], "_rngsplit.txt"),
     ("smoke", ["--headless", "--path", ROOT, "--script", "res://scripts/test_smoke.gd"], "_s.txt"),
 ]
 
