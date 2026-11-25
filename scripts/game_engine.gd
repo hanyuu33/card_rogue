@@ -4652,6 +4652,11 @@ var _armor_turn_taken := 0
 var earring_played := 0           # 已自动出了几张
 ## R288 失控要塞 9161：最近一次入场**实际释放**的技能卡名（日志 / UI / 回归断言共用）。
 var fort_casts: Array[String] = []
+## R869：失控要塞随机释放的**立卡演出**用 —— 只给界面报点与序号，**不参与结算**。
+## 引擎仍是同步一口气放完（`fort_casts` 口径不变、rng 序不变）；界面把这一小段事件
+## 缓冲起来，再按「立一张卡 → 播这张卡的效果」重新排播（见 battle_scene 的 _fort_collect）。
+var _fort_cell := Vector2i(-1, -1)   # 失控要塞所在格（事件报点用）
+var _fort_total := 0                 # 本次一共要放几张（界面 k/N 用）
 var earring_hand_index := 0       # 当前扫描到手牌第几张（从左到右）
 var earring_pass_played := 0      # 本轮扫描已打出几张（用于判断是否需要再扫一轮）
 
@@ -6679,6 +6684,12 @@ func _out_of_control_fort_enter(p: Placement) -> void :
 		action.emit("out_of_control_fort", {"cell": _cell_of(p), "card": p.card,
 				"changes": 0, "casts": none_casts})
 		return
+	_fort_cell = _cell_of(p)
+	_fort_total = n
+	# R869：先打一声招呼再动手 —— 界面收到 begin 就开始缓冲这一段事件，
+	# 等 out_of_control_fort 到了再逐张回放（立卡 → 效果）。
+	action.emit("out_of_control_fort_begin", {"cell": _fort_cell, "card": p.card,
+			"changes": n})
 	for i in n:
 		var nm := _fort_cast_one()
 		if nm == "":
@@ -6741,6 +6752,12 @@ func _fort_play(card: CardData) -> bool:
 	## ⚠️ 无论成败都把临时卡清掉：它不属于玩家，也不该留在手牌里。
 	if card == null or not card.is_spell():
 		return false
+	# R869：立卡事件的**唯一发射点** —— 在真正结算之前报出「这一张要放了」。
+	# 界面把 `out_of_control_fort_begin` 之后的事件先缓冲，收到这条就分一组；
+	# 这一张到底放没放出来，看同组随后的 `fort_cast_result.ok`（结尾发）。
+	action.emit("fort_cast_announce", {"cell": _fort_cell, "card": card,
+			"name": card.card_name, "index": fort_casts.size() + 1,
+			"total": _fort_total})
 	state.hand.append(card)
 	var hi := state.hand.size() - 1
 	var plays_before := state.self_card_plays
@@ -6792,8 +6809,26 @@ func _fort_play(card: CardData) -> bool:
 	if overhaul_pending:
 		overhaul_remaining = 0
 		overhaul_pending = false
+	# 淘汰 9174（R317）：`target_mode = none`，走上面的通用分支就会挂起 `eliminate_pending`
+	# 等玩家从**卡组**挑一张盟友 / 工事。它比 R288 晚出，一直漏在这份「就地收掉」的清单外 ——
+	# 结果是随机释放到它时，立卡演完、界面上还杵着一个选卡页，玩家必须自己点掉。
+	# 处理与返修（overhaul）完全同口径：替玩家随机挑一张，效果照常结算（抽 4 张也照走）。
+	if eliminate_pending:
+		var el_opts := eliminate_options()
+		# ⚠️ 这里**刻意不抽签**：多消耗一次 `rng.randi()` 会把之后整局的随机序列推后一位，
+		#    连带把毫不相关的回归（R769 的开局手牌）撞歪。淘汰具体选哪张对玩家没有可见过程，
+		#    取卡组里第一张合法卡即可 —— 与「就地收掉、不留交互」的意图一致。
+		if el_opts.is_empty():
+			eliminate_pending = false
+		else:
+			eliminate_pick(el_opts[0])
 	if ok:
 		_log("失控要塞：随机释放「%s」" % card.card_name)
+	# R869：成败的唯一判据给界面 —— 只有 `ok == true` 的那一张才立卡。
+	# ⚠️ 不能用「组里有没有 `spell` 事件」代替：手牌系 / 交换系那几张走的是专用入口
+	#    （`cast_sys_upgrade` / `cast_lighten` / `cast_recycle` / `cast_reload` /
+	#    `cast_swap_units`），它们**不发 `spell`**，那样判会把真放出来的卡当成落空丢掉。
+	action.emit("fort_cast_result", {"name": card.card_name, "ok": ok})
 	return ok
 
 

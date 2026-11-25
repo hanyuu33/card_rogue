@@ -794,6 +794,20 @@ var _curse_queue: Array = []    # 待播 [{card, from}]
 var _curse_cur: Dictionary = {} # 正在播 {card, from, t0, dur}
 var _transform_fx: Array = []   # R284：变幻特效 {zone, slot, start, dur}（zone: hand/deck/discard）
 var _deck_pulse: Array = []     # R696：卡真的进了抽牌库 → 牌堆金色脉冲 {start, dur}
+# R869：失控要塞（9161）随机释放技能的**立卡**演出 —— 与上面诅咒展示同构，
+# 但结尾**不飞向牌堆**（这张卡凭空释放、没有落点，飞走会误导），改成缩小 + 火光散去。
+# 时序：立卡（FORT_SHOW_MS）→ **这时才回放这张卡的结算事件** → 收尾（FORT_OUT_MS）→ 下一张。
+# ⚠️ 引擎是同步一口气放完的（`fort_casts` / rng 序都没改），所以这一小段事件先被
+#    `_on_engine_action` 缓冲起来，再由这里按「一张卡一组」重新排播 —— 玩家看到的
+#    顺序才是「先亮这张卡，再看到它的效果」，而不是「一堆飘字 + 一行总报」。
+const FORT_SHOW_MS := 620.0     # 卡面居中展示（含前 200ms 升起 + 缩放入场）
+const FORT_OUT_MS := 190.0      # 收尾：缩小 + 火星散去（与结算飘字重叠，不额外空等）
+const FORT_GAP_MS := 90.0       # 两张之间留一口气，连放时不至于糊成一片
+var _fort_buffering := false    # 正在缓冲失控要塞那一段事件
+var _fort_buffer: Array = []    # 缓冲下来的 [{kind, data}]
+var _fort_groups: Array = []    # 分好组的待播 [{card, name, index, total, events}]
+var _fort_cur: Dictionary = {}  # 正在播 {card, group, index, total, t0, phase: show/out}
+var _fort_next_at := 0          # 下一张的开始时间（错开 FORT_GAP_MS）
 var _earring_missed := 0        # 耳环连出期间压下的飞出数（>3 → 收尾合并一次整体淡出）
 var _void_known := 0            # void_count 快照：增量 = 这段时间被「消耗」的张数（飞出改上飞）
 ## R697：弃牌区张数快照。diff 期间**净减少** = 有卡从弃牌区被捞回手牌 →
@@ -4833,6 +4847,9 @@ func load_level(lvl: Dictionary) -> void:
 	# R77：鸭语耳环（6015）改成**逐张**自动出牌 —— 由 _tick_earring_autoplay 每帧推进一步，
 	# 这样每张牌的抽牌 / 出牌 / 落位动画都能看清。
 	engine.autoplay_stepwise = true
+	# R869：失控要塞（9161）随机释放技能改成「逐张立卡」——但**不动引擎**：引擎仍同步放完，
+	# 界面把这一段事件缓冲起来按「立卡 → 效果」重新排播（见 _on_engine_action / _tick_fort_show）。
+	# 这样随机序列与回放一字未变，联机镜像也不受影响。
 	engine.duck_revive_chance = RunState.duck_revive_chance   # 叠加态的鸭：复活概率跨战斗保留
 	engine.action.connect(_on_engine_action)
 	for e: Array in lvl["enemy_units"]:
@@ -5057,7 +5074,32 @@ func _curse_busy() -> bool:
 	## R362：诅咒展示还在播（或队列里还有没播的）→ 这一小段不收操作。
 	## 窗口 = 每张 CURSE_SHOW_MS + CURSE_FLY_MS（≈0.96s）；三只厄倪俄 ≈ 2.9s。
 	## ⚠️ 纯界面状态，**不进引擎**：联机镜像两侧都跑同一份事件流，各自播各自的。
-	return not _curse_cur.is_empty() or not _curse_queue.is_empty()
+	## R869：这里一并把「失控要塞逐张立卡」算进来 —— 两者都是「有卡盖在屏幕中央」的状态，
+	## 这一小段同样不能让玩家出牌 / 让 AI 推进（否则会在半空里改局面）。
+	return not _curse_cur.is_empty() or not _curse_queue.is_empty() or _fort_busy()
+
+
+func _fort_busy() -> bool:
+	## R869：失控要塞立卡演出还在进行 —— 正在缓冲这一段事件，或排队里还有没播的组，
+	## 或当前正有一张卡盖在屏幕中央。
+	## ⚠️ 战斗一结束就不算 busy —— 否则最后一张技能打死 Boss 时会把操作锁挂住。
+	if engine == null or engine.over:
+		return false
+	return _fort_buffering or not _fort_cur.is_empty() or not _fort_groups.is_empty()
+
+
+func _fort_modal_open() -> bool:
+	## R869：失控要塞随机释放时，个别技能会顺手弹出一个**需要玩家点的页面**
+	## （合体类 → 组合页；淘汰类 → 卡组选卡页；创意 / 涂装等 → 全屏选卡页）。
+	## 这些页面盖在立卡之上，如果照常往下播，玩家既看不到卡、又要面对一个
+	## 来路不明的面板。所以检测到它们就先按住立卡，等页面关掉再继续。
+	## ⚠️ 只看**当前真的开着**的节点，不看引擎 pending —— 引擎侧的 pending 是
+	##    「待办」，界面可能还没把它画出来，按它判会误暂停一帧。
+	if _assemble_overlay != null and _assemble_overlay.visible:
+		return true
+	if _pick != null and (_pick.is_picking() or _pick.is_view()):
+		return true
+	return false
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -9999,6 +10041,7 @@ func _draw() -> void:
 	_draw_reject_fx()
 	_draw_screen_flash()
 	_draw_curse_show()     # R362：诅咒展示（暗幕 + 卡面）—— 盖在手牌与面板之上
+	_draw_fort_show()      # R869：失控要塞随机释放的立卡（暗幕 + 卡面）—— 同一层
 	# R436：麻痹塞牌（小卡飞向弃牌区 + 落地后的黄色电流）。
 	# ⚠️ 必须画在**这之后**：飞卡要从棋盘横穿到右栏，路上正好压着大号「回合结束」
 	#    按钮，插在 `_draw_deck_and_discard()` 后面会整段被那个面板盖掉 —— 出图
@@ -12434,6 +12477,8 @@ func _tick_anims() -> bool:
 		_ee_swap = {}
 	# R362：诅咒展示队列（逐张：展示 → 收进卡组 → 下一张）
 	var curse_busy := _tick_curse_show(n)
+	# R869：失控要塞逐张立卡（立卡 → 引擎结算 → 收尾 → 下一张）
+	var fort_busy := _tick_fort_show(n)
 	if not _screen_flash.is_empty() and n - int(_screen_flash.start) >= int(_screen_flash.dur):
 		_screen_flash = {}
 	# R360：死亡效果还没结算 → 仍然算「演出中」（结算面板 / 回合推进都别抢跑）。
@@ -12465,7 +12510,7 @@ func _tick_anims() -> bool:
 			or not _deck_fly.is_empty() or not _transform_fx.is_empty() \
 			or not _deck_pulse.is_empty() \
 			or not _ee_swap.is_empty() \
-			or curse_busy
+			or curse_busy or fort_busy
 
 
 func _energy_fail(card: CardData, idx: int) -> void:
@@ -12488,6 +12533,18 @@ func _reject_fx(idx: int, reason := "", target = null) -> void:
 
 func _on_engine_action(kind: String, data: Dictionary) -> void:
 	## 引擎动作 → 动画 + 音效。
+	## R869：失控要塞（9161）随机释放期间的事件**先收进缓冲**。
+	## 引擎是同步一口气放完的（`fort_casts` 与 rng 序都没动），直接播出去玩家只能看到
+	## 「一堆飘字 + 一行总报」，认不出放了哪几张。缓冲到收尾事件后再由
+	## `_fort_collect()` 分组，按「立一项卡 → 播这张的效果」逐组回放。
+	## ⚠️ 拦截必须在一切副作用之前 —— 下面每一行都在往画面 / 音效 / 队列里塞东西。
+	if _fort_buffering:
+		if kind != "out_of_control_fort":
+			_fort_buffer.append({"kind": kind, "data": data})
+			return
+		# 收尾事件：先分组起播，再让它自己走下面的正常分支（状态栏总报照旧）
+		_fort_buffering = false
+		_fort_collect(data)
 	var n := _now()
 	if kind == "fx_impact" and _primal_landing and str(data.get("source", "")) in [
 			"土元素", "火元素", GameEngine.SURVEYOR_NAME]:
@@ -12615,9 +12672,25 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					th_sfx = "attack"
 				sfx.play(th_sfx)
 				_shake(th_shake, 260)
+		"out_of_control_fort_begin":
+			# R869：开场 —— 从现在起到 `out_of_control_fort` 之间的所有事件都进缓冲，
+			# 由 `_tick_fort_show` 按「立一张卡 → 播这张效果」重新排播（见 `_on_engine_action` 开头）。
+			_fort_buffering = true
+			_fort_buffer.clear()
+			_fort_groups.clear()
+			_fort_cur = {}
+			status_text = "失控要塞：本次对战已变化 %d 张牌 → 逐张释放技能" \
+					% int(data.get("changes", 0))
+		"fort_cast_announce":
+			# R869：回放阶段走到这里 —— 卡面已经立起来了，补一行状态栏点名。
+			status_text = "失控要塞：随机释放「%s」（第 %d / %d 张）" % [
+					str(data.get("name", "")), int(data.get("index", 1)),
+					int(data.get("total", 1))]
 		"out_of_control_fort":
 			# R288 失控要塞：入场随机释放职业技能 —— 这里只报总结果；每张技能自己
 			# 已经走过上面的 "spell" 分支（音效 / 飘字都在那儿）。
+			# R869：单机走逐张立卡时，这条由 `_finish_fort_casts()` 在**最后一张结算完**
+			# 才发（同一份 payload），所以这段不用分两套写法。
 			var ocf_names := ""
 			for ocf_n in (data.get("casts", []) as Array):
 				ocf_names = str(ocf_n) if ocf_names == "" \
@@ -18835,6 +18908,169 @@ func _draw_curse_show() -> void:
 		var sub := "→ 你的卡组" if src == "" else "%s → 你的卡组" % src
 		_draw_string_center(_font_bold, UI_FS_CAPTION, sub,
 				Vector2(ctr.x, rect.end.y + 26.0), Color(0.78, 0.62, 1.0, 0.9))
+
+
+func _fort_collect(data: Dictionary) -> void:
+	## R869：把缓冲下来的那一段事件按 `fort_cast_announce` 切成「一张卡一组」。
+	## 判据：组里的 `fort_cast_result.ok` —— 引擎在 `_fort_play()` 收尾时发的成败。
+	##   * 成功 → 立卡；
+	##   * 落空（随机池抽到但此刻打不出去，比如场上没有合法目标）→ 整组丢掉、连卡都不立，
+	##     否则玩家会看到一串「亮了卡却什么也没发生」的空壳。
+	## ⚠️ 别改用「组里有没有 `spell` 事件」：手牌系 / 交换系那几张走的是专用入口
+	##    （`cast_sys_upgrade` / `cast_lighten` / `cast_recycle` / `cast_reload` /
+	##    `cast_swap_units`），它们不发 `spell`，那样判会把真放出来的卡丢掉。
+	## ⚠️ 张数按**实际放出来的**重排成连续的 k/N —— 引擎那边登记的张数含落空的那几张。
+	var groups: Array = []
+	var cur: Dictionary = {}
+	for ev: Dictionary in _fort_buffer:
+		if str(ev.get("kind", "")) == "fort_cast_announce":
+			var d: Dictionary = ev.get("data", {})
+			cur = {"card": d.get("card", null), "name": str(d.get("name", "")),
+					"index": int(d.get("index", 1)), "total": int(d.get("total", 1)),
+					"events": []}
+			groups.append(cur)
+		elif not cur.is_empty():
+			(cur["events"] as Array).append(ev)
+	_fort_buffer.clear()
+	var kept: Array = []
+	for g: Dictionary in groups:
+		if g.get("card", null) == null:
+			continue
+		var ok := false
+		for ev2: Dictionary in (g["events"] as Array):
+			if str(ev2.get("kind", "")) == "fort_cast_result":
+				ok = bool((ev2["data"] as Dictionary).get("ok", false))
+				break
+		if ok:
+			kept.append(g)
+	var total := kept.size()
+	for i in total:
+		(kept[i] as Dictionary)["index"] = i + 1
+		(kept[i] as Dictionary)["total"] = total
+	_fort_groups = kept
+	_fort_cur = {}
+	_fort_next_at = 0
+
+
+func _replay_fort_events(events: Array) -> void:
+	## R869：把缓存的这一组事件按原顺序交回正常处理口 —— 立卡演完之后才轮到它们，
+	## 于是「卡先亮、伤害后出」的顺序就成立了。
+	## ⚠️ 时间戳一律取**当前** `_now()`（`_on_engine_action` 内部自己取）：这些事件
+	##    已经被压了几百毫秒，按原时刻算会当场过期、飘字直接不显示。
+	## ⚠️ 此刻 `_fort_buffering` 必须是 false，否则会被自己重新收回缓冲。
+	for ev: Dictionary in events:
+		var k := str(ev.get("kind", ""))
+		if k == "":
+			continue
+		_on_engine_action(k, ev.get("data", {}))
+
+
+func _tick_fort_show(n: int) -> bool:
+	## R869：失控要塞立卡的推进口（`_tick_anims` 每帧调一次）。
+	## 时序：取一组 → 立卡 FORT_SHOW_MS → **回放这一组的结算事件** → 收尾 FORT_OUT_MS
+	##       → 隔 FORT_GAP_MS 接下一组。
+	## ⚠️ 回放发生在立卡**之后**，这就是玩家看到的「先亮卡、再结算」。
+	## ⚠️ 兜底：战斗结束 / 引擎没了 → 立刻清空，绝不让它把玩家操作永久锁死。
+	if engine == null or engine.over:
+		_fort_buffering = false
+		_fort_buffer.clear()
+		_fort_groups.clear()
+		_fort_cur = {}
+		return false
+	if not _fort_cur.is_empty():
+		var el := float(n - int(_fort_cur.get("t0", n)))
+		if str(_fort_cur.get("phase", "show")) == "show":
+			if el < FORT_SHOW_MS:
+				return true
+			# 卡看够了 → 这时才播这张卡的效果（伤害飘字 / 击破 / 抽牌 / 换卡）
+			var grp: Dictionary = _fort_cur.get("group", {})
+			_replay_fort_events(grp.get("events", []))
+			_fort_cur["phase"] = "out"
+			_fort_cur["t0"] = n
+			return true
+		if el < FORT_OUT_MS:
+			return true
+		_fort_cur = {}
+		_fort_next_at = n + int(FORT_GAP_MS)
+		return true
+	if not _fort_groups.is_empty():
+		if n < _fort_next_at or _fort_modal_open():
+			return true
+		var cur: Dictionary = _fort_groups.pop_front()
+		_fort_cur = {"card": cur.get("card", null), "group": cur,
+				"index": int(cur.get("index", 1)), "total": int(cur.get("total", 1)),
+				"t0": n, "phase": "show"}
+		_banner = {}      # 大字横幅让位（与诅咒展示同理：卡面不能被横条切一半）
+		sfx.play("spell")
+		return true
+	return false
+
+
+func _draw_fort_show() -> void:
+	## R869：失控要塞随机释放的「技能卡立卡」演出（唯一口）。
+	## ① FORT_SHOW_MS：暗幕 + 卡面放大到 2.2 倍居中 + 火色外框呼吸
+	##    + 上方「机械之心 · 随机释放」与卡名，下方「失控要塞 → 第 k / N 张」。
+	## ② FORT_OUT_MS：整卡缩小 + 外框散去 + 八向火星 —— 这时引擎已经结算完，
+	##    伤害飘字正从棋盘上冒出来，「先看牌、再看结果」的顺序就成立了。
+	## ⚠️ 刻意**不飞向牌堆**：这张卡是凭空释放的、没有落点，飞走会让玩家以为它进了牌库。
+	## ⚠️ 卡面走 `_draw_card_face()` —— 费用 / 卡名 / 种类全按卡库排版，
+	##    玩家一眼能认出「这是聚能炮击」「这是系统升级」，而不是一个抽象的火色方块。
+	if _fort_cur.is_empty():
+		return
+	var card: CardData = _fort_cur.get("card", null)
+	if card == null:
+		return
+	var n := _now()
+	var el := float(n - int(_fort_cur.get("t0", n)))
+	var ctr := Vector2(WINDOW_W / 2.0, WINDOW_H / 2.0 - 18.0)
+	var sc := 2.35
+	var ending := str(_fort_cur.get("phase", "show")) == "out"
+	var out_t := 0.0
+	if ending:
+		out_t = clampf(el / FORT_OUT_MS, 0.0, 1.0)
+		sc *= lerpf(1.0, 0.84, out_t)
+		ctr += Vector2(0.0, 30.0 * out_t)
+	else:
+		# 升起 + 缩放入场（前 200ms，ease-out）—— 卡从下方「浮」上来
+		var k := clampf(el / 200.0, 0.0, 1.0)
+		var e1 := 1.0 - pow(1.0 - k, 3.0)
+		ctr += Vector2(0.0, 96.0 * (1.0 - e1))
+		sc *= lerpf(0.62, 1.0, e1)
+	# 暗幕比诅咒展示更重一档：这里压住的是**整块棋盘**，卡面必须是唯一焦点，
+	# 否则玩家会先去看伤害飘字、反而错过「放的是哪一张」。
+	var dim_a := 0.62 * clampf(el / 120.0, 0.0, 1.0)
+	if ending:
+		dim_a *= 1.0 - smoothstep(0.0, 1.0, out_t)
+	draw_rect(Rect2(Vector2.ZERO, Vector2(WINDOW_W, WINDOW_H)),
+			Color(0.05, 0.03, 0.02, dim_a), true)
+	var rect := Rect2(ctr - Vector2(CARD_W, CARD_H) * sc / 2.0,
+			Vector2(CARD_W, CARD_H) * sc)
+	var pulse := 0.5 + 0.5 * sin(el / 140.0)
+	var out_a := (1.0 - smoothstep(0.55, 1.0, out_t)) if ending else 1.0
+	# 火色底衬 + 外框（呼吸）
+	draw_rect(rect.grow(8.0 + 4.0 * pulse), Color(1.0, 0.52, 0.16, 0.26 * out_a), true)
+	draw_rect(rect.grow(3.0), Color(1.0, 0.72, 0.34, 0.92 * out_a), false, 2.0)
+	# 费用按**卡面原值**画（不传 cost_override）：这张卡是凭空释放、不向玩家收费，
+	# 用 `engine.cost_of()` 会把当前减费算进去（2 费的双向传送曾显示成 0 费），
+	# 玩家会误以为这张卡本来就是 0 费。
+	_draw_card_face(card, rect, card.health, false, false)
+	if ending:
+		# 收尾：八向火星（纯几何，不依赖贴图）
+		for i in 8:
+			var ang := TAU * float(i) / 8.0 + 0.28
+			var p := ctr + Vector2(cos(ang), sin(ang)) * lerpf(36.0, 104.0, out_t)
+			draw_circle(p, lerpf(3.4, 0.5, out_t),
+					Color(1.0, 0.66, 0.24, 0.75 * (1.0 - out_t)))
+	else:
+		var top := rect.position.y - 54.0
+		_draw_string_center(_font_bold, UI_FS_CAPTION, "机械之心 · 随机释放",
+				Vector2(ctr.x, top), Color(1.0, 0.72, 0.36, 0.95))
+		_draw_string_center(_font_bold, UI_FS_HEADING, card.card_name,
+				Vector2(ctr.x, top + 30.0), Color(1.0, 0.96, 0.92))
+		_draw_string_center(_font_bold, UI_FS_CAPTION,
+				"失控要塞 → 第 %d / %d 张" % [int(_fort_cur.get("index", 1)),
+				int(_fort_cur.get("total", 1))],
+				Vector2(ctr.x, rect.end.y + 26.0), Color(1.0, 0.80, 0.56, 0.9))
 
 
 func _on_deck_added(data: Dictionary, n: int) -> void:
