@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 348,
+ "count": 350,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1397,6 +1397,14 @@
   "9287": {
    "name": "Improvisation",
    "effect_text": "When played, and at the start of your next two turns, add a random \"Note\" card to your Hand."
+  },
+  "9288": {
+   "name": "Spare Battery",
+   "effect_text": "Set your current Cost to 2 (if it is higher than 2, it also drops to 2)."
+  },
+  "9289": {
+   "name": "Sow",
+   "effect_text": "At the start of your next turn, gain 2 Cost and draw 1 card."
   }
  }
 }

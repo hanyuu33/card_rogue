@@ -813,6 +813,23 @@ const RAPID_PER_ZERO:= 1
 # R316 激光扫射（9172，机械之心 2 费稀有技能）：对所有敌人造成 9 点伤害。
 const LASER_SWEEP_ID:= 9172
 const LASER_SWEEP_DMG:= 9
+# R873 备用电池（9288，机械之心 0 费稀有技能）：把自己的**当前费用**直接设成 2。
+#   ⚠️ 是「设为」不是「+2」：基础发费 5 → 开局就打是从 5 降到 2（净亏 3），
+#      这张卡的用法是**把主电池先花光**（0 费 → 不足 2 时补到 2），名字与机制自洽。
+#      与应急电源 9170（`state.energy += 1`）刻意不同：那张是「加」，这张是「重设」。
+#   ⚠️ 不进 `max_energy()` 分母（不是「每回合都给」）→ 费用条显示 2/5 属正常，与活力转移同口径。
+#   敌方对称：直接写 `state.opp_energy`（AI 正常拿不到这张卡，防御性实现）。
+const SPARE_BATTERY_ID:= 9288
+const SPARE_BATTERY_ENERGY:= 2
+# R873 播种（9289，森林精魄 1 费稀有技能）：**下个回合开始** +2 费、多抽 1 张。
+#   两条都走既有的「下回合」记账（state.self_next_energy / state.self_next_draw，
+#   与活力转移 9110 / 负重减轻 8066 / Do 9277 同一个 `_begin_turn` 发放口），
+#   不新增引擎字段 —— 这两个字段本来就在 FieldState 的存档里，读档续战不会丢。
+#   ⚠️ 别与「种子 9248」（SEED_ID，回合开始破坏自己换费 / 换卡）混淆：
+#      那张是场上的实体卡，这张是一次性延迟收益。
+const SOW_ID:= 9289
+const SOW_NEXT_ENERGY:= 2
+const SOW_NEXT_DRAW:= 1
 # R317 身法（9173，暗影刺客 1 费普通技能）：抽 REFLEX_DRAW 张；**这回合结束为止不能使用盟友和工事卡**。
 #   R845（用户口径）：抽 5 → 抽 4。
 #   锁的判据放在 `can_use_card()`（显示 / UI / 引擎同一口）+ `play_from_hand()` 兜底；
@@ -2880,12 +2897,13 @@ func _begin_turn(side: String) -> void :
 					"text": "新月耳饰：每 %d 场战斗，首回合费用 +%d"
 							% [RunState.CRESCENT_EVERY, CRESCENT_ENERGY]})
 
-		# 活力转移（9110，R55）：上回合剩余费用换来的额外费用，**只在本回合发放一次**。
+		# 活力转移（9110，R55）/ 播种（9289，R873）：上回合记下的额外费用，**只在本回合发放一次**。
+		# R873 起日志改中性措辞 —— 这条口由活力转移与播种共用，写死卡名会张冠李戴。
 		var transfer_energy := state.self_next_energy
 		if transfer_energy > 0:
 			state.energy += transfer_energy
 			state.self_next_energy = 0
-			_log("活力转移：上回合结转，费用 +%d" % transfer_energy)
+			_log("上回合结转：费用 +%d" % transfer_energy)
 			action.emit("vitality", {"energy": transfer_energy, "side": SIDE_SELF})
 
 		var ice_energy:= 0
@@ -2978,12 +2996,14 @@ func _begin_turn(side: String) -> void :
 			popcorn_draw = 0
 			_log("爆米花：上回合没用技能指向敌人 → 本回合多抽 %d 张" % pc_draw)
 			action.emit("popcorn", {"draw": pc_draw, "side": SIDE_SELF})
-		# 负重减轻（8066，R201）：上回合「选卡消失」换来的额外抽牌，**只在本回合发放一次**
+		# 负重减轻（8066，R201）/ 播种（9289，R873）/ Do（9277）：上回合记下的额外抽牌，
+		# **只在本回合发放一次**。R873 起日志改中性措辞 —— 这条口是三个来源共用的，
+		# 写死「负重减轻」会把播种 / Do 的抽牌记到负重减轻头上。
 		if state.self_next_draw > 0:
 			extra_draw += state.self_next_draw
 			var lighten_draw := state.self_next_draw
 			state.self_next_draw = 0
-			_log("负重减轻：本回合多抽 %d 张卡" % lighten_draw)
+			_log("上回合结转：本回合多抽 %d 张卡" % lighten_draw)
 			action.emit("lighten_draw", {"draw": lighten_draw, "side": SIDE_SELF})
 		if turn_number == 1:
 			_ensure_opening_enchanted()      # R229「起手」附魔：同样第 1 回合必定抽到
@@ -3076,7 +3096,7 @@ func _begin_turn(side: String) -> void :
 			"（+%d 鸭翼）" % bonus_energy if bonus_energy > 0 else "",
 			"（+%d 鸭语耳环）" % earring_energy if earring_energy > 0 else "",
 			"（+%d 冰淇淋）" % ice_energy if ice_energy > 0 else "",
-			"（+%d 活力转移）" % transfer_energy if transfer_energy > 0 else "",
+			"（+%d 上回合结转）" % transfer_energy if transfer_energy > 0 else "",
 			"（无尽黑暗：待选弃牌）" if endless_pending else "",
 			"（鸭之低语：%s）" % whisper_txt if whisper_txt != "" else "",
 			"，耳环自动出 %d 张" % earring_autoplayed if earring_autoplayed > 0 else "",
@@ -3088,12 +3108,12 @@ func _begin_turn(side: String) -> void :
 		state.opp_card_plays = 0
 		state.opp_energy_spent = 0   # 暗影之刃 9111：对称保留
 		state.opp_energy = FieldState.ENERGY_PER_TURN
-		# 活力转移（9110，R55）：对称保留（敌方正常拿不到这张卡）
+		# 上回合结转（活力转移 9110 / 播种 9289）：对称保留（敌方正常拿不到这张卡）
 		var opp_transfer := state.opp_next_energy
 		if opp_transfer > 0:
 			state.opp_energy += opp_transfer
 			state.opp_next_energy = 0
-			_log("活力转移（对方）：费用 +%d" % opp_transfer)
+			_log("上回合结转（对方）：费用 +%d" % opp_transfer)
 			action.emit("vitality", {"energy": opp_transfer, "side": SIDE_OPPONENT})
 		_assemble_opponent_draw(FieldState.HAND_DRAW_PER_TURN)
 		state.opp_deck_count = maxi(0, state.opp_deck_count - FieldState.HAND_DRAW_PER_TURN)
@@ -13186,8 +13206,43 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return _note_la(side)
 		NOTE_SI_ID:
 			return _note_si(side, card)
+		SPARE_BATTERY_ID:
+			# 备用电池（9288，R873，机械之心 0 费稀有技能）：当前费用**设为** 2。
+			# * 严格按卡面「变为 2」实现 —— 原本 5 点也照降，这是卡的设计代价（先花光再打）。
+			# * 不碰 `self_energy_spent`：那是「本回合已花掉多少」的记录（暗影之刃 9111 读它），
+			#   重设当前费用不等于把花掉的费用退回去。
+			# * 差值只用来出提示文案 / 飘字，逻辑分支不看它 —— 「已经是 2」照样算打出成功。
+			var sb_before: int = state.energy if side == SIDE_SELF else state.opp_energy
+			if side == SIDE_SELF:
+				state.energy = SPARE_BATTERY_ENERGY
+			else:
+				state.opp_energy = SPARE_BATTERY_ENERGY
+			var sb_delta: int = SPARE_BATTERY_ENERGY - sb_before
+			_log("备用电池：费用 %d → %d（差值 %d）" % [sb_before, SPARE_BATTERY_ENERGY, sb_delta])
+			action.emit("spare_battery", {"before": sb_before, "after": SPARE_BATTERY_ENERGY,
+					"delta": sb_delta, "side": side})
+			if sb_delta == 0:
+				return "费用已经是 %d 点，没有变化" % SPARE_BATTERY_ENERGY
+			return "费用 %d → %d" % [sb_before, SPARE_BATTERY_ENERGY]
+		SOW_ID:
+			# 播种（9289，R873，森林精魄 1 费稀有技能）：下个回合开始 +2 费、多抽 1 张。
+			# * 只**记账**，本回合一点费用都不回 —— 卡面写的是「下回合」，当回合不变。
+			# * 重复打出 / 蓄力双发 → 两个字段各自 `+=`，额度叠加，各算各的。
+			# * 敌方没有真实手牌体系 → 只记费用那半边（与活力转移对称保留同口径）。
+			if side == SIDE_SELF:
+				state.self_next_energy += SOW_NEXT_ENERGY
+				state.self_next_draw += SOW_NEXT_DRAW
+				_log("播种：下个回合开始 +%d 费、多抽 %d 张（记账 %d 费 / %d 张）" % [
+						SOW_NEXT_ENERGY, SOW_NEXT_DRAW,
+						state.self_next_energy, state.self_next_draw])
+				action.emit("sow", {"energy": SOW_NEXT_ENERGY, "draw": SOW_NEXT_DRAW,
+						"side": side})
+				return "下个回合开始时获得 %d 点费用，抽 %d 张卡" % [SOW_NEXT_ENERGY, SOW_NEXT_DRAW]
+			state.opp_next_energy += SOW_NEXT_ENERGY
+			_log("播种（敌方）：对方下个回合开始 +%d 费（敌方无手牌 → 不抽卡）" % SOW_NEXT_ENERGY)
+			action.emit("sow", {"energy": SOW_NEXT_ENERGY, "draw": 0, "side": side})
+			return "对方下个回合开始时获得 %d 点费用" % SOW_NEXT_ENERGY
 		LASER_SWEEP_ID:
-			# 激光扫射（9172，R316，机械之心 2 费稀有技能）：对所有敌人造成 9 点伤害。
 			# 与激发 8077 / 风妖精 6042 同口径：逐格走 `_hit_unit`（护盾 / 减伤 / 光环照常），
 			# 致死统一交 `_destroy_dead()`；格子先排序，回放 / 同种子必须逐帧一致。
 			# 只打**场上的敌方单位**，不直击敌方 HP（没有单位时效果落空）。

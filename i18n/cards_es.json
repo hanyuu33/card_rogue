@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 348,
+ "count": 350,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1397,6 +1397,14 @@
   "9287": {
    "name": "Improvisación",
    "effect_text": "Al usarla, y al inicio de tus dos próximos turnos, añade una carta de \"Nota\" aleatoria a tu mano."
+  },
+  "9288": {
+   "name": "Batería de repuesto",
+   "effect_text": "Establece tu Coste actual en 2 (si es mayor que 2, también baja a 2)."
+  },
+  "9289": {
+   "name": "Siembra",
+   "effect_text": "Al inicio de tu próximo turno, obtén 2 de Coste y roba 1 carta."
   }
  }
 }

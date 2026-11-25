@@ -14848,14 +14848,41 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"col": Color("c0392b"), "start": n, "dur": 1500, "size": 16})
 			sfx.play("heal")
 		"vitality":
-			# 活力转移（9110）：上回合结转的额外费用在本回合开始发放
+			# 活力转移（9110）/ 播种（9289）：上回合结转的额外费用在本回合开始发放（文案中性，来源可能两处）
 			var vt_side := str(data.get("side", GameEngine.SIDE_SELF))
 			var vt_pos := Vector2(GRID_X + GRID_W / 2, GRID_Y - 12) \
 					if vt_side == GameEngine.SIDE_SELF \
 					else Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 24)
 			_floaters.append({"pos": vt_pos,
-					"text": "活力转移 · 本回合费用 +%d" % int(data.get("energy", 0)),
+					"text": "上回合结转 · 本回合费用 +%d" % int(data.get("energy", 0)),
 					"col": Color("2f9e5e"), "start": n, "dur": 2100})
+			sfx.play("heal")
+		"spare_battery":
+			# 备用电池（9288，R873，机械之心 0 费稀有技能）：费用被**重设**为 2。
+			# ⚠️ 一定要飘字：这张卡会把 5 费降成 2，没有提示玩家会当成 bug。
+			# 升（补费）用绿、降（重设）用红，方向一眼能看出来。
+			var sb_side := str(data.get("side", GameEngine.SIDE_SELF))
+			var sb_pos := Vector2(GRID_X + GRID_W / 2, GRID_Y - 12) \
+					if sb_side == GameEngine.SIDE_SELF \
+					else Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 24)
+			var sb_d := int(data.get("delta", 0))
+			_floaters.append({"pos": sb_pos,
+					"text": "🔋 备用电池 · 费用 %d → %d" % [int(data.get("before", 0)),
+							int(data.get("after", 0))],
+					"col": Color("2f9e5e") if sb_d > 0 else Color("c0392b"),
+					"start": n, "dur": 2100})
+			sfx.play("heal" if sb_d > 0 else "click")
+		"sow":
+			# 播种（9289，R873，森林精魄 1 费稀有技能）：记下「下回合 +2 费 +1 抽」
+			var sow_side := str(data.get("side", GameEngine.SIDE_SELF))
+			var sow_pos := Vector2(GRID_X + GRID_W / 2, GRID_Y - 12) \
+					if sow_side == GameEngine.SIDE_SELF \
+					else Vector2(GRID_X + GRID_W / 2, GRID_Y + GRID_H + 24)
+			var sow_draw_n := int(data.get("draw", 0))
+			_floaters.append({"pos": sow_pos,
+					"text": "🌱 播种 · 下回合 +%d 费%s" % [int(data.get("energy", 0)),
+							"、多抽 %d 张" % sow_draw_n if sow_draw_n > 0 else ""],
+					"col": Color("3f8f4f"), "start": n, "dur": 2100})
 			sfx.play("heal")
 		"lighten_set":
 			# 负重减轻（8066，R201）：选卡消失完成 → 提示「下个回合多抽一张」
@@ -14867,10 +14894,12 @@ func _on_engine_action(kind: String, data: Dictionary) -> void:
 					"text": "👻 负重减轻 · 下回合多抽 %d 张" % int(data.get("draw", 0)),
 					"col": Color("6a4aa0"), "start": n, "dur": 2100})
 		"lighten_draw":
-			# 负重减轻（8066，R201）：回合开始正式发放额外抽牌
+			# 负重减轻（8066，R201）/ 播种（9289，R873）/ Do（9277）：回合开始正式发放额外抽牌
+			# ⚠️ 文案写「上回合结转」而不是「负重减轻」：这个 action 由 `state.self_next_draw`
+			#    统一发放，来源可能是负重减轻 / 播种 / Do —— 写死卡名会张冠李戴（R873 修正）。
 			var ld_pos := Vector2(GRID_X + GRID_W / 2, GRID_Y - 12)
 			_floaters.append({"pos": ld_pos,
-					"text": "👻 负重减轻 · 多抽 %d 张" % int(data.get("draw", 0)),
+					"text": "👻 上回合结转 · 多抽 %d 张" % int(data.get("draw", 0)),
 					"col": Color("6a4aa0"), "start": n, "dur": 2100})
 			sfx.play("heal")
 		"contractor":
