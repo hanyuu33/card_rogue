@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "es",
  "source": "i18n/zh_canonical.json",
- "count": 346,
+ "count": 348,
  "cards": {
   "1011": {
    "name": "Guardia de la Muralla de Hierro",
@@ -1389,6 +1389,14 @@
   "9276": {
    "name": "Muñeca maldita",
    "effect_text": "No puede jugarse. Al final del turno, recibes 3 de daño. Al inicio de tu turno, si esta carta está en tu pila de descartes, vuelve a tu mano."
+  },
+  "9286": {
+   "name": "Encuentro fortuito",
+   "effect_text": "Añade 2 cartas de \"Nota\" aleatorias y 2 cartas de Aliado aleatorias de otras clases a tu mazo."
+  },
+  "9287": {
+   "name": "Improvisación",
+   "effect_text": "Al usarla, y al inicio de tus dos próximos turnos, añade una carta de \"Nota\" aleatoria a tu mano."
   }
  }
 }

@@ -2,7 +2,7 @@
  "version": 1,
  "lang": "en",
  "source": "i18n/zh_canonical.json",
- "count": 346,
+ "count": 348,
  "cards": {
   "1011": {
    "name": "Ironwall Guard",
@@ -1389,6 +1389,14 @@
   "9276": {
    "name": "Curse Doll",
    "effect_text": "Cannot be played. At the end of the turn, you take 3 damage. At the start of your turn, if this card is in your Discard Pile, return it to your Hand."
+  },
+  "9286": {
+   "name": "Chance Encounter",
+   "effect_text": "Add 2 random \"Note\" cards and 2 random Ally cards of other classes to your Deck."
+  },
+  "9287": {
+   "name": "Improvisation",
+   "effect_text": "When played, and at the start of your next two turns, add a random \"Note\" card to your Hand."
   }
  }
 }

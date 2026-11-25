@@ -217,6 +217,9 @@ var _recruit_cards: Array = []
 ##    回合结束重置就没了；卡面写的是「本局」，所以必须记在这里，由 `_begin_turn` 发费时
 ##    叠加、`max_energy()` 算进分母。每个新 GameEngine = 一场新战斗 → 自然复位。
 var _battle_energy_bonus:= 0
+## R872 即兴演奏（9287）：还要在**几个回合开始**各塞一张随机音符（每回合 -1，归零即停）。
+## 引擎实例 = 一场战斗 → 新战斗 / 读档重进自然复位，不跨战斗、不进存档。
+var _improv_left:= 0
 var _steel_stamp_used:= false  # R307 思想钢印：本场战斗是否已经救过一次（每场一次）
 var _thorn_ring_turn:= -1      # R307 荆棘指环：上次触发是第几回合（每回合一次）
 var _spike_wall_turn:= -1      # R827 刺墙：上次触发是第几回合（每回合一次）
@@ -1322,6 +1325,22 @@ const ENCORE_ID:= 9274
 const NOTE_ID:= 9275
 const NOTE_ENERGY:= 2
 const NOTE_DRAW:= 2
+
+# ── 邂逅（9286 技能，R872，吟游诗人稀有）：2 张随机音符 + 2 张随机其他职业盟友 → **卡组** ──
+# 「加入卡组」按 zh_canonical 的定案（卡组 = 完整卡组，跨战斗增删保留；战斗中待抽区才叫抽牌库）
+# → 走 `RunState.add_card()`，与猴爪 6066 塞「懊悔」同一个口。这几张**本场抽牌堆不掺**，
+# 要等到下一场战斗才抽得到 —— 所以这里刻意**不**发 `deck_added`（那是抽牌库的塞牌动画）。
+# ⚠️ 音符（9277~9283）是 rarity 5 / 隐藏职业卡，平时进不了任何获得池；这张是**唯一**
+#    把她们永久塞进卡组的通道。别改成 `state.deck`，那会把「跨战斗投资」变成「本场爆发」。
+const ENCOUNTER_ID:= 9286
+const ENCOUNTER_NOTES:= 2
+const ENCOUNTER_ALLIES:= 2
+# ── 即兴演奏（9287 技能，R872，吟游诗人史诗）：使用时 + 接下来两个回合开始，各 1 张随机音符 ──
+# 「接下来两个回合」记在 `_improv_left`（引擎实例 = 一场战斗 → 新战斗 / 读档重进自然复位，
+# 不进存档字段）；挂点是 `_begin_turn(SIDE_SELF)` 里的 `_improv_tick()`，排在 `_claw_tick()`
+# 之后 —— 那时抽牌已完成、手牌状态稳定，满手判定与「抽到但手牌满」走同一条 `_grant_to_hand`。
+const IMPROV_ID:= 9287
+const IMPROV_TURNS:= 2
 
 # ── 火墙术（9084 技能，2026-10-01）──
 # 3 费普通技能：对一横行的**所有单位**（R247 起不分敌我）造成 FIRE_WALL_DMG 点伤害；
@@ -2643,6 +2662,7 @@ func start_game(starting_hand:= 0, opponent_deck:= 50, i_start:= true) -> void :
 	regret_pending = false
 	recruit_pending = false
 	_recruit_cards.clear()
+	_improv_left = 0            # R872 即兴演奏：每场战斗都从「没有延后额度」开始
 	_poem_used = false          # R761 诗：每场战斗从「这回合还没回费」开始
 	_master_sword_first_ally_done = false   # R793 圣剑：第一个盟友的额度每场重置
 	_plate_first_ally_done = false   # R792 板甲：第一个盟友的额度每场重置
@@ -2984,6 +3004,7 @@ func _begin_turn(side: String) -> void :
 		if _zone_has(state.effects, ENDLESS_DARK_TRAIT):
 			_endless_dark(SIDE_SELF)
 		_claw_tick()   # R766 猴爪：前三个回合各发一张外来卡 + 一张「懊悔」进卡组
+		_improv_tick()  # R872 即兴演奏：接下来两个回合开始各塞一张随机音符
 		_melt_ice_walls(SIDE_SELF)
 		_clear_fire_walls(SIDE_SELF)
 		_wisdom_surge()
@@ -13157,6 +13178,10 @@ func _run_spell_effect_body(card: CardData, target, side:= SIDE_SELF) -> String:
 			return _barrage(side, card)
 		ENCORE_ID:
 			return _encore(side, card)
+		ENCOUNTER_ID:
+			return _encounter_card(side)
+		IMPROV_ID:
+			return _improvisation(side)
 		NOTE_ID:
 			return _note_spell(side)
 		RAID_SPELL_ID:
@@ -18449,6 +18474,121 @@ func _random_note_except(exclude_id: int) -> CardData:
 	if pool.is_empty():
 		return null
 	return pool[rng.randi() % pool.size()]
+
+
+func _random_note_card() -> CardData:
+	## R872：随机一张音符卡（邂逅 / 即兴演奏共用）。判据只认 trait「音符」——
+	## 与音乐盒 6086 / Re 的「另一张随机音符」同一份名单（`_note_cards()`），不写死 id。
+	## 走引擎 `rng` → 同种子同结果、回放可复现。
+	var pool: Array[CardData] = _note_cards()
+	if pool.is_empty():
+		return null
+	return pool[rng.randi() % pool.size()]
+
+
+func _other_class_ally_pool() -> Array[CardData]:
+	## R872 邂逅：**其他职业的盟友**候选池。
+	## 池子走 `reward_pool()`（隐藏职业 / event_only / 本局禁卡一并筛掉），再用
+	## `_other_class_card()` 判「有明确职业归属且不是玩家当前职业」——
+	## 与猴爪 / 懊悔 / 呼唤同一个判据，公用卡（class 留空）不算「其他职业」。
+	var repo := CardRepo.load_json()
+	var pool: Array[CardData] = []
+	for c: CardData in repo.reward_pool():
+		if c.kind == "盟友" and _other_class_card(c):
+			pool.append(c)
+	return pool
+
+
+func _encounter_card(side: String) -> String:
+	## 邂逅（9286，R872，吟游诗人 1 费稀有技能）：
+	##   2 张随机「音符」+ 2 张随机其他职业盟友 → **卡组**（跨战斗，`RunState.add_card`）。
+	## * 卡面写「加入卡组」→ 按 zh_canonical 的分区口径走完整卡组；本场抽牌库不掺，
+	##   下一场战斗才抽得到，所以**不**发 `deck_added`（那个事件是「进抽牌库」的动画）。
+	## * 音符是 rarity 5 的隐藏卡：这是唯一把她们永久塞进卡组的通道。
+	## * 抽不满（卡池被清空 / 卡库缺音符）时有几张给几张，日志里写清是哪种缺。
+	var note_total: int = ENCOUNTER_NOTES
+	var ally_total: int = ENCOUNTER_ALLIES
+	if side != SIDE_SELF:
+		# 敌方没有真实卡组（只有抽象计数 `opp_deck_count`）→ 只推进计数，与余音同口径。
+		state.opp_deck_count += note_total + ally_total
+		_log("邂逅（敌方）：敌方牌库 +%d 张" % (note_total + ally_total))
+		return "将 %d 张卡加入卡组" % (note_total + ally_total)
+	var got_notes: Array[String] = []
+	for _i in note_total:
+		var nc := _random_note_card()
+		if nc == null:
+			break
+		RunState.add_card(nc.id)
+		got_notes.append(nc.card_name)
+	var got_allies: Array[String] = []
+	var apool := _other_class_ally_pool()
+	for _i in ally_total:
+		if apool.is_empty():
+			break
+		var ac: CardData = apool[rng.randi() % apool.size()]
+		RunState.add_card(ac.id)
+		got_allies.append(ac.card_name)
+	var added: int = got_notes.size() + got_allies.size()
+	_log("邂逅：卡组 +%d 张（音符：%s；其他职业盟友：%s）" % [
+			added,
+			"、".join(got_notes) if not got_notes.is_empty() else "无",
+			"、".join(got_allies) if not got_allies.is_empty() else "无"])
+	action.emit("encounter", {"notes": got_notes, "allies": got_allies, "total": added})
+	if added <= 0:
+		return "卡库里摇不出音符 / 其他职业盟友，效果落空"
+	return "卡组 +%d 张（%d 张音符 + %d 张其他职业盟友）" % [
+			added, got_notes.size(), got_allies.size()]
+
+
+func _improvisation(side: String) -> String:
+	## 即兴演奏（9287，R872，吟游诗人 2 费史诗技能）：
+	##   使用时先塞 1 张随机「音符」进手牌，再把「接下来两个回合开始各塞一张」记进 `_improv_left`。
+	## * 连打两张（蓄力 / 双发）→ 额度叠加，各算各的两个回合，不互相吞掉。
+	## * 手牌满 → `_grant_to_hand` 通用口径（进弃牌区，不蒸发）；额度照样记着，
+	##   因为「回合开始再加两张」那部分还没结算。
+	## * 加牌**不加费** —— 音符自己带「+2 费 + 抽 2 张」，费用收益全在音符那张卡上。
+	if side != SIDE_SELF:
+		_log("即兴演奏（敌方）：敌方没有手牌体系，效果落空")
+		return "即兴演奏：效果落空"
+	var note := _random_note_card()
+	var landed := false
+	var nm := ""
+	if note != null:
+		var copy := _new_own_card(note)
+		nm = copy.card_name
+		landed = _grant_to_hand(copy, "即兴演奏")
+	_improv_left += IMPROV_TURNS
+	action.emit("improvisation", {"card": note, "to_hand": landed, "left": _improv_left,
+			"side": side, "turn": turn_number})
+	if note == null:
+		_log("即兴演奏：卡库里没有音符卡，本次加牌落空（延后 %d 个回合的额度仍记着）" % IMPROV_TURNS)
+		return "卡库里没有音符卡；接下来 %d 个回合开始时再试" % IMPROV_TURNS
+	_log("即兴演奏：%s「%s」；接下来 %d 个回合开始各塞一张音符" % [
+			"手卡加入" if landed else "手牌已满 → 进弃牌区", nm, IMPROV_TURNS])
+	return "「%s」%s；接下来 %d 个回合开始时各加入一张音符" % [
+			nm, "加入手卡" if landed else "进弃牌区", IMPROV_TURNS]
+
+
+func _improv_tick() -> void:
+	## R872 即兴演奏：**每个我方回合开始**结算一次，`_improv_left` 归零即停。
+	## 挂点与 `_claw_tick()` 同一排（抽牌之后）—— 手牌状态稳定，满手改投弃牌区
+	## 与「抽到但手牌满」完全同一条口径。
+	## 读档 / 重开：引擎实例即一场战斗，`start_game` 会把 `_improv_left` 归零，
+	## 所以不存在「上一场欠下的额度漏到这一场」。
+	if _improv_left <= 0:
+		return
+	_improv_left -= 1
+	var note := _random_note_card()
+	if note == null:
+		_log("即兴演奏：卡库里没有音符卡，跳过（还剩 %d 个回合）" % _improv_left)
+		return
+	var copy := _new_own_card(note)
+	var landed := _grant_to_hand(copy, "即兴演奏")
+	_log("即兴演奏：第 %d 回合开始，%s「%s」（还剩 %d 个回合）" % [
+			turn_number, "手卡加入" if landed else "手牌已满 → 进弃牌区",
+			copy.card_name, _improv_left])
+	action.emit("improvisation", {"card": copy, "to_hand": landed, "left": _improv_left,
+			"side": SIDE_SELF, "turn": turn_number})
 
 
 func _note_re(side: String, card: CardData) -> String:

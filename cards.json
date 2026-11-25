@@ -7246,6 +7246,44 @@
       "target_mode": "none",
       "color": "自然",
       "image": ""
+    },
+    {
+      "id": 9286,
+      "name": "邂逅",
+      "kind": "技能",
+      "cost": 1,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 1,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "将 2 张随机「音符」卡和 2 张随机其他职业的盟友卡加入卡组。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
+    },
+    {
+      "id": 9287,
+      "name": "即兴演奏",
+      "kind": "技能",
+      "cost": 2,
+      "power": 0,
+      "health": 0,
+      "attack_range": 0,
+      "move_speed": 0,
+      "rarity": 2,
+      "group": "player",
+      "class": "吟游诗人",
+      "traits": [],
+      "affixes": [],
+      "effect_text": "使用时，以及接下来两个回合开始时，各将一张随机「音符」卡加入手卡。",
+      "target_mode": "none",
+      "color": "水风",
+      "image": ""
     }
   ]
 }

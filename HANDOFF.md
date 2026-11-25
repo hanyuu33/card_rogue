@@ -2709,4 +2709,27 @@ art_src/2026-11-23_frames 包含六类独立卡框和提示词框架。内置ima
   （底图 1672×941、断言仍要 1280×720，在途 R868 改动导致，与本轮无关）。
 - 截图验收：`tools/_shot_r869_diff.gd` 在真实 ClassPickScene 上截 4/6/10 三档，
   `art_src/2026-11-25_frames/r869_diff_{green,orange,red}.png` —— 绿/橙/红三态清晰、风格一致。
-- 轮次号查重：R868 已被占用（背景接入），R869/R870 空闲 → 本轮用 **R869**。
+- 轮次号查重：R868 已被占用（背景接入），R869/R872 空闲 → 本轮用 **R869**。
+
+## 2026-11-25 R872 吟游诗人「邂逅」9286 / 「即兴演奏」9287
+
+- 用户口径：新增吟游诗人**稀有「邂逅」**（1 费：2 张随机音符 + 2 张随机其他职业盟友 → 卡组）、
+  **史诗「即兴演奏」**（2 费：使用时 + 接下来两个回合开始，各 1 张随机音符 → 手卡）。
+- `cards.json`：9286 邂逅 / 9287 即兴演奏（技能 · 吟游诗人 · `target_mode: none` · 颜色「水风」），
+  卡库 346 → 348；两张都是隐藏职业卡，默认随机池不收，只有吟游诗人自己的池子里有。
+- `scripts/game_engine.gd`：
+  - 常量 `ENCOUNTER_ID / ENCOUNTER_NOTES / ENCOUNTER_ALLIES`、`IMPROV_ID / IMPROV_TURNS`；
+    新增引擎变量 `_improv_left`（引擎实例 = 一场战斗，`start_game()` 归零，不进存档字段）。
+  - 邂逅走 `RunState.add_card()` —— **卡组**（跨战斗），本场抽牌库不掺、刻意不发 `deck_added`
+    （那是「进抽牌库」的动画）；音符取 `_note_cards()` 的 trait 名单，盟友取 `reward_pool()` ∩
+    `_other_class_card()`；敌方没有真实卡组 → 只推进 `opp_deck_count`（与余音同口径）。
+  - 即兴演奏：使用时用 `_grant_to_hand` 塞 1 张随机音符，并把 `_improv_left += 2`；
+    `_begin_turn(SIDE_SELF)` 新增 `_improv_tick()`（排在 `_claw_tick()` 之后，抽牌已完成），
+    每回合 -1、归零即停；连打两张额度叠加。
+- i18n：`cards_en / cards_ja / cards_es / zh_canonical` 各 +2 条（`count` 346 → 348），
+  译文沿用既有术语（Note / Nota / 音符、Deck / mazo / デッキ、Hand / mano / 手札）。
+- 回归：`test_engine` 图鉴 346 → 348、玩家 266 → 268、吟游诗人 16 → 18、R226 技能 117 → 119；
+  `test_reward` 与 content / mod 两个探针的基线计数一并同步；新增 `_test_r872()`（数据层 / 卡组口径 /
+  延后两回合 / 获取口径 / 源码锁，共 16 条断言）。
+- 素材：**本轮按要求未生成卡图** → `assets/pics/9286.png`、`9287.png` 仍缺图，卡面走既有缺图回退。
+- 轮次号查重：R865 在途（启示者二阶段）、R866~R869 已用 → 本轮用 **R872**。
