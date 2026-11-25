@@ -1,0 +1,211 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+
+LEVEL_COUNT=41
+### PER_LEVEL
+LVL	duck_knight	鸭子骑士来袭	普通敌人-简单	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9001	鸭子骑士	3	30	1	2	1,0
+  UNIT	9001	鸭子骑士	3	30	1	2	1,2
+LVL	familiars	使魔鸭群	普通敌人-简单	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9009	使魔鸭子	4	15	1	1	2,0
+  UNIT	9009	使魔鸭子	4	15	1	1	2,1
+  UNIT	9009	使魔鸭子	4	15	1	1	2,2
+  UNIT	9009	使魔鸭子	4	15	1	1	1,0
+  UNIT	9009	使魔鸭子	4	15	1	1	1,2
+LVL	archer_knight	弓手与骑士	普通敌人-简单	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9017	鸭子弓手	3	15	2	1	0,0
+  UNIT	9001	鸭子骑士	3	30	1	2	0,1
+  UNIT	9017	鸭子弓手	3	15	2	1	0,2
+LVL	blaze_pack	爆炎鸭阵	普通敌人-简单	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9009	使魔鸭子	4	15	1	1	0,1
+  UNIT	9020	爆炎鸭	5	3	1	1	2,0
+  UNIT	9001	鸭子骑士	3	30	1	2	2,1
+  UNIT	9020	爆炎鸭	5	3	1	1	2,2
+LVL	frost_line	寒冰防线	普通敌人-简单	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9210]	reward=[]
+  UNIT	1031	冰冻术士	4	24	3	1	0,1
+  UNIT	1011	铁壁卫兵	3	40	1	1	2,1
+  UNIT	1053	骷髅兵	2	10	1	1	2,0
+  UNIT	1054	骷髅兵	3	14	1	1	2,2
+LVL	assembly_line	量产流水线	普通敌人-简单	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9147]	reward=[]
+  UNIT	9137	量产型赫利俄斯	6	30	1	0	0,1
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,0
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,2
+LVL	mass_anvil	量产铁砧	普通敌人-简单	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9138	量产型赫菲斯托斯	4	50	1	1	0,0
+  UNIT	9138	量产型赫菲斯托斯	4	50	1	1	0,1
+  UNIT	9138	量产型赫菲斯托斯	4	50	1	1	0,2
+LVL	argos_mobilize	百眼动员	普通敌人-简单	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9142	量产型阿尔戈斯	7	35	2	2	1,0
+  UNIT	9142	量产型阿尔戈斯	7	35	2	2	1,2
+  UNIT	9137	量产型赫利俄斯	6	30	1	0	0,1
+LVL	knight_charge	骑士冲锋	普通敌人-困难	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9001	鸭子骑士	3	30	1	2	1,0
+  UNIT	9001	鸭子骑士	3	30	1	2	1,1
+  UNIT	9001	鸭子骑士	3	30	1	2	1,2
+LVL	wizard	巫师的召唤	普通敌人-困难	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9115]	reward=[]
+  UNIT	9008	鸭子巫师	8	50	2	1	1,1
+  UNIT	9009	使魔鸭子	4	15	1	1	2,1
+LVL	white_mage_guard	白魔法鸭护阵	普通敌人-困难	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9021	白魔法鸭	0	30	1	1	0,1
+  UNIT	9001	鸭子骑士	3	30	1	2	0,0
+  UNIT	9001	鸭子骑士	3	30	1	2	0,2
+LVL	night_ducks	夜鸭阵	普通敌人-困难	L1	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9027	夜鸭	5	35	2	2	1,0
+  UNIT	9009	使魔鸭子	4	15	1	1	2,0
+  UNIT	9009	使魔鸭子	4	15	1	1	2,2
+LVL	sun_forge	太阳熔炉	普通敌人-困难	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9130	赫利俄斯	0	50	0	0	0,1
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,0
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,2
+LVL	hecaton	百臂工场	普通敌人-困难	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9136	赫卡同克瑞斯	8	80	2	1	0,1
+  UNIT	9137	量产型赫利俄斯	6	30	2	0	2,0
+  UNIT	9137	量产型赫利俄斯	6	30	2	0	2,2
+LVL	undead_legion	亡灵军团	普通敌人-困难	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	1051	亡灵领主	4	55	1	2	0,1
+  UNIT	1055	骷髅兵	2	28	1	1	2,0
+  UNIT	1050	腐化尸鬼	4	18	1	2	2,1
+  UNIT	1054	骷髅兵	3	14	1	1	2,2
+LVL	twin_cannon	双机炮阵	普通敌人-困难	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9139]	reward=[]
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,0
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,2
+LVL	metrology_works	计量工坊	精英敌人-困难	L2	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9260	常数测量员	0	80	1	1	0,1
+  UNIT	9261	精密计算者	6	80	1	2	1,1
+  UNIT	9262	负载增量员	4	80	1	1	2,1
+LVL	laser_line	巨炮防线	精英敌人-困难	L2	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9241	激光巨炮	5	400	0	0	1,1
+LVL	captain	鸭子队长登场	精英敌人-简单	L1	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9012	鸭子队长	6	50	1	1	0,1
+  UNIT	9001	鸭子骑士	3	30	1	2	0,0
+  UNIT	9001	鸭子骑士	3	30	1	2	0,2
+LVL	duck_kiln	鸭子窑	精英敌人-简单	L1	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9025	鸭子窑	0	100	0	0	0,1
+LVL	breath_charge	哈气骑士团	精英敌人-简单	L1	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9024]	reward=[]
+  UNIT	9017	鸭子弓手	3	15	2	1	0,0
+  UNIT	9017	鸭子弓手	3	15	2	1	0,2
+  UNIT	9001	鸭子骑士	3	30	1	2	2,0
+  UNIT	9001	鸭子骑士	3	30	1	2	2,1
+  UNIT	9001	鸭子骑士	3	30	1	2	2,2
+LVL	hermes	赫尔墨斯的试炼	精英敌人-简单	L2	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9140	赫尔墨斯	9	80	1	1	2,1
+  UNIT	9188	量产型赫尔墨斯	5	55	1	1	0,0
+  UNIT	9188	量产型赫尔墨斯	5	55	1	1	0,2
+LVL	dragon_nest	龙族巢穴	精英敌人-简单	L1	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	1013	灰烬龙	5	45	1	2	0,1
+  UNIT	1014	幼龙	5	25	2	1	1,0
+  UNIT	1014	幼龙	5	25	2	1	1,2
+LVL	enforcer_judgement	执法者的审判	精英敌人-简单	L2	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9223	执法者	10	80	2	1	0,1
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,0
+  UNIT	9131	量产型俄倪厄	5	45	1	1	2,2
+LVL	asclepius	阿斯克勒庇厄斯的试炼	普通敌人-困难	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9141	阿斯克勒庇厄斯	12	80	2	2	0,1
+LVL	pronoia_shadow	普罗诺亚之影	精英敌人-简单	L2	pp=20	ehp=120(base 50)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9242	普罗诺亚之影	8	150	1	1	0,1
+LVL	captain_wizard	队长与巫师	精英敌人-困难	L1	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9013]	reward=[]
+  UNIT	9012	鸭子队长	6	50	1	1	0,1
+  UNIT	9008	鸭子巫师	8	50	2	1	1,1
+  UNIT	9009	使魔鸭子	4	15	1	1	2,1
+LVL	legion	骑士军团	精英敌人-困难	L1	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9013]	reward=[]
+  UNIT	9001	鸭子骑士	3	30	1	2	0,0
+  UNIT	9001	鸭子骑士	3	30	1	2	0,1
+  UNIT	9001	鸭子骑士	3	30	1	2	0,2
+  UNIT	9001	鸭子骑士	3	30	1	2	2,0
+  UNIT	9001	鸭子骑士	3	30	1	2	2,1
+  UNIT	9001	鸭子骑士	3	30	1	2	2,2
+LVL	mech_giant	机甲巨兵	精英敌人-困难	L2	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	1071	熔岩巨人	8	60	1	2	0,1
+  UNIT	1061	爆裂机甲	4	30	2	1	1,0
+  UNIT	1061	爆裂机甲	4	30	2	1	1,2
+  UNIT	1011	铁壁卫兵	3	40	1	1	2,1
+LVL	steel_fortress	钢铁要塞	精英敌人-困难	L2	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9137	量产型赫利俄斯	6	30	1	0	0,1
+  UNIT	9133	量产型赫卡同克瑞斯	3	60	1	1	0,0
+  UNIT	9132	俄倪厄	10	100	1	3	2,1
+LVL	air_raid	母舰空袭	精英敌人-困难	L2	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9209]	reward=[]
+  UNIT	9208	母舰	0	40	0	0	0,1
+  UNIT	9142	量产型阿尔戈斯	7	35	2	2	1,1
+  UNIT	9207	量产型阿斯克勒庇厄斯	7	50	1	1	2,0
+  UNIT	9207	量产型阿斯克勒庇厄斯	7	50	1	1	2,2
+LVL	boss_dragon	远古虚骨龙	Boss	L1	pp=20	ehp=100(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9015]	reward=[]
+  UNIT	9014	远古虚骨龙	12	100	2	2	0,1
+LVL	boss_demon_duck	恶魔鸭	Boss	L1	pp=20	ehp=100(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9117]	reward=[]
+  UNIT	9116	恶魔鸭	5	100	2	1	0,1
+LVL	boss_duck_darkside	鸭之暗面	Boss	L1	pp=20	ehp=100(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9125]	reward=[]
+  UNIT	9124	鸭之暗面	9	100	1	1	0,1
+LVL	mech_duck_boss	机械巨鸭	Boss	L2	pp=20	ehp=100(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9049]	reward=[]
+  UNIT	9047	机械巨鸭	10	150	3	1	0,1
+LVL	hephaestus_forge	赫菲斯托斯工坊	Boss	L2	pp=20	ehp=100(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9135	赫菲斯托斯	5	120	1	1	0,1
+  UNIT	9138	量产型赫菲斯托斯	4	50	1	1	0,0
+  UNIT	9138	量产型赫菲斯托斯	4	50	1	1	0,2
+LVL	defector_machine	叛逃机械	Boss	L2	pp=20	ehp=100(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9240]	reward=[]
+  UNIT	9237	巴兰-α	5	250	1	1	2,1
+  UNIT	9238	安西-β	8	200	1	1	1,0
+  UNIT	9239	塔基尼-γ	10	180	1	1	0,1
+LVL	scrapyard	废料场	普通敌人-困难	L2	pp=20	ehp=60(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[]	reward=[]
+  UNIT	9151	拾荒者	4	35	1	1	0,0
+  UNIT	9151	拾荒者	4	35	1	1	0,2
+  UNIT	9152	废弃机器人	5	40	1	1	2,0
+  UNIT	9152	废弃机器人	5	40	1	1	2,1
+  UNIT	9152	废弃机器人	5	40	1	1	2,2
+LVL	eternal_night	永夜鸭群	精英敌人-困难	L1	pp=20	ehp=80(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9178]	reward=[]
+  UNIT	9027	夜鸭	5	35	2	2	1,0
+  UNIT	9027	夜鸭	5	35	2	2	1,2
+LVL	boss_revelator	启示者	Boss	L3	pp=20	ehp=100(base 30)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9201]	reward=[]
+  UNIT	9200	启示者	15	300	2	2	0,1
+LVL	cave_owlbear	洞穴	精英敌人-简单	L2	pp=20	ehp=120(base 50)	turn=-1	shuffle=true	ai=true	hand=0	effects=[9212]	reward=[9213]
+  UNIT	9214	枭熊	10	100	0	0	1,1
+### PER_UNIT
+UNIT	9001	鸭子骑士	3	30	1	2	duck_knight,archer_knight,blaze_pack,knight_charge,white_mage_guard,captain,breath_charge,legion
+UNIT	9009	使魔鸭子	4	15	1	1	familiars,blaze_pack,wizard,night_ducks,captain_wizard
+UNIT	9017	鸭子弓手	3	15	2	1	archer_knight,breath_charge
+UNIT	9020	爆炎鸭	5	3	1	1	blaze_pack
+UNIT	1031	冰冻术士	4	24	3	1	frost_line
+UNIT	1011	铁壁卫兵	3	40	1	1	frost_line,mech_giant
+UNIT	1053	骷髅兵	2	10	1	1	frost_line
+UNIT	1054	骷髅兵	3	14	1	1	frost_line,undead_legion
+UNIT	9137	量产型赫利俄斯	6	30	1	0	assembly_line,argos_mobilize,hecaton,steel_fortress
+UNIT	9131	量产型俄倪厄	5	45	1	1	assembly_line,sun_forge,twin_cannon,enforcer_judgement
+UNIT	9138	量产型赫菲斯托斯	4	50	1	1	mass_anvil,hephaestus_forge
+UNIT	9142	量产型阿尔戈斯	7	35	2	2	argos_mobilize,air_raid
+UNIT	9008	鸭子巫师	8	50	2	1	wizard,captain_wizard
+UNIT	9021	白魔法鸭	0	30	1	1	white_mage_guard
+UNIT	9027	夜鸭	5	35	2	2	night_ducks,eternal_night
+UNIT	9130	赫利俄斯	0	50	0	0	sun_forge
+UNIT	9136	赫卡同克瑞斯	8	80	2	1	hecaton
+UNIT	1051	亡灵领主	4	55	1	2	undead_legion
+UNIT	1055	骷髅兵	2	28	1	1	undead_legion
+UNIT	1050	腐化尸鬼	4	18	1	2	undead_legion
+UNIT	9260	常数测量员	0	80	1	1	metrology_works
+UNIT	9261	精密计算者	6	80	1	2	metrology_works
+UNIT	9262	负载增量员	4	80	1	1	metrology_works
+UNIT	9241	激光巨炮	5	400	0	0	laser_line
+UNIT	9012	鸭子队长	6	50	1	1	captain,captain_wizard
+UNIT	9025	鸭子窑	0	100	0	0	duck_kiln
+UNIT	9140	赫尔墨斯	9	80	1	1	hermes
+UNIT	9188	量产型赫尔墨斯	5	55	1	1	hermes
+UNIT	1013	灰烬龙	5	45	1	2	dragon_nest
+UNIT	1014	幼龙	5	25	2	1	dragon_nest
+UNIT	9223	执法者	10	80	2	1	enforcer_judgement
+UNIT	9141	阿斯克勒庇厄斯	12	80	2	2	asclepius
+UNIT	9242	普罗诺亚之影	8	150	1	1	pronoia_shadow
+UNIT	1071	熔岩巨人	8	60	1	2	mech_giant
+UNIT	1061	爆裂机甲	4	30	2	1	mech_giant
+UNIT	9133	量产型赫卡同克瑞斯	3	60	1	1	steel_fortress
+UNIT	9132	俄倪厄	10	100	1	3	steel_fortress
+UNIT	9208	母舰	0	40	0	0	air_raid
+UNIT	9207	量产型阿斯克勒庇厄斯	7	50	1	1	air_raid
+UNIT	9014	远古虚骨龙	12	100	2	2	boss_dragon
+UNIT	9116	恶魔鸭	5	100	2	1	boss_demon_duck
+UNIT	9124	鸭之暗面	9	100	1	1	boss_duck_darkside
+UNIT	9047	机械巨鸭	10	150	3	1	mech_duck_boss
+UNIT	9135	赫菲斯托斯	5	120	1	1	hephaestus_forge
+UNIT	9237	巴兰-α	5	250	1	1	defector_machine
+UNIT	9238	安西-β	8	200	1	1	defector_machine
+UNIT	9239	塔基尼-γ	10	180	1	1	defector_machine
+UNIT	9151	拾荒者	4	35	1	1	scrapyard
+UNIT	9152	废弃机器人	5	40	1	1	scrapyard
+UNIT	9200	启示者	15	300	2	2	boss_revelator
+UNIT	9214	枭熊	10	100	0	0	cave_owlbear
+UNIT_TOTAL=51

@@ -1,0 +1,25 @@
+R763：正式构建身份（Quackill 1.0.0）+ 单实例锁 + 本地诊断包
+
+口径（店长）：「能替我处理的阻塞现在就动手；不行的话先做建议完成的内容」。
+
+- 构建身份：GameBrand.VERSION 1.0.0、FOOTER 改纯 v{v}；标题页改走 footer_text()，
+  不再自己拼「开发版」后缀 —— 否则 FOOTER 改了、标题页仍显示旧标签，B1 的名实一致就是假完成。
+- 导出预设四份统一：export_path dist/Quackill*.exe/apk、product_name Quackill、
+  company_name / copyright 改 risusumai、file_description Quackill、modify_resources=true
+  （配本机 rcedit 才能把版本资源写进 exe）；Android version/name 改 1.0.0。
+- 单实例：新增 scripts/app_instance_guard.gd，挂 autoload 首位。user://instance.lock/ 目录锁，
+  活 PID 拒绝并 OS.alert 后退出、不碰存档；死 PID 回收；headless / --screenshot /
+  --allow-multiple-instances / 非桌面一律跳过，免得回归与出图脚本互相挡。
+- 诊断包：新增 scripts/diagnostic_bundle.gd + 设置页「对局」页按钮。只收本机设置 / 存档 /
+  轮转日志（*_test.* 只在测试模式收），打成本机 zip，不上传、不收遥测；
+  project.godot 开 user://logs/godot.log、5 份轮转。
+- 品牌收口：release/build_apk.sh、自检.bat、安卓打包说明、玩法说明、steam_roadmap、
+  i18n/interface 三语 + l10n_es（补 privacy / telemetry 西语）统一 DuckCardsRogue → Quackill。
+- 关卡与敌人配置总览补齐 R758 计量工坊落地后的存量：39→40、二层 21→22、敌 75→78、实例 110→113。
+- 顺手修 i18n/validate_spanish.py 的卡数锁 319→325（R756/R758/R761 加卡后一直没同步，纯计数）。
+
+验证：_verify.py 八套全绿 —— engine 6220✓ / 0✗（新增 17 条 _test_r763）、smoke 75✓ / 0✗、
+reward 26、bgm 39、traps 176、trapinput 70、assemble 0、mana PASS。
+i18n：validate_interface 只剩 5 个既有失效锚点；validate_spanish 剩 14 条既有译文项
+（8066 / 9131 / 9132 / 9167 卡组译法、9262 卡名复用、glossary_es 缺 增量/测量/计算、
+event_ui 条目数），本轮新增项全绿。

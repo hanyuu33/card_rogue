@@ -1,0 +1,68 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+
+  ✓ 基线 346 张
+  ✓ 基线原型卡可读
+  ✓ 未设环境变量时不扫 mod（编辑器口径）
+  ✓ 空 mod 根 = 基线 346
+  ✓ 单 mod 加卡后 347
+  ✓ 新卡 id 读得到
+  ✓ 新卡名字正确
+  ✓ 两个 mod 共存 = 348
+  ✓ A 的卡还在
+  ✓ B 的卡也在
+  ✓ 深合并：名字变了
+  ✓ 深合并：cost 仍是基线值
+  ✓ 深合并：power 仍是基线值
+  ✓ 深合并后总数仍是 348
+  ✓ priority 高的后加载并赢
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] mod 文件不可解析，已跳过：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/probe_mods/mod_broken_json/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 坏清单目录被跳过
+  ✓ 坏清单被记进 problems
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] mod 文件不可解析，已跳过：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/probe_mods/mod_broken_json/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 坏 mod 不影响新 mod
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] mod 文件不可解析，已跳过：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/probe_mods/mod_broken_json/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 坏 mod 不影响 A 的卡
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] mod 文件不可解析，已跳过：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/probe_mods/mod_broken_json/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 缺依赖的 mod 被剔除
+  ✓ 剔除后总数不变（349 = 346 + A/B/C）
+  ✓ i18n 深合并：改动生效
+  ✓ i18n 深合并：别的卡译文没丢
+  ✓ i18n 基线值确实不同（防假绿）
+  ✓ 基线卡图可读
+  ✓ mod 图生效（7x5）
+  ✓ 高 priority 的图压过低 priority（3x4）
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] mod 文件不可解析，已跳过：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/probe_mods/mod_broken_json/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 启停：停用前是 349
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] mod 文件不可解析，已跳过：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/probe_mods/mod_broken_json/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 停用后 A 的卡消失
+  ✓ 停用后总数 348
+  ✓ 停用后 all_mods 仍列得出它
+  ✓ is_enabled(a) = false
+  ✓ cfg 已落盘
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] mod 文件不可解析，已跳过：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/probe_mods/mod_broken_json/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 重新启用后回到 349
+  ✓ is_enabled(a) = true
+  ✓ 卸载后回到 346
+  ✓ 卸载后卡名回基线
+MOD LOADER: 37 pass / 0 fail

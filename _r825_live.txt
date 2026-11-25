@@ -1,0 +1,30 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+OpenGL API 3.3.0 NVIDIA 610.88 - Compatibility - Using Device: NVIDIA - NVIDIA GeForce RTX 5070
+
+[PerfBoot] 刷新率 300.0 → max_fps=99，vsync=1
+-- R825 LIVE 战斗胜利后退出 / 读档
+  ✓ 战斗结算已产生战后血量 / 金币 / 奖励（23 / 120 / 2）
+  ✓ 战斗后真实读档：
+  ✓ 胜利页退出不回血、不丢金币、不吞待领奖励
+  ✓ 奖励面板实际领取一件道具
+  ✓ 领奖后真实读档：
+    DEBUG reward after load: relics=[6022, 6005] pending=[{ "id": 6005, "kind": "relic", "state": "claimed", "tel": 0 }, { "candidates": [9040, 9064, 9046], "kind": "cards", "kinds": [], "picked": -1, "state": "pending", "tel": 0, "type": "normal" }]
+  ✓ 领奖后读档保持 claimed，再次领取不重复发奖
+-- R825 LIVE 商店成交 / 同店按钮
+  ✓ 测试地图有一间商店
+  ✓ 进店即登记同店重进，不必等正常离店
+  ✓ 商店第二行有工具可买
+  ✓ 卡 / 工具 / 信物都已实际发放
+  ✓ 商店成交后真实读档：
+  ✓ 扣款 / 生命 / 巧克力 / 卡组 / 工具 / 信物与成交时一致
+  ✓ 货架 id、售罄位和同店窗口完整恢复
+    DEBUG shop restored: expected=9063 actual={ "card": <RefCounted#-9223371756658489338>, "sold": true, "off": false }
+  ✓ 场景恢复分支不重摇，已买卡牌仍售罄
+  ✓ 读档后的地图显示「返回同一间商店」按钮
+  ✓ 真实点击按钮进入商店，而不是只改 pending_node
+  ✓ 同店返回不推进、不扣巧克力、不换货架、不重复扣款
+-- R825 LIVE Boss 待领奖励 / 关窗换层
+  ✓ Boss 待领奖励写入测试档
+  ✓ Boss 奖励未领时读档留在本层，奖励不被换层清空
+  ✓ 领完并关窗后交还原路由，正常进入第二层
+R825 LIVE === 全部通过 ===

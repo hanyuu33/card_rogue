@@ -1,0 +1,227 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+
+SMOKE OK R672：回主界面不许降级显示（FULLSCREEN / MAXIMIZED 都保留）
+SMOKE === 开始（73 项场景用例）===
+SMOKE OK res://scenes/title.tscn  [用例 1/73]
+WARNING: [Steam] 初始化失败（AppID 0 / status 1）：No appID found.  Either launch the game from Steam, or put the file steam_appid.txt containing the correct appID in your game folder. —— 成就跳过，游戏照常
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+SMOKE OK res://scenes/language_pick.tscn  [用例 2/73]
+SMOKE OK R660：首次语言选择页（注册表 4 项 / 默认 zh / 列表可滚动）
+SMOKE OK res://scenes/codex.tscn  [用例 3/73]
+SMOKE OK res://scenes/story.tscn  [用例 4/73]
+SMOKE OK R682 故事正文点任意位置关闭 + 关闭即收下（episode1）
+SMOKE OK res://scenes/story.tscn  [用例 5/73]
+SMOKE OK res://scenes/ban.tscn  [用例 6/73]
+SMOKE OK res://scenes/class_pick.tscn  [用例 7/73]
+SMOKE OK 道具查看：ClassPick 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK res://scenes/class_pick.tscn  [用例 8/73]
+SMOKE OK res://scenes/class_pick.tscn  [用例 9/73]
+SMOKE OK res://scenes/map.tscn  [用例 10/73]
+SMOKE OK 地图场景：5×7 = 35 格相接正方形 / 起点 (3,4) / 左上大宝箱 + 右上商店 / 巧克力 ×12 / 可走 3 间
+SMOKE OK R470 道具栏：20 件全部有槽位 / 互不重叠 / 绕开 4 处固定 UI / 已换行 / 详情 20 件全列
+SMOKE OK 地图标记（R184）：关态点按钮可激活 / 拖笔入栈 / 单点放旗 / 再点收起 / 橡皮删旗删笔
+SCRIPT ERROR: Parse Error: Function "_tool_bar_layout()" not found in base self.
+          at: GDScript::reload (res://scripts/battle_scene.gd:4999)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "lay" variable because the value doesn't have a set type.
+          at: GDScript::reload (res://scripts/battle_scene.gd:4999)
+SCRIPT ERROR: Parse Error: Function "_discard_tool_now()" not found in base self.
+          at: GDScript::reload (res://scripts/battle_scene.gd:5023)
+SCRIPT ERROR: Parse Error: Function "_draw_tool_bar()" not found in base self.
+          at: GDScript::reload (res://scripts/battle_scene.gd:10269)
+ERROR: Failed to load script "res://scripts/battle_scene.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript.cpp:2936)
+SMOKE OK res://scenes/battle.tscn  [用例 11/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_hand_fan (res://scripts/test_smoke.gd:3331)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_move_path (res://scripts/test_smoke.gd:3490)
+SCRIPT ERROR: Invalid access to property or key 'GRID_Y' on a base object of type 'Control'.
+          at: _check_overflow (res://scripts/test_smoke.gd:5951)
+SCRIPT ERROR: Invalid call. Nonexistent function '_toggle_map' in base 'Control'.
+          at: _check_map_panel (res://scripts/test_smoke.gd:5889)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_frozen_aura (res://scripts/test_smoke.gd:5629)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_sleep_aura (res://scripts/test_smoke.gd:5675)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_turn_gate (res://scripts/test_smoke.gd:5133)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_relic_gate (res://scripts/test_smoke.gd:5068)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_r106 (res://scripts/test_smoke.gd:4996)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_cancel_armed (res://scripts/test_smoke.gd:5202)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_click_self (res://scripts/test_smoke.gd:5339)
+SMOKE FAIL R148：战斗场景没有挂主菜单
+SCRIPT ERROR: Invalid call. Nonexistent function '_show_settings_overlay (via call)' in base 'Control'.
+          at: _check_settings_overlay (res://scripts/test_smoke.gd:5843)
+SMOKE OK 公用初始卡职业变体：木栅栏/攻击各按职业取图，缺图回退通用图
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_long_press (res://scripts/test_smoke.gd:4874)
+SMOKE OK BackKey：autoload 在位 / quit_on_go_back=false / 返回键→Esc 翻译在位
+SCRIPT ERROR: Invalid access to property or key '_font' on a base object of type 'Control'.
+          at: _check_perf (res://scripts/test_smoke.gd:4923)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_pick_overlay (res://scripts/test_smoke.gd:4738)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_ee_popup (res://scripts/test_smoke.gd:4429)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_recycle (res://scripts/test_smoke.gd:4468)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_lighten (res://scripts/test_smoke.gd:4642)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_reload (res://scripts/test_smoke.gd:4118)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_sysupgrade (res://scripts/test_smoke.gd:4558)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_assemble (res://scripts/test_smoke.gd:4389)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_run_deck_panel (res://scripts/test_smoke.gd:4258)
+SCRIPT ERROR: Invalid access to property or key '_floaters' on a base object of type 'Control'.
+          at: _check_r208 (res://scripts/test_smoke.gd:4358)
+SMOKE OK R214 附魔标记：费用正下方（同 x / 间距 2R，三种尺寸）/ 种类表唯一口 / 牌库面板不并按
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_r277_field_tap (res://scripts/test_smoke.gd:3972)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_r729_drop_out_of_board (res://scripts/test_smoke.gd:3684)
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_speech_bubble (res://scripts/test_smoke.gd:3807)
+SMOKE FAIL R388 倍速按钮：battle.tscn 里没有 SpeedBtn
+SMOKE OK res://scenes/battle.tscn  [用例 12/73]
+SMOKE FAIL R389：战斗场景没有挂上 RewardPanel
+SMOKE OK res://scenes/battle.tscn  [用例 13/73]
+SMOKE FAIL R546：战斗场景没有胜利面板（_build_win_panel 没跑？）
+SMOKE OK res://scenes/battle.tscn  [用例 14/73]
+SMOKE FAIL R391：战斗场景没有 _end_turn_big_rect / _end_turn_ready 唯一口
+SMOKE OK res://scenes/battle.tscn  [用例 15/73]
+SMOKE FAIL R393：战斗场景没有 _pending_impact_ms 唯一口
+SMOKE OK res://scenes/battle.tscn  [用例 16/73]
+SMOKE FAIL R466：战斗场景没有 _hit_cue_at 唯一口
+SMOKE OK res://scenes/battle.tscn  [用例 17/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_r467_cave (res://scripts/test_smoke.gd:2565)
+SMOKE OK res://scenes/battle.tscn  [用例 18/73]
+SMOKE FAIL R395：战斗场景缺少 _sync_pick / _abort_empty_pick
+SMOKE OK res://scenes/battle.tscn  [用例 19/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_r396_same_id_flyin (res://scripts/test_smoke.gd:2964)
+SMOKE OK res://scenes/battle.tscn  [用例 20/73]
+SMOKE FAIL R398：战斗场景没有奖励面板
+SMOKE OK res://scenes/battle.tscn  [用例 21/73]
+SMOKE FAIL R458：战斗场景没有奖励面板
+SMOKE OK res://scenes/battle.tscn  [用例 22/73]
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'Dictionary'.
+          at: _check_r335_pre_battle_snap (res://scripts/test_smoke.gd:3921)
+SMOKE OK res://scenes/battle.tscn  [用例 23/73]
+SMOKE FAIL R477 继续游戏：战斗没开局（engine 为空）
+SMOKE OK res://scenes/battle.tscn  [用例 24/73]
+SMOKE FAIL R341 逃跑按钮：battle.tscn 里没有 FleeBtn
+SMOKE OK res://scenes/battle.tscn  [用例 25/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_eliminate_panel (res://scripts/test_smoke.gd:632)
+SMOKE OK res://scenes/battle.tscn  [用例 26/73]
+SMOKE FAIL R697：DECK_FLY_GAP_MS 缺失或非正（0）
+SMOKE OK res://scenes/battle.tscn  [用例 27/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_relic_highlight (res://scripts/test_smoke.gd:661)
+SMOKE OK res://scenes/battle.tscn  [用例 28/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_discard_view (res://scripts/test_smoke.gd:730)
+SMOKE OK res://scenes/battle.tscn  [用例 29/73]
+SMOKE OK res://scenes/event.tscn  [用例 30/73]
+SMOKE OK 道具查看：EventScene 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK res://scenes/event.tscn  [用例 31/73]
+SMOKE OK R119 奖励悬浮窗：列表 视图渲染（3 条待领，宿主 EventScene）
+SMOKE OK res://scenes/event.tscn  [用例 32/73]
+SMOKE OK R627 冒险家的遗物：第二选项「燧石」可悬浮（命中表 2 条）
+SMOKE OK res://scenes/event.tscn  [用例 33/73]
+SMOKE OK R119 奖励悬浮窗：道具详情 视图渲染（3 条待领，宿主 EventScene）
+SMOKE OK res://scenes/event.tscn  [用例 34/73]
+SMOKE OK R119 奖励悬浮窗：卡牌三选一 视图渲染（3 条待领，宿主 EventScene）
+SMOKE OK res://scenes/relic_pick.tscn  [用例 35/73]
+SMOKE OK 道具查看：RelicPick 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK res://scenes/curtain.tscn  [用例 36/73]
+SMOKE OK 道具查看：CurtainScene 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK res://scenes/curtain.tscn  [用例 37/73]
+  [smoke] curtain 回答态：名称牌=true 台词=true 收尾可离开=True
+SMOKE OK res://scenes/battle.tscn  [用例 38/73]
+SMOKE FAIL R323 牛奶：场景没有挂上 RewardPanel
+SMOKE OK res://scenes/deck_edit.tscn  [用例 39/73]
+SMOKE OK res://scenes/deck_edit.tscn  [用例 40/73]
+SMOKE OK 鸭血卡组编辑：多选上限 2 / 选 3 张保留最新 2 张 / 确定后卡组 13 → 15
+SMOKE OK res://scenes/shop.tscn  [用例 41/73]
+SMOKE OK 道具查看：ShopScene 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK 商店附魔：首击选中 / 再击成交（卡 0 落附魔，金币 500 → 440）；打开附魔/删除选卡页均请求重绘，点灰卡有反馈
+SMOKE OK res://scenes/shop.tscn  [用例 42/73]
+SMOKE OK R390 商店重进：买过的那张仍是售罄 / 走出去就关门
+SMOKE OK res://scenes/shop.tscn  [用例 43/73]
+SMOKE OK R674 商店 Esc 打开菜单 + 右上齿轮在位（屏幕 x=992）
+SMOKE OK res://scenes/event.tscn  [用例 44/73]
+SMOKE OK R206 详情条：提及块在右栏 / 浅底琥珀棕 / 预算高度 63 == 公式（1 个提及）
+SMOKE OK res://scenes/map.tscn  [用例 45/73]
+SMOKE OK R194 低语：接管 → 抽中走过的房间仍继续往前走（30 → 31，接着挑 32）
+SMOKE OK R194 低语：一连代走 3 步到没走过的房间（旧实现走 1 步就停；路过步不扣巧克力）
+SMOKE OK res://scenes/gallery.tscn  [用例 46/73]
+SMOKE OK R717 图鉴详情：976 个卡牌×语言正文均在安全框内；复制术残留宽度收回
+SMOKE OK res://scenes/map.tscn  [用例 47/73]
+SMOKE OK R636 鸭血即时结算：领取当刻就地摊开卡组（不关面板 / 不跳场景）
+SMOKE OK R636 鸭血复制：选 2 张各复制一份，附魔一起带走，面板留在原地
+SMOKE OK R340/R636 奖励批次：鸭血就地结算、卡牌仍待领、不跳场景
+SMOKE OK R441 Boss 奖励：先领道具不结束本批（两组卡牌仍待领 · 面板不关 · 不跳场景）
+SMOKE OK R442 暗动力：完成点不动 / 放弃被拒 / 选一组仍关不掉 / 两组选完才放行
+SMOKE OK res://scenes/record_list.tscn  [用例 48/73]
+SMOKE OK 道具查看：RecordList 牌库 1 个 / 道具 1 个（两个查看器成对）
+SMOKE OK R215 记录页：2 行（中断 / 通关）· 新在前 · 文案正确
+SMOKE OK res://scenes/settings.tscn  [用例 49/73]
+SCRIPT ERROR: Invalid access to property or key 'TABS' on a base object of type 'Control'.
+          at: _check_settings (res://scripts/test_smoke.gd:1090)
+SMOKE OK res://scenes/event.tscn  [用例 50/73]
+SMOKE OK res://scenes/event.tscn  [用例 51/73]
+SMOKE OK R372 宝箱：免费开 → 只有卡牌奖励（不扣生命、不再随机成道具）
+SMOKE OK res://scenes/event.tscn  [用例 52/73]
+SMOKE OK R142 事件子类型：只给 event_kind 也能认出遗忘之泉（不再一律变成卡牌宝箱）
+SMOKE OK res://scenes/event.tscn  [用例 53/73]
+SMOKE OK res://scenes/event.tscn  [用例 54/73]
+SMOKE OK res://scenes/event.tscn  [用例 55/73]
+SMOKE OK res://scenes/event.tscn  [用例 56/73]
+SMOKE OK 奥秘之泉：已有护符时「喝下泉水」仍可选 → 卡牌奖励入队（限定 效果/技能）并弹出奖励悬浮窗
+SMOKE OK res://scenes/event.tscn  [用例 57/73]
+SMOKE OK R147 奥秘之泉：一次访问只领一份（护符 ↔ 泉水双向锁死，硬点也不发奖励）
+SMOKE OK res://scenes/event.tscn  [用例 58/73]
+SMOKE OK R147/R237/R390 休息处：篝火回血（+12）+ 添加柴火第三选项；休息后只留离开
+SMOKE OK res://scenes/event.tscn  [用例 59/73]
+SMOKE OK res://scenes/deck_edit.tscn  [用例 60/73]
+SMOKE OK res://scenes/event.tscn  [用例 61/73]
+SMOKE OK res://scenes/event.tscn  [用例 62/73]
+SMOKE OK R121 覆盖层让位：奖励悬浮窗开/关 → 道具速览浮层正确让位/恢复（R353 起不再挂 tooltip）
+SMOKE OK res://scenes/shop.tscn  [用例 63/73]
+SMOKE OK R394 道具胶囊行：悬停只认按钮 / 点击展开收起 / 7 件从右往左排
+SMOKE OK res://scenes/battle.tscn  [用例 64/73]
+SCRIPT ERROR: Invalid access to property or key '_reward_panel' on a base object of type 'Control'.
+          at: _check_battle_hover_gate (res://scripts/test_smoke.gd:1682)
+SMOKE OK res://scenes/event.tscn  [用例 65/73]
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1448)
+SMOKE OK 运送委托：平铺选卡页 1~6 / 取消不接 / 确认 2 张入卡组
+SMOKE OK res://scenes/event.tscn  [用例 66/73]
+SMOKE OK 委托完成：3 张货物各抽一次 / 总量=3 / 一次性 / 货物已移出卡组 / 结算后只剩离开
+SMOKE OK res://scenes/event.tscn  [用例 67/73]
+  [smoke] R365 赏月：硬币 +1（0 → 1），领完只留「离开」
+SMOKE OK res://scenes/event.tscn  [用例 68/73]
+  [smoke] R365 卡片商人：折价成交（金币 0 → 100，卡 4 → 3）
+SMOKE OK res://scenes/battle.tscn  [用例 69/73]
+SMOKE FAIL R366 百臂工场：战斗场景没有 engine
+SMOKE OK res://scenes/battle.tscn  [用例 70/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_r367_spent_bar (res://scripts/test_smoke.gd:6160)
+SMOKE OK res://scenes/battle.tscn  [用例 71/73]
+SCRIPT ERROR: Invalid access to property or key 'engine' on a base object of type 'Control'.
+          at: _check_r367_defeat_record (res://scripts/test_smoke.gd:6192)
+SMOKE OK res://scenes/battle.tscn  [用例 72/73]
+  [smoke] R444 字段浮窗：单字段靠右 / 两字段一左一右不压卡 / bounds 夹回屏内
+  [smoke] R614 机制词条并入浮窗：传授 = 次元 + 组合
+SMOKE OK res://scenes/run_summary.tscn  [用例 73/73]
+SMOKE OK R530 通关结算页：五行数据 / 几何 / 确定按钮出口
+SMOKE === 结束：74 通过 / 15 失败 ===

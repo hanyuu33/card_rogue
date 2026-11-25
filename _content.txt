@@ -1,0 +1,32 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+
+  ✓ 基线卡牌 346 张
+  ✓ 基线卡名非空
+  ✓ 覆盖生效（卡名）
+  ✓ 覆盖后仍是 346 张
+ERROR: Parse JSON failed. Error at line 0: Expected key
+   at: (core/io/json.cpp:576)
+WARNING: [DataPaths] 外部内容不可用，回落 pck 基线：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/patch probe dir/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 坏 JSON 回落基线
+WARNING: [DataPaths] 外部内容不可用，回落 pck 基线：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/patch probe dir/cards.json
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 空结构回落基线
+  ✓ 译文覆盖生效
+  ✓ 基线卡图可读
+  ✓ 覆盖图被识别为存在
+  ✓ 覆盖图生效（尺寸 7x5）
+  ✓ CardFace 认覆盖图
+  ✓ 新增图判存
+  ✓ 新增图可读
+WARNING: Not a PNG file
+     at: check_error (drivers/png/png_driver_common.cpp:56)
+ERROR: Condition "!success" is true. Returning: ERR_FILE_CORRUPT
+   at: png_to_image (drivers/png/png_driver_common.cpp:69)
+ERROR: Error loading image: C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/patch probe dir/assets/pics/8001.png
+   at: load_image (core/io/image_loader.cpp:101)
+WARNING: [DataPaths] 覆盖贴图读取失败，回落基线：C:/Users/Administrator/AppData/Roaming/Godot/app_userdata/卡牌肉鸽/patch probe dir/assets/pics/8001.png
+     at: push_warning (core/variant/variant_utility.cpp:1112)
+  ✓ 坏图回落基线
+  ✓ 移除覆盖后回到基线
+CONTENT OVERRIDE: 15 pass / 0 fail

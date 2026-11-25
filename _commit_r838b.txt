@@ -1,0 +1,14 @@
+R838b：暗动力 6054 文案改序 —— 收益前置、代价后置（用户口径）
+
+R838 版把代价放前面、收益用「作为交换」收尾，读起来像「先拦你再给你」。
+按店长口径改成收益第一句、代价用「代价是」接在后面，玩家先看到拿到什么。
+
+- 中文 67 → 65 字：「每回合开始时多抽一张牌。代价是你无法跳过卡牌奖励：……
+  ；商店里同样无法删除卡牌。」
+- 五处齐改（relics.json / noncard_zh_canonical / en / ja / es），三语同结构：
+  At the start of each turn … The cost: … / 各ターン開始時に … 代償として … /
+  Al comienzo de cada turno … El coste: …
+- 测试判据 `desc.contains("跳过卡牌奖励")` 仍成立，无翻面。
+
+验证：i18n 四个校验器 OK + _audit_text_sources 合计不符 0；_verify.py 十套全绿
+（engine 7032 / smoke 77 / 其余 0 失败）。

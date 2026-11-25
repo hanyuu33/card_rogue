@@ -1,0 +1,53 @@
+R767：安卓进场不再卡 + 每日挑战重做（修饰池 / 随机卡组）
+
+一、安卓「选标准模式进去卡一段时间」
+
+病因分两层，第二层才是真正难看的那个：
+1. change_scene_to_file() 同步执行 —— 主线程读盘 / 解析场景 / 解码 1280x720 的 CG；
+2. SceneFx 的擦入计时起点记在卡之前，主线程一回来 IN_MS + SETTLE_MS 早已过期，
+   擦入动画整段被吞 —— 玩家看到「黑屏一阵，画面啪地蹦出来」。
+   只优化加载速度而不改时间基准，动画照样消失。
+
+修法：
+- 新增 scripts/scene_warm.gd：warm() 走 load_threaded_request，成品进 _done，
+  take() 拿走即删（不是资源池）；静态懒实例挂 tree.root，与 SceneFx 同款。
+- 预热链：标题页 mode_select + class_pick；模式选择页 class_pick + 今日 CG +
+  四张头像 + map；选人页 map + 另外两张 CG。
+- SceneFx._swap_now() 成为换场景唯一收口：优先 change_scene_to_packed，拿不到才回退同步。
+- 擦出满 220ms 时若下一站仍在读，就在已经全黑的画面上再等最多 WARM_WAIT_MS=900。
+- 擦入从「新场景真的出现那一帧」起表（_t0 = -1 哨兵）；_on_cv_draw 在该状态下画全黑，
+  否则拿 -1 算 p 会把旧场景闪一下。
+- 换场景实测超过 400ms 打 [SceneFx] 慢切换 日志。
+- 安全闸：headless / --screenshot / --demo 三处都跳过预热。
+
+二、每日挑战重做
+
+原来只有固定角色 + 固定难度 + 固定种子，第三天就长一个样。
+
+- 新增 scripts/daily_modifiers.gd：20 条修饰（10 增益 + 10 减益），每天各摇 2 条。
+  富裕/强健/旅粮/幸运/温暖/工具箱/杂牌/敌之孱弱/冷清/灵光
+  贫瘠/贫血/饥饿/倒霉/阴冷/诅咒/敌之顽强/凶猛/拥挤/滞涩
+- 效果只落在既有唯一取数口：start_gold / chocolate_per_layer / max_hp_mul /
+  rare_weight_mul / elite_weight_mul / rest_pct / enemy_hp_bonus_pct /
+  enemy_power_bonus / fatigue_active，外加新增 RunState.energy_per_turn()
+  （替掉 state.energy = FieldState.ENERGY_PER_TURN 的两处赋值，下限 1；敌方不读它）。
+  合并方式按后缀：_mul 相乘、其余相加。修饰模块不直接改任何数值。
+- 随机卡组 15 张：木栅栏 4~6 + 攻击补足到 10 + 5 张本职业可达卡（至少 1 张盟友）。
+  不整组随机 —— 栅栏和攻击是这游戏的下限，抽不到就是「手里 5 张全下不去」的死局。
+- _daily_pool() 刻意不看账号（不看剧情锁、不看个人禁卡），并按 id 排序：
+  抽取是按下标摇的，用 reward_pool_for() 会让同一天不同账号卡组不同，Steam 榜失去意义。
+- 规则版本 1 -> 2（DailyChallenge 与 DailyModifiers 两处必须同步），榜名变 V2，
+  旧成绩留在 V1 榜。
+- daily_fx 进 RunSave.snapshot/apply：漏了它，续档后换层 start_gold() /
+  chocolate_per_layer() / energy_per_turn() 全部重算回标准值。
+- 界面：模式选择页每日面板改成「日期·固定角色 / 固定难度·卡组 / 今日种子 /
+  今日修正 4 条 / 每日一次」，增益绿、减益赭红；长语种超宽时压一行加省略号。
+- i18n：interface 四语新增 daily 域 43 条（20 名称 + 20 效果 + 3 界面）。
+
+验证：
+- python _verify.py 八套全绿：engine 6281✓ 0✗（+29 条 _test_r767）、reward 26、
+  bgm 39、traps 183、trapinput 70、smoke 75、assemble 0、mana PASS。
+- 存档跑前备份、跑后逐文件还原 RESTORE_VERIFY OK。
+- 非 headless 实跑 260 帧：无 SceneWarm / SceneFx 任何 warning。
+- 模式选择页截图：四行修饰不溢出、按钮不压字。
+- 顺带把 _test_r762 两条旧断言按新口径更新（卡组改随机构筑；榜名版本写成表达式）。

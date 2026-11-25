@@ -1,0 +1,45 @@
+R761：隐藏职业「吟游诗人」（默认玩家不可感知）+ 杜鹃/招募/「诗」6069
+
+店长口径：「这个职业目前不可见，不可选，卡牌不可在图鉴查到，不能被随机到，总之
+就是玩家不能感知到，只能我自己用指令打开能玩吟游诗人的特殊版本。」「吟游诗人头像
+放到森林精魄头像正上方。」
+
+三条约束各留**一个**判据口，默认全部不含它：
+- 界面：PlayerClass.ids() = 可见三职业；playable_ids() = 它 + 开关
+- 卡池：CardRepo.obtainable_cards() 默认拦 is_hidden_class()
+- 图鉴：gallery_scene.gallery_visible() 恒 false（与发布/测试版无关）
+
+开关：PlayerClass.bard_enabled()（_bard_forced → 命令行 `-- --bard` →
+OS.get_cmdline_user_args()），写口只有 set_bard_enabled()；AI 对局桥新增
+POST /mode {"bard":true}；UnlockSystem 对隐藏职业放开难度上限。
+
+内容：
+- cards.json 杜鹃 9263（盟友 3 费 3/1/1/8 · 水风）、招募 9264（0 费技能，三个其他
+  职业的盟友各一张三选一）—— 均 rarity 3（初始卡，不进随机池）
+- relics.json「诗」6069：每回合第一次用别职业盟友回 1 费（_poem_tick，记账口
+  _note_card_played）+ 别职业盟友 +2 力量（Placement.poem_atk，与竖琴 6052 逐字
+  同构：赋不累加、绝不写回 card.power；三处落点 _sync_poem / _relic_on_enter_buffs
+  / status_bonuses）
+- 初始卡组 13 张 = 木栅栏×5 + 攻击×5 + 杜鹃×2 + 招募×1，最大生命 64
+- 招募候选在出牌那一刻摇定并缓存（引擎 rng，可复现），选卡页走新 "recruit" 形态
+
+界面：
+- 头像槽位 _bard_rect() = _av_rect(0) 上方 56px、同宽同名牌；_draw_bard_slot()
+  首行 `if not PlayerClass.bard_enabled(): return` → 默认版本零像素差异
+- 出图核验新增 `-- --screenshot --bard --bardsel`
+
+美术（codex 图生图 → assets/ui/）：class_cg_bard.png（1280x720，v2 定稿）、
+class_avatar_bard.png（320² 透明）、relic_icon_6069.png（128² 卷轴 + 音符）；
+源图 / prompt / 验收页在 art_src/2026-11-15_吟游诗人CG_R761/。
+
+回归：_verify.py 全绿 —— engine 6188（+34 条 _test_r761）/ reward 26 / bgm 39 /
+traps 176 / trapinput 70 / smoke 74 / assemble 0 / mana PASS。
+计数锁同步：卡牌 325、玩家卡 247、道具 63、玩家技能卡 104（test_engine /
+test_reward / validate_noncard / validate_spanish）。
+
+i18n：cards 三语 + zh_canonical + glossary（道具名要登记 id）+ noncard 四语；
+五个校验脚本剩余红项都是既有的（计量工坊 / 奇异雕像 / 巅峰之上 / 6027「生命值」/
+l10n 隐私页），本轮新增项全绿。
+
+另：HANDOFF.md 一并带上并线那 4 条图源小节（它们的 png 仍未跟踪，本轮没删没换），
+并把该文件 4 处 CRLF 归一成 LF；关卡与敌人配置总览.md 属并线未提交改动，本轮没碰。

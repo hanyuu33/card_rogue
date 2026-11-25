@@ -1,0 +1,265 @@
+count=66
+
+--- 8005 | 幽影 | 盟友 | cost=3 | power=3 | hp=8 | rar=3 | color=暗影
+    traits=['幽影']  affixes=None  target=none
+    eff: 
+
+--- 8006 | 影子猫 | 盟友 | cost=1 | power=1 | hp=1 | rar=0 | color=暗影
+    traits=[]  affixes=None  target=none
+    eff: 打出时，若包含这张卡本回合打出的卡达到 3 张，从卡组将一张随机技能卡加入手卡。
+
+--- 8007 | 影魔 | 盟友 | cost=4 | power=6 | hp=12 | rar=2 | color=暗影
+    traits=[]  affixes=None  target=none
+    eff: 使用时，手卡中所有技能牌本回合费用 -1；手卡每有一张费用为 0 的技能卡，这张卡获得 +3 生命。
+
+--- 8008 | 幽灵 | 盟友 | cost=1 | power=1 | hp=1 | rar=0 | color=暗影
+    traits=[]  affixes=None  target=none
+    eff: 自己回合开始时，这张卡破坏。这张卡破坏时，从卡组将一张随机技能卡加入手卡。
+
+--- 8009 | 潜影者 | 盟友 | cost=2 | power=2 | hp=10 | rar=0 | color=暗影
+    traits=[]  affixes=None  target=none
+    eff: 在场时每使用一张卡，这张卡力量 +1，攻击或离场后重置。
+
+--- 8010 | 荧光草 | 工事 | cost=0 | power=0 | hp=1 | rar=5 | color=自然
+    traits=['离场消失']  affixes=['次元']  target=none
+    eff: 在场时自己的技能伤害 +1。
+
+--- 8019 | 地狱猫 | 盟友 | cost=0 | power=1 | hp=1 | rar=1 | color=暗影
+    traits=['地狱猫']  affixes=None  target=none
+    eff: 自己回合结束时，剩余费用每有 1 点，这张卡获得 1 点力量和 2 点生命。
+
+--- 8020 | 鲜血堡垒 | 工事 | cost=0 | power=0 | hp=1 | rar=0 | color=暗影
+    traits=['工事', '鲜血堡垒']  affixes=None  target=none
+    eff: 自己回合结束时，剩余费用每有 1 点，这张卡获得 1 点力量和 3 点生命。
+
+--- 8021 | 黑暗领主 | 盟友 | cost=4 | power=6 | hp=11 | rar=0 | color=暗影
+    traits=['黑暗领主']  affixes=None  target=none
+    eff: 使用后，你在本回合结束时获得 5 点费用（优先结算）。
+
+--- 8022 | 地狱咏唱者 | 盟友 | cost=3 | power=2 | hp=11 | rar=1 | color=暗影
+    traits=['咏唱者']  affixes=None  target=none
+    eff: 攻击时，回复 1 点费用。
+
+--- 8023 | 黑暗祭坛 | 工事 | cost=3 | power=1 | hp=15 | rar=1 | color=暗影
+    traits=['工事', '祭坛']  affixes=None  target=none
+    eff: 攻击时，回复 1 点费用。
+
+--- 8024 | 契约签订者 | 盟友 | cost=3 | power=3 | hp=9 | rar=0 | color=暗影
+    traits=['契约签订者']  affixes=None  target=none
+    eff: 入场时：回复 4 点费用。本回合手卡中所有卡费用 +4。
+
+--- 8062 | 夜蚀 | 盟友 | cost=2 | power=3 | hp=9 | rar=2 | color=暗影
+    traits=['夜蚀']  affixes=[]  target=none
+    eff: 自己回合结束时，回复 X 点生命值，X 为自己剩余费用（每 1 点剩余费用回复 1 点生命，不超过生命上限）。
+
+--- 8066 | 负重减轻 | 技能 | cost=0 | power=0 | hp=0 | rar=2 | color=
+    traits=[]  affixes=[]  target=none
+    eff: 选卡组一张卡，使其**消失**。**下个回合开始时多抽一张卡**。
+
+--- 8067 | 分裂之影 | 工事 | cost=2 | power=0 | hp=6 | rar=0 | color=暗影
+    traits=['工事', '分裂之影']  affixes=[]  target=none
+    eff: 回合开始时，抽一张卡。
+
+--- 8085 | 影缚 | 技能 | cost=1 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=[]  affixes=['次元']  target=none
+    eff: 从全职业卡池组合一张卡。
+
+--- 9086 | 终结 | 技能 | cost=0 | power=0 | hp=0 | rar=3 | color=物理
+    traits=[]  affixes=None  target=unit
+    eff: 对一个目标造成 2+X 点伤害，X 为本回合你已使用的卡牌数。
+
+--- 9087 | 连刺 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=物理
+    traits=[]  affixes=None  target=unit
+    eff: 对目标造成 4 点伤害，随机将一张费用为 0 的技能卡从卡组加入手卡。
+
+--- 9088 | 敲晕 | 技能 | cost=0 | power=0 | hp=0 | rar=0 | color=物理
+    traits=[]  affixes=None  target=unit
+    eff: 对目标造成 3 点伤害，目标本回合失去 3 点力量。
+
+--- 9089 | 回转 | 技能 | cost=2 | power=0 | hp=0 | rar=1 | color=
+    traits=[]  affixes=None  target=none
+    eff: 抽 X 张牌，X 为本回合你已使用的卡牌数，这些牌本回合结束不会丢弃。
+
+--- 9090 | 偷袭 | 技能 | cost=0 | power=0 | hp=0 | rar=0 | color=物理
+    traits=[]  affixes=None  target=unit
+    eff: 造成 5 点伤害，若目标处于满血状态则改为造成 12 点伤害。
+
+--- 9091 | 疾风 | 效果 | cost=3 | power=0 | hp=0 | rar=1 | color=水风
+    traits=[]  affixes=None  target=none
+    eff: 每使用一张卡，随机对一个敌人造成 2 点伤害。效果区多张本卡不可叠加。
+
+--- 9092 | 潜伏 | 效果 | cost=2 | power=0 | hp=0 | rar=1 | color=
+    traits=[]  affixes=None  target=none
+    eff: 回合开始时多抽 1 张卡，如果这张卡费用为 0，则再抽 1 张。效果区多张本卡不可叠加。
+
+--- 9093 | 连环戏法 | 技能 | cost=0 | power=0 | hp=0 | rar=1 | color=
+    traits=[]  affixes=None  target=unit
+    eff: 对目标造成 4 点伤害。若这回合已经使用过 2 张其他卡，抽 1 张卡；若这回合已经使用过 4 张其他卡，则改为造成 10 点伤害。
+
+--- 9094 | 准备 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=
+    traits=[]  affixes=None  target=none
+    eff: 抽 2 张卡，如果其中有费用为 0 的卡，则再抽 1 张卡。
+
+--- 9095 | 怒涛 | 技能 | cost=2 | power=0 | hp=0 | rar=2 | color=水风
+    traits=[]  affixes=None  target=unit
+    eff: 对目标造成 10 点伤害，从弃牌区将所有费用为 0 的卡返回手卡。
+
+--- 9096 | 回旋斩 | 技能 | cost=0 | power=0 | hp=0 | rar=1 | color=物理
+    traits=[]  affixes=None  target=cell
+    eff: 对十字形区域的敌方单位造成 17 点伤害。本回合使用 4 张以上其他卡后才能使用。
+
+--- 9097 | 预判 | 技能 | cost=0 | power=0 | hp=0 | rar=2 | color=
+    traits=[]  affixes=['次元']  target=none
+    eff: 选一个效果：从弃牌区选一张费用为 0 的技能卡加入手卡；或从卡组随机将一张费用不为 0 的技能卡加入手卡。
+
+--- 9098 | 拒绝命运 | 技能 | cost=2 | power=0 | hp=0 | rar=2 | color=
+    traits=[]  affixes=['次元']  target=none
+    eff: 丢弃所有手卡，之后从弃牌区把**所有 0 费卡和 1 费卡**按弃牌区顺序加入手卡，最多填到手牌上限。
+
+--- 9099 | 幽光 | 效果 | cost=3 | power=0 | hp=0 | rar=2 | color=自然
+    traits=[]  affixes=None  target=none
+    eff: 回合开始时，将一张荧光草加入你的手卡。效果区多张本卡不可叠加。
+
+--- 9100 | 潜入 | 技能 | cost=0 | power=0 | hp=0 | rar=0 | color=暗影
+    traits=[]  affixes=None  target=unit
+    eff: 选一个盟友移动到任意一个空的格子，且它本回合力量 +4。
+
+--- 9101 | 不眠 | 效果 | cost=1 | power=0 | hp=0 | rar=1 | color=
+    traits=[]  affixes=None  target=none
+    eff: 自己的回合中每次自己没有手卡时，抽 1 张卡，这样抽到的 0 费卡本回合费用 +1。效果区多张本卡不可叠加。
+
+--- 9102 | 回响 | 技能 | cost=1 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=[]  affixes=None  target=none
+    eff: 对所有敌人造成 2 点伤害，所有敌人本回合失去 1 点力量。使用后返回手卡，费用最低为 1。
+
+--- 9103 | 闪躲 | 技能 | cost=0 | power=0 | hp=0 | rar=0 | color=
+    traits=[]  affixes=None  target=none
+    eff: 这个回合，所有友方单位获得嘲讽。
+
+--- 9104 | 收尾 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=物理
+    traits=[]  affixes=None  target=unit
+    eff: 造成 6 点伤害，若这张卡是你手卡中仅剩的一张则改为造成 22 点伤害。
+
+--- 9110 | 活力转移 | 效果 | cost=2 | power=0 | hp=0 | rar=1 | color=
+    traits=['活力转移']  affixes=None  target=none
+    eff: 自己回合结束时，剩余费用每 2 点，下个回合开始时获得 1 点额外费用。效果区多张本卡不可叠加。
+
+--- 9111 | 暗影之刃 | 效果 | cost=2 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=['暗影之刃']  affixes=None  target=none
+    eff: 自己回合结束时，对随机一个敌人造成 X 点伤害，X 为你本回合已使用的费用数。效果区多张本卡不可叠加。
+
+--- 9112 | 暗影锁链 | 效果 | cost=1 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=['暗影锁链']  affixes=None  target=none
+    eff: 自己回合结束时，剩余费用每 3 点，将随机一个敌人击退 2 格。效果区多张本卡不可叠加。
+
+--- 9113 | 黑暗扩散 | 效果 | cost=1 | power=0 | hp=0 | rar=2 | color=暗影
+    traits=['黑暗扩散']  affixes=None  target=none
+    eff: 自己回合结束时，剩余费用每有 1 点，对所有敌人造成 2 点伤害。效果区多张本卡不可叠加。
+
+--- 9114 | 无尽黑暗 | 效果 | cost=1 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=['无尽黑暗']  affixes=None  target=none
+    eff: 每回合抽牌之后，你强制从手牌中选择 1 张弃掉（不能不选），然后获得 2 点费用。效果区多张本卡不可叠加。
+
+--- 9119 | 起手式 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=物理
+    traits=[]  affixes=[]  target=unit
+    eff: 对目标造成 4 点伤害，然后抽 1 张卡。
+
+--- 9120 | 影袭 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=暗影
+    traits=[]  affixes=[]  target=unit
+    eff: 对目标造成 8 点伤害。若**含这张卡**本回合已经使用了 3 张卡，回复 1 点费用。
+
+--- 9121 | 暗影步 | 技能 | cost=2 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=[]  affixes=[]  target=unit
+    eff: 对目标造成 8 点伤害，然后从**弃牌区任选一张卡**返回你的手卡。
+
+--- 9122 | 专注 | 技能 | cost=0 | power=0 | hp=0 | rar=1 | color=
+    traits=[]  affixes=[]  target=none
+    eff: 从抽牌库中**选择 2 张卡**，这 2 张卡在本次对战中**消失**。
+
+--- 9155 | 夜行 | 技能 | cost=2 | power=0 | hp=0 | rar=2 | color=暗影
+    traits=[]  affixes=[]  target=none
+    eff: 这个回合，你使用所有卡都无需费用。包含这张卡在内，本回合只能使用 5 张卡（无论这张卡之前还是之后使用的）。
+
+--- 9156 | 蓄势 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=
+    traits=[]  affixes=['保存']  target=unit
+    eff: 造成 0 点伤害。回合结束时，每有 1 点未使用的费用，手卡的此卡伤害 +3，本局累计。
+
+--- 9160 | 弹跳飞刀 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=物理
+    traits=[]  affixes=None  target=unit
+    eff: 对一个敌人造成 5 点伤害，在不同敌人间随机弹跳两次，每次伤害减 1。
+
+--- 9171 | 极速 | 技能 | cost=1 | power=0 | hp=0 | rar=1 | color=
+    traits=[]  affixes=[]  target=none
+    eff: 抽 2 张牌。抽到的牌里每有一张 0 费，本回合所有敌人受到伤害 +1。
+
+--- 9173 | 身法 | 技能 | cost=1 | power=0 | hp=0 | rar=0 | color=
+    traits=[]  affixes=[]  target=none
+    eff: 抽 5 张牌。这回合结束为止，你不能使用盟友和工事卡。
+
+--- 9176 | 本能 | 技能 | cost=2 | power=0 | hp=0 | rar=1 | color=
+    traits=['本能']  affixes=[]  target=none
+    eff: 随机打出抽牌库中 3 张费用 1 或以下的技能卡。
+
+--- 9189 | 独行 | 技能 | cost=2 | power=0 | hp=0 | rar=0 | color=暗影
+    traits=[]  affixes=None  target=unit
+    eff: 对一个敌人造成 7 点伤害，使其本回合失去 1 点力量。随机使手卡一张盟友或工事消失，将其生命值本局加到此卡的伤害上，将其力量本局加到此卡的降力上。
+
+--- 9190 | 猫鼠游戏 | 技能 | cost=5 | power=None | hp=None | rar=0 | color=
+    traits=[]  affixes=[]  target=none
+    eff: 丢弃所有手牌。下回合，自己的技能伤害加倍（与其他增加乘算）。
+
+--- 9191 | 黑暗嵌合 | 技能 | cost=2 | power=None | hp=None | rar=1 | color=暗影
+    traits=[]  affixes=['次元']  target=none
+    eff: 组合一张卡，使那张卡获得「保存」，对所有敌人造成那个力量值的伤害。
+
+--- 9204 | 赏金猎人 | 盟友 | cost=2 | power=8 | hp=2 | rar=1 | color=物理
+    traits=['赏金猎人']  affixes=['次元']  target=none
+    eff: 每场战斗中首次击杀敌人：永久 +1 力量。战斗结束后获得 20 金币。
+
+--- 9205 | 猎杀 | 技能 | cost=3 | power=0 | hp=0 | rar=2 | color=物理
+    traits=['猎杀']  affixes=['次元']  target=unit
+    eff: 对一个目标造成 22 点伤害。若此卡击杀敌人，此卡伤害永久 +4。
+
+--- 9224 | 标记 | 场地 | cost=0 | power=0 | hp=0 | rar=0 | color=暗影
+    traits=['持续场地', '场地生效·双']  affixes=[]  target=none
+    eff: 场地效果（全场同时只存在一个标记）。处于这一格的敌人受到的伤害 +1（固定，不随回合成长）。换一个格子放标记会把旧的顶掉。
+
+--- 9225 | 死亡预告 | 技能 | cost=1 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=[]  affixes=[]  target=unit
+    eff: 对目标造成 6 点伤害，然后标记目标所在的格子。
+
+--- 9226 | 致命 | 效果 | cost=3 | power=0 | hp=0 | rar=2 | color=暗影
+    traits=['致命']  affixes=[]  target=none
+    eff: 被标记的敌人受到的所有伤害提升 50%（替代标记本身的加伤）。打出时若场上没有标记，随机标记一个格子。效果区多张本卡不可叠加。
+
+--- 9227 | 死神降临 | 技能 | cost=2 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=[]  affixes=[]  target=unit
+    eff: 对目标造成 14 点伤害；若目标被标记，改为造成 20 点伤害并抽 2 张卡。
+
+--- 9228 | 恐惧之影 | 盟友 | cost=3 | power=3 | hp=14 | rar=1 | color=暗影
+    traits=[]  affixes=[]  target=none
+    eff: 被标记的敌人对这张卡造成的伤害减半。
+
+--- 9229 | 恐惧投射 | 技能 | cost=2 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=[]  affixes=['次元']  target=unit
+    eff: 标记目标所在的格子，并使目标本回合力量 -11。若目标已被标记，则改为对其造成 8 点伤害。
+
+--- 9230 | 恐惧化身 | 效果 | cost=2 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=['恐惧化身']  affixes=[]  target=none
+    eff: 对被标记的敌人造成伤害时，使其本回合力量 -X。若场上没有标记，随机标记一个敌人所在的位置。X 为本卡在效果区的张数。
+
+--- 9231 | 噩兆 | 效果 | cost=1 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=['噩兆']  affixes=[]  target=none
+    eff: 自己回合结束时，处于标记格的敌人受到 4X 点伤害。X 为本卡在效果区的张数。
+
+--- 9232 | 厄运的使者 | 盟友 | cost=3 | power=2 | hp=15 | rar=1 | color=暗影
+    traits=[]  affixes=[]  target=none
+    eff: 攻击被标记的敌人时回复 3 点生命值。
+
+--- 9233 | 灵魂收割者 | 盟友 | cost=8 | power=6 | hp=20 | rar=2 | color=暗影
+    traits=[]  affixes=[]  target=none
+    eff: 每次对被标记的敌人造成伤害，此卡费用本局 -1。这张卡击杀单位时，这张卡回满生命。
+
+--- 9234 | 恐惧收割 | 技能 | cost=2 | power=0 | hp=0 | rar=1 | color=暗影
+    traits=[]  affixes=[]  target=unit
+    eff: 对目标造成 15 点伤害。同一回合内，你对被标记的目标造成第 3 次伤害后（本卡自己造成的不算），从抽牌库或弃牌区将一张「恐惧收割」加入手卡，费用 -1。

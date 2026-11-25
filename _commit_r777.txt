@@ -1,0 +1,33 @@
+R777：彩虹诗（吟游诗人 2 费稀有技能）+ 疾风乐章（2 费史诗效果）
+
+彩虹诗 9269（技能 / 稀有 / 吟游诗人 / 水风 / 2 费）
+  随机取 3 个「其他职业」，每职业各摇一张随机盟友或技能卡加入手卡，
+  这些卡本局费用 -1。
+  - 职业池只从 PlayerClass.ids() 里剔掉自己那一项，Fisher-Yates 前缀取样，
+    走引擎 rng，回放可复现。
+  - 取卡口 repo.reward_pool_for(cls) 后按 card_class == cls 再筛一次
+    （池子里混有中立卡），kind 只认「盟友」「技能」。
+  - 入手指口 _grant_to_hand()（满手转弃牌区，不会凭空消失）；
+    实例一律 _new_own_card()，费用表按卡对象打键。
+  - 减费走 state.hand_cost_delta，只在手里生效、可叠加、
+    新一场战斗自动归零 —— 与「本局」口径一致。
+  - 返回值区分「全进手卡」「全溢出」「部分溢出」，报的是实际落手数。
+
+疾风乐章 9270（效果 / 史诗 / 2 费 / trait 疾风乐章）
+  所有盟友移动速度 +1；若是其他职业盟友，改为一回合行动两次。
+  - 生效口 _free_effect_play() → _wind_song_apply()，按格序稳定遍历。
+  - 「其他职业」判据统一 _other_class_card()，不写死 id、不复用 _poem_ally()。
+  - 行动两次走 Placement.haste_double + FieldState.grant_actions(
+    HASTE_ACTIONS)，不动 card.actions —— 那会把数值焊死在
+    与升级、复制共享的卡数据上。
+  - 非盟友一律跳过。
+
+其余
+  - i18n 三语新增 9269 Rainbow Verse / 虹の詩、9270 Wind Song / 疾風の楽章，count → 331。
+  - 测试：_test_r777() 24 条 + _test_r777b() 22 条；
+    总数口径 330→331、玩家卡 252→253、吟游诗人 6→7，reward 卡牌库 327→331。
+
+回归
+  assemble 0/0 · mana PASS · engine 6445✓ 0✗ · reward 26✓ 0✗
+  bgm 39✓ · traps 183✓ · trapinput 70✓ · smoke 75✓
+  == _verify：全部通过 ==

@@ -1,0 +1,43 @@
+R766：新道具「猴爪」+ 诅咒卡「懊悔」
+
+店长口径：猴爪 —— 每场战斗前三个回合，将一张任意其他职业随机卡加入手牌，
+并将一张「懊悔」加入卡组。懊悔：1 费诅咒，选弃牌区一张其他职业卡消失，次元。
+
+三处口径按现有代码对齐，不新造词：
+- 「次元」沿用 card_data 既有词条（使用后 / 离开战场后消失，不进弃牌区），
+  懊悔只是打上 affixes 标签，不为它写新逻辑。
+- 「其他职业」= card_class 非空且 != RunState.player_class，独立成 _other_class_card()。
+  故意不复用 _poem_ally()（那个只按「普通」判、含本职业），猴爪要的是排他的别职业。
+- 「加入卡组」= 永久写 RunState.deck_ids（跨战斗的牌库），不是本场战斗牌堆 ——
+  所以懊悔当回合摸不到，下一场才可能上手。这是「诅咒进牌库」的应有含义。
+
+引擎（game_engine.gd，CRLF 按字节改）：
+- 常量 MONKEY_CLAW_RELIC_ID=6066 / MONKEY_CLAW_TURNS=3 / REGRET_CARD_ID=9265。
+- _claw_tick() 挂在 _begin_turn 的抽牌与耳环自动打出之后、_melt_ice_walls() 之前；
+  turn_number in 1..3 才算，别职业卡走 _grant_to_hand()（满手自动转弃牌区，唯一口），
+  随后 RunState.add_card(9265)。
+- 懊悔结算照抄 crow 的两段式：regret_options() 出候选下标，regret_pending 挂起，
+  regret_pick() 里 state.discard.remove_at() 落地 —— 卡本来就在弃牌区，
+  所以既不消散也不回任何地方，就是「没了」。
+- regret_pending 三处守卫补齐（use_spell 头部 / _instinct_panel_open / 无眠抽牌），
+  否则选卡页开着还能被别的操作顶掉。
+- start_game() 里归零 regret_pending。
+
+UI（battle_scene.gd，CRLF）：_pick_active_kind / _build_pick_cfg 加 "regret" 分支
+（走 disc_cards 映射），确认派发到 engine.regret_pick()，右键不许取消（必须选一张），
+回合结束按钮按 pick 在开来禁用并 _ensure_pick_visible("regret")。
+
+数据：cards.json 9265（诅咒 · 1 费 · 稀有度 6 · 次元 · 不进奖励池）；
+relics.json 6066（战斗 / 奖励 / 稀有）。四语齐：卡片与道具都按 canonical 口径
+（手牌不写手卡、消失=本场移除、删除=出牌库）补了 en/ja/es + noncard_zh_canonical。
+
+图标：relic_icon_6066.png 128x128，委托 codex 两候选。v1 是不透明 47x122 的细长吊挂手臂，
+放到道具栏跟 6065/6069 并排明显小一圈；v2 按「手指蜷成拳、宽高比约 1:1.15、
+禁止细长下垂手臂」重出，不透明区 76x122（占宽 59%），与邻居齐平。
+判定法记一下：这类问题不能靠眼睛，要量不透明 bbox 占比。
+
+回归 _verify.py 八套零失败：assemble 0 / mana PASS / engine 6252 / reward 26 / bgm 39 /
+traps 183 / trapinput 70 / smoke 75。实机截图核对选卡页：只列出 2 张别职业卡
+（本职业的 8018 被滤掉），标题与说明文字正确，确认按钮可见可点。
+
+计数同步：卡牌 326（玩家 248 / 敌 78 / 无职业 27）、道具 64。

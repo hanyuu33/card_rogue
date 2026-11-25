@@ -1,0 +1,17 @@
+R838：暗动力 6054 描述优化（代价 → 收益重排），lucky 7 原文核为「免疫」
+
+暗动力原文三句里有两句在说同一件事（「无法再跳过卡牌奖励」与「也不能留到以后
+领取」），且缺失代价/收益的对照关系。改为：一句讲代价、一句讲商店、末尾用
+「作为交换」带出收益。中文 68 → 67 字，语义不动。
+
+- relics.json / noncard_zh_canonical.json：中文同改（① 必须与 ② 逐字相同）
+- noncard_en / ja / es：三语同步同结构（代价 → 商店 → In exchange / 代わりに / A cambio）
+- tools/_patch_r838.py：一次性替换脚本，留档
+
+lucky 7（6045）核对：原文已是「免疫所有生命伤害」，无需改动 —— 是上一轮
+口头复述时写成了「免」，不是数据问题。
+
+验证：i18n 六个校验器全 OK（noncard 84 / spanish 24327 / glossary / interface 836 /
+narrative / event_ui）；_audit_text_sources A~G 合计不符 0；_verify.py 十套全绿
+（engine 7032 / smoke 77 / 其余 0 失败）。工作区里并行线的 run_state.gd /
+test_engine.gd 改动未提交。

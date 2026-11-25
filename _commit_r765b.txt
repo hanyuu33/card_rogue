@@ -1,0 +1,19 @@
+R765b：巧克力咬口改到「角」上（远右上角定稿）
+
+店长口径：咬的位置不好，要从一个角的方向咬，而不是一条边。
+
+第一版 prompt 只说了「右端咬一口」，模型就照字面落在右边直边的中段，读起来像掰断一块。
+第二版把咬口钉死在角上，并显式写三条反例（middle of a straight edge / rectangular chunk
+snapped off / chip out of a flat side），外加一句失败判据（reads as "broke off" 而不是
+"bit the corner" 就算错）。
+
+远角 / 近角各出一张：corner_br.txt 由 tools/_gen_r765_prompt_br.py 从 corner_tr.txt 派生，
+只换 3 处锚点，其余一字不改 —— 两候选的差异只有「哪个角」。
+
+定稿 choco_c（远右上角，弧线从顶边斜切、缺口边缘有波浪齿痕）；choco_d（近右下角）
+缺口更大更规整、边缘偏直，像「切掉一角」，留作候选。选型仍按 52x24 放大 8 倍比。
+
+顺手记一条：preview 把 RGBA 直接 paste 到 RGB 画布会丢 alpha，半透明边缘会被当不透明贴成
+一圈彩色杂点，看着像素材脏了 —— 必须 alpha_composite 到面板底色上。
+
+assets/ui/chocolate.png 已重导入（--import），实机截图核过 HUD。

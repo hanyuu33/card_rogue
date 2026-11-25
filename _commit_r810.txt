@@ -1,0 +1,31 @@
+R810：四件新道具（新月耳饰 / 太阳指环 / 海妖鱼叉 / 缺陷时钟）
+
+- 6081 新月耳饰（一般）：每 3 场战斗获得 1 点费用，在第 3 场的第一回合发放。
+  计数走 RunState.crescent_battles（进 RunSave，clampi 0..2），落点在 _begin_turn(SIDE_SELF)
+  —— 跨场计数要的是「第一回合」而不是「战斗开始」，两者中间还夹着敌方先手分支。
+  道具栏角标 = 距下一点还差几场（crescent_left 下限 1）。括号内说明按要求不写进描述。
+- 6082 太阳指环（一般）：每回合开始对所有敌方单位造成 3 点伤害。
+  伤害全部走 _hit_unit()，格挡/减伤/斥候光环自动生效（对齐风妖精 6042）；
+  时机在 _run_battlecries 之后、回合标题日志之前。特效全部复用（SKILL_HOLY 逐格 60ms 错峰
+  + 金色爆裂 + 飘字 + 气泡），未新出图；因每回合都播，不挂横幅、不抖屏。
+- 6083 海妖鱼叉（一般）：同一回合内每对同一个敌人造成 3 次伤害，追加 6 点。
+  计数挂在 Placement（harpoon_hits / harpoon_turn，键 turn_number，同赫尔墨斯那套），
+  只统计我方打敌方；两个新字段已进 _SAVE_FIELDS，否则读档后计数归零。
+  面板状态行显示「本回合已命中 N/3」，命满时不显示。
+- 6084 缺陷时钟（传奇）：每场战斗打出第 12 张牌时结束当前回合、直接进入新的我方回合，
+  完全不进行敌方回合。关键在**延后触发**——_note_card_played 只置 _clock_pending，
+  真正的 end_turn(true) 由 play_from_hand / use_spell / use_effect 三个公开入口的薄壳
+  在本轮结算完之后调用，否则第 12 张牌自己会被切掉一半。
+  end_turn 新增 skip_enemy 形参且默认 false，所有老调用点行为逐字不变。
+
+数据与本地化：relics.json +4（共 79）、reward_ids 追加四件（池过滤后 36 = 一般 29 + 传奇 7）、
+四语 noncard + glossary + 界面键 REWARD_RELIC_STATE_CRESCENT_WAITING（界面 828 / reward 125）、
+validate_spanish 条数同步；图标 128×128 真透明四张 + .import。
+
+验收：engine 6739（+37）/ reward 26 / bgm 39 / traps 206 / trapinput 77 / content 15 /
+smoke 75 / assemble 0 / mana PASS；四套 i18n 校验器全 OK；用户存档 RESTORE_VERIFY OK。
+实机图 _shots/r810_sunring.png（四图标在位 + 日冕爆裂与飘字）、r810_clock.png（跳过敌方回合横幅）。
+
+坑记：_new_engine() 不填 engine.self_relics（只有 battle_scene.load_level 会）→ 新测试 6 条假红，
+9 处各补 eng.self_relics = RunState.active_relics()。cut() 的 bright= 是成品亮度增强不是背景阈值，
+传 190 会把图乘成纯白；太阳指环的圈内空腔被前景包围、四边泛洪吃不到，补 punch_hole((512,560)) 从孔心挖。

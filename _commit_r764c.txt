@@ -1,0 +1,5 @@
+R764c：角色动作段剪辑脚本 trailer_characters.py
+
+- 六条 AI 图生视频（首帧=游戏原画）统一裁水印、补画幅、段间淡变、concat 拼接。
+- xfade 链式在本机 ffmpeg 上会挂住，改用每段自带淡入淡出 + concat -c copy。
+- 方形素材（9:8）走模糊底信箱，7:4 素材满屏裁切。

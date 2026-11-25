@@ -1,0 +1,30 @@
+R754：新增事件「奇异雕像」+ 石头工具 + 所有工具单击弹出丢弃按钮
+
+一、事件「奇异雕像」（第二层专属）
+- 三个选项：祭拜（接下来三场战斗必定掉落工具）/ 摧毁（用石头填满工具栏）/ 绕过去
+- 祭拜祝福是倒计时不是概率加成：tool_drop_pledge > 0 时不看 randf()，否则同一种子
+  在祝福 / 不祝福之间会产生不同随机流；叠拜取 max 不累加
+- 雕像竖主体进 SIDE_LAYOUT_KINDS（左图右文）；侧图 assets/ui/side_statue.png
+  （白石嵌合兽：狮躯干 + 背上羊头 + 尾端蛇，出图后裁掉右下角水印）
+
+二、石头（工具 7012）
+- 新字段 direct_damage / no_drop。故意不收进 is_usable() —— 它要落点，走拖放那条路
+  （当使用型会在原地「轻点即结算」砸空）
+- 落点唯一口 GameEngine.trap_drop_cells()：直接伤害型 -> trap_target_cells()（敌方存活单位格），
+  其余 -> trap_legal_cells()（空格）
+- 伤害走 use_tool_on_unit()，它自己调 _destroy_dead() 收尾（R733 铁律：_hit_unit 只扣血）
+- no_drop 让它不进 random_traps()（只从奇异雕像的摧毁选项拿）
+- 程序化图标 _stone()：内部折面画成 Y 形切三片，别连成一条对角线（会读成「禁止」符号）
+
+三、工具按钮栏（店长口径「不管是哪种类型的道具，都要有单击后弹出丢弃按钮」）
+- 松手轻点 -> 所有工具都上膛弹栏；使用型的两个按钮（使用 / 丢弃）用同一个栏
+- 栏画在 CanvasLayer(layer 20) 上：右侧那些面板是子节点、绘制在本体 _draw() 之后，
+  单靠高 z_index 的 Control 判不过，只有 CanvasLayer 能盖住
+- _tool_bar_layout() 是唯一几何口（绘制与命中同读它）；放置型只有「丢弃」占满整条
+- 栏上的丢弃 = 一次点击即确认（栏本身已经是第二段动作）
+
+四、顺带
+- run_save 补存 R752 漏掉的 tool_deliver_seq（不存的话续档会重摇同一批工具）+ tool_drop_pledge
+
+验证：八套 _verify.py 全部通过（engine 6123 / traps 163 / trapinput 70 / reward 26 /
+bgm 39 / smoke 74 / assemble 0 / mana PASS）。截图核验：雕像事件页、石头图标、按钮栏。

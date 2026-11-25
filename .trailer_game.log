@@ -1,0 +1,23 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+OpenGL API 3.3.0 NVIDIA 610.88 - Compatibility - Using Device: NVIDIA - NVIDIA GeForce RTX 5070
+
+Movie Maker mode enabled, recording movie at 30 FPS...
+[AiBridge] http://127.0.0.1:8772  ——  GET /state  GET /json  POST /act
+[PerfBoot] 刷新率 300.0 → max_fps=99，vsync=1
+MANUAL LOADOUT READY
+  level=使魔鸭群
+  hand=["土元素", "野兔", "火墙术", "宠物鸭", "攻击"]
+  relics=[6022, 6058] engine=[6022, 6058]
+  energy=5 curse_free=true enemy_ai=true
+  control=human; ai_bridge=off; demo=off; save=test-profile-only
+  control=directed-record; ai_bridge=autoload; game_rules=normal
+----------------
+Done recording movie at path: E:\work\card_rogue\release\trailer\raw\seg_element_combo_zh_clean.avi
+3000 frames at 30 FPS (movie length: 00:01:40), recorded in 00:01:09 (144% of real-time speed).
+CPU time: 2.67 seconds (average: 0.89 ms/frame)
+GPU time: 0.43 seconds (average: 0.14 ms/frame)
+----------------
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2284)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:604)

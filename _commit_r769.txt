@@ -1,0 +1,35 @@
+R769：猴爪 —— 发进手牌的那张，本回合费用 -1
+
+店长口径：「猴爪：新增加入手卡的卡本回合费用－1。注意修改文本」
+
+一、机制：复用既有表，不新造字段
+- `state.hand_cost_turn` 本来就是「本回合手卡内减费」的表（R276 随心组装 9144、
+  森林的朋友们 9183、机械臂 6065 都往它写），链路齐全：
+  * 读：`cost_of()` 唯一口 —— 显示 = 判定 = 实扣都走这里
+  * 判据：`state.hand.has(card)` —— 打出 / 弃掉即自动恢复原价，不用在离手口逐个清标记
+  * 清：`end_turn` 清空；迁：`_move_key` 已覆盖
+- 所以只加一处写入：`_claw_tick()` 里 `if got: state.hand_cost_turn[copy] = cur + MONKEY_CLAW_DISCOUNT`。
+- **只在 got 时写**：手牌满 → 改投弃牌区的那张不在手牌，标记无处生效。
+- **不动 CardData 字段**，因此 `_migrate_card_state` 也不用碰
+  （删/加字段漏一处就是运行期 Invalid access to property or key，R756 踩过）。
+- 新增常量 `MONKEY_CLAW_DISCOUNT := 1`；日志补「（本回合费用 -1）」。
+
+二、文本五处同步（措辞对齐既有写法，不新造）
+- 中「（本回合费用-1）」—— relics.json 里已有同款写法（无空格）
+- 英 "(it costs -1 this turn)" —— 与随心组装那条同机制同措辞
+- 日「（このターン中コスト-1）」/ 西 "(cuesta -1 este turno)"
+- 落点：relics.json · noncard_zh_canonical.json · noncard_en/ja/es.json
+
+三、验证
+- 新增 `_test_r769` 共 11 条：标记写入 / cost_of 真降 / 不改卡面原型 / 离手复原 /
+  回合清表 / -1 真落地（另取一张 >=1 费卡证效果）/ 满手不写标记 / 第 4 回合停手。
+  ⚠️ 第一次跑随机到「鲜血堡垒」（0 费），`maxi(0, 0-1)==0` 断言虽过却证明不了 -1，
+  所以另补一条确定 >=1 费卡的硬断言。
+- `_verify.py` 八套零失败：assemble 0 / mana PASS / engine **6292✓/0✗**（+11）/
+  reward 26 / bgm 39 / traps 183 / trapinput 70 / smoke 75。
+- 实机截图 tools/_shot_r769_claw.gd（窗口模式）：同一张卡的两张实例并排，
+  一张挂标记一张不挂，卡面费数字直接差 1。
+
+四、已知留白（未擅自改，等店长定）
+- 有职业的卡里 0 费占 57/299 ≈ 19%。摇到 0 费卡时 -1 被 maxi(0,…) 夹住，
+  机制照常触发但玩家无感。是否限制只发 >=1 费的卡，属设计取舍，不自行决定。
